@@ -1,0 +1,253 @@
+.sui-wallet {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.sui-wallet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.sui-wallet__title {
+  margin: 0;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sui-wallet__network {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #2a2a2a;
+  color: #888;
+}
+
+.sui-wallet__network-select {
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #ededed;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.sui-wallet__network-select:hover {
+  border-color: #444;
+}
+
+.sui-wallet__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sui-wallet__connect-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #4da2ff;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sui-wallet__connect-btn:hover {
+  background: #3d8ce6;
+}
+
+.sui-wallet__connect-btn:disabled {
+  background: #444;
+  cursor: not-allowed;
+}
+
+.sui-wallet__disconnect-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #888;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.sui-wallet__disconnect-btn:hover {
+  border-color: #666;
+  color: #aaa;
+}
+
+.sui-wallet__address {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 1rem;
+  word-break: break-all;
+}
+
+.sui-wallet__section {
+  margin-bottom: 1.25rem;
+}
+
+.sui-wallet__section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sui-wallet__balances {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sui-wallet__balance-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: #1a1a1a;
+  border-radius: 6px;
+  border: 1px solid #2a2a2a;
+}
+
+.sui-wallet__token-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.sui-wallet__token-amount {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #4da2ff;
+}
+
+.sui-wallet__txs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sui-wallet__tx-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: #1a1a1a;
+  border-radius: 6px;
+  border: 1px solid #2a2a2a;
+}
+
+.sui-wallet__tx-digest {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: #aaa;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sui-wallet__tx-status {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+}
+
+.sui-wallet__tx-status--success {
+  background: #0a2a0a;
+  color: #6bff6b;
+}
+
+.sui-wallet__tx-status--failure {
+  background: #2a0a0a;
+  color: #ff6b6b;
+}
+
+.sui-wallet__tx-links {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sui-wallet__tx-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: #2a2a2a;
+  transition: background 0.15s;
+}
+
+.sui-wallet__tx-link:hover {
+  background: #3a3a3a;
+}
+
+.sui-wallet__tx-link img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.sui-wallet__empty {
+  text-align: center;
+  padding: 1rem;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.sui-wallet__loading {
+  text-align: center;
+  padding: 1rem;
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.sui-wallet__error {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: #2a0a0a;
+  border: 1px solid #5a1a1a;
+  color: #ff6b6b;
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.sui-wallet__wallets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.sui-wallet__wallet-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #ededed;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sui-wallet__wallet-btn:hover {
+  border-color: #4da2ff;
+  background: #1f1f1f;
+}
+
+.sui-wallet__wallet-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}

@@ -1,0 +1,16 @@
+.hello-plugin {
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--color-surface, #f0f0f0);
+  border: 1px solid var(--color-border, #ddd);
+  margin-top: 1rem;
+}
+
+.hello-plugin h3 {
+  margin: 0 0 0.5rem;
+}
+
+.hello-plugin p {
+  margin: 0;
+  opacity: 0.8;
+}

@@ -1,0 +1,85 @@
+.sui-plugin {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.sui-plugin__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.sui-plugin__desc {
+  margin: 0 0 1rem;
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
+.sui-plugin__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.sui-plugin__label {
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.sui-plugin__select,
+.sui-plugin__input {
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #ededed;
+  font-size: 0.9rem;
+}
+
+.sui-plugin__input {
+  font-family: monospace;
+}
+
+.sui-plugin__btn {
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #4da2ff;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.25rem;
+}
+
+.sui-plugin__btn:disabled {
+  background: #444;
+  cursor: not-allowed;
+}
+
+.sui-plugin__balance {
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: #111;
+  border: 1px solid #333;
+  font-size: 0.85rem;
+  font-family: monospace;
+}
+
+.sui-plugin__message {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.sui-plugin__message--success {
+  background: #0a2a0a;
+  border: 1px solid #1a5a1a;
+  color: #6bff6b;
+}
+
+.sui-plugin__message--error {
+  background: #2a0a0a;
+  border: 1px solid #5a1a1a;
+  color: #ff6b6b;
+}
