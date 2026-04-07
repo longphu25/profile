@@ -28,6 +28,7 @@ function copyPluginAssets(): VitePlugin {
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/profile/',
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] }),
@@ -35,6 +36,7 @@ export default defineConfig({
     copyPluginAssets(),
   ],
   build: {
+    modulePreload: false,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),

@@ -7,7 +7,9 @@ import type { Plugin } from '../plugins/types'
 // Static plugin registry — add your plugins here
 // In dev, Vite serves .tsx directly; in production, plugins are pre-built entry points
 const pluginPath = (name: string) =>
-  import.meta.env.DEV ? `/plugins/${name}/plugin.tsx` : `/assets/plugins/${name}.js`
+  import.meta.env.DEV
+    ? `/plugins/${name}/plugin.tsx`
+    : `${import.meta.env.BASE_URL}assets/plugins/${name}.js`
 
 const AVAILABLE_PLUGINS = [
   { name: 'HelloPlugin', src: pluginPath('hello-plugin') },

@@ -23,10 +23,13 @@ export function ShadowContainer({ styleUrls, children }: ShadowContainerProps) {
 
       // Inject plugin CSS into shadow root
       if (styleUrls?.length) {
+        const base = import.meta.env.BASE_URL
         for (const url of styleUrls) {
           const link = document.createElement('link')
           link.rel = 'stylesheet'
-          link.href = `${url}?t=${Date.now()}`
+          // Prepend base path for production (e.g. /profile/plugins/...)
+          const resolved = url.startsWith('/') ? `${base}${url.slice(1)}` : url
+          link.href = `${resolved}?t=${Date.now()}`
           shadow.appendChild(link)
         }
       }
