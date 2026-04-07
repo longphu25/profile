@@ -1,12 +1,23 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- <script src="https://unpkg.com/react-scan/dist/auto.global.js" crossorigin="anonymous"></script> -->
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>profile</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/motion@latest/dist/motion.js" defer></script>
+    <!-- <script type="module">
+      if (import.meta.env.DEV) {
+        import("react-grab");
+      }
+    </script> -->
   </head>
   <body>
+    <script>
+      (function(){var t=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t)})()
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
