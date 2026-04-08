@@ -9,7 +9,7 @@
     "bun": {
       "source": "bun.sh",
       "sourceType": "well-known",
-      "computedHash": "bc316dd20398ba1d43069d1ebc4e429f1ba2766d51c69aa96ef815c52346cdb7"
+      "computedHash": "c20fe20eb84bb56fd5a96eae6e36c5fd8d38f989818a4944f8a08140fe5e7a5b"
     },
     "frontend-design": {
       "source": "anthropics/skills",
@@ -85,6 +85,16 @@
       "source": "antfu/skills",
       "sourceType": "github",
       "computedHash": "867ff66238f3152e9c494339ad08dc432dd0df5bcf5cc7a00b61a72b580eb908"
+    },
+    "sui-move-blockchain": {
+      "source": "local",
+      "sourceType": "workspace",
+      "computedHash": ""
+    },
+    "shadow-dom-web-components": {
+      "source": "local",
+      "sourceType": "workspace",
+      "computedHash": ""
     }
   }
 }
