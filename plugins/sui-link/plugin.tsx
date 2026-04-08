@@ -1,8 +1,9 @@
 // SuiLink Plugin
 // View cross-chain wallet links (soulbound NFTs) for a connected Sui wallet
-// Supports Ethereum, Solana, and Sui-to-Sui links
+// Dual-mode: works standalone (plugin-demo) or with shared context (sui-dashboard)
 
 import type { Plugin, HostAPI } from '../../src/plugins/types'
+import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import {
   DAppKitProvider,
   useDAppKit,
@@ -18,7 +19,6 @@ import { useState, useEffect } from 'react'
 import './style.css'
 
 // --- Constants ---
-
 const GRPC_URLS: Record<string, string> = {
   mainnet: 'https://fullnode.mainnet.sui.io:443',
   testnet: 'https://fullnode.testnet.sui.io:443',
@@ -27,7 +27,6 @@ const GRPC_URLS: Record<string, string> = {
 
 const NETWORKS = ['mainnet', 'testnet'] as const
 
-// SuiLink package IDs per network
 const SUILINK_PACKAGES: Record<string, { ethSol: string; sui: string }> = {
   mainnet: {
     ethSol: '0xf857fa9df5811e6df2a0240a1029d365db24b5026896776ddd1c3c70803bccd3',
@@ -45,16 +44,20 @@ const CHAIN_ICONS: Record<string, string> = {
   sui: '💧',
 }
 
-// --- dAppKit instance ---
-
-const dAppKit = createDAppKit({
+// --- Standalone DAppKit (only used when NOT in sui-dashboard) ---
+const standaloneDAppKit = createDAppKit({
   networks: ['mainnet', 'testnet', 'devnet'],
   defaultNetwork: 'mainnet',
   createClient: (network) => new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network] }),
 })
 
-// --- Types ---
+declare module '@mysten/dapp-kit-react' {
+  interface Register {
+    dAppKit: typeof standaloneDAppKit
+  }
+}
 
+// --- Types ---
 interface SuiLinkEntry {
   id: string
   chain: string
@@ -64,7 +67,6 @@ interface SuiLinkEntry {
 }
 
 // --- Helpers ---
-
 function parseChainFromType(typeStr: string): string {
   const match = typeStr.match(/::(\w+)>$/)
   if (!match) return 'unknown'
@@ -78,11 +80,7 @@ function formatAddress(addr: string): string {
 
 function formatDate(timestampMs: string): string {
   const date = new Date(Number(timestampMs))
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function getExplorerUrl(chain: string, address: string): string | null {
@@ -98,8 +96,7 @@ function getExplorerUrl(chain: string, address: string): string | null {
   }
 }
 
-// --- Components ---
-
+// --- Core UI (used in both modes) ---
 function SuiLinkContent() {
   const wallets = useWallets()
   const connection = useWalletConnection()
@@ -137,7 +134,6 @@ function SuiLinkContent() {
 
         const allLinks: SuiLinkEntry[] = []
 
-        // Query ETH/SOL SuiLinks
         const ethSolResult = await client.core.listOwnedObjects({
           owner: account.address,
           type: `${packages.ethSol}::suilink::SuiLink`,
@@ -157,7 +153,6 @@ function SuiLinkContent() {
           }
         }
 
-        // Query Sui-to-Sui SuiLinks (different package on mainnet)
         if (packages.sui !== packages.ethSol) {
           const suiResult = await client.core.listOwnedObjects({
             owner: account.address,
@@ -179,7 +174,6 @@ function SuiLinkContent() {
           }
         }
 
-        // Sort by timestamp descending
         allLinks.sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
         setLinks(allLinks)
       } catch (err) {
@@ -209,7 +203,6 @@ function SuiLinkContent() {
     }
   }
 
-  // --- Not connected ---
   if (!connection.isConnected) {
     return (
       <div className="sui-link">
@@ -269,7 +262,6 @@ function SuiLinkContent() {
     )
   }
 
-  // --- Connected ---
   return (
     <div className="sui-link">
       <div className="sui-link__header">
@@ -377,22 +369,31 @@ function SuiLinkContent() {
   )
 }
 
-function SuiLinkComponent() {
+// --- Standalone wrapper (plugin-demo: own DAppKitProvider) ---
+function SuiLinkStandalone() {
   return (
-    <DAppKitProvider dAppKit={dAppKit}>
+    <DAppKitProvider dAppKit={standaloneDAppKit}>
       <SuiLinkContent />
     </DAppKitProvider>
   )
 }
 
+// --- Shared wrapper (sui-dashboard: DAppKitProvider already exists) ---
+function SuiLinkShared() {
+  return <SuiLinkContent />
+}
+
 const SuiLinkPlugin: Plugin = {
   name: 'SuiLink',
-  version: '1.0.0',
+  version: '1.1.0',
   styleUrls: ['/plugins/sui-link/style.css'],
 
   init(host: HostAPI) {
-    host.registerComponent('SuiLink', SuiLinkComponent)
-    host.log('SuiLink plugin initialized')
+    const Component = isSuiHostAPI(host) ? SuiLinkShared : SuiLinkStandalone
+    host.registerComponent('SuiLink', Component)
+    host.log(
+      'SuiLink plugin initialized' + (isSuiHostAPI(host) ? ' (shared mode)' : ' (standalone mode)'),
+    )
   },
 
   mount() {

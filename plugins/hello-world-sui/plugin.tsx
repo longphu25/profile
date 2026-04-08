@@ -1,11 +1,15 @@
 // Hello World SUI Plugin
 // Requests SUI from faucet (Devnet/Testnet) and displays balance
+// Dual-mode: standalone or shared context (auto-fills address from connected wallet)
 
 import type { Plugin, HostAPI } from '../../src/plugins/types'
+import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
+import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { getFaucetHost, requestSuiFromFaucetV2 } from '@mysten/sui/faucet'
 import { MIST_PER_SUI } from '@mysten/sui/utils'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import './style.css'
 
 type Network = 'devnet' | 'testnet'
 
@@ -19,6 +23,9 @@ function mistToSui(mist: string): string {
   return val.toFixed(4)
 }
 
+// Store reference to SuiHostAPI if available (set during init)
+let sharedHost: SuiHostAPI | null = null
+
 function HelloSuiComponent() {
   const [address, setAddress] = useState('')
   const [network, setNetwork] = useState<Network>('devnet')
@@ -26,6 +33,19 @@ function HelloSuiComponent() {
   const [message, setMessage] = useState('')
   const [balanceBefore, setBalanceBefore] = useState<string | null>(null)
   const [balanceAfter, setBalanceAfter] = useState<string | null>(null)
+
+  // Auto-fill address from shared context if available
+  useEffect(() => {
+    if (!sharedHost) return
+    const ctx = sharedHost.getSuiContext()
+    if (ctx.address && !address) {
+      setAddress(ctx.address)
+    }
+    const unsub = sharedHost.onSuiContextChange((newCtx) => {
+      if (newCtx.address) setAddress(newCtx.address)
+    })
+    return unsub
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRequestSui = async () => {
     if (!address.trim()) {
@@ -122,12 +142,16 @@ function HelloSuiComponent() {
 
 const HelloWorldSuiPlugin: Plugin = {
   name: 'HelloWorldSui',
-  version: '1.0.0',
+  version: '1.1.0',
   styleUrls: ['/plugins/hello-world-sui/style.css'],
 
   init(host: HostAPI) {
+    // Store shared host reference if in sui-dashboard mode
+    sharedHost = isSuiHostAPI(host) ? host : null
     host.registerComponent('HelloSui', HelloSuiComponent)
-    host.log('HelloWorldSui plugin initialized')
+    host.log(
+      'HelloWorldSui plugin initialized' + (sharedHost ? ' (shared mode)' : ' (standalone mode)'),
+    )
   },
 
   mount() {
@@ -135,6 +159,7 @@ const HelloWorldSuiPlugin: Plugin = {
   },
 
   unmount() {
+    sharedHost = null
     console.log('[HelloWorldSui] unmounted')
   },
 }

@@ -16,6 +16,7 @@ const AVAILABLE_PLUGINS = [
   { name: 'HelloWorldSui', src: pluginPath('hello-world-sui') },
   { name: 'SuiWallet', src: pluginPath('sui-wallet') },
   { name: 'SuiLink', src: pluginPath('sui-link') },
+  { name: 'DualWallet', src: pluginPath('sui-dual-wallet') },
 ]
 
 interface LoadedPlugin {

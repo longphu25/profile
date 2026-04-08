@@ -1,7 +1,9 @@
 // SUI Wallet Plugin
 // Connect wallet, show balances and transaction history with explorer links
+// Dual-mode: works standalone (plugin-demo) or with shared context (sui-dashboard)
 
 import type { Plugin, HostAPI } from '../../src/plugins/types'
+import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import {
   DAppKitProvider,
   useDAppKit,
@@ -16,6 +18,7 @@ import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { useState, useEffect } from 'react'
 import './style.css'
 
+// --- Standalone DAppKit (only used when NOT in sui-dashboard) ---
 const GRPC_URLS: Record<string, string> = {
   mainnet: 'https://fullnode.mainnet.sui.io:443',
   testnet: 'https://fullnode.testnet.sui.io:443',
@@ -35,8 +38,7 @@ const EXPLORER_URLS = {
   },
 }
 
-// Create dAppKit instance
-const dAppKit = createDAppKit({
+const standaloneDAppKit = createDAppKit({
   networks: ['mainnet', 'testnet', 'devnet'],
   defaultNetwork: 'mainnet',
   createClient: (network) => new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network] }),
@@ -44,10 +46,11 @@ const dAppKit = createDAppKit({
 
 declare module '@mysten/dapp-kit-react' {
   interface Register {
-    dAppKit: typeof dAppKit
+    dAppKit: typeof standaloneDAppKit
   }
 }
 
+// --- Types ---
 interface Balance {
   coinType: string
   symbol: string
@@ -59,6 +62,7 @@ interface Transaction {
   success: boolean
 }
 
+// --- Helpers ---
 function formatBalance(balance: string, decimals = 9): string {
   const val = Number(balance) / Math.pow(10, decimals)
   if (val === 0) return '0'
@@ -84,6 +88,7 @@ function getExplorerTxUrl(
 const NETWORKS = ['mainnet', 'testnet', 'devnet'] as const
 type Network = (typeof NETWORKS)[number]
 
+// --- Core wallet UI (used in both modes) ---
 function WalletContent() {
   const wallets = useWallets()
   const connection = useWalletConnection()
@@ -114,7 +119,6 @@ function WalletContent() {
       setError(null)
 
       try {
-        // Fetch balances
         const { balances: balanceList } = await client.core.listBalances({
           owner: account.address,
         })
@@ -122,14 +126,9 @@ function WalletContent() {
         const formattedBalances: Balance[] = balanceList.map((b) => {
           const parts = b.coinType.split('::')
           const symbol = parts[parts.length - 1] || 'Unknown'
-          return {
-            coinType: b.coinType,
-            symbol,
-            balance: b.balance,
-          }
+          return { coinType: b.coinType, symbol, balance: b.balance }
         })
 
-        // Sort SUI first, then by balance
         formattedBalances.sort((a, b) => {
           if (a.symbol === 'SUI') return -1
           if (b.symbol === 'SUI') return 1
@@ -138,12 +137,10 @@ function WalletContent() {
 
         setBalances(formattedBalances)
 
-        // Fetch recent transactions using SuiScan API
         try {
           const txResponse = await fetch(
             `https://api.suiscan.xyz/api/v1/transactions?address=${account.address}&limit=5`,
           )
-
           if (txResponse.ok) {
             const txData = await txResponse.json()
             const txs: Transaction[] = (txData.data || [])
@@ -155,7 +152,6 @@ function WalletContent() {
             setTransactions(txs)
           }
         } catch {
-          // Silently fail for tx history - not critical
           setTransactions([])
         }
       } catch (err) {
@@ -185,7 +181,6 @@ function WalletContent() {
     }
   }
 
-  // Not connected - show connect UI
   if (!connection.isConnected) {
     return (
       <div className="sui-wallet">
@@ -250,7 +245,6 @@ function WalletContent() {
     )
   }
 
-  // Connected - show wallet info
   return (
     <div className="sui-wallet">
       <div className="sui-wallet__header">
@@ -307,9 +301,7 @@ function WalletContent() {
                   <div key={tx.digest} className="sui-wallet__tx-item">
                     <span className="sui-wallet__tx-digest">{shortenDigest(tx.digest)}</span>
                     <span
-                      className={`sui-wallet__tx-status sui-wallet__tx-status--${
-                        tx.success ? 'success' : 'failure'
-                      }`}
+                      className={`sui-wallet__tx-status sui-wallet__tx-status--${tx.success ? 'success' : 'failure'}`}
                     >
                       {tx.success ? 'Success' : 'Failed'}
                     </span>
@@ -344,21 +336,33 @@ function WalletContent() {
   )
 }
 
-function SuiWalletComponent() {
+// --- Standalone wrapper (plugin-demo: own DAppKitProvider) ---
+function SuiWalletStandalone() {
   return (
-    <DAppKitProvider dAppKit={dAppKit}>
+    <DAppKitProvider dAppKit={standaloneDAppKit}>
       <WalletContent />
     </DAppKitProvider>
   )
 }
 
+// --- Shared wrapper (sui-dashboard: DAppKitProvider already exists) ---
+function SuiWalletShared() {
+  return <WalletContent />
+}
+
 const SuiWalletPlugin: Plugin = {
   name: 'SuiWallet',
-  version: '1.0.0',
+  version: '1.1.0',
+  styleUrls: ['/plugins/sui-wallet/style.css'],
 
   init(host: HostAPI) {
-    host.registerComponent('SuiWallet', SuiWalletComponent)
-    host.log('SuiWallet plugin initialized')
+    // Detect mode: if host has getSuiContext, we're in sui-dashboard (shared DAppKit)
+    const Component = isSuiHostAPI(host) ? SuiWalletShared : SuiWalletStandalone
+    host.registerComponent('SuiWallet', Component)
+    host.log(
+      'SuiWallet plugin initialized' +
+        (isSuiHostAPI(host) ? ' (shared mode)' : ' (standalone mode)'),
+    )
   },
 
   mount() {
