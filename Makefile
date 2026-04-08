@@ -36,6 +36,14 @@ audit-fix: ## Attempt to fix vulnerable dependencies
 codegen: ## Generate Sui TypeScript bindings
 	bun run codegen
 
+plugin: ## Create a new plugin (usage: make plugin name=my-plugin)
+	@test -n "$(name)" || (echo "Usage: make plugin name=my-plugin" && exit 1)
+	node scripts/create-plugin.mjs $(name)
+
+sui-plugin: ## Create a new SUI plugin with dual-mode (usage: make sui-plugin name=token-swap)
+	@test -n "$(name)" || (echo "Usage: make sui-plugin name=token-swap" && exit 1)
+	node scripts/create-sui-plugin.mjs $(name)
+
 clean: ## Remove build artifacts
 	rm -rf dist node_modules/.vite
 

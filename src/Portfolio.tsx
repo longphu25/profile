@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { motion, useScroll, useTransform } from 'motion/react'
 import { Menu, X, Mail, ExternalLink, ChevronRight, Sparkles } from 'lucide-react'
 
 function GithubIcon({ className }: { className?: string }) {
@@ -626,6 +626,84 @@ export default function Portfolio() {
         </motion.div>
       </Sec>
 
+      {/* ── Playground ── */}
+      <Sec id="playground" bg={t.surface}>
+        <Header eyebrow="Playground" title="Interactive demos" />
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.15 }}
+          variants={stagger}
+          className="grid gap-5 md:grid-cols-2"
+        >
+          <motion.a
+            href="/plugin-demo.html"
+            variants={fadeUp}
+            className="group flex items-start gap-4 rounded-lg p-6 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+            style={{ background: t.surfaceContainerLow, boxShadow: shadow }}
+          >
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-xl"
+              style={{ background: t.surfaceContainerHighest }}
+            >
+              🔌
+            </div>
+            <div>
+              <h3
+                className="text-[17px] font-semibold"
+                style={{ color: t.primary, fontFamily: font.display }}
+              >
+                Plugin Demo
+              </h3>
+              <p className="mt-1.5 text-[14px] leading-[1.7]" style={{ color: t.onSurface }}>
+                Load and preview plugins dynamically via the Host API. Each plugin runs in isolated
+                Shadow DOM with scoped CSS.
+              </p>
+              <span
+                className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold tracking-wide"
+                style={{ color: t.primary, fontFamily: font.label }}
+              >
+                Open demo
+                <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+              </span>
+            </div>
+          </motion.a>
+
+          <motion.a
+            href="/sui-plugin.html"
+            variants={fadeUp}
+            className="group flex items-start gap-4 rounded-lg p-6 transition-all duration-200 hover:-translate-y-0.5 cursor-pointer"
+            style={{ background: t.surfaceContainerLow, boxShadow: shadow }}
+          >
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-xl"
+              style={{ background: t.surfaceContainerHighest }}
+            >
+              💧
+            </div>
+            <div>
+              <h3
+                className="text-[17px] font-semibold"
+                style={{ color: t.primary, fontFamily: font.display }}
+              >
+                SUI Dashboard
+              </h3>
+              <p className="mt-1.5 text-[14px] leading-[1.7]" style={{ color: t.onSurface }}>
+                Shared wallet context across SUI plugins. Connect once, interact with Faucet,
+                Wallet, SuiLink, and more.
+              </p>
+              <span
+                className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold tracking-wide"
+                style={{ color: t.primary, fontFamily: font.label }}
+              >
+                Open dashboard
+                <ChevronRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+              </span>
+            </div>
+          </motion.a>
+        </motion.div>
+      </Sec>
+
       {/* ── Contact ── */}
       <Sec id="contact" bg={t.surface}>
         <Header eyebrow="Contact" title="Let's build something together" />
@@ -668,7 +746,7 @@ export default function Portfolio() {
           className="text-[11px] tracking-[0.15em]"
           style={{ color: t.outlineVariant, fontFamily: font.label }}
         >
-          © 2025 Long Phú
+          © 2026 Long Phú
         </p>
       </footer>
     </main>
