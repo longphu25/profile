@@ -28,7 +28,7 @@ function copyPluginAssets(): VitePlugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/profile/',
+  base: process.env.CUSTOM_DOMAIN ? '/' : '/profile/',
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] }),
