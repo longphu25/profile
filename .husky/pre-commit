@@ -1,1 +1,4 @@
+# Clean pycache before commit
+find . -type d -name __pycache__ -not -path './node_modules/*' -exec rm -rf {} + 2>/dev/null || true
+
 bunx lint-staged
