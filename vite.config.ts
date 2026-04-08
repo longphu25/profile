@@ -28,7 +28,7 @@ function copyPluginAssets(): VitePlugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: process.env.GITHUB_PAGES === 'true' ? '/profile/' : '/',
+  base: '/',
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] }),
