@@ -1,7 +1,7 @@
 {
   "name": "profile",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.11.0",
   "type": "module",
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
@@ -32,7 +32,10 @@
     "@uidotdev/usehooks": "^2.4.1",
     "boneyard-js": "^1.5.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.38.0",
+    "gridstack": "^12.5.0",
     "gsap": "^3.14.2",
+    "lucide-react": "^1.7.0",
     "motion": "^12.38.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
