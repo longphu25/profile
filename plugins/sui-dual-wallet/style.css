@@ -1,0 +1,324 @@
+.dual-wallet {
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+/* Header */
+.dual-wallet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.dual-wallet__header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.dual-wallet__header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.dual-wallet__title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.dual-wallet__hint {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+/* Grid */
+.dual-wallet__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .dual-wallet__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Slot */
+.dual-wallet__slot {
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #111;
+}
+
+.dual-wallet__slot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.dual-wallet__slot-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4da2ff;
+}
+
+/* Select */
+.dual-wallet__select {
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #ccc;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.dual-wallet__select--full {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: monospace;
+  margin-bottom: 0.75rem;
+}
+
+/* Input */
+.dual-wallet__input {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #ededed;
+  font-size: 0.8rem;
+  font-family: monospace;
+  margin-bottom: 0.75rem;
+  box-sizing: border-box;
+}
+
+.dual-wallet__input:focus {
+  outline: none;
+  border-color: #4da2ff;
+}
+
+.dual-wallet__input::placeholder {
+  color: #555;
+}
+
+/* Address badge */
+.dual-wallet__address {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: #4da2ff;
+  margin-bottom: 0.75rem;
+  padding: 0.3rem 0.5rem;
+  background: #4da2ff10;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Account select wrapper */
+.dual-wallet__account-select {
+  margin-bottom: 0;
+}
+
+/* Mode toggle */
+.dual-wallet__mode-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid #333;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.dual-wallet__mode-btn {
+  padding: 0.2rem 0.5rem;
+  border: none;
+  background: #1a1a1a;
+  color: #666;
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+
+.dual-wallet__mode-btn--active {
+  background: #4da2ff20;
+  color: #4da2ff;
+}
+
+/* Buttons */
+.dual-wallet__connect-btn {
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #4da2ff;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dual-wallet__connect-btn:hover {
+  background: #3d8ce6;
+}
+
+.dual-wallet__disconnect-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #888;
+  font-size: 0.7rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dual-wallet__disconnect-btn:hover {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+.dual-wallet__cancel-btn {
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid #333;
+  background: transparent;
+  color: #666;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+/* Wallet dropdown */
+.dual-wallet__wallet-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 10;
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 0.5rem;
+  min-width: 200px;
+  margin-top: 0.25rem;
+}
+
+.dual-wallet__wallet-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #2a2a2a;
+  background: #1a1a1a;
+  color: #ededed;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dual-wallet__wallet-btn:hover {
+  border-color: #4da2ff;
+}
+
+.dual-wallet__wallet-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+/* Sections */
+.dual-wallet__section {
+  margin-bottom: 0.75rem;
+}
+
+.dual-wallet__section-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+}
+
+.dual-wallet__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.dual-wallet__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  background: #1a1a1a;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.dual-wallet__amount {
+  font-family: monospace;
+  color: #4da2ff;
+}
+
+.dual-wallet__tx-link {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: #aaa;
+  text-decoration: none;
+}
+
+.dual-wallet__tx-link:hover {
+  color: #4da2ff;
+}
+
+.dual-wallet__status {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.dual-wallet__status--ok {
+  color: #34d399;
+}
+
+.dual-wallet__status--fail {
+  color: #f87171;
+}
+
+/* States */
+.dual-wallet__muted {
+  font-size: 0.8rem;
+  color: #555;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.dual-wallet__loading {
+  text-align: center;
+  padding: 0.75rem;
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.dual-wallet__error {
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  background: #2a0a0a;
+  border: 1px solid #5a1a1a;
+  color: #ff6b6b;
+  font-size: 0.75rem;
+  margin-bottom: 0.5rem;
+}
