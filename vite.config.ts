@@ -52,11 +52,13 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         app: resolve(__dirname, 'app.html'),
         'plugin-demo': resolve(__dirname, 'plugin-demo.html'),
+        'sui-plugin': resolve(__dirname, 'sui-plugin.html'),
         // Build plugins as separate entry points
         'plugins/hello-plugin': resolve(__dirname, 'plugins/hello-plugin/plugin.tsx'),
         'plugins/hello-world-sui': resolve(__dirname, 'plugins/hello-world-sui/plugin.tsx'),
         'plugins/sui-wallet': resolve(__dirname, 'plugins/sui-wallet/plugin.tsx'),
         'plugins/sui-link': resolve(__dirname, 'plugins/sui-link/plugin.tsx'),
+        'plugins/sui-dual-wallet': resolve(__dirname, 'plugins/sui-dual-wallet/plugin.tsx'),
       },
       external: ['gsap', 'motion'],
       output: {
