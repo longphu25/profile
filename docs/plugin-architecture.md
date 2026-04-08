@@ -460,6 +460,31 @@ SuiWalletPlugin
 3. CSS riêng biệt (`style.css`) với prefix `sui-wallet__*` tránh xung đột
 4. Network switching qua `dAppKit.switchNetwork()` — client tự cập nhật
 
+### ⚠️ Gotchas với DAppKitProvider
+
+Các lỗi TypeScript thường gặp khi dùng `@mysten/dapp-kit-react` trong plugin:
+
+| Lỗi | Nguyên nhân | Fix |
+|-----|-------------|-----|
+| TS2322 tại `<DAppKitProvider dAppKit={...}>` | `createDAppKit` thiếu network trong array (ví dụ thiếu `devnet`) | Luôn khai báo đủ `['mainnet', 'testnet', 'devnet']` |
+| TS2345 tại `switchNetwork(newNetwork)` | `newNetwork` là `string`, nhưng expect union literal | Cast: `newNetwork as typeof NETWORKS[number]` |
+| Runtime: `ConnectButton` not found | `ConnectButton` là web component, không export từ React package | Tự tạo UI bằng `useWallets()` + `connectWallet()` |
+
+```typescript
+// ❌ Thiếu devnet → TS2322
+createDAppKit({ networks: ['mainnet', 'testnet'], ... })
+
+// ✅ Đủ 3 network
+createDAppKit({ networks: ['mainnet', 'testnet', 'devnet'], ... })
+
+// ❌ string → TS2345
+dAppKit.switchNetwork(e.target.value)
+
+// ✅ Cast type
+const NETWORKS = ['mainnet', 'testnet', 'devnet'] as const
+dAppKit.switchNetwork(e.target.value as typeof NETWORKS[number])
+```
+
 ---
 
 ## 10. Best Practices

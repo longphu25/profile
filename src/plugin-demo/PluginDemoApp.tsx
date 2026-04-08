@@ -8,13 +8,14 @@ import type { Plugin } from '../plugins/types'
 // In dev, Vite serves .tsx directly; in production, plugins are pre-built entry points
 const pluginPath = (name: string) =>
   import.meta.env.DEV
-    ? `/plugins/${name}/plugin.tsx`
+    ? `${import.meta.env.BASE_URL}plugins/${name}/plugin.tsx`
     : `${import.meta.env.BASE_URL}assets/plugins/${name}.js`
 
 const AVAILABLE_PLUGINS = [
   { name: 'HelloPlugin', src: pluginPath('hello-plugin') },
   { name: 'HelloWorldSui', src: pluginPath('hello-world-sui') },
   { name: 'SuiWallet', src: pluginPath('sui-wallet') },
+  { name: 'SuiLink', src: pluginPath('sui-link') },
 ]
 
 interface LoadedPlugin {

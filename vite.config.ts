@@ -35,6 +35,16 @@ export default defineConfig({
     tailwindcss(),
     copyPluginAssets(),
   ],
+  optimizeDeps: {
+    include: [
+      '@mysten/dapp-kit-react',
+      '@mysten/dapp-kit-core',
+      '@mysten/sui/grpc',
+      '@mysten/sui/faucet',
+      '@mysten/sui/utils',
+      'nanostores',
+    ],
+  },
   build: {
     modulePreload: false,
     rollupOptions: {
@@ -46,6 +56,7 @@ export default defineConfig({
         'plugins/hello-plugin': resolve(__dirname, 'plugins/hello-plugin/plugin.tsx'),
         'plugins/hello-world-sui': resolve(__dirname, 'plugins/hello-world-sui/plugin.tsx'),
         'plugins/sui-wallet': resolve(__dirname, 'plugins/sui-wallet/plugin.tsx'),
+        'plugins/sui-link': resolve(__dirname, 'plugins/sui-link/plugin.tsx'),
       },
       external: ['gsap', 'motion'],
       output: {
