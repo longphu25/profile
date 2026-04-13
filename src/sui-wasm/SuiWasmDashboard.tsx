@@ -144,9 +144,25 @@ const PLUGIN_GROUPS: PluginGroup[] = [
   },
   {
     id: 'walrus',
-    label: 'Walrus',
+    label: 'Walrus Storage',
     icon: '🦭',
     plugins: [
+      {
+        id: 'sui-walrus-upload',
+        name: 'SuiWalrusUpload',
+        label: 'Upload',
+        desc: 'Upload files to Walrus storage',
+        src: pluginPath('sui-walrus-upload'),
+        wasmDesc: 'Walrus Publisher HTTP API',
+      },
+      {
+        id: 'sui-walrus-viewer',
+        name: 'SuiWalrusViewer',
+        label: 'Viewer',
+        desc: 'View & download blobs by ID',
+        src: pluginPath('sui-walrus-viewer'),
+        wasmDesc: 'Walrus Aggregator HTTP API',
+      },
       {
         id: 'sui-walrus-earn',
         name: 'SuiWalrusEarn',

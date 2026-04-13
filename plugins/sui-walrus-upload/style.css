@@ -1,0 +1,90 @@
+/* SUI Walrus Upload Plugin */
+
+.sui-wup { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ededed; max-width: 100%; }
+.sui-wup__header { margin-bottom: 16px; }
+.sui-wup__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-wup__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+
+/* Drop zone */
+.sui-wup__drop {
+  border: 2px dashed #333; border-radius: 12px; padding: 32px 16px;
+  text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 14px;
+}
+.sui-wup__drop:hover, .sui-wup__drop--active { border-color: #4da2ff; background: #4da2ff08; }
+.sui-wup__drop-icon { font-size: 32px; margin-bottom: 8px; }
+.sui-wup__drop-text { font-size: 13px; color: #888; }
+.sui-wup__drop-hint { font-size: 11px; color: #555; margin-top: 4px; }
+
+/* File info */
+.sui-wup__file {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px;
+}
+.sui-wup__file-icon { font-size: 24px; }
+.sui-wup__file-info { flex: 1; min-width: 0; }
+.sui-wup__file-name { font-size: 13px; font-weight: 600; color: #ededed; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sui-wup__file-size { font-size: 11px; color: #888; }
+.sui-wup__file-remove { background: none; border: 1px solid #333; border-radius: 6px; color: #888; font-size: 12px; padding: 2px 8px; cursor: pointer; }
+.sui-wup__file-remove:hover { color: #f87171; border-color: #f87171; }
+
+/* Options */
+.sui-wup__options { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.sui-wup__field { flex: 1; min-width: 120px; }
+.sui-wup__label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; display: block; }
+.sui-wup__select, .sui-wup__input-sm {
+  width: 100%; background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  color: #ededed; font-size: 12px; padding: 8px 10px; outline: none; box-sizing: border-box;
+}
+
+/* Cost estimate */
+.sui-wup__cost {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 10px 14px; margin-bottom: 12px; font-size: 12px;
+}
+.sui-wup__cost-row { display: flex; justify-content: space-between; padding: 2px 0; }
+.sui-wup__cost-label { color: #666; }
+.sui-wup__cost-val { color: #ededed; font-weight: 500; }
+
+/* Progress */
+.sui-wup__progress { margin-bottom: 14px; }
+.sui-wup__progress-label { font-size: 11px; color: #888; margin-bottom: 4px; display: flex; justify-content: space-between; }
+.sui-wup__progress-bar { width: 100%; height: 6px; background: #1e1e22; border-radius: 3px; overflow: hidden; }
+.sui-wup__progress-fill { height: 100%; background: #4da2ff; border-radius: 3px; transition: width 0.3s; }
+.sui-wup__progress-step { font-size: 11px; color: #4da2ff; margin-top: 4px; }
+
+/* Action */
+.sui-wup__action {
+  width: 100%; background: #4da2ff; border: none; border-radius: 10px;
+  color: #fff; font-size: 14px; font-weight: 600; padding: 14px;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.sui-wup__action:hover { opacity: 0.85; }
+.sui-wup__action:disabled { opacity: 0.4; cursor: not-allowed; }
+.sui-wup__action--connect { background: #34d399; }
+
+/* Result */
+.sui-wup__result {
+  background: #0a2a0a; border: 1px solid #1a5c1a; border-radius: 8px;
+  padding: 14px; margin-bottom: 12px;
+}
+.sui-wup__result-title { font-size: 13px; font-weight: 600; color: #34d399; margin-bottom: 8px; }
+.sui-wup__result-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+.sui-wup__result-label { color: #666; }
+.sui-wup__result-val { color: #ededed; font-weight: 500; font-family: monospace; word-break: break-all; }
+.sui-wup__copy { background: #4da2ff20; border: 1px solid #4da2ff40; border-radius: 6px; color: #4da2ff; font-size: 10px; padding: 2px 8px; cursor: pointer; margin-left: 6px; }
+
+/* History */
+.sui-wup__section-title { font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin: 14px 0 8px; }
+.sui-wup__history-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; border-bottom: 1px solid #141416; font-size: 12px;
+}
+.sui-wup__history-name { font-weight: 500; color: #ededed; }
+.sui-wup__history-id { font-size: 10px; color: #4da2ff; font-family: monospace; }
+
+/* States */
+.sui-wup__error { background: #2a0a0a; border: 1px solid #5c1a1a; border-radius: 8px; color: #f87171; padding: 10px 14px; font-size: 12px; margin-bottom: 12px; }
+.sui-wup__footer { text-align: center; font-size: 11px; color: #555; margin-top: 12px; }
+.sui-wup__link { color: #4da2ff; text-decoration: none; }
+.sui-wup__link:hover { text-decoration: underline; }

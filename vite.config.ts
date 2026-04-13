@@ -83,6 +83,8 @@ export default defineConfig({
         'plugins/sui-wal-swap': resolve(__dirname, 'plugins/sui-wal-swap/plugin.tsx'),
         'plugins/sui-wallet-profile': resolve(__dirname, 'plugins/sui-wallet-profile/plugin.tsx'),
         'plugins/sui-payment': resolve(__dirname, 'plugins/sui-payment/plugin.tsx'),
+        'plugins/sui-walrus-upload': resolve(__dirname, 'plugins/sui-walrus-upload/plugin.tsx'),
+        'plugins/sui-walrus-viewer': resolve(__dirname, 'plugins/sui-walrus-viewer/plugin.tsx'),
       },
       external: ['gsap', 'motion'],
       preserveEntrySignatures: 'exports-only',
