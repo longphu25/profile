@@ -53,12 +53,26 @@ export default defineConfig({
         app: resolve(__dirname, 'app.html'),
         'plugin-demo': resolve(__dirname, 'plugin-demo.html'),
         'sui-plugin': resolve(__dirname, 'sui-plugin.html'),
+        'sui-plugin-wasm': resolve(__dirname, 'sui-plugin-wasm.html'),
         // Build plugins as separate entry points
         'plugins/hello-plugin': resolve(__dirname, 'plugins/hello-plugin/plugin.tsx'),
         'plugins/hello-world-sui': resolve(__dirname, 'plugins/hello-world-sui/plugin.tsx'),
         'plugins/sui-wallet': resolve(__dirname, 'plugins/sui-wallet/plugin.tsx'),
         'plugins/sui-link': resolve(__dirname, 'plugins/sui-link/plugin.tsx'),
         'plugins/sui-dual-wallet': resolve(__dirname, 'plugins/sui-dual-wallet/plugin.tsx'),
+        'plugins/sui-lending': resolve(__dirname, 'plugins/sui-lending/plugin.tsx'),
+        'plugins/sui-create-wallet': resolve(__dirname, 'plugins/sui-create-wallet/plugin.tsx'),
+        'plugins/sui-pool-explorer': resolve(__dirname, 'plugins/sui-pool-explorer/plugin.tsx'),
+        'plugins/sui-price-feed': resolve(__dirname, 'plugins/sui-price-feed/plugin.tsx'),
+        'plugins/sui-deepbook-portfolio': resolve(
+          __dirname,
+          'plugins/sui-deepbook-portfolio/plugin.tsx',
+        ),
+        'plugins/sui-deepbook-history': resolve(
+          __dirname,
+          'plugins/sui-deepbook-history/plugin.tsx',
+        ),
+        'plugins/sui-swap': resolve(__dirname, 'plugins/sui-swap/plugin.tsx'),
       },
       external: ['gsap', 'motion'],
       output: {
