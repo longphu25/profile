@@ -1,0 +1,104 @@
+/* SUI Payment Plugin */
+
+.sui-pay {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #ededed; max-width: 100%;
+}
+
+.sui-pay__header { margin-bottom: 16px; }
+.sui-pay__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-pay__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+
+/* Tabs */
+.sui-pay__tabs {
+  display: flex; gap: 2px; margin-bottom: 14px;
+  background: #18181c; border-radius: 8px; padding: 3px;
+}
+.sui-pay__tab {
+  flex: 1; background: none; border: none; color: #888;
+  font-size: 12px; font-weight: 500; padding: 8px 12px;
+  border-radius: 6px; cursor: pointer; transition: color 0.2s, background 0.2s;
+}
+.sui-pay__tab:hover { color: #ccc; }
+.sui-pay__tab--active { background: #4da2ff; color: #fff; }
+
+/* Form */
+.sui-pay__form {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 10px;
+  padding: 16px; margin-bottom: 14px;
+}
+.sui-pay__field { margin-bottom: 12px; }
+.sui-pay__label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; display: block; }
+.sui-pay__input {
+  width: 100%; background: #111114; border: 1px solid #2a2a2e; border-radius: 8px;
+  color: #ededed; font-size: 13px; padding: 10px 12px; outline: none;
+  box-sizing: border-box; transition: border-color 0.2s;
+}
+.sui-pay__input:focus { border-color: #4da2ff; }
+.sui-pay__input::placeholder { color: #444; }
+.sui-pay__select {
+  width: 100%; background: #111114; border: 1px solid #2a2a2e; border-radius: 8px;
+  color: #ededed; font-size: 13px; padding: 10px 12px; outline: none; cursor: pointer;
+}
+
+.sui-pay__action {
+  width: 100%; background: #4da2ff; border: none; border-radius: 10px;
+  color: #fff; font-size: 14px; font-weight: 600; padding: 14px;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.sui-pay__action:hover { opacity: 0.85; }
+.sui-pay__action:disabled { opacity: 0.4; cursor: not-allowed; }
+.sui-pay__action--connect { background: #34d399; }
+
+/* QR / Link result */
+.sui-pay__result {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 10px;
+  padding: 16px; margin-bottom: 14px; text-align: center;
+}
+.sui-pay__result-title { font-size: 13px; font-weight: 600; color: #ededed; margin-bottom: 10px; }
+.sui-pay__qr {
+  background: #fff; border-radius: 8px; padding: 12px; display: inline-block; margin-bottom: 10px;
+}
+.sui-pay__link-box {
+  background: #111114; border: 1px solid #2a2a2e; border-radius: 8px;
+  padding: 10px; font-size: 11px; color: #4da2ff; word-break: break-all;
+  font-family: monospace;
+}
+.sui-pay__copy-btn {
+  background: #4da2ff20; border: 1px solid #4da2ff40; border-radius: 6px;
+  color: #4da2ff; font-size: 11px; font-weight: 600; padding: 4px 12px;
+  cursor: pointer; margin-top: 8px; transition: background 0.2s;
+}
+.sui-pay__copy-btn:hover { background: #4da2ff30; }
+
+/* History */
+.sui-pay__section-title {
+  font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase;
+  letter-spacing: 0.5px; margin: 14px 0 8px;
+}
+.sui-pay__history-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; border-bottom: 1px solid #141416; font-size: 12px;
+}
+.sui-pay__history-row:hover { background: #18181c; }
+.sui-pay__history-amount { font-weight: 600; color: #ededed; }
+.sui-pay__history-status { font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+.sui-pay__history-status--paid { background: #34d39920; color: #34d399; }
+.sui-pay__history-status--pending { background: #fbbf2420; color: #fbbf24; }
+.sui-pay__history-status--expired { background: #f8717120; color: #f87171; }
+.sui-pay__history-meta { font-size: 10px; color: #555; }
+
+/* States */
+.sui-pay__loading { text-align: center; color: #666; padding: 20px 0; font-size: 13px; }
+.sui-pay__empty { text-align: center; color: #555; padding: 16px 0; font-size: 12px; }
+.sui-pay__error {
+  background: #2a0a0a; border: 1px solid #5c1a1a; border-radius: 8px;
+  color: #f87171; padding: 10px 14px; font-size: 12px; margin-bottom: 12px;
+}
+.sui-pay__success {
+  background: #0a2a0a; border: 1px solid #1a5c1a; border-radius: 8px;
+  color: #34d399; padding: 10px 14px; font-size: 12px; margin-bottom: 12px;
+}
+.sui-pay__footer { text-align: center; font-size: 11px; color: #555; margin-top: 12px; }
+.sui-pay__link { color: #4da2ff; text-decoration: none; }
+.sui-pay__link:hover { text-decoration: underline; }
