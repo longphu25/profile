@@ -75,6 +75,7 @@ export default defineConfig({
         'plugins/sui-swap': resolve(__dirname, 'plugins/sui-swap/plugin.tsx'),
       },
       external: ['gsap', 'motion'],
+      preserveEntrySignatures: 'exports-only',
       output: {
         globals: {
           gsap: 'gsap',
