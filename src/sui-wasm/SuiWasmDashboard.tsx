@@ -9,8 +9,11 @@
 // - This page shows WASM status and performance metrics for each plugin
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { getRegisteredComponents, unregisterComponent } from '../plugins/host'
-import { suiHostAPI } from '../sui-dashboard/sui-host'
+import {
+  getRegisteredSuiComponents,
+  unregisterSuiComponent,
+  suiHostAPI,
+} from '../sui-dashboard/sui-host'
 import { ShadowContainer } from '../plugins/ShadowContainer'
 import { loadWasmPlugin, type WasmPlugin } from './wasm-loader'
 
@@ -247,7 +250,7 @@ export function SuiWasmDashboard() {
 
     setLoadingId(meta.id)
     setError(null)
-    const beforeComponents = new Set(getRegisteredComponents())
+    const beforeComponents = new Set(getRegisteredSuiComponents())
     const startTime = performance.now()
 
     try {
@@ -255,7 +258,7 @@ export function SuiWasmDashboard() {
       plugin.mount?.()
       const loadTimeMs = Math.round(performance.now() - startTime)
 
-      const afterComponents = getRegisteredComponents()
+      const afterComponents = getRegisteredSuiComponents()
       const newComponents = afterComponents.filter((c) => !beforeComponents.has(c))
 
       setLoaded((prev) => {
@@ -275,7 +278,7 @@ export function SuiWasmDashboard() {
       const target = prev.find((l) => l.meta.id === id)
       if (target) {
         target.plugin.unmount?.()
-        target.componentNames.forEach(unregisterComponent)
+        target.componentNames.forEach(unregisterSuiComponent)
       }
       return prev.filter((l) => l.meta.id !== id)
     })
