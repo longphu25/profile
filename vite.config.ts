@@ -73,6 +73,10 @@ export default defineConfig({
           'plugins/sui-deepbook-history/plugin.tsx',
         ),
         'plugins/sui-swap': resolve(__dirname, 'plugins/sui-swap/plugin.tsx'),
+        'plugins/sui-deepbook-orderbook': resolve(
+          __dirname,
+          'plugins/sui-deepbook-orderbook/plugin.tsx',
+        ),
       },
       external: ['gsap', 'motion'],
       preserveEntrySignatures: 'exports-only',

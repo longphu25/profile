@@ -93,6 +93,14 @@ const WASM_PLUGINS: PluginEntry[] = [
     src: pluginPath('sui-swap'),
     wasmDesc: 'ESM + @mysten/deepbook-v3 SDK (BCS encoding)',
   },
+  {
+    id: 'sui-deepbook-orderbook',
+    name: 'SuiDeepBookOrderbook',
+    label: 'Orderbook',
+    desc: 'Live Level 2 orderbook + depth chart',
+    src: pluginPath('sui-deepbook-orderbook'),
+    wasmDesc: 'Standard ESM — DeepBook Indexer REST API',
+  },
 ]
 
 interface LoadedPlugin {

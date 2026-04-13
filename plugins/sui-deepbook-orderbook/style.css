@@ -1,0 +1,145 @@
+/* SUI DeepBook Orderbook Plugin */
+
+.sui-ob {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #ededed;
+  max-width: 100%;
+}
+
+.sui-ob__header { margin-bottom: 16px; }
+
+.sui-ob__title-row { display: flex; align-items: center; gap: 10px; }
+
+.sui-ob__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+
+.sui-ob__refresh {
+  background: none; border: 1px solid #333; border-radius: 6px;
+  color: #888; font-size: 14px; padding: 2px 8px; cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.sui-ob__refresh:hover { color: #4da2ff; border-color: #4da2ff; }
+.sui-ob__refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.sui-ob__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+
+/* Controls */
+.sui-ob__controls { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+
+.sui-ob__select {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  color: #ededed; font-size: 12px; padding: 8px 12px; outline: none; cursor: pointer;
+}
+
+.sui-ob__auto-label {
+  font-size: 11px; color: #888; display: flex; align-items: center; gap: 4px; cursor: pointer;
+  margin-left: auto;
+}
+
+.sui-ob__auto-label input { accent-color: #4da2ff; }
+
+/* Price banner */
+.sui-ob__price-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 10px 14px; margin-bottom: 12px;
+}
+
+.sui-ob__mid-price { font-size: 20px; font-weight: 700; color: #ededed; }
+
+.sui-ob__spread {
+  font-size: 12px; color: #888;
+}
+
+.sui-ob__spread-val { color: #ededed; font-weight: 500; }
+
+/* Orderbook grid */
+.sui-ob__book {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;
+}
+
+.sui-ob__side { display: flex; flex-direction: column; gap: 1px; }
+
+.sui-ob__side-label {
+  font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.3px;
+  margin-bottom: 6px; font-weight: 500;
+}
+
+.sui-ob__level {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; padding: 3px 8px; border-radius: 3px; position: relative;
+  overflow: hidden;
+}
+
+.sui-ob__level-bar {
+  position: absolute; top: 0; bottom: 0; right: 0; opacity: 0.12;
+}
+
+.sui-ob__level--bid .sui-ob__level-bar { background: #34d399; }
+.sui-ob__level--ask .sui-ob__level-bar { background: #f87171; }
+
+.sui-ob__level-price { font-weight: 500; position: relative; z-index: 1; }
+.sui-ob__level--bid .sui-ob__level-price { color: #34d399; }
+.sui-ob__level--ask .sui-ob__level-price { color: #f87171; }
+
+.sui-ob__level-size { color: #888; position: relative; z-index: 1; }
+.sui-ob__level-total { color: #555; font-size: 10px; position: relative; z-index: 1; }
+
+/* Depth chart */
+.sui-ob__depth {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 12px;
+}
+
+.sui-ob__depth-title {
+  font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.3px;
+  margin-bottom: 8px;
+}
+
+.sui-ob__depth-chart {
+  display: flex; height: 60px; gap: 2px; align-items: flex-end;
+}
+
+.sui-ob__depth-bar {
+  flex: 1; border-radius: 2px 2px 0 0; min-width: 2px;
+  transition: height 0.3s;
+}
+
+.sui-ob__depth-bar--bid { background: #34d39940; }
+.sui-ob__depth-bar--ask { background: #f8717140; }
+
+.sui-ob__depth-labels {
+  display: flex; justify-content: space-between; font-size: 9px; color: #555; margin-top: 4px;
+}
+
+/* States */
+.sui-ob__loading { text-align: center; color: #666; padding: 32px 0; font-size: 13px; }
+
+.sui-ob__error {
+  background: #2a0a0a; border: 1px solid #5c1a1a; border-radius: 8px;
+  color: #f87171; padding: 10px 14px; font-size: 12px; margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.sui-ob__retry {
+  background: none; border: 1px solid #5c1a1a; border-radius: 4px;
+  color: #f87171; font-size: 11px; padding: 3px 10px; cursor: pointer;
+}
+.sui-ob__retry:hover { background: #3a1010; }
+
+.sui-ob__footer {
+  text-align: center; font-size: 11px; color: #555; margin-top: 12px;
+}
+.sui-ob__link { color: #4da2ff; text-decoration: none; }
+.sui-ob__link:hover { text-decoration: underline; }
+
+/* Pulse dot for auto-refresh */
+.sui-ob__pulse {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: #34d399; margin-right: 4px;
+  animation: sui-ob-pulse 2s infinite;
+}
+
+@keyframes sui-ob-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
