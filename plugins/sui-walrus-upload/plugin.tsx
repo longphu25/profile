@@ -39,7 +39,7 @@ const NET_CONFIG: Record<
     aggregator: 'https://aggregator.walrus-testnet.walrus.space',
     uploadRelay: 'https://upload-relay.testnet.walrus.space',
     walType: '0x9ef7676a9f81937a52ae4b2af8d511a28a0b080477c0c2db40b0ab8882240d76::wal::WAL',
-    walPackage: '0x9ef7676a9f81937a52ae4b2af8d511a28a0b080477c0c2db40b0ab8882240d76',
+    walPackage: '0x82593828ed3fcb8c6a235eac9abd0adbe9c5f9bbffa9b1e7a45cdd884481ef9f',
   },
 }
 
