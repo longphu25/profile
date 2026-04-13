@@ -125,6 +125,14 @@ const WASM_PLUGINS: PluginEntry[] = [
     src: pluginPath('sui-walrus-earn'),
     wasmDesc: 'ESM + @mysten/sui on-chain reads + tx signing',
   },
+  {
+    id: 'sui-wal-swap',
+    name: 'SuiWalSwap',
+    label: 'WAL Swap',
+    desc: 'Swap WAL ↔ SUI / USDC via DeepBook',
+    src: pluginPath('sui-wal-swap'),
+    wasmDesc: 'ESM + @mysten/deepbook-v3 SDK (BCS encoding)',
+  },
 ]
 
 interface LoadedPlugin {

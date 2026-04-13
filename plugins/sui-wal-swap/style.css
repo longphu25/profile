@@ -1,0 +1,120 @@
+/* SUI WAL Swap Plugin */
+
+.sui-walswap {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #ededed;
+  max-width: 100%;
+}
+
+.sui-walswap__header { margin-bottom: 16px; }
+.sui-walswap__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-walswap__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+
+/* Pair tabs */
+.sui-walswap__pairs {
+  display: flex; gap: 2px; margin-bottom: 14px;
+  background: #18181c; border-radius: 8px; padding: 3px;
+}
+
+.sui-walswap__pair-btn {
+  flex: 1; background: none; border: none; color: #888;
+  font-size: 12px; font-weight: 500; padding: 8px 12px;
+  border-radius: 6px; cursor: pointer; transition: color 0.2s, background 0.2s;
+}
+.sui-walswap__pair-btn:hover { color: #ccc; }
+.sui-walswap__pair-btn--active { background: #4da2ff; color: #fff; }
+
+/* Swap card */
+.sui-walswap__card {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 12px;
+  padding: 16px; margin-bottom: 12px;
+}
+
+.sui-walswap__card-label {
+  font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+}
+
+.sui-walswap__card-row { display: flex; gap: 10px; align-items: center; }
+
+.sui-walswap__amount {
+  flex: 1; background: transparent; border: none; color: #ededed;
+  font-size: 24px; font-weight: 600; outline: none; min-width: 0;
+}
+.sui-walswap__amount::placeholder { color: #333; }
+
+.sui-walswap__token {
+  background: #111114; border: 1px solid #2a2a2e; border-radius: 8px;
+  color: #ededed; font-size: 13px; font-weight: 600; padding: 8px 14px;
+  min-width: 80px; text-align: center;
+}
+
+.sui-walswap__card-sub {
+  display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: #666;
+}
+
+.sui-walswap__balance-btn {
+  background: none; border: none; color: #4da2ff; font-size: 11px;
+  cursor: pointer; padding: 0; text-decoration: underline;
+}
+
+/* Flip */
+.sui-walswap__flip { display: flex; justify-content: center; margin: -6px 0; position: relative; z-index: 1; }
+
+.sui-walswap__flip-btn {
+  background: #111114; border: 2px solid #1e1e22; border-radius: 8px;
+  color: #888; font-size: 16px; width: 36px; height: 36px;
+  cursor: pointer; transition: color 0.2s, border-color 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.sui-walswap__flip-btn:hover { color: #4da2ff; border-color: #4da2ff; }
+
+/* Quote */
+.sui-walswap__quote {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 12px;
+}
+
+.sui-walswap__quote-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+.sui-walswap__quote-label { color: #666; }
+.sui-walswap__quote-val { color: #ededed; font-weight: 500; }
+.sui-walswap__quote-val--green { color: #34d399; }
+.sui-walswap__quote-val--red { color: #f87171; }
+
+/* Slippage */
+.sui-walswap__slippage { display: flex; align-items: center; gap: 4px; }
+
+.sui-walswap__slip-btn {
+  background: transparent; color: #888; border: 1px solid #333;
+  border-radius: 4px; padding: 1px 6px; font-size: 11px; cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.sui-walswap__slip-btn--active { background: #4da2ff; color: #fff; border-color: #4da2ff; }
+
+/* Action */
+.sui-walswap__action {
+  width: 100%; background: #4da2ff; border: none; border-radius: 10px;
+  color: #fff; font-size: 14px; font-weight: 600; padding: 14px;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.sui-walswap__action:hover { opacity: 0.85; }
+.sui-walswap__action:disabled { opacity: 0.4; cursor: not-allowed; }
+.sui-walswap__action--connect { background: #34d399; }
+
+/* States */
+.sui-walswap__error {
+  background: #2a0a0a; border: 1px solid #5c1a1a; border-radius: 8px;
+  color: #f87171; padding: 10px 14px; font-size: 12px; margin-bottom: 12px;
+}
+
+.sui-walswap__success {
+  background: #0a2a0a; border: 1px solid #1a5c1a; border-radius: 8px;
+  color: #34d399; padding: 10px 14px; font-size: 12px; margin-bottom: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.sui-walswap__link { color: #4da2ff; text-decoration: none; }
+.sui-walswap__link:hover { text-decoration: underline; }
+
+.sui-walswap__loading { text-align: center; color: #666; padding: 20px 0; font-size: 13px; }
+
+.sui-walswap__footer { text-align: center; font-size: 11px; color: #555; margin-top: 12px; }
