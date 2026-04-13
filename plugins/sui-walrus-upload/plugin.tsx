@@ -24,6 +24,7 @@ const NET_CONFIG: Record<
     aggregator: string
     uploadRelay: string
     walType: string
+    walPackage: string
   }
 > = {
   mainnet: {
@@ -31,12 +32,14 @@ const NET_CONFIG: Record<
     aggregator: 'https://aggregator.walrus-mainnet.walrus.space',
     uploadRelay: 'https://upload-relay.mainnet.walrus.space',
     walType: '0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL',
+    walPackage: '0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59',
   },
   testnet: {
     rpc: 'https://fullnode.testnet.sui.io:443',
     aggregator: 'https://aggregator.walrus-testnet.walrus.space',
     uploadRelay: 'https://upload-relay.testnet.walrus.space',
     walType: '0x9ef7676a9f81937a52ae4b2af8d511a28a0b080477c0c2db40b0ab8882240d76::wal::WAL',
+    walPackage: '0x9ef7676a9f81937a52ae4b2af8d511a28a0b080477c0c2db40b0ab8882240d76',
   },
 }
 
@@ -166,18 +169,11 @@ function WalrusUploadContent() {
           const exchangeId = TESTNET_WALRUS_PACKAGE_CONFIG.exchangeIds?.[0]
           if (!exchangeId) throw new Error('No testnet exchange object available')
 
-          // Get the walrus package ID from system object
-          const sysObj = await client.core.getObject({
-            objectId: TESTNET_WALRUS_PACKAGE_CONFIG.systemObjectId,
-            include: { content: true },
-          })
-          void sysObj // package ID inferred by SDK
-
           const exchangeTx = new Transaction()
           exchangeTx.setSender(walletAddr)
           const [suiCoin] = exchangeTx.splitCoins(exchangeTx.gas, [exchangeTx.pure.u64(neededMist)])
           exchangeTx.moveCall({
-            target: `${TESTNET_WALRUS_PACKAGE_CONFIG.systemObjectId}::wal_exchange::exchange`,
+            target: `${net.walPackage}::wal_exchange::exchange`,
             arguments: [exchangeTx.object(exchangeId), suiCoin],
           })
           await sharedHost.signAndExecuteTransaction(exchangeTx)
