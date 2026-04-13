@@ -146,6 +146,19 @@ function WalletProfileContent() {
     } satisfies WalletProfile)
   }, [account?.address, suinsName, network, balances])
 
+  // Register transaction signer so other plugins can sign via host API
+  useEffect(() => {
+    if (!sharedHost || !connection.isConnected) return
+    sharedHost.registerSigner(async (transaction) => {
+      const result = await dAppKit.signAndExecuteTransaction({ transaction })
+      const tx = result.Transaction ?? result.FailedTransaction
+      if (result.$kind === 'FailedTransaction') {
+        throw new Error(`Transaction failed: ${tx?.digest}`)
+      }
+      return { digest: tx!.digest, effects: tx }
+    })
+  }, [connection.isConnected, dAppKit])
+
   const handleConnect = async (wallet: { name: string }) => {
     setConnecting(true)
     setError(null)

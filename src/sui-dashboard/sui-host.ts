@@ -94,6 +94,10 @@ export const suiHostAPI: SuiHostAPI = {
     return signAndExecuteCallback(transaction)
   },
 
+  registerSigner(signer: (transaction: Transaction) => Promise<TransactionResult>) {
+    signAndExecuteCallback = signer
+  },
+
   // --- Shared Data Store ---
   setSharedData(key, value) {
     sharedDataStore[key] = value

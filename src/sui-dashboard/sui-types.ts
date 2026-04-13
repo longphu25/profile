@@ -50,6 +50,8 @@ export interface SuiHostAPI extends HostAPI {
   requestNetworkSwitch: (network: string) => void
   /** Sign and execute a transaction via the connected wallet */
   signAndExecuteTransaction: (transaction: Transaction) => Promise<TransactionResult>
+  /** Register a transaction signer (called by wallet plugins) */
+  registerSigner: (signer: (transaction: Transaction) => Promise<TransactionResult>) => void
   /** Shared data store: set a value visible to all plugins */
   setSharedData: (key: string, value: unknown) => void
   /** Shared data store: get a value set by any plugin */
