@@ -1,0 +1,163 @@
+/* SUI Walrus Earn Plugin */
+
+.sui-earn {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #ededed;
+  max-width: 100%;
+}
+
+.sui-earn__header { margin-bottom: 16px; }
+.sui-earn__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-earn__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+
+/* Promo banner */
+.sui-earn__promo {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid #4da2ff30;
+  border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 12px;
+}
+
+.sui-earn__promo-icon { font-size: 28px; flex-shrink: 0; }
+
+.sui-earn__promo-text { flex: 1; }
+.sui-earn__promo-title { font-size: 13px; font-weight: 600; color: #4da2ff; margin: 0 0 2px; }
+.sui-earn__promo-sub { font-size: 11px; color: #888; margin: 0; }
+
+/* Stats */
+.sui-earn__stats {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px; margin-bottom: 14px;
+}
+
+.sui-earn__stat {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
+}
+
+.sui-earn__stat-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+.sui-earn__stat-value { font-size: 15px; font-weight: 600; color: #ededed; }
+.sui-earn__stat-value--green { color: #34d399; }
+
+/* Node list */
+.sui-earn__section-title {
+  font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase;
+  letter-spacing: 0.5px; margin: 14px 0 8px;
+}
+
+.sui-earn__search {
+  width: 100%; background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  color: #ededed; font-size: 12px; padding: 8px 12px; margin-bottom: 10px;
+  outline: none; box-sizing: border-box; transition: border-color 0.2s;
+}
+.sui-earn__search:focus { border-color: #4da2ff; }
+.sui-earn__search::placeholder { color: #555; }
+
+.sui-earn__table-wrap { overflow-x: auto; }
+.sui-earn__table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+.sui-earn__th {
+  text-align: left; font-weight: 500; color: #666; padding: 8px 10px;
+  border-bottom: 1px solid #1e1e22; font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.3px; white-space: nowrap;
+}
+.sui-earn__th--right { text-align: right; }
+.sui-earn__th--sort { cursor: pointer; user-select: none; transition: color 0.2s; }
+.sui-earn__th--sort:hover { color: #4da2ff; }
+
+.sui-earn__row { transition: background 0.15s; cursor: pointer; }
+.sui-earn__row:hover { background: #18181c; }
+.sui-earn__row--selected { background: #18181c; border-left: 2px solid #4da2ff; }
+
+.sui-earn__td { padding: 10px; border-bottom: 1px solid #141416; vertical-align: middle; }
+.sui-earn__td--right { text-align: right; }
+.sui-earn__td--green { color: #34d399; font-weight: 600; }
+.sui-earn__td--muted { color: #888; }
+
+.sui-earn__sub { font-size: 10px; color: #666; margin-top: 2px; }
+
+.sui-earn__node-name { font-weight: 600; color: #ededed; }
+
+/* Stake panel */
+.sui-earn__panel {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 10px;
+  padding: 16px; margin-bottom: 14px;
+}
+
+.sui-earn__panel-title { font-size: 14px; font-weight: 600; color: #ededed; margin: 0 0 12px; }
+
+.sui-earn__panel-row {
+  display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0;
+}
+.sui-earn__panel-label { color: #666; }
+.sui-earn__panel-val { color: #ededed; font-weight: 500; }
+
+.sui-earn__input-group { margin-top: 12px; }
+
+.sui-earn__input-label { font-size: 11px; color: #666; margin-bottom: 4px; }
+
+.sui-earn__input-row { display: flex; gap: 8px; }
+
+.sui-earn__input {
+  flex: 1; background: #111114; border: 1px solid #2a2a2e; border-radius: 8px;
+  color: #ededed; font-size: 14px; font-weight: 600; padding: 10px 12px;
+  outline: none; box-sizing: border-box; transition: border-color 0.2s;
+}
+.sui-earn__input:focus { border-color: #4da2ff; }
+.sui-earn__input::placeholder { color: #333; }
+
+.sui-earn__max-btn {
+  background: #4da2ff20; border: 1px solid #4da2ff40; border-radius: 6px;
+  color: #4da2ff; font-size: 11px; font-weight: 600; padding: 0 12px;
+  cursor: pointer; transition: background 0.2s;
+}
+.sui-earn__max-btn:hover { background: #4da2ff30; }
+
+.sui-earn__action {
+  width: 100%; background: #4da2ff; border: none; border-radius: 10px;
+  color: #fff; font-size: 14px; font-weight: 600; padding: 14px;
+  cursor: pointer; transition: opacity 0.2s; margin-top: 12px;
+}
+.sui-earn__action:hover { opacity: 0.85; }
+.sui-earn__action:disabled { opacity: 0.4; cursor: not-allowed; }
+.sui-earn__action--connect { background: #34d399; }
+
+.sui-earn__warning {
+  font-size: 11px; color: #fbbf24; margin-top: 8px;
+  display: flex; align-items: center; gap: 4px;
+}
+
+/* My stakes */
+.sui-earn__my-stakes { margin-top: 14px; }
+
+.sui-earn__stake-card {
+  background: #111114; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 10px 14px; margin-bottom: 8px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.sui-earn__stake-info { display: flex; flex-direction: column; gap: 2px; }
+.sui-earn__stake-amount { font-size: 14px; font-weight: 600; color: #ededed; }
+.sui-earn__stake-node { font-size: 11px; color: #888; }
+.sui-earn__stake-status { font-size: 10px; font-weight: 500; padding: 2px 6px; border-radius: 4px; }
+.sui-earn__stake-status--active { background: #34d39920; color: #34d399; }
+.sui-earn__stake-status--pending { background: #fbbf2420; color: #fbbf24; }
+.sui-earn__stake-status--withdrawing { background: #f8717120; color: #f87171; }
+
+/* States */
+.sui-earn__loading { text-align: center; color: #666; padding: 32px 0; font-size: 13px; }
+.sui-earn__empty { text-align: center; color: #555; padding: 24px 0; font-size: 12px; }
+
+.sui-earn__error {
+  background: #2a0a0a; border: 1px solid #5c1a1a; border-radius: 8px;
+  color: #f87171; padding: 10px 14px; font-size: 12px; margin-bottom: 12px;
+}
+
+.sui-earn__success {
+  background: #0a2a0a; border: 1px solid #1a5c1a; border-radius: 8px;
+  color: #34d399; padding: 10px 14px; font-size: 12px; margin-bottom: 12px;
+}
+
+.sui-earn__footer { text-align: center; font-size: 11px; color: #555; margin-top: 12px; }
+.sui-earn__link { color: #4da2ff; text-decoration: none; }
+.sui-earn__link:hover { text-decoration: underline; }

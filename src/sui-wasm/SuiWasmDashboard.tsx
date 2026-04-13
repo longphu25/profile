@@ -117,6 +117,14 @@ const WASM_PLUGINS: PluginEntry[] = [
     src: pluginPath('sui-margin-manager'),
     wasmDesc: 'Standard ESM — DeepBook Indexer REST API',
   },
+  {
+    id: 'sui-walrus-earn',
+    name: 'SuiWalrusEarn',
+    label: 'Earn WAL',
+    desc: 'Stake WAL with Walrus storage nodes',
+    src: pluginPath('sui-walrus-earn'),
+    wasmDesc: 'ESM + @mysten/sui on-chain reads + tx signing',
+  },
 ]
 
 interface LoadedPlugin {
