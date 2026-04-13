@@ -28,120 +28,173 @@ interface PluginEntry {
   wasmDesc: string
 }
 
-const WASM_PLUGINS: PluginEntry[] = [
+interface PluginGroup {
+  id: string
+  label: string
+  icon: string
+  plugins: PluginEntry[]
+}
+
+const PLUGIN_GROUPS: PluginGroup[] = [
   {
-    id: 'sui-wallet-profile',
-    name: 'SuiWalletProfile',
-    label: '🔑 Wallet Profile',
-    desc: 'Connect wallet, SuiNS, tokens (required)',
-    src: pluginPath('sui-wallet-profile'),
-    wasmDesc: 'ESM + @mysten/dapp-kit + SuiNS resolution',
+    id: 'core',
+    label: 'Core',
+    icon: '🔑',
+    plugins: [
+      {
+        id: 'sui-wallet-profile',
+        name: 'SuiWalletProfile',
+        label: 'Wallet Profile',
+        desc: 'Connect wallet, SuiNS, tokens (required)',
+        src: pluginPath('sui-wallet-profile'),
+        wasmDesc: 'ESM + @mysten/dapp-kit + SuiNS',
+      },
+      {
+        id: 'sui-create-wallet',
+        name: 'SuiCreateWallet',
+        label: 'Create Wallet',
+        desc: 'Generate Secp256k1 keypairs',
+        src: pluginPath('sui-create-wallet'),
+        wasmDesc: '@noble/curves + @noble/hashes + @scure/bip39',
+      },
+      {
+        id: 'hello-world-sui',
+        name: 'HelloWorldSui',
+        label: 'Faucet',
+        desc: 'Request SUI from faucet',
+        src: pluginPath('hello-world-sui'),
+        wasmDesc: 'Standard ESM',
+      },
+    ],
   },
   {
-    id: 'sui-create-wallet',
-    name: 'SuiCreateWallet',
-    label: 'Create Wallet',
-    desc: 'Generate Secp256k1 keypairs',
-    src: pluginPath('sui-create-wallet'),
-    wasmDesc: '@noble/curves secp256k1 + @noble/hashes BLAKE2b + @scure/bip39',
+    id: 'deepbook',
+    label: 'DeepBook Trading',
+    icon: '📊',
+    plugins: [
+      {
+        id: 'sui-pool-explorer',
+        name: 'SuiPoolExplorer',
+        label: 'Pool Explorer',
+        desc: 'Browse all DeepBook v3 pools',
+        src: pluginPath('sui-pool-explorer'),
+        wasmDesc: 'DeepBook Indexer REST API',
+      },
+      {
+        id: 'sui-deepbook-orderbook',
+        name: 'SuiDeepBookOrderbook',
+        label: 'Orderbook',
+        desc: 'Live Level 2 orderbook + depth chart',
+        src: pluginPath('sui-deepbook-orderbook'),
+        wasmDesc: 'DeepBook Indexer REST API',
+      },
+      {
+        id: 'sui-price-feed',
+        name: 'SuiPriceFeed',
+        label: 'Price Feed',
+        desc: 'Live prices + OHLCV sparkline',
+        src: pluginPath('sui-price-feed'),
+        wasmDesc: 'DeepBook Indexer REST API',
+      },
+      {
+        id: 'sui-swap',
+        name: 'SuiSwap',
+        label: 'Swap',
+        desc: 'Trade via DeepBook v3 orderbook',
+        src: pluginPath('sui-swap'),
+        wasmDesc: '@mysten/deepbook-v3 SDK',
+      },
+      {
+        id: 'sui-deepbook-portfolio',
+        name: 'SuiDeepBookPortfolio',
+        label: 'Portfolio',
+        desc: 'Margin positions, collateral & points',
+        src: pluginPath('sui-deepbook-portfolio'),
+        wasmDesc: 'DeepBook Indexer REST API',
+      },
+      {
+        id: 'sui-deepbook-history',
+        name: 'SuiDeepBookHistory',
+        label: 'Trade History',
+        desc: 'Recent trades per pool',
+        src: pluginPath('sui-deepbook-history'),
+        wasmDesc: 'DeepBook Indexer REST API',
+      },
+      {
+        id: 'sui-margin-manager',
+        name: 'SuiMarginManager',
+        label: 'Margin Manager',
+        desc: 'Inspect margin positions & orders',
+        src: pluginPath('sui-margin-manager'),
+        wasmDesc: 'DeepBook Indexer REST API',
+      },
+      {
+        id: 'sui-hedging-monitor',
+        name: 'SuiHedgingMonitor',
+        label: 'Hedging Monitor',
+        desc: 'Monitor hedging bot instance',
+        src: pluginPath('sui-hedging-monitor'),
+        wasmDesc: 'Bot REST/SSE API',
+      },
+    ],
   },
   {
-    id: 'sui-lending',
-    name: 'SuiLending',
-    label: 'Lending Pools',
-    desc: 'Scallop lending markets (API fetch)',
-    src: pluginPath('sui-lending'),
-    wasmDesc: 'Standard ESM — no WASM crypto',
+    id: 'walrus',
+    label: 'Walrus',
+    icon: '🦭',
+    plugins: [
+      {
+        id: 'sui-walrus-earn',
+        name: 'SuiWalrusEarn',
+        label: 'Earn WAL',
+        desc: 'Stake WAL with storage nodes',
+        src: pluginPath('sui-walrus-earn'),
+        wasmDesc: '@mysten/sui on-chain + tx signing',
+      },
+      {
+        id: 'sui-wal-swap',
+        name: 'SuiWalSwap',
+        label: 'WAL Swap',
+        desc: 'Swap WAL ↔ SUI / USDC',
+        src: pluginPath('sui-wal-swap'),
+        wasmDesc: '@mysten/deepbook-v3 SDK',
+      },
+    ],
   },
   {
-    id: 'hello-world-sui',
-    name: 'HelloWorldSui',
-    label: 'Faucet',
-    desc: 'Request SUI from faucet',
-    src: pluginPath('hello-world-sui'),
-    wasmDesc: 'Standard ESM — uses @mysten/sui gRPC client',
+    id: 'payment',
+    label: 'Payment Kit',
+    icon: '💳',
+    plugins: [
+      {
+        id: 'sui-payment',
+        name: 'SuiPayment',
+        label: 'Payment',
+        desc: 'Create & pay payment requests',
+        src: pluginPath('sui-payment'),
+        wasmDesc: '@mysten/payment-kit',
+      },
+    ],
   },
   {
-    id: 'sui-pool-explorer',
-    name: 'SuiPoolExplorer',
-    label: 'Pool Explorer',
-    desc: 'Browse all DeepBook v3 pools',
-    src: pluginPath('sui-pool-explorer'),
-    wasmDesc: 'Standard ESM — DeepBook Indexer REST API',
-  },
-  {
-    id: 'sui-price-feed',
-    name: 'SuiPriceFeed',
-    label: 'Price Feed',
-    desc: 'Live prices + OHLCV sparkline',
-    src: pluginPath('sui-price-feed'),
-    wasmDesc: 'Standard ESM — DeepBook Indexer REST API',
-  },
-  {
-    id: 'sui-deepbook-portfolio',
-    name: 'SuiDeepBookPortfolio',
-    label: 'Portfolio',
-    desc: 'Margin positions, collateral & points',
-    src: pluginPath('sui-deepbook-portfolio'),
-    wasmDesc: 'Standard ESM — DeepBook Indexer REST API',
-  },
-  {
-    id: 'sui-deepbook-history',
-    name: 'SuiDeepBookHistory',
-    label: 'Trade History',
-    desc: 'Recent trades per pool',
-    src: pluginPath('sui-deepbook-history'),
-    wasmDesc: 'Standard ESM — DeepBook Indexer REST API',
-  },
-  {
-    id: 'sui-swap',
-    name: 'SuiSwap',
-    label: 'Swap',
-    desc: 'Trade via DeepBook v3 orderbook',
-    src: pluginPath('sui-swap'),
-    wasmDesc: 'ESM + @mysten/deepbook-v3 SDK (BCS encoding)',
-  },
-  {
-    id: 'sui-deepbook-orderbook',
-    name: 'SuiDeepBookOrderbook',
-    label: 'Orderbook',
-    desc: 'Live Level 2 orderbook + depth chart',
-    src: pluginPath('sui-deepbook-orderbook'),
-    wasmDesc: 'Standard ESM — DeepBook Indexer REST API',
-  },
-  {
-    id: 'sui-hedging-monitor',
-    name: 'SuiHedgingMonitor',
-    label: 'Hedging Monitor',
-    desc: 'Monitor a running hedging bot instance',
-    src: pluginPath('sui-hedging-monitor'),
-    wasmDesc: 'Standard ESM — Bot REST/SSE API',
-  },
-  {
-    id: 'sui-margin-manager',
-    name: 'SuiMarginManager',
-    label: 'Margin Manager',
-    desc: 'Inspect margin positions, debts & orders',
-    src: pluginPath('sui-margin-manager'),
-    wasmDesc: 'Standard ESM — DeepBook Indexer REST API',
-  },
-  {
-    id: 'sui-walrus-earn',
-    name: 'SuiWalrusEarn',
-    label: 'Earn WAL',
-    desc: 'Stake WAL with Walrus storage nodes',
-    src: pluginPath('sui-walrus-earn'),
-    wasmDesc: 'ESM + @mysten/sui on-chain reads + tx signing',
-  },
-  {
-    id: 'sui-wal-swap',
-    name: 'SuiWalSwap',
-    label: 'WAL Swap',
-    desc: 'Swap WAL ↔ SUI / USDC via DeepBook',
-    src: pluginPath('sui-wal-swap'),
-    wasmDesc: 'ESM + @mysten/deepbook-v3 SDK (BCS encoding)',
+    id: 'defi',
+    label: 'DeFi',
+    icon: '🏦',
+    plugins: [
+      {
+        id: 'sui-lending',
+        name: 'SuiLending',
+        label: 'Lending Pools',
+        desc: 'Scallop lending markets',
+        src: pluginPath('sui-lending'),
+        wasmDesc: 'Scallop Indexer API',
+      },
+    ],
   },
 ]
+
+// Flat list for lookup
+const ALL_PLUGINS = PLUGIN_GROUPS.flatMap((g) => g.plugins)
 
 interface LoadedPlugin {
   plugin: WasmPlugin
@@ -171,6 +224,7 @@ export function SuiWasmDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<string | null>(null)
   const [wasmSupported, setWasmSupported] = useState<boolean | null>(null)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const initRef = useRef(false)
 
   // Check WebAssembly support
@@ -229,11 +283,20 @@ export function SuiWasmDashboard() {
 
   // Auto-load first plugin
   useEffect(() => {
-    if (!initRef.current && WASM_PLUGINS.length > 0) {
+    if (!initRef.current && ALL_PLUGINS.length > 0) {
       initRef.current = true
-      handleLoad(WASM_PLUGINS[0])
+      handleLoad(ALL_PLUGINS[0])
     }
   }, [handleLoad])
+
+  const toggleGroup = (groupId: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(groupId)) next.delete(groupId)
+      else next.add(groupId)
+      return next
+    })
+  }
 
   const activePlugin = loaded.find((l) => l.meta.id === activeTab)
 
@@ -289,61 +352,99 @@ export function SuiWasmDashboard() {
         {/* Sidebar */}
         <aside className="w-72 shrink-0 border-r border-[#1e1e22] p-4">
           <div className="mb-4 text-xs font-semibold uppercase tracking-wider text-[#555]">
-            WASM Plugins
+            Plugins ({ALL_PLUGINS.length})
           </div>
-          <nav className="flex flex-col gap-1">
-            {WASM_PLUGINS.map((meta) => {
-              const isLoaded = loaded.some((l) => l.meta.id === meta.id)
-              const isActive = activeTab === meta.id
-              const isLoading = loadingId === meta.id
-              const loadedPlugin = loaded.find((l) => l.meta.id === meta.id)
-              const usesWasm =
-                loadedPlugin?.plugin._wasmMeta?.usesWasm ?? meta.wasmDesc.includes('noble')
+          <nav className="flex flex-col gap-0.5">
+            {PLUGIN_GROUPS.map((group) => {
+              const isCollapsed = collapsedGroups.has(group.id)
+              const groupLoadedCount = group.plugins.filter((p) =>
+                loaded.some((l) => l.meta.id === p.id),
+              ).length
 
               return (
-                <button
-                  key={meta.id}
-                  onClick={() => handleLoad(meta)}
-                  disabled={isLoading}
-                  className={`group flex w-full cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
-                    isActive
-                      ? 'bg-[#4da2ff]/10 text-[#4da2ff]'
-                      : 'text-[#aaa] hover:bg-[#18181c] hover:text-[#ededed]'
-                  }`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{meta.label}</span>
-                      {isLoaded && <span className="h-1.5 w-1.5 rounded-full bg-[#34d399]" />}
-                      <WasmBadge usesWasm={usesWasm} />
-                    </div>
-                    <div className="mt-0.5 truncate text-xs text-[#666]">{meta.desc}</div>
-                    <div className="mt-0.5 truncate text-[10px] text-[#444] font-mono">
-                      {meta.wasmDesc}
-                    </div>
-                  </div>
-                  {isLoading && (
-                    <svg
-                      className="mt-1 h-4 w-4 animate-spin text-[#4da2ff]"
-                      viewBox="0 0 24 24"
-                      fill="none"
+                <div key={group.id}>
+                  {/* Group header — collapsible */}
+                  <button
+                    onClick={() => toggleGroup(group.id)}
+                    className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-[#666] transition-colors hover:bg-[#18181c] hover:text-[#aaa]"
+                  >
+                    <span>{group.icon}</span>
+                    <span className="flex-1">{group.label}</span>
+                    {groupLoadedCount > 0 && (
+                      <span className="rounded-full bg-[#34d399]/10 px-1.5 py-0.5 text-[9px] text-[#34d399]">
+                        {groupLoadedCount}
+                      </span>
+                    )}
+                    <span
+                      className="text-[10px] text-[#555] transition-transform"
+                      style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
                     >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
+                      ▼
+                    </span>
+                  </button>
+
+                  {/* Group plugins */}
+                  {!isCollapsed && (
+                    <div className="ml-2 flex flex-col gap-0.5 border-l border-[#1e1e22] pl-2">
+                      {group.plugins.map((meta) => {
+                        const isLoaded = loaded.some((l) => l.meta.id === meta.id)
+                        const isActive = activeTab === meta.id
+                        const isLoading = loadingId === meta.id
+                        const loadedPlugin = loaded.find((l) => l.meta.id === meta.id)
+                        const usesWasm =
+                          loadedPlugin?.plugin._wasmMeta?.usesWasm ??
+                          meta.wasmDesc.includes('noble')
+
+                        return (
+                          <button
+                            key={meta.id}
+                            onClick={() => handleLoad(meta)}
+                            disabled={isLoading}
+                            className={`group flex w-full cursor-pointer items-start gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors ${
+                              isActive
+                                ? 'bg-[#4da2ff]/10 text-[#4da2ff]'
+                                : 'text-[#aaa] hover:bg-[#18181c] hover:text-[#ededed]'
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-medium">{meta.label}</span>
+                                {isLoaded && (
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#34d399]" />
+                                )}
+                                <WasmBadge usesWasm={usesWasm} />
+                              </div>
+                              <div className="mt-0.5 truncate text-[10px] text-[#555]">
+                                {meta.desc}
+                              </div>
+                            </div>
+                            {isLoading && (
+                              <svg
+                                className="mt-0.5 h-3.5 w-3.5 animate-spin text-[#4da2ff]"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                />
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
                   )}
-                </button>
+                </div>
               )
             })}
           </nav>
