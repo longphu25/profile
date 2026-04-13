@@ -101,23 +101,25 @@ function WalSwapContent() {
   const [error, setError] = useState<string | null>(null)
   const [txDigest, setTxDigest] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
-  const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const [walletAddress, setWalletAddress] = useState<string | null>(() => {
+    if (!sharedHost) return null
+    const d = sharedHost.getSharedData('walletProfile') as { address: string } | null
+    return d?.address ?? null
+  })
 
   const pairInfo = useMemo(() => PAIRS.find((p) => p.key === pair)!, [pair])
   const fromSymbol = isBuy ? pairInfo.quote : pairInfo.base
   const toSymbol = isBuy ? pairInfo.base : pairInfo.quote
   const fromBal = isBuy ? quoteBal : walBal
 
-  // Track connection
+  // Track wallet from shared data
   useEffect(() => {
     if (!sharedHost) return
-    const update = () => {
-      const ctx = sharedHost!.getSuiContext()
-      setIsConnected(ctx.isConnected)
-      setWalletAddress(ctx.address)
-    }
-    update()
-    return sharedHost.onSuiContextChange(update)
+    return sharedHost.onSharedDataChange('walletProfile', (v) => {
+      const p = v as { address: string } | null
+      setWalletAddress(p?.address ?? null)
+      setIsConnected(!!p?.address)
+    })
   }, [])
 
   // Fetch balances

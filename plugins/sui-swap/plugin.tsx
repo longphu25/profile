@@ -161,21 +161,23 @@ function SwapContent() {
   const [error, setError] = useState<string | null>(null)
   const [swapError, setSwapError] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
-  const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const [walletAddress, setWalletAddress] = useState<string | null>(() => {
+    if (!sharedHost) return null
+    const d = sharedHost.getSharedData('walletProfile') as { address: string } | null
+    return d?.address ?? null
+  })
 
   const base = INDEXER[network]
   const explorerBase = EXPLORER[network]
 
-  // Track connection state
+  // Track wallet from shared data
   useEffect(() => {
     if (!sharedHost) return
-    const update = () => {
-      const ctx = sharedHost!.getSuiContext()
-      setIsConnected(ctx.isConnected)
-      setWalletAddress(ctx.address)
-    }
-    update()
-    return sharedHost.onSuiContextChange(update)
+    return sharedHost.onSharedDataChange('walletProfile', (v) => {
+      const p = v as { address: string } | null
+      setWalletAddress(p?.address ?? null)
+      setIsConnected(!!p?.address)
+    })
   }, [])
 
   const pool = useMemo(() => pools.find((p) => p.pool_name === selectedPool), [pools, selectedPool])

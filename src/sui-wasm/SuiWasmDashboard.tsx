@@ -245,11 +245,20 @@ export function SuiWasmDashboard() {
   const [activeTab, setActiveTab] = useState<string | null>(null)
   const [wasmSupported, setWasmSupported] = useState<boolean | null>(null)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const [walletInfo, setWalletInfo] = useState<{ address: string; network: string } | null>(null)
   const initRef = useRef(false)
 
   // Check WebAssembly support
   useEffect(() => {
     setWasmSupported(typeof WebAssembly !== 'undefined')
+  }, [])
+
+  // Track wallet from shared data
+  useEffect(() => {
+    return suiHostAPI.onSharedDataChange('walletProfile', (v) => {
+      const p = v as { address: string; network: string } | null
+      setWalletInfo(p ? { address: p.address, network: p.network } : null)
+    })
   }, [])
 
   // Plugin loading
@@ -351,6 +360,22 @@ export function SuiWasmDashboard() {
                   ? 'WebAssembly OK'
                   : 'No WebAssembly'}
             </div>
+
+            {/* Wallet status */}
+            {walletInfo ? (
+              <div className="flex items-center gap-1.5 rounded-md bg-[#34d399]/10 px-2.5 py-1.5 text-xs text-[#34d399]">
+                <span className="h-2 w-2 rounded-full bg-[#34d399]" />
+                {walletInfo.address.slice(0, 6)}...{walletInfo.address.slice(-4)}
+                <span className="ml-1 rounded bg-[#18181c] px-1.5 py-0.5 text-[10px] text-[#888]">
+                  {walletInfo.network}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 rounded-md bg-[#fbbf24]/10 px-2.5 py-1.5 text-xs text-[#fbbf24]">
+                <span className="h-2 w-2 rounded-full bg-[#fbbf24]" />
+                No wallet
+              </div>
+            )}
 
             <a
               href="/sui-plugin.html"

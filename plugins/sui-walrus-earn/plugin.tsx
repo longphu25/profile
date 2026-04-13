@@ -57,7 +57,12 @@ function shortenId(id: string): string {
 
 function WalrusEarnContent() {
   const [isConnected, setIsConnected] = useState(false)
-  const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const [walletAddress, setWalletAddress] = useState<string | null>(() => {
+    if (!sharedHost) return null
+    const d = sharedHost.getSharedData('walletProfile') as { address: string } | null
+    return d?.address ?? null
+  })
+
   const [walBalance, setWalBalance] = useState<number>(0)
   const [nodes, setNodes] = useState<StorageNode[]>([])
   const [myStakes, setMyStakes] = useState<MyStake[]>([])
@@ -71,16 +76,14 @@ function WalrusEarnContent() {
   const [sortKey, setSortKey] = useState<'totalStake' | 'apy' | 'commission'>('totalStake')
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc')
 
-  // Track connection
+  // Track wallet from shared data
   useEffect(() => {
     if (!sharedHost) return
-    const update = () => {
-      const ctx = sharedHost!.getSuiContext()
-      setIsConnected(ctx.isConnected)
-      setWalletAddress(ctx.address)
-    }
-    update()
-    return sharedHost.onSuiContextChange(update)
+    return sharedHost.onSharedDataChange('walletProfile', (v) => {
+      const p = v as { address: string } | null
+      setWalletAddress(p?.address ?? null)
+      setIsConnected(!!p?.address)
+    })
   }, [])
 
   // Fetch WAL balance
