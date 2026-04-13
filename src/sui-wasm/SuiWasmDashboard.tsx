@@ -9,7 +9,8 @@
 // - This page shows WASM status and performance metrics for each plugin
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { hostAPI, getRegisteredComponents, unregisterComponent } from '../plugins/host'
+import { getRegisteredComponents, unregisterComponent } from '../plugins/host'
+import { suiHostAPI } from '../sui-dashboard/sui-host'
 import { ShadowContainer } from '../plugins/ShadowContainer'
 import { loadWasmPlugin, type WasmPlugin } from './wasm-loader'
 
@@ -250,7 +251,7 @@ export function SuiWasmDashboard() {
     const startTime = performance.now()
 
     try {
-      const plugin = await loadWasmPlugin(meta.src, hostAPI)
+      const plugin = await loadWasmPlugin(meta.src, suiHostAPI)
       plugin.mount?.()
       const loadTimeMs = Math.round(performance.now() - startTime)
 
@@ -555,7 +556,7 @@ export function SuiWasmDashboard() {
 
               <div className="rounded-xl border border-[#1e1e22] bg-[#111113] p-5">
                 {activePlugin.componentNames.map((compName) => {
-                  const Comp = hostAPI.getComponent(compName)
+                  const Comp = suiHostAPI.getComponent(compName)
                   return Comp ? (
                     <ShadowContainer
                       key={`${activePlugin.meta.id}-${compName}`}
