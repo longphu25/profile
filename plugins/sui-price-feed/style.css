@@ -1,0 +1,189 @@
+/* SUI Price Feed Plugin */
+
+.sui-price {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #ededed;
+  max-width: 100%;
+}
+
+.sui-price__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.sui-price__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #ededed;
+}
+
+.sui-price__refresh {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #888;
+  font-size: 14px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.sui-price__refresh:hover { color: #4da2ff; border-color: #4da2ff; }
+.sui-price__refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Cards grid */
+.sui-price__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.sui-price__card {
+  background: #18181c;
+  border: 1px solid #1e1e22;
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.sui-price__card:hover { border-color: #4da2ff; }
+.sui-price__card--selected { border-color: #4da2ff; }
+
+.sui-price__card-pair {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ededed;
+  margin-bottom: 6px;
+}
+
+.sui-price__card-price {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ededed;
+  margin-bottom: 4px;
+}
+
+.sui-price__card-change {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sui-price__card-change--up { color: #34d399; }
+.sui-price__card-change--down { color: #f87171; }
+
+.sui-price__card-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #666;
+  margin-top: 6px;
+}
+
+/* Chart area */
+.sui-price__chart {
+  background: #18181c;
+  border: 1px solid #1e1e22;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.sui-price__chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.sui-price__chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ededed;
+  margin: 0;
+}
+
+.sui-price__intervals {
+  display: flex;
+  gap: 2px;
+}
+
+.sui-price__interval {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #888;
+  font-size: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+
+.sui-price__interval:hover { color: #ccc; }
+.sui-price__interval--active { background: #4da2ff; border-color: #4da2ff; color: #fff; }
+
+/* ASCII sparkline */
+.sui-price__sparkline {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: #4da2ff;
+  line-height: 1.2;
+  white-space: pre;
+  overflow-x: auto;
+  padding: 4px 0;
+}
+
+.sui-price__chart-stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #666;
+}
+
+.sui-price__chart-stat-val {
+  color: #ededed;
+  font-weight: 500;
+}
+
+/* States */
+.sui-price__loading { text-align: center; color: #666; padding: 32px 0; font-size: 13px; }
+
+.sui-price__error {
+  background: #2a0a0a;
+  border: 1px solid #5c1a1a;
+  border-radius: 8px;
+  color: #f87171;
+  padding: 10px 14px;
+  font-size: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sui-price__retry {
+  background: none;
+  border: 1px solid #5c1a1a;
+  border-radius: 4px;
+  color: #f87171;
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.sui-price__retry:hover { background: #3a1010; }
+
+.sui-price__footer {
+  text-align: center;
+  font-size: 11px;
+  color: #555;
+  margin-top: 12px;
+}
+
+.sui-price__link { color: #4da2ff; text-decoration: none; }
+.sui-price__link:hover { text-decoration: underline; }
