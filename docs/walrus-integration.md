@@ -80,33 +80,83 @@ walrus({ wasmUrl: walrusWasmUrl })
 - WASM file ~2MB, load lần đầu có thể chậm
 - Chỉ cần cho write operations (read qua aggregator không cần WASM)
 
-### 4. Upload cần Wallet Signing
+### 4. Upload Step-by-Step Flow (popup per step)
 
-**Vấn đề:** `writeFiles` / `writeBlob` cần `signer` để ký transaction (register blob + certify).
+**Upload plugin phải hiện popup step-by-step:**
 
-**Hiện tại:** Plugin chưa wire wallet signing cho upload. Cần:
-1. Wallet Profile plugin connected
-2. `SuiHostAPI.signAndExecuteTransaction` cho từng step
-3. Hoặc dùng `writeFilesFlow` API cho browser (tách register/certify thành 2 user interactions)
+```
+Step 1: Check WAL Balance
+  ├─ Đủ WAL → skip to Step 3
+  └─ Thiếu WAL → Step 2
 
-**Browser flow (recommended):**
-```ts
-const flow = client.walrus.writeFilesFlow({ files })
-await flow.encode()
+Step 2: Acquire WAL
+  ├─ Testnet: exchange SUI→WAL (1:1) via exchangeIds
+  └─ Mainnet: swap SUI→WAL via DeepBook WAL_SUI pool
+  → Wallet popup: sign swap tx
 
-// Step 1: User clicks "Register" → wallet popup
-const registerTx = flow.register({ epochs, owner: address, deletable })
-const regResult = await signAndExecuteTransaction(registerTx)
+Step 3: Encode file (WASM RedStuff)
+  → Progress bar, no wallet needed
 
-// Step 2: Upload data to storage nodes
-await flow.upload({ digest: regResult.digest })
+Step 4: Register blob on-chain
+  → Wallet popup: sign register tx
 
-// Step 3: User clicks "Certify" → wallet popup
-const certifyTx = flow.certify()
-const certResult = await signAndExecuteTransaction(certifyTx)
+Step 5: Upload slivers to storage nodes
+  → Progress bar, no wallet needed
+
+Step 6: Certify blob on-chain
+  → Wallet popup: sign certify tx
+
+Step 7: Done! Show blob ID + URL
 ```
 
-### 5. Tip Config
+**Browser flow code:**
+```ts
+// Step 1-2: Check & acquire WAL
+const walBalance = await getWalBalance(address)
+const storageCost = estimateStorageCost(fileSize, epochs)
+if (walBalance < storageCost) {
+  if (network === 'testnet') {
+    await exchangeSuiToWal(needed, exchangeIds) // 1:1
+  } else {
+    await swapSuiToWal(needed) // DeepBook WAL_SUI
+  }
+}
+
+// Step 3-6: Upload via writeFilesFlow
+const flow = client.walrus.writeFilesFlow({ files })
+await flow.encode()                              // Step 3
+const registerTx = flow.register({ epochs, owner, deletable })
+await signAndExecuteTransaction(registerTx)      // Step 4
+await flow.upload({ digest })                    // Step 5
+const certifyTx = flow.certify()
+await signAndExecuteTransaction(certifyTx)       // Step 6
+```
+
+### 5. WAL Acquisition Strategy
+
+| Network | Method | Rate | SDK |
+|---------|--------|------|-----|
+| Testnet | `exchangeIds` objects | 1:1 SUI→WAL | `@mysten/walrus` config |
+| Mainnet | DeepBook `WAL_SUI` | Market price | `@mysten/deepbook-v3` |
+| Mainnet | DeepBook `WAL_USDC` | Market price | `@mysten/deepbook-v3` |
+
+**Testnet exchange IDs** (from `TESTNET_WALRUS_PACKAGE_CONFIG`):
+```
+0xf4d164ea2def5fe07dc573992a029e010dba09b1a8dcbc44c5c2e79567f39073
+0x19825121c52080bb1073662231cfea5c0e4d905fd13e95f21e9a018f2ef41862
+0x83b454e524c71f30803f4d6c302a86fb6a39e96cdfb873c2d1e93bc1c26a3bc5
+0x8d63209cf8589ce7aef8f262437163c67577ed09f3e636a9d8e0813843fb8bf1
+```
+
+**Mainnet:** Không có exchange objects. Phải swap qua DeepBook:
+```ts
+dbClient.deepBook.swapExactQuoteForBase({
+  poolKey: 'WAL_SUI', amount: suiAmount,
+  deepAmount: 0, minOut: minWalOut,
+})(tx)
+```
+
+### 6. Tip Config
 
 Upload relay yêu cầu tip (phí) cho mỗi upload:
 
