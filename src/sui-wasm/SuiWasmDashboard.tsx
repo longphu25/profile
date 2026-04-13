@@ -30,6 +30,7 @@ interface PluginEntry {
   desc: string
   src: string
   wasmDesc: string
+  noShadow?: boolean
 }
 
 interface PluginGroup {
@@ -52,6 +53,7 @@ const PLUGIN_GROUPS: PluginGroup[] = [
         desc: 'Connect wallet, SuiNS, tokens (required)',
         src: pluginPath('sui-wallet-profile'),
         wasmDesc: 'ESM + @mysten/dapp-kit + SuiNS',
+        noShadow: true,
       },
       {
         id: 'sui-create-wallet',
@@ -601,17 +603,24 @@ export function SuiWasmDashboard() {
               <div className="rounded-xl border border-[#1e1e22] bg-[#111113] p-5">
                 {activePlugin.componentNames.map((compName) => {
                   const Comp = suiHostAPI.getComponent(compName)
-                  return Comp ? (
+                  if (!Comp) {
+                    return (
+                      <div key={compName} className="text-sm text-[#666]">
+                        Component "{compName}" not found
+                      </div>
+                    )
+                  }
+                  // Skip Shadow DOM for plugins that need full DOM access (wallet popups)
+                  if (activePlugin.meta.noShadow) {
+                    return <Comp key={`${activePlugin.meta.id}-${compName}`} />
+                  }
+                  return (
                     <ShadowContainer
                       key={`${activePlugin.meta.id}-${compName}`}
                       styleUrls={activePlugin.plugin.styleUrls}
                     >
                       <Comp />
                     </ShadowContainer>
-                  ) : (
-                    <div key={compName} className="text-sm text-[#666]">
-                      Component "{compName}" not found
-                    </div>
                   )
                 })}
               </div>
