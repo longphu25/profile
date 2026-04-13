@@ -1,0 +1,319 @@
+/* SUI Lending Pools Plugin */
+
+.sui-lending {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #ededed;
+  max-width: 100%;
+}
+
+.sui-lending__header {
+  margin-bottom: 16px;
+}
+
+.sui-lending__title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sui-lending__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #ededed;
+}
+
+.sui-lending__refresh {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #888;
+  font-size: 14px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.sui-lending__refresh:hover {
+  color: #4da2ff;
+  border-color: #4da2ff;
+}
+
+.sui-lending__refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sui-lending__desc {
+  font-size: 12px;
+  color: #666;
+  margin: 4px 0 0;
+}
+
+/* Stats */
+.sui-lending__stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sui-lending__stat {
+  flex: 1;
+  background: #18181c;
+  border: 1px solid #1e1e22;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sui-lending__stat-label {
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sui-lending__stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ededed;
+}
+
+/* Tabs */
+.sui-lending__tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 12px;
+  background: #18181c;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.sui-lending__tab {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background 0.2s;
+}
+
+.sui-lending__tab:hover {
+  color: #ccc;
+}
+
+.sui-lending__tab--active {
+  background: #4da2ff;
+  color: #fff;
+}
+
+/* Search */
+.sui-lending__search {
+  width: 100%;
+  background: #18181c;
+  border: 1px solid #1e1e22;
+  border-radius: 8px;
+  color: #ededed;
+  font-size: 12px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.sui-lending__search:focus {
+  border-color: #4da2ff;
+}
+
+.sui-lending__search::placeholder {
+  color: #555;
+}
+
+/* Table */
+.sui-lending__table-wrap {
+  overflow-x: auto;
+}
+
+.sui-lending__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.sui-lending__th {
+  text-align: left;
+  font-weight: 500;
+  color: #666;
+  padding: 8px 10px;
+  border-bottom: 1px solid #1e1e22;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.sui-lending__th--right {
+  text-align: right;
+}
+
+.sui-lending__th--sort {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.sui-lending__th--sort:hover {
+  color: #4da2ff;
+}
+
+.sui-lending__row {
+  transition: background 0.15s;
+}
+
+.sui-lending__row:hover {
+  background: #18181c;
+}
+
+.sui-lending__td {
+  padding: 10px;
+  border-bottom: 1px solid #141416;
+  vertical-align: middle;
+}
+
+.sui-lending__td--right {
+  text-align: right;
+}
+
+.sui-lending__td--green {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.sui-lending__td--orange {
+  color: #fb923c;
+  font-weight: 600;
+}
+
+.sui-lending__td--muted {
+  color: #888;
+}
+
+/* Asset cell */
+.sui-lending__asset {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sui-lending__symbol {
+  font-weight: 600;
+  color: #ededed;
+}
+
+.sui-lending__badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.sui-lending__badge--isolated {
+  background: #fb923c20;
+  color: #fb923c;
+}
+
+.sui-lending__sub {
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* Utilization bar */
+.sui-lending__util-bar {
+  width: 60px;
+  height: 4px;
+  background: #1e1e22;
+  border-radius: 2px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.sui-lending__util-fill {
+  height: 100%;
+  background: #4da2ff;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+/* States */
+.sui-lending__loading {
+  text-align: center;
+  color: #666;
+  padding: 32px 0;
+  font-size: 13px;
+}
+
+.sui-lending__error {
+  background: #2a0a0a;
+  border: 1px solid #5c1a1a;
+  border-radius: 8px;
+  color: #f87171;
+  padding: 10px 14px;
+  font-size: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sui-lending__retry {
+  background: none;
+  border: 1px solid #5c1a1a;
+  border-radius: 4px;
+  color: #f87171;
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sui-lending__retry:hover {
+  background: #3a1010;
+}
+
+.sui-lending__empty {
+  text-align: center;
+  color: #555;
+  padding: 24px 0;
+  font-size: 12px;
+}
+
+/* Footer */
+.sui-lending__footer {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 11px;
+  color: #555;
+}
+
+.sui-lending__link {
+  color: #4da2ff;
+  text-decoration: none;
+}
+
+.sui-lending__link:hover {
+  text-decoration: underline;
+}
