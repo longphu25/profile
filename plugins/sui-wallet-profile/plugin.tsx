@@ -246,18 +246,15 @@ function WalletProfileContent() {
   )
 }
 
-// Standalone wrapper
+// Standalone wrapper — always provides its own DAppKitProvider
+// Works in both WASM dashboard and plugin-demo pages
+// Still uses sharedHost for cross-plugin data sharing when available
 function WalletProfileStandalone() {
   return (
     <DAppKitProvider dAppKit={standaloneDAppKit}>
       <WalletProfileContent />
     </DAppKitProvider>
   )
-}
-
-// Shared wrapper (sui-dashboard already has DAppKitProvider)
-function WalletProfileShared() {
-  return <WalletProfileContent />
 }
 
 const SuiWalletProfilePlugin: Plugin = {
@@ -267,9 +264,13 @@ const SuiWalletProfilePlugin: Plugin = {
 
   init(host: HostAPI) {
     sharedHost = isSuiHostAPI(host) ? host : null
-    const Component = isSuiHostAPI(host) ? WalletProfileShared : WalletProfileStandalone
-    host.registerComponent('SuiWalletProfile', Component)
-    host.log('SuiWalletProfile initialized' + (sharedHost ? ' (shared)' : ' (standalone)'))
+    // Always use standalone (own DAppKitProvider) since this plugin
+    // manages the wallet connection itself. sharedHost is still set
+    // for cross-plugin data sharing via setSharedData/getSharedData.
+    host.registerComponent('SuiWalletProfile', WalletProfileStandalone)
+    host.log(
+      'SuiWalletProfile initialized' + (sharedHost ? ' (shared data enabled)' : ' (standalone)'),
+    )
   },
 
   mount() {
