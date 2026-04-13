@@ -10,15 +10,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { Transaction } from '@mysten/sui/transactions'
 import { walrus, WalrusFile } from '@mysten/walrus'
-import {
-  DeepBookClient,
-  mainnetCoins,
-  mainnetPools,
-  mainnetPackageIds,
-  testnetCoins,
-  testnetPools,
-  testnetPackageIds,
-} from '@mysten/deepbook-v3'
+import { DeepBookClient, mainnetCoins, mainnetPools, mainnetPackageIds } from '@mysten/deepbook-v3'
 import { MAINNET_WALRUS_PACKAGE_CONFIG, TESTNET_WALRUS_PACKAGE_CONFIG } from '@mysten/walrus'
 import walrusWasmUrl from '@mysten/walrus-wasm/web/walrus_wasm_bg.wasm?url'
 import './style.css'
@@ -162,30 +154,58 @@ function WalrusUploadContent() {
       const estimatedCost = Math.max(0.01, (file.size / 1e6) * 0.1 * epochs)
       if (bal < estimatedCost) {
         const needed = estimatedCost - bal + 0.01 // buffer
-        setCurrentStep({
-          id: 'acquire-wal',
-          label: 'Acquiring WAL...',
-          detail: `Need ~${estimatedCost.toFixed(4)} WAL, have ${bal.toFixed(4)}. Swapping ${needed.toFixed(4)} SUI → WAL via DeepBook`,
-        })
+        const neededMist = BigInt(Math.ceil(needed * 1e9))
 
-        const dbClient = new DeepBookClient({
-          client,
-          address: walletAddr,
-          network,
-          coins: network === 'mainnet' ? mainnetCoins : testnetCoins,
-          pools: network === 'mainnet' ? mainnetPools : testnetPools,
-          packageIds: network === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
-        })
-        const swapTx = new Transaction()
-        swapTx.setSender(walletAddr)
-        dbClient.deepBook.swapExactQuoteForBase({
-          poolKey: 'WAL_SUI',
-          amount: needed,
-          deepAmount: 0,
-          minOut: needed * 0.95,
-        })(swapTx)
+        if (network === 'testnet') {
+          // Testnet: exchange SUI → WAL 1:1 via exchange objects
+          setCurrentStep({
+            id: 'acquire-wal',
+            label: 'Acquiring WAL...',
+            detail: `Exchanging ${needed.toFixed(4)} SUI → WAL (1:1 testnet exchange)`,
+          })
+          const exchangeId = TESTNET_WALRUS_PACKAGE_CONFIG.exchangeIds?.[0]
+          if (!exchangeId) throw new Error('No testnet exchange object available')
 
-        await sharedHost.signAndExecuteTransaction(swapTx)
+          // Get the walrus package ID from system object
+          const sysObj = await client.core.getObject({
+            objectId: TESTNET_WALRUS_PACKAGE_CONFIG.systemObjectId,
+            include: { content: true },
+          })
+          void sysObj // package ID inferred by SDK
+
+          const exchangeTx = new Transaction()
+          exchangeTx.setSender(walletAddr)
+          const [suiCoin] = exchangeTx.splitCoins(exchangeTx.gas, [exchangeTx.pure.u64(neededMist)])
+          exchangeTx.moveCall({
+            target: `${TESTNET_WALRUS_PACKAGE_CONFIG.systemObjectId}::wal_exchange::exchange`,
+            arguments: [exchangeTx.object(exchangeId), suiCoin],
+          })
+          await sharedHost.signAndExecuteTransaction(exchangeTx)
+        } else {
+          // Mainnet: swap SUI → WAL via DeepBook
+          setCurrentStep({
+            id: 'acquire-wal',
+            label: 'Acquiring WAL...',
+            detail: `Swapping ${needed.toFixed(4)} SUI → WAL via DeepBook`,
+          })
+          const dbClient = new DeepBookClient({
+            client,
+            address: walletAddr,
+            network,
+            coins: mainnetCoins,
+            pools: mainnetPools,
+            packageIds: mainnetPackageIds,
+          })
+          const swapTx = new Transaction()
+          swapTx.setSender(walletAddr)
+          dbClient.deepBook.swapExactQuoteForBase({
+            poolKey: 'WAL_SUI',
+            amount: needed,
+            deepAmount: 0,
+            minOut: needed * 0.95,
+          })(swapTx)
+          await sharedHost.signAndExecuteTransaction(swapTx)
+        }
 
         // Re-check balance
         const newBal = await client.core.getBalance({ owner: walletAddr, coinType: net.walType })
