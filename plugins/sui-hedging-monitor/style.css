@@ -1,0 +1,116 @@
+/* SUI Hedging Monitor Plugin */
+
+.sui-hm {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #ededed;
+  max-width: 100%;
+}
+
+.sui-hm__header { margin-bottom: 16px; }
+.sui-hm__title-row { display: flex; align-items: center; gap: 10px; }
+.sui-hm__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-hm__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+
+/* Connect bar */
+.sui-hm__connect { display: flex; gap: 8px; margin-bottom: 14px; }
+
+.sui-hm__input {
+  flex: 1; background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  color: #ededed; font-size: 12px; padding: 8px 12px; outline: none;
+  box-sizing: border-box; transition: border-color 0.2s;
+}
+.sui-hm__input:focus { border-color: #4da2ff; }
+.sui-hm__input::placeholder { color: #555; }
+
+.sui-hm__btn {
+  background: #4da2ff; border: none; border-radius: 8px;
+  color: #fff; font-size: 12px; font-weight: 500; padding: 8px 16px;
+  cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
+}
+.sui-hm__btn:hover { opacity: 0.85; }
+.sui-hm__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sui-hm__btn--green { background: #34d399; }
+.sui-hm__btn--red { background: #f87171; }
+.sui-hm__btn--sm { padding: 6px 12px; font-size: 11px; }
+
+/* Status badge */
+.sui-hm__status-bar {
+  display: flex; align-items: center; gap: 10px;
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 10px 14px; margin-bottom: 12px;
+}
+
+.sui-hm__dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.sui-hm__dot--running { background: #34d399; animation: sui-hm-pulse 2s infinite; }
+.sui-hm__dot--stopped { background: #888; }
+.sui-hm__dot--error { background: #f87171; }
+.sui-hm__dot--booting { background: #fbbf24; animation: sui-hm-pulse 1s infinite; }
+
+@keyframes sui-hm-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.sui-hm__status-label { font-size: 13px; font-weight: 600; color: #ededed; }
+.sui-hm__status-msg { font-size: 11px; color: #888; margin-left: auto; }
+
+/* Stats grid */
+.sui-hm__stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 12px; }
+
+.sui-hm__stat {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
+}
+
+.sui-hm__stat-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+.sui-hm__stat-value { font-size: 15px; font-weight: 600; color: #ededed; }
+.sui-hm__stat-value--green { color: #34d399; }
+.sui-hm__stat-value--red { color: #f87171; }
+
+/* Cycle card */
+.sui-hm__cycle {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 12px;
+}
+
+.sui-hm__cycle-title { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+
+.sui-hm__cycle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+
+.sui-hm__cycle-item { display: flex; flex-direction: column; gap: 2px; }
+.sui-hm__cycle-label { font-size: 10px; color: #666; }
+.sui-hm__cycle-val { font-size: 13px; font-weight: 500; color: #ededed; }
+
+/* Hold progress */
+.sui-hm__hold-bar { width: 100%; height: 4px; background: #1e1e22; border-radius: 2px; overflow: hidden; margin-top: 8px; }
+.sui-hm__hold-fill { height: 100%; background: #4da2ff; border-radius: 2px; transition: width 1s linear; }
+
+/* Logs */
+.sui-hm__logs {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 12px; max-height: 200px; overflow-y: auto;
+}
+
+.sui-hm__logs-title { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+
+.sui-hm__log-row { font-size: 11px; padding: 2px 0; border-bottom: 1px solid #141416; display: flex; gap: 8px; }
+.sui-hm__log-time { color: #555; white-space: nowrap; flex-shrink: 0; }
+.sui-hm__log-msg { color: #ccc; word-break: break-word; }
+.sui-hm__log-msg--warn { color: #fbbf24; }
+.sui-hm__log-msg--error { color: #f87171; }
+
+/* Controls */
+.sui-hm__controls { display: flex; gap: 8px; margin-bottom: 12px; }
+
+/* States */
+.sui-hm__loading { text-align: center; color: #666; padding: 32px 0; font-size: 13px; }
+.sui-hm__empty { text-align: center; color: #555; padding: 24px 0; font-size: 12px; }
+
+.sui-hm__error {
+  background: #2a0a0a; border: 1px solid #5c1a1a; border-radius: 8px;
+  color: #f87171; padding: 10px 14px; font-size: 12px; margin-bottom: 12px;
+}
+
+.sui-hm__footer { text-align: center; font-size: 11px; color: #555; margin-top: 12px; }
