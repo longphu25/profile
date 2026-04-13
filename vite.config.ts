@@ -77,6 +77,8 @@ export default defineConfig({
           __dirname,
           'plugins/sui-deepbook-orderbook/plugin.tsx',
         ),
+        'plugins/sui-hedging-monitor': resolve(__dirname, 'plugins/sui-hedging-monitor/plugin.tsx'),
+        'plugins/sui-margin-manager': resolve(__dirname, 'plugins/sui-margin-manager/plugin.tsx'),
       },
       external: ['gsap', 'motion'],
       preserveEntrySignatures: 'exports-only',

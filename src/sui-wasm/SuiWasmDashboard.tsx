@@ -101,6 +101,22 @@ const WASM_PLUGINS: PluginEntry[] = [
     src: pluginPath('sui-deepbook-orderbook'),
     wasmDesc: 'Standard ESM — DeepBook Indexer REST API',
   },
+  {
+    id: 'sui-hedging-monitor',
+    name: 'SuiHedgingMonitor',
+    label: 'Hedging Monitor',
+    desc: 'Monitor a running hedging bot instance',
+    src: pluginPath('sui-hedging-monitor'),
+    wasmDesc: 'Standard ESM — Bot REST/SSE API',
+  },
+  {
+    id: 'sui-margin-manager',
+    name: 'SuiMarginManager',
+    label: 'Margin Manager',
+    desc: 'Inspect margin positions, debts & orders',
+    src: pluginPath('sui-margin-manager'),
+    wasmDesc: 'Standard ESM — DeepBook Indexer REST API',
+  },
 ]
 
 interface LoadedPlugin {
