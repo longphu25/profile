@@ -9,6 +9,29 @@
 .sui-pay__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
 .sui-pay__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
 
+/* Wallet status bar (from wallet-profile shared data) */
+.sui-pay__wallet-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 10px 14px; margin-bottom: 12px; font-size: 12px;
+}
+.sui-pay__wallet-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #34d399; flex-shrink: 0;
+}
+.sui-pay__wallet-addr { color: #ededed; font-weight: 500; font-family: monospace; }
+.sui-pay__wallet-net {
+  margin-left: auto; font-size: 10px; color: #888;
+  background: #1e1e22; padding: 2px 8px; border-radius: 4px;
+}
+
+.sui-pay__wallet-disconnected {
+  background: #2a1a0a; border: 1px solid #5c3a1a; border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 12px; font-size: 12px; color: #fbbf24;
+  display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center;
+}
+.sui-pay__wallet-hint { font-size: 11px; color: #888; }
+.sui-pay__wallet-hint strong { color: #4da2ff; }
+
 /* Tabs */
 .sui-pay__tabs {
   display: flex; gap: 2px; margin-bottom: 14px;

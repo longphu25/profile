@@ -1,13 +1,25 @@
 // SUI Payment Plugin
-// Create payment requests with QR codes and payment links
-// Uses @mysten/payment-kit for URI generation and processing
+// Create payment requests with payment links
+// Uses @mysten/payment-kit for URI generation
+// Reads wallet context from sui-wallet-profile via sharedData
 
 import type { Plugin, HostAPI } from '../../src/plugins/types'
 import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import { useState, useEffect, useCallback } from 'react'
 import { createPaymentTransactionUri, parsePaymentTransactionUri } from '@mysten/payment-kit'
+import { Transaction } from '@mysten/sui/transactions'
 import './style.css'
+
+// Shared key from wallet-profile plugin
+const WALLET_PROFILE_KEY = 'walletProfile'
+
+interface WalletProfile {
+  address: string
+  suinsName: string | null
+  network: string
+  balances: { coinType: string; symbol: string; balance: string; decimals: number }[]
+}
 
 const TOKENS: Record<string, { type: string; decimals: number }> = {
   SUI: { type: '0x2::sui::SUI', decimals: 9 },
@@ -29,10 +41,13 @@ interface PaymentRecord {
 
 let sharedHost: SuiHostAPI | null = null
 
+function shortenAddr(addr: string): string {
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+}
+
 function PaymentContent() {
   const [tab, setTab] = useState<'create' | 'pay'>('create')
-  const [isConnected, setIsConnected] = useState(false)
-  const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const [profile, setProfile] = useState<WalletProfile | null>(null)
 
   // Create form
   const [amount, setAmount] = useState('')
@@ -50,19 +65,24 @@ function PaymentContent() {
   const [success, setSuccess] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
+  // Read wallet profile from shared data
   useEffect(() => {
     if (!sharedHost) return
-    const update = () => {
-      const ctx = sharedHost!.getSuiContext()
-      setIsConnected(ctx.isConnected)
-      setWalletAddress(ctx.address)
-    }
-    update()
-    return sharedHost.onSuiContextChange(update)
+
+    // Initial read
+    const data = sharedHost.getSharedData(WALLET_PROFILE_KEY)
+    if (data) setProfile(data as WalletProfile)
+
+    // Subscribe to changes
+    return sharedHost.onSharedDataChange(WALLET_PROFILE_KEY, (value) => {
+      setProfile(value as WalletProfile | null)
+    })
   }, [])
 
+  const isConnected = !!profile?.address
+
   const handleCreate = useCallback(() => {
-    if (!walletAddress || !amount) return
+    if (!profile?.address || !amount) return
     setError(null)
     setSuccess(null)
 
@@ -75,7 +95,7 @@ function PaymentContent() {
       const nonce = Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 
       const uri = createPaymentTransactionUri({
-        receiverAddress: walletAddress,
+        receiverAddress: profile.address,
         amount: atomicAmount,
         coinType: tokenInfo.type,
         nonce,
@@ -85,7 +105,7 @@ function PaymentContent() {
       setGeneratedUri(uri)
 
       const record: PaymentRecord = {
-        id: Date.now().toString(),
+        id: nonce,
         amount: `${amountNum} ${token}`,
         token,
         memo,
@@ -98,7 +118,7 @@ function PaymentContent() {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     }
-  }, [walletAddress, amount, token, memo])
+  }, [profile?.address, amount, token, memo])
 
   const handlePay = useCallback(async () => {
     if (!sharedHost || !payUri) return
@@ -108,8 +128,6 @@ function PaymentContent() {
 
     try {
       const params = parsePaymentTransactionUri(payUri)
-      // Build transfer transaction from parsed params
-      const { Transaction } = await import('@mysten/sui/transactions')
       const tx = new Transaction()
       const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(params.amount)])
       tx.transferObjects([coin], tx.pure.address(params.receiverAddress))
@@ -137,6 +155,32 @@ function PaymentContent() {
         <h3 className="sui-pay__title">Payment Kit</h3>
         <p className="sui-pay__desc">Create and process payment requests on Sui</p>
       </div>
+
+      {/* Wallet status from wallet-profile */}
+      {isConnected ? (
+        <div className="sui-pay__wallet-bar">
+          <span className="sui-pay__wallet-dot" />
+          <span className="sui-pay__wallet-addr">
+            {profile!.suinsName ?? shortenAddr(profile!.address)}
+          </span>
+          <span className="sui-pay__wallet-net">{profile!.network}</span>
+        </div>
+      ) : (
+        <div className="sui-pay__wallet-disconnected">
+          <span>⚠ Wallet not connected</span>
+          <span className="sui-pay__wallet-hint">
+            Load the <strong>Wallet Profile</strong> plugin first
+          </span>
+          {sharedHost && (
+            <button
+              className="sui-pay__action sui-pay__action--connect"
+              onClick={() => sharedHost!.requestConnect()}
+            >
+              Connect Wallet
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="sui-pay__tabs">
@@ -197,29 +241,19 @@ function PaymentContent() {
               />
             </div>
 
-            {!isConnected && sharedHost ? (
-              <button
-                className="sui-pay__action sui-pay__action--connect"
-                onClick={() => sharedHost!.requestConnect()}
-              >
-                Connect Wallet
-              </button>
-            ) : (
-              <button
-                className="sui-pay__action"
-                disabled={!amount || Number(amount) <= 0}
-                onClick={handleCreate}
-              >
-                Create Payment Request
-              </button>
-            )}
+            <button
+              className="sui-pay__action"
+              disabled={!isConnected || !amount || Number(amount) <= 0}
+              onClick={handleCreate}
+            >
+              {!isConnected ? 'Connect Wallet First' : 'Create Payment Request'}
+            </button>
           </div>
 
-          {/* Generated URI */}
           {generatedUri && (
             <div className="sui-pay__result">
               <div className="sui-pay__result-title">Payment Request Created</div>
-              <div className="sui-pay__link-box">{generatedUri.slice(0, 80)}...</div>
+              <div className="sui-pay__link-box">{generatedUri}</div>
               <button className="sui-pay__copy-btn" onClick={copyUri}>
                 {copied ? '✓ Copied' : 'Copy Link'}
               </button>
@@ -236,24 +270,19 @@ function PaymentContent() {
             <input
               className="sui-pay__input"
               type="text"
-              placeholder="sui-payment://..."
+              placeholder="sui:0x...?amount=...&coinType=..."
               value={payUri}
               onChange={(e) => setPayUri(e.target.value)}
             />
           </div>
 
-          {!isConnected && sharedHost ? (
-            <button
-              className="sui-pay__action sui-pay__action--connect"
-              onClick={() => sharedHost!.requestConnect()}
-            >
-              Connect Wallet
-            </button>
-          ) : (
-            <button className="sui-pay__action" disabled={!payUri || paying} onClick={handlePay}>
-              {paying ? 'Processing...' : 'Pay Now'}
-            </button>
-          )}
+          <button
+            className="sui-pay__action"
+            disabled={!isConnected || !payUri || paying}
+            onClick={handlePay}
+          >
+            {!isConnected ? 'Connect Wallet First' : paying ? 'Processing...' : 'Pay Now'}
+          </button>
         </div>
       )}
 
