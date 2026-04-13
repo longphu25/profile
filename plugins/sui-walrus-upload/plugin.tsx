@@ -174,10 +174,11 @@ function WalrusUploadContent() {
           // exchange_for_wal(&mut Exchange, &mut Coin<SUI>, amount: u64)
           // Need a SUI coin object, not split from gas
           const [suiCoin] = exchangeTx.splitCoins(exchangeTx.gas, [exchangeTx.pure.u64(neededMist)])
-          exchangeTx.moveCall({
+          const walCoin = exchangeTx.moveCall({
             target: `${net.walPackage}::wal_exchange::exchange_for_wal`,
             arguments: [exchangeTx.object(exchangeId), suiCoin, exchangeTx.pure.u64(neededMist)],
           })
+          exchangeTx.transferObjects([walCoin], walletAddr)
           await sharedHost.signAndExecuteTransaction(exchangeTx)
         } else {
           // Mainnet: swap SUI → WAL via DeepBook
