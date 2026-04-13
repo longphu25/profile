@@ -30,6 +30,14 @@ interface PluginEntry {
 
 const WASM_PLUGINS: PluginEntry[] = [
   {
+    id: 'sui-wallet-profile',
+    name: 'SuiWalletProfile',
+    label: '🔑 Wallet Profile',
+    desc: 'Connect wallet, SuiNS, tokens (required)',
+    src: pluginPath('sui-wallet-profile'),
+    wasmDesc: 'ESM + @mysten/dapp-kit + SuiNS resolution',
+  },
+  {
     id: 'sui-create-wallet',
     name: 'SuiCreateWallet',
     label: 'Create Wallet',

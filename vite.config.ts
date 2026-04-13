@@ -81,6 +81,7 @@ export default defineConfig({
         'plugins/sui-margin-manager': resolve(__dirname, 'plugins/sui-margin-manager/plugin.tsx'),
         'plugins/sui-walrus-earn': resolve(__dirname, 'plugins/sui-walrus-earn/plugin.tsx'),
         'plugins/sui-wal-swap': resolve(__dirname, 'plugins/sui-wal-swap/plugin.tsx'),
+        'plugins/sui-wallet-profile': resolve(__dirname, 'plugins/sui-wallet-profile/plugin.tsx'),
       },
       external: ['gsap', 'motion'],
       preserveEntrySignatures: 'exports-only',

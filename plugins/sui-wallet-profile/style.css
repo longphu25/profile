@@ -1,0 +1,171 @@
+/* SUI Wallet Profile Plugin */
+
+.swp {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #ededed;
+  max-width: 100%;
+}
+
+.swp__header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.swp__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.swp__desc { font-size: 12px; color: #666; margin: 0 0 14px; }
+
+.swp__required-badge {
+  font-size: 9px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+  background: #fbbf2420; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.swp__connected-badge {
+  font-size: 9px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+  background: #34d39920; color: #34d399; text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* Connect button */
+.swp__connect-btn {
+  width: 100%; background: #4da2ff; border: none; border-radius: 10px;
+  color: #fff; font-size: 14px; font-weight: 600; padding: 14px;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.swp__connect-btn:hover { opacity: 0.85; }
+
+/* Profile header */
+.swp__profile {
+  display: flex; align-items: center; gap: 12px;
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 10px;
+  padding: 14px; margin-bottom: 12px;
+}
+
+.swp__profile-avatar { flex-shrink: 0; }
+
+.swp__profile-icon { width: 40px; height: 40px; border-radius: 10px; }
+
+.swp__profile-placeholder {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: linear-gradient(135deg, #4da2ff, #34d399);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: #fff;
+}
+
+.swp__profile-info { flex: 1; min-width: 0; }
+
+.swp__profile-name { font-size: 15px; font-weight: 600; color: #ededed; margin-bottom: 2px; }
+
+.swp__profile-addr {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #888; font-family: monospace;
+}
+
+.swp__copy-btn {
+  background: none; border: none; color: #4da2ff; font-size: 14px;
+  cursor: pointer; padding: 0; line-height: 1;
+}
+
+.swp__profile-wallet { font-size: 10px; color: #555; margin-top: 2px; }
+
+.swp__disconnect-btn {
+  background: none; border: 1px solid #333; border-radius: 6px;
+  color: #888; font-size: 11px; padding: 4px 10px; cursor: pointer;
+  transition: color 0.2s, border-color 0.2s; flex-shrink: 0;
+}
+.swp__disconnect-btn:hover { color: #f87171; border-color: #f87171; }
+
+/* Network selector */
+.swp__network {
+  display: flex; gap: 2px; margin-bottom: 12px;
+  background: #18181c; border-radius: 8px; padding: 3px;
+}
+
+.swp__network-btn {
+  flex: 1; background: none; border: none; color: #888;
+  font-size: 11px; font-weight: 500; padding: 6px 10px;
+  border-radius: 6px; cursor: pointer; transition: color 0.2s, background 0.2s;
+}
+.swp__network-btn:hover { color: #ccc; }
+.swp__network-btn--active { background: #4da2ff; color: #fff; }
+
+/* Explorer link */
+.swp__explorer-link {
+  display: block; text-align: center; font-size: 11px; color: #4da2ff;
+  text-decoration: none; margin-bottom: 12px;
+}
+.swp__explorer-link:hover { text-decoration: underline; }
+
+/* Token list */
+.swp__tokens { margin-bottom: 12px; }
+
+.swp__section-title {
+  font-size: 11px; font-weight: 600; color: #666; text-transform: uppercase;
+  letter-spacing: 0.5px; margin-bottom: 8px;
+}
+
+.swp__token-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; border-bottom: 1px solid #141416;
+  transition: background 0.15s;
+}
+.swp__token-row:hover { background: #18181c; }
+
+.swp__token-info { display: flex; flex-direction: column; gap: 1px; }
+.swp__token-symbol { font-size: 13px; font-weight: 600; color: #ededed; }
+.swp__token-type { font-size: 9px; color: #555; font-family: monospace; }
+
+.swp__token-amount { font-size: 13px; font-weight: 500; color: #ededed; text-align: right; }
+
+/* Popup overlay */
+.swp__overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; backdrop-filter: blur(4px);
+}
+
+.swp__popup {
+  background: #111114; border: 1px solid #1e1e22; border-radius: 14px;
+  padding: 20px; width: 340px; max-width: 90vw; max-height: 80vh; overflow-y: auto;
+}
+
+.swp__popup-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+}
+
+.swp__popup-title { font-size: 16px; font-weight: 600; color: #ededed; margin: 0; }
+
+.swp__popup-close {
+  background: none; border: 1px solid #333; border-radius: 6px;
+  color: #888; font-size: 14px; width: 28px; height: 28px;
+  cursor: pointer; transition: color 0.2s, border-color 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.swp__popup-close:hover { color: #f87171; border-color: #f87171; }
+
+.swp__popup-list { display: flex; flex-direction: column; gap: 6px; }
+
+.swp__wallet-btn {
+  display: flex; align-items: center; gap: 12px;
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 10px;
+  padding: 12px 14px; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+  color: #ededed; font-size: 13px; width: 100%; text-align: left;
+}
+.swp__wallet-btn:hover { border-color: #4da2ff; background: #1a1a20; }
+.swp__wallet-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.swp__wallet-icon { width: 32px; height: 32px; border-radius: 8px; }
+.swp__wallet-name { flex: 1; font-weight: 500; }
+.swp__wallet-arrow { color: #555; font-size: 16px; }
+
+.swp__popup-empty { text-align: center; color: #555; padding: 20px 0; font-size: 13px; }
+.swp__popup-status { text-align: center; color: #4da2ff; padding: 8px 0; font-size: 12px; }
+.swp__popup-error { color: #f87171; font-size: 12px; margin-top: 8px; text-align: center; }
+
+/* States */
+.swp__loading { text-align: center; color: #666; padding: 20px 0; font-size: 13px; }
+.swp__empty { text-align: center; color: #555; padding: 16px 0; font-size: 12px; }
+
+.swp__error {
+  background: #2a0a0a; border: 1px solid #5c1a1a; border-radius: 8px;
+  color: #f87171; padding: 10px 14px; font-size: 12px; margin-bottom: 12px;
+}
+
+.swp__footer {
+  text-align: center; font-size: 10px; color: #444; margin-top: 12px;
+}
+.swp__footer code { color: #4da2ff; font-size: 10px; }
