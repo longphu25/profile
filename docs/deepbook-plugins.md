@@ -15,7 +15,7 @@ Reference source modules live under `depbuk-hedging/src/lib/server/bot/`.
 | 3 | `sui-deepbook-portfolio` | ✅ Done | `4aee8f2` |
 | 4 | `sui-deepbook-history` | ✅ Done | `03e357b` |
 | 5 | `sui-swap` | ✅ Done | `7483cf1` |
-| 6 | `sui-deepbook-orderbook` | ❌ Not started | — |
+| 6 | `sui-deepbook-orderbook` | ✅ Done | `ff6c840` |
 | 7 | `sui-hedging-monitor` | ❌ Not started | — |
 | 8 | `sui-margin-manager` | ❌ Not started | — |
 
@@ -113,19 +113,18 @@ Swap tokens via DeepBook v3 with real on-chain transaction signing.
 
 ### 6. `sui-deepbook-orderbook` — Live Orderbook Widget
 
-**Priority:** 🥇 | **Effort:** Medium
+**Priority:** 🥇 | **Effort:** Medium | **Status:** ✅ Done
 
-Standalone full-featured orderbook display (separate from the mini orderbook in pool-explorer/swap).
+Full-featured live Level 2 orderbook display.
 
-- Best bid/ask, spread, mid-price
-- Level 2 depth visualization (top N ticks from mid)
-- Real-time updates (polling or WebSocket)
-- Depth chart (cumulative volume)
-- Mini price chart
+- Pool selector with all available pools
+- Depth selector: 10, 20, 50 levels
+- Auto-refresh: 3s, 5s, 10s, or manual (live pulse indicator)
+- Mid-price banner with absolute + percentage spread
+- Cumulative depth chart (bid/ask volume bars)
+- Level 2 book: price, size, cumulative total with background volume bars
 
-**Reference:** `deepbook-market-data.ts` → `getOrderBookTopFromChain`, `midPrice`
-
-**Note:** Mini orderbook already exists inside `sui-pool-explorer` and `sui-swap`. This plugin would be a dedicated, richer version with depth chart and auto-refresh.
+**Data source:** DeepBook Indexer `/orderbook/:pool`, `/get_pools`
 
 ---
 
