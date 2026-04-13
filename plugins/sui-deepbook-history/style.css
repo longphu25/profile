@@ -1,0 +1,117 @@
+/* SUI DeepBook History Plugin */
+
+.sui-history {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #ededed;
+  max-width: 100%;
+}
+
+.sui-history__header { margin-bottom: 16px; }
+.sui-history__title-row { display: flex; align-items: center; gap: 10px; }
+.sui-history__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+
+.sui-history__refresh {
+  background: none; border: 1px solid #333; border-radius: 6px;
+  color: #888; font-size: 14px; padding: 2px 8px; cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+.sui-history__refresh:hover { color: #4da2ff; border-color: #4da2ff; }
+.sui-history__refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.sui-history__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+
+/* Controls */
+.sui-history__controls { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+
+.sui-history__input {
+  flex: 1; min-width: 200px; background: #18181c; border: 1px solid #1e1e22;
+  border-radius: 8px; color: #ededed; font-size: 12px; padding: 8px 12px;
+  outline: none; box-sizing: border-box; transition: border-color 0.2s;
+}
+.sui-history__input:focus { border-color: #4da2ff; }
+.sui-history__input::placeholder { color: #555; }
+
+.sui-history__select {
+  background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  color: #ededed; font-size: 12px; padding: 8px 12px; outline: none;
+  cursor: pointer;
+}
+
+.sui-history__btn {
+  background: #4da2ff; border: none; border-radius: 8px;
+  color: #fff; font-size: 12px; font-weight: 500; padding: 8px 16px;
+  cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
+}
+.sui-history__btn:hover { opacity: 0.85; }
+.sui-history__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Stats */
+.sui-history__stats { display: flex; gap: 12px; margin-bottom: 16px; }
+
+.sui-history__stat {
+  flex: 1; background: #18181c; border: 1px solid #1e1e22; border-radius: 8px;
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
+}
+
+.sui-history__stat-label {
+  font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.sui-history__stat-value { font-size: 16px; font-weight: 600; color: #ededed; }
+
+/* Table */
+.sui-history__table-wrap { overflow-x: auto; }
+.sui-history__table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+.sui-history__th {
+  text-align: left; font-weight: 500; color: #666; padding: 8px 10px;
+  border-bottom: 1px solid #1e1e22; font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.3px; white-space: nowrap;
+}
+.sui-history__th--right { text-align: right; }
+
+.sui-history__row { transition: background 0.15s; }
+.sui-history__row:hover { background: #18181c; }
+
+.sui-history__td {
+  padding: 10px; border-bottom: 1px solid #141416; vertical-align: middle;
+}
+.sui-history__td--right { text-align: right; }
+.sui-history__td--green { color: #34d399; font-weight: 600; }
+.sui-history__td--red { color: #f87171; font-weight: 600; }
+.sui-history__td--muted { color: #888; }
+
+.sui-history__sub { font-size: 10px; color: #666; margin-top: 2px; }
+
+.sui-history__badge {
+  font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 500;
+  display: inline-block;
+}
+.sui-history__badge--buy { background: #34d39920; color: #34d399; }
+.sui-history__badge--sell { background: #f8717120; color: #f87171; }
+
+.sui-history__digest-link {
+  color: #4da2ff; text-decoration: none; font-size: 11px; font-family: monospace;
+}
+.sui-history__digest-link:hover { text-decoration: underline; }
+
+/* States */
+.sui-history__loading { text-align: center; color: #666; padding: 32px 0; font-size: 13px; }
+.sui-history__empty { text-align: center; color: #555; padding: 24px 0; font-size: 12px; }
+
+.sui-history__error {
+  background: #2a0a0a; border: 1px solid #5c1a1a; border-radius: 8px;
+  color: #f87171; padding: 10px 14px; font-size: 12px; margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.sui-history__retry {
+  background: none; border: 1px solid #5c1a1a; border-radius: 4px;
+  color: #f87171; font-size: 11px; padding: 3px 10px; cursor: pointer;
+}
+.sui-history__retry:hover { background: #3a1010; }
+
+.sui-history__footer {
+  margin-top: 16px; text-align: center; font-size: 11px; color: #555;
+}
+.sui-history__link { color: #4da2ff; text-decoration: none; }
+.sui-history__link:hover { text-decoration: underline; }
