@@ -10,14 +10,44 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { Transaction } from '@mysten/sui/transactions'
 import { walrus, WalrusFile } from '@mysten/walrus'
-import { DeepBookClient, mainnetCoins, mainnetPools, mainnetPackageIds } from '@mysten/deepbook-v3'
+import {
+  DeepBookClient,
+  mainnetCoins,
+  mainnetPools,
+  mainnetPackageIds,
+  testnetCoins,
+  testnetPools,
+  testnetPackageIds,
+} from '@mysten/deepbook-v3'
+import { MAINNET_WALRUS_PACKAGE_CONFIG, TESTNET_WALRUS_PACKAGE_CONFIG } from '@mysten/walrus'
 import walrusWasmUrl from '@mysten/walrus-wasm/web/walrus_wasm_bg.wasm?url'
 import './style.css'
 
-const AGGREGATOR = 'https://aggregator.walrus-mainnet.walrus.space'
-const UPLOAD_RELAY = 'https://upload-relay.mainnet.walrus.space'
-const RPC_URL = 'https://fullnode.mainnet.sui.io:443'
-const WAL_TYPE = '0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL'
+type NetworkKey = 'mainnet' | 'testnet'
+
+const NET_CONFIG: Record<
+  NetworkKey,
+  {
+    rpc: string
+    aggregator: string
+    uploadRelay: string
+    walType: string
+  }
+> = {
+  mainnet: {
+    rpc: 'https://fullnode.mainnet.sui.io:443',
+    aggregator: 'https://aggregator.walrus-mainnet.walrus.space',
+    uploadRelay: 'https://upload-relay.mainnet.walrus.space',
+    walType: '0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL',
+  },
+  testnet: {
+    rpc: 'https://fullnode.testnet.sui.io:443',
+    aggregator: 'https://aggregator.walrus-testnet.walrus.space',
+    uploadRelay: 'https://upload-relay.testnet.walrus.space',
+    walType: '0x9ef7676a9f81937a52ae4b2af8d511a28a0b080477c0c2db40b0ab8882240d76::wal::WAL',
+  },
+}
+
 const WALLET_KEY = 'walletProfile'
 
 type UploadStep =
@@ -78,6 +108,11 @@ function WalrusUploadContent() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
+  const [network, setNetwork] = useState<NetworkKey>(() => {
+    if (!sharedHost) return 'mainnet'
+    const d = sharedHost.getSharedData(WALLET_KEY) as { network: string } | null
+    return (d?.network === 'testnet' ? 'testnet' : 'mainnet') as NetworkKey
+  })
   const [walletAddr, setWalletAddr] = useState<string | null>(() => {
     if (!sharedHost) return null
     const d = sharedHost.getSharedData(WALLET_KEY) as { address: string } | null
@@ -87,11 +122,14 @@ function WalrusUploadContent() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const uploading = currentStep.id !== 'idle' && currentStep.id !== 'done'
+  const net = NET_CONFIG[network]
 
   useEffect(() => {
     if (!sharedHost) return
     return sharedHost.onSharedDataChange(WALLET_KEY, (v) => {
-      setWalletAddr((v as { address: string } | null)?.address ?? null)
+      const p = v as { address: string; network: string } | null
+      setWalletAddr(p?.address ?? null)
+      setNetwork((p?.network === 'testnet' ? 'testnet' : 'mainnet') as NetworkKey)
     })
   }, [])
 
@@ -111,12 +149,12 @@ function WalrusUploadContent() {
     setError(null)
     setResult(null)
 
-    const client = new SuiGrpcClient({ network: 'mainnet', baseUrl: RPC_URL })
+    const client = new SuiGrpcClient({ network, baseUrl: net.rpc })
 
     try {
       // Step 1: Check WAL balance
       setCurrentStep({ id: 'check-wal', label: 'Checking WAL balance...' })
-      const balRes = await client.core.getBalance({ owner: walletAddr, coinType: WAL_TYPE })
+      const balRes = await client.core.getBalance({ owner: walletAddr, coinType: net.walType })
       const bal = Number(balRes.balance.balance) / 1e9
       setWalBalance(bal)
 
@@ -133,10 +171,10 @@ function WalrusUploadContent() {
         const dbClient = new DeepBookClient({
           client,
           address: walletAddr,
-          network: 'mainnet',
-          coins: mainnetCoins,
-          pools: mainnetPools,
-          packageIds: mainnetPackageIds,
+          network,
+          coins: network === 'mainnet' ? mainnetCoins : testnetCoins,
+          pools: network === 'mainnet' ? mainnetPools : testnetPools,
+          packageIds: network === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
         })
         const swapTx = new Transaction()
         swapTx.setSender(walletAddr)
@@ -150,7 +188,7 @@ function WalrusUploadContent() {
         await sharedHost.signAndExecuteTransaction(swapTx)
 
         // Re-check balance
-        const newBal = await client.core.getBalance({ owner: walletAddr, coinType: WAL_TYPE })
+        const newBal = await client.core.getBalance({ owner: walletAddr, coinType: net.walType })
         setWalBalance(Number(newBal.balance.balance) / 1e9)
       }
 
@@ -160,7 +198,9 @@ function WalrusUploadContent() {
       const walrusClient = client.$extend(
         walrus({
           wasmUrl: walrusWasmUrl,
-          uploadRelay: { host: UPLOAD_RELAY, sendTip: { max: 5000 } },
+          packageConfig:
+            network === 'mainnet' ? MAINNET_WALRUS_PACKAGE_CONFIG : TESTNET_WALRUS_PACKAGE_CONFIG,
+          uploadRelay: { host: net.uploadRelay, sendTip: { max: 5000 } },
         }),
       )
 
@@ -196,7 +236,7 @@ function WalrusUploadContent() {
       const blobId = files[0]?.blobId ?? ''
       const uploadResult: UploadResult = {
         blobId,
-        url: `${AGGREGATOR}/v1/blobs/${blobId}`,
+        url: `${net.aggregator}/v1/blobs/${blobId}`,
         size: file.size,
         fileName: file.name,
       }
@@ -207,7 +247,7 @@ function WalrusUploadContent() {
       setError(err instanceof Error ? err.message : String(err))
       setCurrentStep({ id: 'idle' })
     }
-  }, [file, epochs, deletable, walletAddr])
+  }, [file, epochs, deletable, walletAddr, network, net])
 
   const copy = async (text: string, key: string) => {
     await navigator.clipboard.writeText(text)
