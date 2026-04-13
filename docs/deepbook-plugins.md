@@ -16,8 +16,8 @@ Reference source modules live under `depbuk-hedging/src/lib/server/bot/`.
 | 4 | `sui-deepbook-history` | ✅ Done | `03e357b` |
 | 5 | `sui-swap` | ✅ Done | `7483cf1` |
 | 6 | `sui-deepbook-orderbook` | ✅ Done | `ff6c840` |
-| 7 | `sui-hedging-monitor` | ❌ Not started | — |
-| 8 | `sui-margin-manager` | ❌ Not started | — |
+| 7 | `sui-hedging-monitor` | ✅ Done | `2ecc9a9` |
+| 8 | `sui-margin-manager` | ✅ Done | `a1b97f9` |
 
 Host API: `signAndExecuteTransaction` added in `0ea4c8f`
 Deps + vite config: `6b2e0fd` (v0.20.0)
@@ -109,7 +109,7 @@ Swap tokens via DeepBook v3 with real on-chain transaction signing.
 
 ---
 
-## ❌ Not Started
+## ✅ Additional Completed Plugins
 
 ### 6. `sui-deepbook-orderbook` — Live Orderbook Widget
 
@@ -130,44 +130,45 @@ Full-featured live Level 2 orderbook display.
 
 ### 7. `sui-hedging-monitor` — Bot Status Dashboard
 
-**Priority:** 4 | **Effort:** Low
+**Priority:** 4 | **Effort:** Low | **Status:** ✅ Done
 
-Connect to a running depbuk-hedging bot instance via its API.
+Connect to a running depbuk-hedging bot instance via REST/SSE API.
 
-- Bot lifecycle state (RUNNING/STOPPED/ERROR)
-- Active cycle progress & hold timer
-- Session PnL, volume, fees
-- Start/Stop control
+- URL input with Connect/Disconnect
+- Live status bar with lifecycle dot (RUNNING/STOPPED/ERROR/BOOTING)
+- Start and Stop & Clean controls via `/api/bot/control`
+- Stats: SUI price, session PnL, volume today/all-time, fees, cycles
+- Active cycle card: stage, price, notional, hold progress bar
+- Runtime logs (last 20, color-coded by level)
+- SSE stream for real-time snapshot updates
 
-**Reference:** `runtime-snapshot.ts`, API routes `/api/bot/status`, `/api/bot/stream` (SSE)
-
-**Note:** Requires the hedging bot to be running and accessible. Niche use case — only useful when actively running the bot.
+**Data source:** Bot REST API `/api/bot/status`, `/api/bot/stream` (SSE), `/api/bot/control`
 
 ---
 
 ### 8. `sui-margin-manager` — Margin Account Viewer
 
-**Priority:** 4 | **Effort:** Medium
+**Priority:** 4 | **Effort:** Medium | **Status:** ✅ Done
 
-Detailed margin manager inspection for advanced users.
+Inspect DeepBook margin managers with detailed balance and order data.
 
-- Collateral balances (base/quote)
-- Debt outstanding
-- Available margin & liquidation risk indicator
-- Open orders list
+- Wallet address input with auto-sync from connected wallet
+- Per-manager cards: pool, risk ratio badge (Safe/Caution/At Risk)
+- Balance grid: base/quote assets + debts with USD values
+- Debt/equity ratio bar with color coding
+- Open orders table per manager (side, price, qty, filled, remaining)
+- Net value calculation
 
-**Reference:** `deepbook-margin-state.ts`
-
-**Note:** Some of this data is already available in `sui-deepbook-portfolio` via the `/portfolio/:address` endpoint. This plugin would add deeper on-chain reads via DeepBook SDK for real-time manager state.
+**Data source:** DeepBook Indexer `/portfolio/:address`, `/orders/:pool/:balance_manager`
 
 ---
 
 ## Implementation Notes
 
-- All plugins follow the existing `Plugin` / `SuiHostAPI` interface in `src/plugins/types.ts`
+- All 8 plugins follow the existing `Plugin` / `SuiHostAPI` interface in `src/plugins/types.ts`
 - Each plugin lives in `plugins/<name>/` with `plugin.tsx` + `style.css`
 - Dual-mode support: standalone (plugin-demo) or shared context (sui-dashboard)
 - On-chain reads use `@mysten/sui` v2 (`SuiGrpcClient`) — already a project dependency
 - `@mysten/deepbook-v3` added as dependency (used by `sui-swap`)
-- All 5 completed plugins registered in `SuiWasmDashboard` (ESM badge)
+- All 8 plugins registered in `SuiWasmDashboard` (ESM badge)
 - `SuiHostAPI.signAndExecuteTransaction` added for wallet-signed transactions
