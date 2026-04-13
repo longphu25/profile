@@ -28,6 +28,14 @@ export interface SuiContext {
 /** Callback for context changes */
 export type SuiContextListener = (ctx: SuiContext) => void
 
+import type { Transaction } from '@mysten/sui/transactions'
+
+/** Result from signing and executing a transaction */
+export interface TransactionResult {
+  digest: string
+  effects?: unknown
+}
+
 /** Extended Host API with shared Sui wallet context */
 export interface SuiHostAPI extends HostAPI {
   /** Get current shared Sui context (wallet, network) */
@@ -40,6 +48,8 @@ export interface SuiHostAPI extends HostAPI {
   requestDisconnect: () => void
   /** Request network switch */
   requestNetworkSwitch: (network: string) => void
+  /** Sign and execute a transaction via the connected wallet */
+  signAndExecuteTransaction: (transaction: Transaction) => Promise<TransactionResult>
   /** Shared data store: set a value visible to all plugins */
   setSharedData: (key: string, value: unknown) => void
   /** Shared data store: get a value set by any plugin */

@@ -82,6 +82,22 @@ const SUI_PLUGINS = [
     src: pluginPath('sui-dual-wallet'),
     icon: '⚡',
   },
+  {
+    id: 'sui-lending',
+    name: 'SuiLending',
+    label: 'Lending Pools',
+    desc: 'Scallop lending markets',
+    src: pluginPath('sui-lending'),
+    icon: '🏦',
+  },
+  {
+    id: 'sui-create-wallet',
+    name: 'SuiCreateWallet',
+    label: 'Create Wallet',
+    desc: 'Generate Secp256k1 keypairs',
+    src: pluginPath('sui-create-wallet'),
+    icon: '🔐',
+  },
 ]
 
 interface LoadedPlugin {
@@ -138,6 +154,14 @@ function DashboardInner() {
       },
       onNetworkSwitch: (net) => {
         dAppKitInstance.switchNetwork(net as (typeof NETWORKS)[number])
+      },
+      onSignAndExecuteTransaction: async (transaction) => {
+        const result = await dAppKitInstance.signAndExecuteTransaction({ transaction })
+        const tx = result.Transaction ?? result.FailedTransaction
+        if (result.$kind === 'FailedTransaction') {
+          throw new Error(`Transaction failed: ${tx?.digest}`)
+        }
+        return { digest: tx!.digest, effects: tx }
       },
     })
   }, [dAppKitInstance])

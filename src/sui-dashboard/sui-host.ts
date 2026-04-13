@@ -2,7 +2,8 @@
 // Extends base HostAPI with shared wallet context and cross-plugin data store
 
 import type { ComponentType } from 'react'
-import type { SuiHostAPI, SuiContext, SuiContextListener } from './sui-types'
+import type { SuiHostAPI, SuiContext, SuiContextListener, TransactionResult } from './sui-types'
+import type { Transaction } from '@mysten/sui/transactions'
 
 // --- Component registry (same as base host) ---
 const componentRegistry: Record<string, ComponentType<unknown>> = {}
@@ -25,16 +26,19 @@ const dataListeners: Record<string, Set<(value: unknown) => void>> = {}
 let connectCallback: (() => void) | null = null
 let disconnectCallback: (() => void) | null = null
 let networkSwitchCallback: ((network: string) => void) | null = null
+let signAndExecuteCallback: ((transaction: Transaction) => Promise<TransactionResult>) | null = null
 
 /** Register dashboard-level action handlers */
 export function registerActions(actions: {
   onConnect: () => void
   onDisconnect: () => void
   onNetworkSwitch: (network: string) => void
+  onSignAndExecuteTransaction: (transaction: Transaction) => Promise<TransactionResult>
 }) {
   connectCallback = actions.onConnect
   disconnectCallback = actions.onDisconnect
   networkSwitchCallback = actions.onNetworkSwitch
+  signAndExecuteCallback = actions.onSignAndExecuteTransaction
 }
 
 /** Update shared context (called by dashboard when wallet/network changes) */
@@ -81,6 +85,13 @@ export const suiHostAPI: SuiHostAPI = {
 
   requestNetworkSwitch(network) {
     networkSwitchCallback?.(network)
+  },
+
+  async signAndExecuteTransaction(transaction: Transaction) {
+    if (!signAndExecuteCallback) {
+      throw new Error('Wallet not connected — cannot sign transaction')
+    }
+    return signAndExecuteCallback(transaction)
   },
 
   // --- Shared Data Store ---
