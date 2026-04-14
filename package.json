@@ -28,7 +28,7 @@
     "@mysten/seal": "^1.1.1",
     "@mysten/slush-wallet": "^1.0.3",
     "@mysten/sui": "^2.14.1",
-    "@mysten/walrus": "^1.1.0",
+    "@mysten/walrus": "^1.1.1",
     "@mysten/zksend": "^1.0.3",
     "@scallop-io/sui-scallop-sdk": "^3.0.2",
     "@uidotdev/usehooks": "^2.4.1",

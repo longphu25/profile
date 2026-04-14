@@ -13,7 +13,7 @@
         "@mysten/seal": "^1.1.1",
         "@mysten/slush-wallet": "^1.0.3",
         "@mysten/sui": "^2.14.1",
-        "@mysten/walrus": "^1.1.0",
+        "@mysten/walrus": "^1.1.1",
         "@mysten/zksend": "^1.0.3",
         "@scallop-io/sui-scallop-sdk": "^3.0.2",
         "@uidotdev/usehooks": "^2.4.1",
@@ -315,7 +315,7 @@
 
     "@mysten/wallet-standard": ["@mysten/wallet-standard@0.20.1", "", { "dependencies": { "@wallet-standard/core": "1.1.1" }, "peerDependencies": { "@mysten/sui": "*" } }, "sha512-Q2GoXO1SPLayqunNIWI3VT8cyOVGTFAPUvaCzx7jYIEoZBfyCR5RCUS4/ehgAlApF88Y/1c/OfjBvEoeRi76jw=="],
 
-    "@mysten/walrus": ["@mysten/walrus@1.1.0", "", { "dependencies": { "@mysten/bcs": "^2.0.3", "@mysten/utils": "^0.3.1", "@mysten/walrus-wasm": "^0.2.0", "dataloader": "^2.2.3" }, "peerDependencies": { "@mysten/sui": "^2.9.1" } }, "sha512-8BpuwUEhD1WzHOGgLAkofOTeBu7HPNhqPI+Lc4pzE/rYdd3O07KlqeCsG+VaS+3JJh3VzS3u8eYMSXZ0yMaczQ=="],
+    "@mysten/walrus": ["@mysten/walrus@1.1.1", "", { "dependencies": { "@mysten/bcs": "^2.0.3", "@mysten/utils": "^0.3.1", "@mysten/walrus-wasm": "^0.2.0", "dataloader": "^2.2.3" }, "peerDependencies": { "@mysten/sui": "^2.15.0" } }, "sha512-i06eFFQcnB9qkDpG1OCQVBLoPM5fwFJKmhMfZ/liEGf7P8bNsWlwzm9tBN3NpKcx4BBoGLMzaKLshanHv5mrsg=="],
 
     "@mysten/walrus-wasm": ["@mysten/walrus-wasm@0.2.0", "", {}, "sha512-QYZoS6CIoFnVxqYClXkwgeoUjnNUyPdXwoD1Re4Xo/TVdXXmpH46akodNJ+e6egUSrjzHgeiRgfAuq57sDXGNA=="],
 
