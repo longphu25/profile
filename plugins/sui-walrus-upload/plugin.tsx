@@ -132,12 +132,28 @@ function WalrusUploadContent() {
             setDetail(`Exchange ${needed.toFixed(2)} SUI → WAL`)
             const exId = TESTNET_WALRUS_PACKAGE_CONFIG.exchangeIds?.[0]
             if (!exId) throw new Error('No exchange object')
+
+            // Resolve package ID dynamically from exchange object type
+            const exRes = await fetch(net.rpc, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'sui_getObject',
+                params: [exId, { showType: true }],
+              }),
+            }).then((r) => r.json())
+            const exType: string = exRes.result?.data?.type ?? ''
+            const exPkg = exType.split('::')[0]
+            if (!exPkg || exPkg.length < 10) throw new Error('Cannot resolve exchange package')
+
             const neededMist = BigInt(Math.ceil(needed * 1e9))
             const tx = new Transaction()
             tx.setSender(walletAddr!)
             const [suiCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(neededMist)])
             const [walCoin] = tx.moveCall({
-              target: `${net.exchangePackage}::wal_exchange::exchange_for_wal`,
+              target: `${exPkg}::wal_exchange::exchange_for_wal`,
               arguments: [tx.object(exId), suiCoin, tx.pure.u64(neededMist)],
             })
             tx.transferObjects([walCoin, suiCoin], walletAddr!)
@@ -184,7 +200,8 @@ function WalrusUploadContent() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       setError(`[${step}] ${msg}`)
-      setStep('idle')
+    } finally {
+      if (step !== 'done') setStep('idle')
     }
   }, [file, epochs, deletable, walletAddr, network, net, mode, publisherUrl])
 

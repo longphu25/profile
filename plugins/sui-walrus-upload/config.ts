@@ -10,7 +10,6 @@ export interface NetConfig {
   aggregator: string
   uploadRelay: string
   walType: string
-  exchangePackage: string
   walrusConfig: typeof MAINNET_WALRUS_PACKAGE_CONFIG
 }
 
@@ -20,7 +19,6 @@ export const NET_CONFIG: Record<NetworkKey, NetConfig> = {
     aggregator: 'https://aggregator.walrus-mainnet.walrus.space',
     uploadRelay: 'https://upload-relay.mainnet.walrus.space',
     walType: '0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL',
-    exchangePackage: '',
     walrusConfig: MAINNET_WALRUS_PACKAGE_CONFIG,
   },
   testnet: {
@@ -28,7 +26,6 @@ export const NET_CONFIG: Record<NetworkKey, NetConfig> = {
     aggregator: 'https://aggregator.walrus-testnet.walrus.space',
     uploadRelay: 'https://upload-relay.testnet.walrus.space',
     walType: '0x9ef7676a9f81937a52ae4b2af8d511a28a0b080477c0c2db40b0ab8882240d76::wal::WAL',
-    exchangePackage: '0x82593828ed3fcb8c6a235eac9abd0adbe9c5f9bbffa9b1e7a45cdd884481ef9f',
     walrusConfig: TESTNET_WALRUS_PACKAGE_CONFIG,
   },
 }
