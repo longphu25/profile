@@ -181,7 +181,8 @@ function WalrusUploadContent() {
         finishUpload(files[0]?.blobId ?? '', 'direct')
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      const msg = err instanceof Error ? err.message : String(err)
+      setError(`[${step}] ${msg}`)
       setStep('idle')
     }
   }, [file, epochs, deletable, walletAddr, network, net, mode, publisherUrl])
