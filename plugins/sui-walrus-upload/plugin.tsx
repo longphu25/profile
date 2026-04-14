@@ -1,7 +1,7 @@
 // SUI Walrus Upload Plugin
-// Upload files to Walrus with step-by-step flow
-// Uses @mysten/walrus SDK + WASM + upload relay
-// Signing via CurrentAccountSigner from wallet-profile's DAppKit
+// Two upload modes:
+// 1. Publisher (easy): upload via HTTP API, publisher owns blob object
+// 2. Direct (own blob): user signs register+certify, owns blob object on-chain
 
 import type { Plugin, HostAPI } from '../../src/plugins/types'
 import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
@@ -9,10 +9,17 @@ import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { Transaction } from '@mysten/sui/transactions'
-import { TESTNET_WALRUS_PACKAGE_CONFIG } from '@mysten/walrus'
+import {
+  walrus,
+  WalrusFile,
+  TESTNET_WALRUS_PACKAGE_CONFIG,
+  MAINNET_WALRUS_PACKAGE_CONFIG,
+} from '@mysten/walrus'
+import walrusWasmUrl from '@mysten/walrus-wasm/web/walrus_wasm_bg.wasm?url'
 import './style.css'
 
 type NetworkKey = 'mainnet' | 'testnet'
+type UploadMode = 'publisher' | 'direct'
 
 const NET_CONFIG: Record<
   NetworkKey,
@@ -20,6 +27,7 @@ const NET_CONFIG: Record<
     rpc: string
     aggregator: string
     publisher: string
+    uploadRelay: string
     walType: string
     exchangePackage: string
   }
@@ -27,7 +35,8 @@ const NET_CONFIG: Record<
   mainnet: {
     rpc: 'https://fullnode.mainnet.sui.io:443',
     aggregator: 'https://aggregator.walrus-mainnet.walrus.space',
-    publisher: '', // no public publisher on mainnet
+    publisher: '',
+    uploadRelay: 'https://upload-relay.mainnet.walrus.space',
     walType: '0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL',
     exchangePackage: '',
   },
@@ -35,6 +44,7 @@ const NET_CONFIG: Record<
     rpc: 'https://fullnode.testnet.sui.io:443',
     aggregator: 'https://aggregator.walrus-testnet.walrus.space',
     publisher: 'https://publisher.walrus-testnet.walrus.space',
+    uploadRelay: 'https://upload-relay.testnet.walrus.space',
     walType: '0x9ef7676a9f81937a52ae4b2af8d511a28a0b080477c0c2db40b0ab8882240d76::wal::WAL',
     exchangePackage: '0x82593828ed3fcb8c6a235eac9abd0adbe9c5f9bbffa9b1e7a45cdd884481ef9f',
   },
@@ -42,22 +52,23 @@ const NET_CONFIG: Record<
 
 const WALLET_KEY = 'walletProfile'
 
-type StepId = 'idle' | 'check-wal' | 'acquire-wal' | 'encode' | 'uploading' | 'done'
-
-const STEP_LABELS: Record<StepId, string> = {
-  idle: '',
-  'check-wal': 'Checking WAL balance...',
-  'acquire-wal': 'Acquiring WAL...',
-  encode: 'Encoding & uploading (WASM)...',
-  uploading: 'Uploading via relay...',
-  done: 'Upload complete!',
-}
+type StepId =
+  | 'idle'
+  | 'check-wal'
+  | 'acquire-wal'
+  | 'encode'
+  | 'register'
+  | 'upload'
+  | 'certify'
+  | 'uploading'
+  | 'done'
 
 interface UploadResult {
   blobId: string
   url: string
   size: number
   fileName: string
+  mode: UploadMode
 }
 
 let sharedHost: SuiHostAPI | null = null
@@ -76,21 +87,20 @@ function fileIcon(type: string): string {
   return '📁'
 }
 
-// Cost estimate: units = ceil(size / 1MiB), cost ≈ units × 0.5 WAL × epochs
 const PRICE_PER_UNIT_EPOCH = 0.5
 const BYTES_PER_UNIT = 1024 * 1024
 
 function estimateCost(fileSize: number, ep: number) {
   const units = Math.max(1, Math.ceil(fileSize / BYTES_PER_UNIT))
   const storage = units * PRICE_PER_UNIT_EPOCH * ep
-  const write = 0.01
-  return { units, storage, write, total: storage + write }
+  return { units, storage, total: storage + 0.01 }
 }
 
 function WalrusUploadContent() {
   const [file, setFile] = useState<File | null>(null)
   const [epochs, setEpochs] = useState(5)
   const [deletable, setDeletable] = useState(false)
+  const [mode, setMode] = useState<UploadMode>('publisher')
   const [step, setStep] = useState<StepId>('idle')
   const [detail, setDetail] = useState('')
   const [result, setResult] = useState<UploadResult | null>(null)
@@ -113,6 +123,7 @@ function WalrusUploadContent() {
 
   const uploading = step !== 'idle' && step !== 'done'
   const net = NET_CONFIG[network]
+  const isConnected = !!walletAddr
 
   useEffect(() => {
     if (!sharedHost) return
@@ -134,96 +145,144 @@ function WalrusUploadContent() {
     }
   }, [])
 
+  // --- Acquire WAL helper ---
+  const acquireWal = useCallback(
+    async (_client: SuiGrpcClient, addr: string, needed: number) => {
+      if (network === 'testnet') {
+        setDetail(`Exchange ${needed.toFixed(2)} SUI → WAL (1:1 testnet)`)
+        const exchangeId = TESTNET_WALRUS_PACKAGE_CONFIG.exchangeIds?.[0]
+        if (!exchangeId) throw new Error('No testnet exchange object')
+        const neededMist = BigInt(Math.ceil(needed * 1e9))
+        const tx = new Transaction()
+        tx.setSender(addr)
+        const [suiCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(neededMist)])
+        const [walCoin] = tx.moveCall({
+          target: `${net.exchangePackage}::wal_exchange::exchange_for_wal`,
+          arguments: [tx.object(exchangeId), suiCoin, tx.pure.u64(neededMist)],
+        })
+        tx.transferObjects([walCoin, suiCoin], addr)
+        await sharedHost!.signAndExecuteTransaction(tx)
+      } else {
+        throw new Error(`Insufficient WAL. Use WAL Swap plugin to get WAL first.`)
+      }
+    },
+    [network, net],
+  )
+
+  // --- Publisher upload ---
+  const uploadViaPublisher = useCallback(
+    async (bytes: Uint8Array) => {
+      if (!net.publisher)
+        throw new Error('No public publisher on mainnet. Use Direct mode or Walrus CLI.')
+      setStep('uploading')
+      setDetail(`Uploading to ${network} publisher...`)
+
+      const url = `${net.publisher}/v1/blobs?epochs=${epochs}${deletable ? '&deletable=true' : ''}`
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: bytes.buffer as ArrayBuffer,
+      })
+      if (!res.ok)
+        throw new Error(
+          `Publisher error ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`,
+        )
+
+      const data = await res.json()
+      return (data.newlyCreated?.blobObject?.blobId ??
+        data.alreadyCertified?.blobId ??
+        '') as string
+    },
+    [net, network, epochs, deletable],
+  )
+
+  // --- Direct upload (user owns blob) ---
+  const uploadDirect = useCallback(
+    async (bytes: Uint8Array, addr: string) => {
+      if (!sharedHost) throw new Error('No host API')
+
+      setStep('encode')
+      setDetail('Initializing WASM encoder...')
+
+      const client = new SuiGrpcClient({ network, baseUrl: net.rpc }).$extend(
+        walrus({
+          wasmUrl: walrusWasmUrl,
+          packageConfig:
+            network === 'mainnet' ? MAINNET_WALRUS_PACKAGE_CONFIG : TESTNET_WALRUS_PACKAGE_CONFIG,
+          uploadRelay: { host: net.uploadRelay, sendTip: { max: 10000 } },
+        }),
+      )
+
+      const flow = client.walrus.writeFilesFlow({
+        files: [WalrusFile.from({ contents: bytes, identifier: file?.name ?? 'file' })],
+      })
+
+      setDetail('Encoding file (WASM RedStuff)...')
+      await flow.encode()
+
+      setStep('register')
+      setDetail('Sign register transaction in wallet...')
+      const registerTx = flow.register({ epochs, owner: addr, deletable })
+      await sharedHost.signAndExecuteTransaction(registerTx)
+
+      setStep('upload')
+      setDetail('Uploading slivers to storage nodes...')
+      await flow.upload()
+
+      setStep('certify')
+      setDetail('Sign certify transaction in wallet...')
+      const certifyTx = flow.certify()
+      await sharedHost.signAndExecuteTransaction(certifyTx)
+
+      const files = await flow.listFiles()
+      return files[0]?.blobId ?? ''
+    },
+    [network, net, epochs, deletable, file?.name],
+  )
+
+  // --- Main upload handler ---
   const handleUpload = useCallback(async () => {
     if (!file || !walletAddr || !sharedHost) return
     setError(null)
     setResult(null)
 
-    const client = new SuiGrpcClient({ network, baseUrl: net.rpc })
-
     try {
-      // Step 1: Check WAL balance
-      setStep('check-wal')
-      setDetail('')
-      const balRes = await client.core.getBalance({ owner: walletAddr, coinType: net.walType })
-      const bal = Number(balRes.balance.balance) / 1e9
-      setWalBalance(bal)
+      const client = new SuiGrpcClient({ network, baseUrl: net.rpc })
 
-      // Step 2: Acquire WAL if needed
-      const estimatedCost = Math.max(0.5, (file.size / 1e6) * 0.5 * epochs)
-      if (bal < estimatedCost) {
-        const needed = estimatedCost - bal + 0.1
-        const neededMist = BigInt(Math.ceil(needed * 1e9))
-        setStep('acquire-wal')
+      // Check WAL balance (for direct mode)
+      if (mode === 'direct') {
+        setStep('check-wal')
+        setDetail('')
+        const balRes = await client.core.getBalance({ owner: walletAddr, coinType: net.walType })
+        const bal = Number(balRes.balance.balance) / 1e9
+        setWalBalance(bal)
 
-        if (network === 'testnet') {
-          setDetail(`Exchange ${needed.toFixed(2)} SUI → WAL (1:1 testnet)`)
-          const exchangeId = TESTNET_WALRUS_PACKAGE_CONFIG.exchangeIds?.[0]
-          if (!exchangeId) throw new Error('No testnet exchange object')
-
-          const tx = new Transaction()
-          tx.setSender(walletAddr)
-          const [suiCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(neededMist)])
-          const [walCoin] = tx.moveCall({
-            target: `${net.exchangePackage}::wal_exchange::exchange_for_wal`,
-            arguments: [tx.object(exchangeId), suiCoin, tx.pure.u64(neededMist)],
-          })
-          tx.transferObjects([walCoin, suiCoin], walletAddr)
-          await sharedHost.signAndExecuteTransaction(tx)
-        } else {
-          // Mainnet: skip auto-swap, just warn
-          throw new Error(
-            `Insufficient WAL balance (${bal.toFixed(4)} WAL). ` +
-              `Need ~${estimatedCost.toFixed(4)} WAL. ` +
-              `Use the WAL Swap plugin to get WAL first.`,
-          )
+        const cost = estimateCost(file.size, epochs)
+        if (bal < cost.total) {
+          setStep('acquire-wal')
+          await acquireWal(client, walletAddr, cost.total - bal + 0.1)
+          const newBal = await client.core.getBalance({ owner: walletAddr, coinType: net.walType })
+          setWalBalance(Number(newBal.balance.balance) / 1e9)
         }
-
-        const newBal = await client.core.getBalance({ owner: walletAddr, coinType: net.walType })
-        setWalBalance(Number(newBal.balance.balance) / 1e9)
-      }
-
-      // Step 3: Upload via publisher HTTP API
-      // Testnet: public publishers available with CORS
-      // Mainnet: no public publisher — need Walrus CLI or own publisher
-      if (!net.publisher) {
-        throw new Error(
-          'Mainnet has no public publisher for browser uploads. ' +
-            'Use the Walrus CLI, Tusky app, or run your own publisher.',
-        )
       }
 
       setStep('encode')
       setDetail('Reading file...')
       const bytes = new Uint8Array(await file.arrayBuffer())
 
-      setStep('uploading')
-      setDetail(`Uploading to ${network} publisher...`)
+      const blobId =
+        mode === 'publisher'
+          ? await uploadViaPublisher(bytes)
+          : await uploadDirect(bytes, walletAddr)
 
-      const url = `${net.publisher}/v1/blobs?epochs=${epochs}${deletable ? '' : '&deletable=true'}&send_object_to=${walletAddr}`
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/octet-stream' },
-        body: bytes,
-      })
+      if (!blobId) throw new Error('No blob ID returned')
 
-      if (!res.ok) {
-        const text = await res.text().catch(() => '')
-        throw new Error(`Publisher error ${res.status}: ${text.slice(0, 300)}`)
-      }
-
-      const data = await res.json()
-      const blobInfo = data.newlyCreated?.blobObject ?? data.alreadyCertified ?? data
-      const blobId = blobInfo?.blobId ?? ''
-
-      if (!blobId) throw new Error('No blob ID in response: ' + JSON.stringify(data).slice(0, 200))
-
-      // Done
       const uploadResult: UploadResult = {
         blobId,
         url: `${net.aggregator}/v1/blobs/${blobId}`,
         size: file.size,
         fileName: file.name,
+        mode,
       }
       setResult(uploadResult)
       setHistory((prev) => {
@@ -234,11 +293,21 @@ function WalrusUploadContent() {
       setStep('done')
       setDetail('')
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setError(msg)
+      setError(err instanceof Error ? err.message : String(err))
       setStep('idle')
     }
-  }, [file, epochs, deletable, walletAddr, network, net])
+  }, [
+    file,
+    epochs,
+    deletable,
+    walletAddr,
+    network,
+    net,
+    mode,
+    acquireWal,
+    uploadViaPublisher,
+    uploadDirect,
+  ])
 
   const copy = async (text: string, key: string) => {
     await navigator.clipboard.writeText(text)
@@ -246,13 +315,16 @@ function WalrusUploadContent() {
     setTimeout(() => setCopied(null), 2000)
   }
 
-  const isConnected = !!walletAddr
+  const activeSteps: StepId[] =
+    mode === 'publisher'
+      ? ['encode', 'uploading', 'done']
+      : ['check-wal', 'acquire-wal', 'encode', 'register', 'upload', 'certify', 'done']
 
   return (
     <div className="sui-wup">
       <div className="sui-wup__header">
         <h3 className="sui-wup__title">Walrus Upload</h3>
-        <p className="sui-wup__desc">Upload files to Walrus decentralized storage</p>
+        <p className="sui-wup__desc">Upload files to Walrus decentralized storage · {network}</p>
       </div>
 
       {error && <div className="sui-wup__error">{error}</div>}
@@ -262,7 +334,7 @@ function WalrusUploadContent() {
           className="sui-wup__error"
           style={{ background: '#2a1a0a', borderColor: '#5c3a1a', color: '#fbbf24' }}
         >
-          ⚠ Connect wallet via <strong>Wallet Profile</strong> plugin to upload
+          ⚠ Connect wallet via <strong>Wallet Profile</strong> plugin
           {sharedHost && (
             <button
               className="sui-wup__action sui-wup__action--connect"
@@ -281,13 +353,30 @@ function WalrusUploadContent() {
             <span className="sui-wup__cost-label">WAL Balance</span>
             <span className="sui-wup__cost-val">{walBalance.toFixed(4)} WAL</span>
           </div>
-          <div className="sui-wup__cost-row">
-            <span className="sui-wup__cost-label">Network</span>
-            <span className="sui-wup__cost-val">{network}</span>
-          </div>
         </div>
       )}
 
+      {/* Upload mode selector */}
+      {!uploading && !result && (
+        <div className="sui-wup__modes">
+          <button
+            className={`sui-wup__mode ${mode === 'publisher' ? 'sui-wup__mode--active' : ''}`}
+            onClick={() => setMode('publisher')}
+          >
+            <div className="sui-wup__mode-title">📡 Publisher</div>
+            <div className="sui-wup__mode-desc">Fast · No signing · Publisher owns blob</div>
+          </button>
+          <button
+            className={`sui-wup__mode ${mode === 'direct' ? 'sui-wup__mode--active' : ''}`}
+            onClick={() => setMode('direct')}
+          >
+            <div className="sui-wup__mode-title">🔐 Direct</div>
+            <div className="sui-wup__mode-desc">You own blob · Needs WAL · 2 signatures</div>
+          </button>
+        </div>
+      )}
+
+      {/* Drop zone */}
       {!file && !uploading && (
         <div
           className={`sui-wup__drop ${dragActive ? 'sui-wup__drop--active' : ''}`}
@@ -302,7 +391,9 @@ function WalrusUploadContent() {
           <div className="sui-wup__drop-icon">📤</div>
           <div className="sui-wup__drop-text">Drop file here or click to browse</div>
           <div className="sui-wup__drop-hint">
-            WASM encoding · Upload relay · Auto WAL exchange (testnet)
+            {mode === 'publisher'
+              ? 'Publisher mode · No WAL needed'
+              : 'Direct mode · WASM encoding · You own the blob'}
           </div>
           <input
             ref={inputRef}
@@ -320,6 +411,7 @@ function WalrusUploadContent() {
         </div>
       )}
 
+      {/* File info */}
       {file && (
         <div className="sui-wup__file">
           {file.type.startsWith('image/') ? (
@@ -353,6 +445,7 @@ function WalrusUploadContent() {
         </div>
       )}
 
+      {/* Options */}
       {file && !uploading && !result && (
         <div className="sui-wup__options">
           <div className="sui-wup__field">
@@ -383,7 +476,7 @@ function WalrusUploadContent() {
         </div>
       )}
 
-      {/* Cost estimate */}
+      {/* Cost estimate (direct mode) */}
       {file &&
         !uploading &&
         !result &&
@@ -391,53 +484,68 @@ function WalrusUploadContent() {
           const c = estimateCost(file.size, epochs)
           return (
             <div className="sui-wup__cost">
-              <div className="sui-wup__cost-row">
-                <span className="sui-wup__cost-label">Storage Units</span>
-                <span className="sui-wup__cost-val">
-                  {c.units} unit{c.units > 1 ? 's' : ''} (⌈{formatSize(file.size)} / 1 MiB⌉)
-                </span>
-              </div>
-              <div className="sui-wup__cost-row">
-                <span className="sui-wup__cost-label">Storage Cost</span>
-                <span className="sui-wup__cost-val">
-                  {c.storage.toFixed(4)} WAL ({c.units} × 0.5 × {epochs})
-                </span>
-              </div>
-              <div className="sui-wup__cost-row">
-                <span className="sui-wup__cost-label">Write Fee</span>
-                <span className="sui-wup__cost-val">~{c.write.toFixed(4)} WAL</span>
-              </div>
-              <div
-                className="sui-wup__cost-row"
-                style={{ borderTop: '1px solid #1e1e22', paddingTop: 4, marginTop: 4 }}
-              >
-                <span className="sui-wup__cost-label" style={{ fontWeight: 600, color: '#ededed' }}>
-                  Estimated Total
-                </span>
-                <span className="sui-wup__cost-val" style={{ color: '#4da2ff' }}>
-                  ~{c.total.toFixed(4)} WAL
-                </span>
-              </div>
-              <div style={{ fontSize: 10, color: '#555', marginTop: 6 }}>
-                Formula: ⌈size / 1MiB⌉ × price_per_unit × epochs + write_fee
-              </div>
+              {mode === 'direct' ? (
+                <>
+                  <div className="sui-wup__cost-row">
+                    <span className="sui-wup__cost-label">Est. Cost</span>
+                    <span className="sui-wup__cost-val">~{c.total.toFixed(4)} WAL</span>
+                  </div>
+                  <div className="sui-wup__cost-row">
+                    <span className="sui-wup__cost-label">Formula</span>
+                    <span className="sui-wup__cost-val" style={{ fontSize: 10 }}>
+                      ⌈{formatSize(file.size)}/1MiB⌉ × {PRICE_PER_UNIT_EPOCH} × {epochs}
+                    </span>
+                  </div>
+                  <div className="sui-wup__cost-row">
+                    <span className="sui-wup__cost-label">Blob Owner</span>
+                    <span className="sui-wup__cost-val" style={{ color: '#34d399' }}>
+                      You (wallet)
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="sui-wup__cost-row">
+                    <span className="sui-wup__cost-label">Cost</span>
+                    <span className="sui-wup__cost-val" style={{ color: '#34d399' }}>
+                      Free (publisher pays)
+                    </span>
+                  </div>
+                  <div className="sui-wup__cost-row">
+                    <span className="sui-wup__cost-label">Blob Owner</span>
+                    <span className="sui-wup__cost-val" style={{ color: '#fbbf24' }}>
+                      Publisher
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           )
         })()}
 
+      {/* Step progress */}
       {uploading && (
         <div className="sui-wup__steps">
-          {(['check-wal', 'acquire-wal', 'encode', 'uploading', 'done'] as StepId[]).map((sid) => {
+          {activeSteps.map((sid) => {
             const isCurrent = step === sid
-            const allSteps: StepId[] = ['check-wal', 'acquire-wal', 'encode', 'uploading', 'done']
-            const isDone = allSteps.indexOf(sid) < allSteps.indexOf(step)
+            const isDone = activeSteps.indexOf(sid) < activeSteps.indexOf(step)
+            const labels: Record<string, string> = {
+              'check-wal': 'Check WAL',
+              'acquire-wal': 'Get WAL',
+              encode: 'Encode',
+              register: 'Register (sign)',
+              upload: 'Upload slivers',
+              certify: 'Certify (sign)',
+              uploading: 'Uploading...',
+              done: 'Done',
+            }
             return (
               <div
                 key={sid}
                 className={`sui-wup__step ${isCurrent ? 'sui-wup__step--active' : ''} ${isDone ? 'sui-wup__step--done' : ''}`}
               >
                 <span className="sui-wup__step-icon">{isDone ? '✓' : isCurrent ? '⏳' : '○'}</span>
-                <span className="sui-wup__step-label">{STEP_LABELS[sid]}</span>
+                <span className="sui-wup__step-label">{labels[sid] ?? sid}</span>
               </div>
             )
           })}
@@ -447,7 +555,7 @@ function WalrusUploadContent() {
               <div
                 className="sui-wup__progress-fill"
                 style={{
-                  width: `${step === 'check-wal' ? 15 : step === 'acquire-wal' ? 30 : step === 'encode' ? 50 : step === 'uploading' ? 75 : 100}%`,
+                  width: `${Math.round(((activeSteps.indexOf(step) + 1) / activeSteps.length) * 100)}%`,
                 }}
               />
             </div>
@@ -455,19 +563,27 @@ function WalrusUploadContent() {
         </div>
       )}
 
+      {/* Upload button */}
       {file && !uploading && !result && (
-        <button className="sui-wup__action" disabled={!isConnected} onClick={handleUpload}>
-          {isConnected ? `Upload to Walrus (${epochs} epochs)` : 'Connect Wallet First'}
+        <button
+          className="sui-wup__action"
+          disabled={!isConnected && mode === 'direct'}
+          onClick={handleUpload}
+        >
+          {mode === 'publisher'
+            ? `Upload via Publisher (${epochs} epochs)`
+            : `Upload Direct (${epochs} epochs)`}
         </button>
       )}
 
+      {/* Result */}
       {result && (
         <div className="sui-wup__result">
-          <div className="sui-wup__result-title">✓ Upload Successful</div>
+          <div className="sui-wup__result-title">✓ Upload Successful ({result.mode})</div>
           <div className="sui-wup__result-row">
             <span className="sui-wup__result-label">Blob ID</span>
             <span className="sui-wup__result-val">
-              {result.blobId.slice(0, 20)}...
+              {result.blobId.slice(0, 24)}...
               <button className="sui-wup__copy" onClick={() => copy(result.blobId, 'blob')}>
                 {copied === 'blob' ? '✓' : '⎘'}
               </button>
@@ -489,10 +605,6 @@ function WalrusUploadContent() {
               </button>
             </span>
           </div>
-          <div className="sui-wup__result-row">
-            <span className="sui-wup__result-label">Size</span>
-            <span className="sui-wup__result-val">{formatSize(result.size)}</span>
-          </div>
           <button
             className="sui-wup__action"
             style={{ marginTop: 10 }}
@@ -502,19 +614,22 @@ function WalrusUploadContent() {
               setStep('idle')
             }}
           >
-            Upload Another File
+            Upload Another
           </button>
         </div>
       )}
 
+      {/* History */}
       {history.length > 0 && !uploading && (
         <>
-          <div className="sui-wup__section-title">Recent Uploads ({history.length})</div>
+          <div className="sui-wup__section-title">Recent ({history.length})</div>
           {history.map((h) => (
             <div key={h.blobId} className="sui-wup__history-row">
               <div>
                 <div className="sui-wup__history-name">{h.fileName}</div>
-                <div className="sui-wup__history-id">{h.blobId.slice(0, 24)}...</div>
+                <div className="sui-wup__history-id">
+                  {h.blobId.slice(0, 24)}... · {h.mode}
+                </div>
               </div>
               <a href={h.url} target="_blank" rel="noopener noreferrer" className="sui-wup__link">
                 View ↗
@@ -525,7 +640,6 @@ function WalrusUploadContent() {
       )}
 
       <div className="sui-wup__footer">
-        Powered by{' '}
         <a
           href="https://docs.wal.app"
           target="_blank"
@@ -534,7 +648,7 @@ function WalrusUploadContent() {
         >
           Walrus
         </a>
-        {' · WASM encoding · Upload relay'}
+        {mode === 'direct' ? ' · WASM encoding · You own the blob' : ' · Publisher mode'}
       </div>
     </div>
   )
@@ -542,7 +656,7 @@ function WalrusUploadContent() {
 
 const SuiWalrusUploadPlugin: Plugin = {
   name: 'SuiWalrusUpload',
-  version: '2.0.0',
+  version: '3.0.0',
   styleUrls: ['/plugins/sui-walrus-upload/style.css'],
   init(host: HostAPI) {
     sharedHost = isSuiHostAPI(host) ? host : null
