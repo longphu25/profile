@@ -226,7 +226,11 @@ function WalrusUploadContent() {
         fileName: file.name,
       }
       setResult(uploadResult)
-      setHistory((prev) => [uploadResult, ...prev.slice(0, 9)])
+      setHistory((prev) => {
+        const next = [uploadResult, ...prev.slice(0, 9)]
+        if (sharedHost) sharedHost.setSharedData('walrusUploads', next)
+        return next
+      })
       setStep('done')
       setDetail('')
     } catch (err) {

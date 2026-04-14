@@ -79,6 +79,9 @@ function ViewerContent() {
   const [history, setHistory] = useState<{ blobId: string; size: number }[]>([])
   const [ownedBlobs, setOwnedBlobs] = useState<OwnedBlob[]>([])
   const [ownedLoading, setOwnedLoading] = useState(false)
+  const [uploadedBlobs, setUploadedBlobs] = useState<
+    { blobId: string; fileName: string; size: number }[]
+  >([])
   const [walletAddr, setWalletAddr] = useState<string | null>(() => {
     if (!sharedHost) return null
     const d = sharedHost.getSharedData(WALLET_KEY) as { address: string } | null
@@ -99,6 +102,16 @@ function ViewerContent() {
       const p = v as { address: string; network: string } | null
       setWalletAddr(p?.address ?? null)
       setNetwork(p?.network ?? 'mainnet')
+    })
+  }, [])
+
+  // Subscribe to upload history from walrus-upload plugin
+  useEffect(() => {
+    if (!sharedHost) return
+    const d = sharedHost.getSharedData('walrusUploads')
+    if (Array.isArray(d)) setUploadedBlobs(d)
+    return sharedHost.onSharedDataChange('walrusUploads', (v) => {
+      if (Array.isArray(v)) setUploadedBlobs(v)
     })
   }, [])
 
@@ -285,6 +298,31 @@ function ViewerContent() {
               ↗ Open in Browser
             </a>
           </div>
+        </>
+      )}
+
+      {/* Uploaded blobs (from walrus-upload plugin) */}
+      {uploadedBlobs.length > 0 && (
+        <>
+          <div className="sui-wvw__section-title">Uploaded ({uploadedBlobs.length})</div>
+          {uploadedBlobs.map((b) => (
+            <div
+              key={b.blobId}
+              className="sui-wvw__history-row"
+              onClick={() => {
+                setBlobId(b.blobId)
+                fetchBlob(b.blobId)
+              }}
+            >
+              <div>
+                <span className="sui-wvw__history-id">{b.blobId.slice(0, 24)}...</span>
+                <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>
+                  {b.fileName} · {formatSize(b.size)}
+                </div>
+              </div>
+              <span className="sui-wvw__history-size">View →</span>
+            </div>
+          ))}
         </>
       )}
 
