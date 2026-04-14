@@ -186,7 +186,10 @@ function ViewerContent() {
         if (!res.ok) throw new Error(`Aggregator: ${res.status} ${res.statusText}`)
 
         const bytes = new Uint8Array(await res.arrayBuffer())
-        const contentType = res.headers.get('content-type') || detectContentType(bytes)
+        const detected = detectContentType(bytes)
+        const header = res.headers.get('content-type') ?? ''
+        // Prefer magic bytes detection over generic header
+        const contentType = detected !== 'application/octet-stream' ? detected : header || detected
 
         let objectUrl: string | null = null
         if (isImageType(contentType)) {
