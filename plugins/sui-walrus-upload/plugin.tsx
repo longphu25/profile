@@ -7,7 +7,7 @@ import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { Transaction } from '@mysten/sui/transactions'
-import { walrus, TESTNET_WALRUS_PACKAGE_CONFIG } from '@mysten/walrus'
+import { walrus } from '@mysten/walrus'
 import walrusWasmUrl from '@mysten/walrus-wasm/web/walrus_wasm_bg.wasm?url'
 
 import {
@@ -16,6 +16,7 @@ import {
   type UploadResult,
   NET_CONFIG,
   TESTNET_PUBLISHERS,
+  TESTNET_WALRUS_PACKAGE_CONFIG,
   WALLET_KEY,
   formatSize,
   fileIcon,
@@ -171,7 +172,6 @@ function WalrusUploadContent() {
         const wClient = client.$extend(
           walrus({
             wasmUrl: walrusWasmUrl,
-            packageConfig: net.walrusConfig,
             uploadRelay: { host: net.uploadRelay, sendTip: { max: 10000 } },
           }),
         )

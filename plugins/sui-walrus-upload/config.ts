@@ -1,6 +1,6 @@
 // Shared types and config for walrus-upload plugin
 
-import { TESTNET_WALRUS_PACKAGE_CONFIG, MAINNET_WALRUS_PACKAGE_CONFIG } from '@mysten/walrus'
+import { TESTNET_WALRUS_PACKAGE_CONFIG } from '@mysten/walrus'
 
 export type NetworkKey = 'mainnet' | 'testnet'
 export type UploadMode = 'publisher' | 'direct'
@@ -10,7 +10,6 @@ export interface NetConfig {
   aggregator: string
   uploadRelay: string
   walType: string
-  walrusConfig: typeof MAINNET_WALRUS_PACKAGE_CONFIG
 }
 
 export const NET_CONFIG: Record<NetworkKey, NetConfig> = {
@@ -19,16 +18,16 @@ export const NET_CONFIG: Record<NetworkKey, NetConfig> = {
     aggregator: 'https://aggregator.walrus-mainnet.walrus.space',
     uploadRelay: 'https://upload-relay.mainnet.walrus.space',
     walType: '0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL',
-    walrusConfig: MAINNET_WALRUS_PACKAGE_CONFIG,
   },
   testnet: {
     rpc: 'https://fullnode.testnet.sui.io:443',
     aggregator: 'https://aggregator.walrus-testnet.walrus.space',
     uploadRelay: 'https://upload-relay.testnet.walrus.space',
     walType: '0x9ef7676a9f81937a52ae4b2af8d511a28a0b080477c0c2db40b0ab8882240d76::wal::WAL',
-    walrusConfig: TESTNET_WALRUS_PACKAGE_CONFIG,
   },
 }
+
+export { TESTNET_WALRUS_PACKAGE_CONFIG }
 
 export interface Publisher {
   url: string
