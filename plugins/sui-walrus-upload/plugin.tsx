@@ -76,6 +76,17 @@ function fileIcon(type: string): string {
   return '📁'
 }
 
+// Cost estimate: units = ceil(size / 1MiB), cost ≈ units × 0.5 WAL × epochs
+const PRICE_PER_UNIT_EPOCH = 0.5
+const BYTES_PER_UNIT = 1024 * 1024
+
+function estimateCost(fileSize: number, ep: number) {
+  const units = Math.max(1, Math.ceil(fileSize / BYTES_PER_UNIT))
+  const storage = units * PRICE_PER_UNIT_EPOCH * ep
+  const write = 0.01
+  return { units, storage, write, total: storage + write }
+}
+
 function WalrusUploadContent() {
   const [file, setFile] = useState<File | null>(null)
   const [epochs, setEpochs] = useState(5)
@@ -307,7 +318,16 @@ function WalrusUploadContent() {
 
       {file && (
         <div className="sui-wup__file">
-          <div className="sui-wup__file-icon">{fileIcon(file.type)}</div>
+          {file.type.startsWith('image/') ? (
+            <img
+              src={URL.createObjectURL(file)}
+              alt="Preview"
+              className="sui-wup__preview-thumb"
+              onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+            />
+          ) : (
+            <div className="sui-wup__file-icon">{fileIcon(file.type)}</div>
+          )}
           <div className="sui-wup__file-info">
             <div className="sui-wup__file-name">{file.name}</div>
             <div className="sui-wup__file-size">
@@ -358,6 +378,48 @@ function WalrusUploadContent() {
           </div>
         </div>
       )}
+
+      {/* Cost estimate */}
+      {file &&
+        !uploading &&
+        !result &&
+        (() => {
+          const c = estimateCost(file.size, epochs)
+          return (
+            <div className="sui-wup__cost">
+              <div className="sui-wup__cost-row">
+                <span className="sui-wup__cost-label">Storage Units</span>
+                <span className="sui-wup__cost-val">
+                  {c.units} unit{c.units > 1 ? 's' : ''} (⌈{formatSize(file.size)} / 1 MiB⌉)
+                </span>
+              </div>
+              <div className="sui-wup__cost-row">
+                <span className="sui-wup__cost-label">Storage Cost</span>
+                <span className="sui-wup__cost-val">
+                  {c.storage.toFixed(4)} WAL ({c.units} × 0.5 × {epochs})
+                </span>
+              </div>
+              <div className="sui-wup__cost-row">
+                <span className="sui-wup__cost-label">Write Fee</span>
+                <span className="sui-wup__cost-val">~{c.write.toFixed(4)} WAL</span>
+              </div>
+              <div
+                className="sui-wup__cost-row"
+                style={{ borderTop: '1px solid #1e1e22', paddingTop: 4, marginTop: 4 }}
+              >
+                <span className="sui-wup__cost-label" style={{ fontWeight: 600, color: '#ededed' }}>
+                  Estimated Total
+                </span>
+                <span className="sui-wup__cost-val" style={{ color: '#4da2ff' }}>
+                  ~{c.total.toFixed(4)} WAL
+                </span>
+              </div>
+              <div style={{ fontSize: 10, color: '#555', marginTop: 6 }}>
+                Formula: ⌈size / 1MiB⌉ × price_per_unit × epochs + write_fee
+              </div>
+            </div>
+          )
+        })()}
 
       {uploading && (
         <div className="sui-wup__steps">
