@@ -54,6 +54,7 @@ export default defineConfig({
         'plugin-demo': resolve(__dirname, 'plugin-demo.html'),
         'sui-plugin': resolve(__dirname, 'sui-plugin.html'),
         'sui-plugin-wasm': resolve(__dirname, 'sui-plugin-wasm.html'),
+        'sui-deepbook-hedging-bot': resolve(__dirname, 'sui-deepbook-hedging-bot.html'),
         // Build plugins as separate entry points
         'plugins/hello-plugin': resolve(__dirname, 'plugins/hello-plugin/plugin.tsx'),
         'plugins/hello-world-sui': resolve(__dirname, 'plugins/hello-world-sui/plugin.tsx'),
@@ -85,6 +86,10 @@ export default defineConfig({
         'plugins/sui-payment': resolve(__dirname, 'plugins/sui-payment/plugin.tsx'),
         'plugins/sui-walrus-upload': resolve(__dirname, 'plugins/sui-walrus-upload/plugin.tsx'),
         'plugins/sui-walrus-viewer': resolve(__dirname, 'plugins/sui-walrus-viewer/plugin.tsx'),
+        'plugins/sui-deepbook-hedging-bot': resolve(
+          __dirname,
+          'plugins/sui-deepbook-hedging-bot/plugin.tsx',
+        ),
       },
       external: ['gsap', 'motion'],
       preserveEntrySignatures: 'exports-only',

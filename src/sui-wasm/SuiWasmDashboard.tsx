@@ -142,6 +142,14 @@ const PLUGIN_GROUPS: PluginGroup[] = [
         src: pluginPath('sui-hedging-monitor'),
         wasmDesc: 'Bot REST/SSE API',
       },
+      {
+        id: 'sui-deepbook-hedging-bot',
+        name: 'SuiDeepBookHedgingBot',
+        label: 'Hedging Bot',
+        desc: 'Client-side hedging bot (no server)',
+        src: pluginPath('sui-deepbook-hedging-bot'),
+        wasmDesc: 'Ed25519Keypair + DeepBook SDK',
+      },
     ],
   },
   {
