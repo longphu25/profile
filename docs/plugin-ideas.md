@@ -239,3 +239,91 @@ These plugins bring bot-level trading operations to the browser dashboard.
 | 🥉 | `sui-deepbook-bot` | High | Medium — full bot (enhanced hedging-monitor) |
 | 4 | `sui-deepbook-strategy` | High | Niche — advanced users |
 | 4 | `sui-deepbook-aggregator` | Medium | Medium — needs @7kprotocol SDK |
+
+---
+
+## Client-Side Hedging Bot Plugin
+
+### `sui-deepbook-hedging-bot` — Browser-Based Hedging Bot
+
+**Concept:** Bot hedging chạy hoàn toàn trên browser (client-side), không cần server.
+Import 2 private keys → bot tự động mở/đóng positions → theo dõi realtime trên dashboard.
+
+**Khác biệt với `sui-hedging-monitor`:**
+- `sui-hedging-monitor`: chỉ monitor bot server qua REST/SSE
+- `sui-deepbook-hedging-bot`: bot chạy ngay trong browser, tự ký transactions
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────┐
+│  Browser Plugin (client-side)                    │
+│                                                  │
+│  ┌──────────┐  ┌──────────┐                     │
+│  │ Account A │  │ Account B │  ← import keys     │
+│  │  (Long)   │  │  (Short)  │                    │
+│  └─────┬─────┘  └─────┬─────┘                    │
+│        │               │                         │
+│  ┌─────▼───────────────▼─────┐                   │
+│  │     Bot Runtime Loop       │                   │
+│  │  ┌─────────────────────┐  │                   │
+│  │  │ 1. Check balances   │  │                   │
+│  │  │ 2. Get orderbook    │  │                   │
+│  │  │ 3. Place open legs  │  │  ← setInterval    │
+│  │  │ 4. Wait fills       │  │                   │
+│  │  │ 5. Hold position    │  │                   │
+│  │  │ 6. Place close legs │  │                   │
+│  │  │ 7. Cleanup          │  │                   │
+│  │  └─────────────────────┘  │                   │
+│  └───────────────────────────┘                   │
+│                                                  │
+│  ┌───────────────────────────┐                   │
+│  │     Live Dashboard         │                   │
+│  │  • Cycle status + timer    │                   │
+│  │  • PnL tracking            │                   │
+│  │  • Balance overview         │                   │
+│  │  • Runtime logs             │                   │
+│  │  • Start / Stop / Clean     │                   │
+│  └───────────────────────────┘                   │
+└─────────────────────────────────────────────────┘
+```
+
+**Features:**
+- Import 2 private keys (encrypted in memory, never stored)
+- Or connect 2 wallet accounts from same wallet
+- Bot loop chạy via `setInterval` trong browser tab
+- Configurable: pool, notional size, hold time, max cycles
+- Auto-swap nếu thiếu collateral (7K aggregator hoặc DeepBook)
+- Place POST_ONLY maker orders (open + close)
+- Wait for fills with reprice logic
+- Hold timer with progress bar
+- Settle + withdraw + repay after close
+- Live PnL, volume, fees tracking
+- Runtime logs (in-memory, exportable)
+- Start / Stop / Stop & Clean controls
+- Tab must stay open (browser tab = bot process)
+- Warning: closing tab stops the bot
+
+**Source modules (from depbuk-hedging):**
+- `runtime-cycle-executor.ts` → cycle logic (open → hold → close)
+- `deepbook-execution.ts` → order placement, swap
+- `deepbook-cleanup.ts` → cancel, withdraw, repay
+- `deepbook-market-data.ts` → orderbook, price
+- `deepbook-margin-state.ts` → manager state
+- `runtime-shared.ts` → helpers (PnL calc, retry, etc.)
+
+**Key differences from server bot:**
+- No Postgres — state in React state + localStorage
+- No SSE — direct state updates via React
+- Signing via Ed25519Keypair (imported keys) or wallet
+- Single tab = single bot instance
+- Browser must stay open
+
+**Security notes:**
+- Private keys encrypted with user password in memory
+- Keys never sent to any server
+- Keys cleared on tab close
+- Option to use connected wallet accounts instead of raw keys
+
+**Effort:** High (port server bot logic to browser)
+**Value:** High (self-contained, no server needed)
+**WASM:** ESM (signing via @mysten/sui keypairs)
