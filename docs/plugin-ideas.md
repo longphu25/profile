@@ -327,3 +327,22 @@ Import 2 private keys → bot tự động mở/đóng positions → theo dõi r
 **Effort:** High (port server bot logic to browser)
 **Value:** High (self-contained, no server needed)
 **WASM:** ESM (signing via @mysten/sui keypairs)
+
+---
+
+## Planned WASM Module
+
+### `sui-deepbook-analysis` — WASM Orderbook Analysis Engine
+
+**SDK:** Rust → `wasm-bindgen` · **WASM:** Real WebAssembly (Rust compiled)
+
+Tích hợp vào `sui-deepbook-hedging-bot` plugin:
+- Orderbook depth analysis + wall detection
+- Spread predictor (statistical model)
+- Monte Carlo PnL simulator (triệu iterations)
+- Backtest engine trên historical trades
+- Optimal hold time calculator
+
+**Perf gain:** 10-100x vs JS cho compute-heavy tasks.
+**Effort:** High
+**Status:** ❌ Planned — see `docs/deepbook/hedging-bot.md`
