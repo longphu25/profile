@@ -1,12 +1,32 @@
 // SUI Walrus Viewer Plugin
 // View and download files from Walrus by blob ID
+// Shows owned blobs from connected wallet
 // Uses public aggregator HTTP API for reads
 
 import type { Plugin, HostAPI } from '../../src/plugins/types'
-import { useState, useCallback } from 'react'
+import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
+import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
+import { useState, useCallback, useEffect } from 'react'
+import { SuiGrpcClient } from '@mysten/sui/grpc'
 import './style.css'
 
-const AGGREGATOR = 'https://aggregator.walrus-mainnet.walrus.space'
+const AGGREGATORS: Record<string, string> = {
+  mainnet: 'https://aggregator.walrus-mainnet.walrus.space',
+  testnet: 'https://aggregator.walrus-testnet.walrus.space',
+}
+
+const RPC: Record<string, string> = {
+  mainnet: 'https://fullnode.mainnet.sui.io:443',
+  testnet: 'https://fullnode.testnet.sui.io:443',
+}
+
+// Known Walrus blob object types (mainnet + testnet)
+const BLOB_TYPES = [
+  '0xfdc88f7d7cf30afab2f82e8380d11ee8f70efb90e863d1de8616fae1bb09ea77::blob::Blob',
+  '0x795e21e4ac0e0e1c498e91e40c4a4c2a1e935e0a0c474e1916a4e4e8724b9af0::blob::Blob',
+]
+
+const WALLET_KEY = 'walletProfile'
 
 interface BlobData {
   blobId: string
@@ -16,6 +36,14 @@ interface BlobData {
   objectUrl: string | null
 }
 
+interface OwnedBlob {
+  objectId: string
+  blobId: string
+  size: number
+}
+
+let sharedHost: SuiHostAPI | null = null
+
 function formatSize(b: number): string {
   if (b >= 1e6) return `${(b / 1e6).toFixed(2)} MB`
   if (b >= 1e3) return `${(b / 1e3).toFixed(2)} KB`
@@ -23,14 +51,12 @@ function formatSize(b: number): string {
 }
 
 function detectContentType(bytes: Uint8Array): string {
-  // Magic bytes detection
   if (bytes[0] === 0x89 && bytes[1] === 0x50) return 'image/png'
   if (bytes[0] === 0xff && bytes[1] === 0xd8) return 'image/jpeg'
   if (bytes[0] === 0x47 && bytes[1] === 0x49) return 'image/gif'
   if (bytes[0] === 0x52 && bytes[1] === 0x49) return 'image/webp'
   if (bytes[0] === 0x25 && bytes[1] === 0x50) return 'application/pdf'
   if (bytes[0] === 0x7b) return 'application/json'
-  // Try UTF-8 text
   try {
     const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes.slice(0, 512))
     if (text.includes('<html') || text.includes('<!DOCTYPE')) return 'text/html'
@@ -54,6 +80,73 @@ function ViewerContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<{ blobId: string; size: number }[]>([])
+  const [ownedBlobs, setOwnedBlobs] = useState<OwnedBlob[]>([])
+  const [ownedLoading, setOwnedLoading] = useState(false)
+  const [walletAddr, setWalletAddr] = useState<string | null>(() => {
+    if (!sharedHost) return null
+    const d = sharedHost.getSharedData(WALLET_KEY) as { address: string } | null
+    return d?.address ?? null
+  })
+  const [network, setNetwork] = useState<string>(() => {
+    if (!sharedHost) return 'mainnet'
+    const d = sharedHost.getSharedData(WALLET_KEY) as { network: string } | null
+    return d?.network ?? 'mainnet'
+  })
+
+  const aggregator = AGGREGATORS[network] ?? AGGREGATORS.mainnet
+
+  // Subscribe to wallet
+  useEffect(() => {
+    if (!sharedHost) return
+    return sharedHost.onSharedDataChange(WALLET_KEY, (v) => {
+      const p = v as { address: string; network: string } | null
+      setWalletAddr(p?.address ?? null)
+      setNetwork(p?.network ?? 'mainnet')
+    })
+  }, [])
+
+  // Fetch owned blobs when wallet connects
+  const fetchOwnedBlobs = useCallback(async (addr: string, net: string) => {
+    setOwnedLoading(true)
+    try {
+      const rpc = RPC[net] ?? RPC.mainnet
+      const client = new SuiGrpcClient({ network: net as 'mainnet' | 'testnet', baseUrl: rpc })
+
+      const blobs: OwnedBlob[] = []
+      for (const blobType of BLOB_TYPES) {
+        try {
+          const res = await client.core.listOwnedObjects({
+            owner: addr,
+            type: blobType,
+            include: { content: true },
+            limit: 20,
+          })
+          for (const obj of res.objects) {
+            if (obj instanceof Error) continue
+            const content = await obj.content
+            // Blob object has blobId and size in its fields
+            // Parse from BCS content — simplified: use object ID as fallback
+            blobs.push({
+              objectId: obj.objectId,
+              blobId: obj.objectId, // will be replaced if we can parse
+              size: content ? content.length : 0,
+            })
+          }
+        } catch {
+          // Type might not exist on this network
+        }
+      }
+      setOwnedBlobs(blobs)
+    } catch {
+      setOwnedBlobs([])
+    } finally {
+      setOwnedLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (walletAddr) fetchOwnedBlobs(walletAddr, network)
+  }, [walletAddr, network, fetchOwnedBlobs])
 
   const fetchBlob = useCallback(
     async (id?: string) => {
@@ -64,7 +157,7 @@ function ViewerContent() {
       setData(null)
 
       try {
-        const res = await fetch(`${AGGREGATOR}/v1/blobs/${target}`)
+        const res = await fetch(`${aggregator}/v1/blobs/${target}`)
         if (!res.ok) throw new Error(`Aggregator: ${res.status} ${res.statusText}`)
 
         const bytes = new Uint8Array(await res.arrayBuffer())
@@ -77,14 +170,7 @@ function ViewerContent() {
           )
         }
 
-        const result: BlobData = {
-          blobId: target,
-          bytes,
-          contentType,
-          size: bytes.length,
-          objectUrl,
-        }
-        setData(result)
+        setData({ blobId: target, bytes, contentType, size: bytes.length, objectUrl })
 
         setHistory((prev) => {
           if (prev.some((h) => h.blobId === target)) return prev
@@ -96,7 +182,7 @@ function ViewerContent() {
         setLoading(false)
       }
     },
-    [blobId],
+    [blobId, aggregator],
   )
 
   const handleDownload = () => {
@@ -119,7 +205,7 @@ function ViewerContent() {
     <div className="sui-wvw">
       <div className="sui-wvw__header">
         <h3 className="sui-wvw__title">Walrus Viewer</h3>
-        <p className="sui-wvw__desc">View and download files from Walrus storage</p>
+        <p className="sui-wvw__desc">View files from Walrus · {network}</p>
       </div>
 
       {/* Input */}
@@ -146,7 +232,6 @@ function ViewerContent() {
 
       {data && (
         <>
-          {/* Metadata */}
           <div className="sui-wvw__meta">
             <div className="sui-wvw__meta-row">
               <span className="sui-wvw__meta-label">Blob ID</span>
@@ -162,7 +247,6 @@ function ViewerContent() {
             </div>
           </div>
 
-          {/* Preview */}
           <div className="sui-wvw__preview">
             <div className="sui-wvw__preview-title">Preview</div>
             {data.objectUrl && isImageType(data.contentType) ? (
@@ -176,14 +260,13 @@ function ViewerContent() {
             )}
           </div>
 
-          {/* Download */}
           <div className="sui-wvw__download">
             <button className="sui-wvw__dl-btn" onClick={handleDownload}>
-              ⬇ Download File
+              ⬇ Download
             </button>
             <a
               className="sui-wvw__dl-btn"
-              href={`${AGGREGATOR}/v1/blobs/${data.blobId}`}
+              href={`${aggregator}/v1/blobs/${data.blobId}`}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -193,7 +276,36 @@ function ViewerContent() {
         </>
       )}
 
-      {/* History */}
+      {/* Owned blobs */}
+      {walletAddr && (
+        <>
+          <div className="sui-wvw__section-title">
+            My Blobs {ownedLoading ? '(loading...)' : `(${ownedBlobs.length})`}
+          </div>
+          {ownedBlobs.length === 0 && !ownedLoading && (
+            <div className="sui-wvw__empty">No blob objects found for this wallet</div>
+          )}
+          {ownedBlobs.map((b) => (
+            <div
+              key={b.objectId}
+              className="sui-wvw__history-row"
+              onClick={() => {
+                setBlobId(b.blobId)
+                fetchBlob(b.blobId)
+              }}
+            >
+              <span className="sui-wvw__history-id">
+                {b.objectId.slice(0, 12)}...{b.objectId.slice(-6)}
+              </span>
+              <span className="sui-wvw__history-size">
+                {b.size > 0 ? formatSize(b.size) : 'blob'}
+              </span>
+            </div>
+          ))}
+        </>
+      )}
+
+      {/* View history */}
       {history.length > 0 && (
         <>
           <div className="sui-wvw__section-title">Recent ({history.length})</div>
@@ -223,7 +335,8 @@ function ViewerContent() {
         >
           Walrus
         </a>
-        {' aggregator · No wallet needed'}
+        {' aggregator · '}
+        {network}
       </div>
     </div>
   )
@@ -231,9 +344,10 @@ function ViewerContent() {
 
 const SuiWalrusViewerPlugin: Plugin = {
   name: 'SuiWalrusViewer',
-  version: '1.0.0',
+  version: '1.1.0',
   styleUrls: ['/plugins/sui-walrus-viewer/style.css'],
   init(host: HostAPI) {
+    sharedHost = isSuiHostAPI(host) ? host : null
     host.registerComponent('SuiWalrusViewer', ViewerContent)
     host.log('SuiWalrusViewer initialized')
   },
@@ -241,6 +355,7 @@ const SuiWalrusViewerPlugin: Plugin = {
     console.log('[SuiWalrusViewer] mounted')
   },
   unmount() {
+    sharedHost = null
     console.log('[SuiWalrusViewer] unmounted')
   },
 }

@@ -363,14 +363,20 @@ export function SuiWasmDashboard() {
                   : 'No WebAssembly'}
             </div>
 
-            {/* Wallet status */}
+            {/* Wallet + Network */}
             {walletInfo ? (
               <div className="flex items-center gap-1.5 rounded-md bg-[#34d399]/10 px-2.5 py-1.5 text-xs text-[#34d399]">
                 <span className="h-2 w-2 rounded-full bg-[#34d399]" />
                 {walletInfo.address.slice(0, 6)}...{walletInfo.address.slice(-4)}
-                <span className="ml-1 rounded bg-[#18181c] px-1.5 py-0.5 text-[10px] text-[#888]">
-                  {walletInfo.network}
-                </span>
+                <select
+                  className="ml-1 rounded bg-[#18181c] px-1.5 py-0.5 text-[10px] text-[#888] border-none outline-none cursor-pointer"
+                  value={walletInfo.network}
+                  onChange={(e) => suiHostAPI.requestNetworkSwitch(e.target.value)}
+                >
+                  <option value="mainnet">mainnet</option>
+                  <option value="testnet">testnet</option>
+                  <option value="devnet">devnet</option>
+                </select>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 rounded-md bg-[#fbbf24]/10 px-2.5 py-1.5 text-xs text-[#fbbf24]">
