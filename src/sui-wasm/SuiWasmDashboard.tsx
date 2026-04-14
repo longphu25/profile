@@ -371,7 +371,19 @@ export function SuiWasmDashboard() {
                 <select
                   className="ml-1 rounded bg-[#18181c] px-1.5 py-0.5 text-[10px] text-[#888] border-none outline-none cursor-pointer"
                   value={walletInfo.network}
-                  onChange={(e) => suiHostAPI.requestNetworkSwitch(e.target.value)}
+                  onChange={(e) => {
+                    const net = e.target.value
+                    // Update shared data so all plugins pick up the change
+                    suiHostAPI.setSharedData('networkSwitch', net)
+                    // Also update walletProfile network
+                    const current = suiHostAPI.getSharedData('walletProfile') as Record<
+                      string,
+                      unknown
+                    > | null
+                    if (current) {
+                      suiHostAPI.setSharedData('walletProfile', { ...current, network: net })
+                    }
+                  }}
                 >
                   <option value="mainnet">mainnet</option>
                   <option value="testnet">testnet</option>

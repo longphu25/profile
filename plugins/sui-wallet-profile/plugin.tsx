@@ -22,6 +22,7 @@ import {
   GRPC_URLS,
   EXPLORER_URLS,
   SHARED_KEY,
+  NETWORKS,
   type Network,
   type TokenBalance,
   type WalletProfile,
@@ -158,6 +159,17 @@ function WalletProfileContent() {
       return { digest: tx!.digest, effects: tx }
     })
   }, [connection.isConnected, dAppKit])
+
+  // Listen for network switch from dashboard header
+  useEffect(() => {
+    if (!sharedHost) return
+    return sharedHost.onSharedDataChange('networkSwitch', (v) => {
+      const net = v as string | null
+      if (net && NETWORKS.includes(net as Network)) {
+        dAppKit.switchNetwork(net as Network)
+      }
+    })
+  }, [dAppKit])
 
   const handleConnect = async (wallet: { name: string }) => {
     setConnecting(true)
