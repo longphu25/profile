@@ -166,16 +166,17 @@ function WalrusUploadContent() {
         setStep('register')
         setDetail('Sign register tx in wallet...')
         const regTx = flow.register({ epochs, owner: walletAddr!, deletable })
-        await sharedHost.signAndExecuteTransaction(regTx)
+        const regResult = await sharedHost.signAndExecuteTransaction(regTx)
 
         setStep('upload')
         setDetail('Uploading slivers...')
-        await flow.upload()
+        await flow.upload({ digest: regResult.digest })
 
         setStep('certify')
         setDetail('Sign certify tx in wallet...')
         const certTx = flow.certify()
-        await sharedHost.signAndExecuteTransaction(certTx)
+        const certResult = await sharedHost.signAndExecuteTransaction(certTx)
+        void certResult
 
         const files = await flow.listFiles()
         finishUpload(files[0]?.blobId ?? '', 'direct')
