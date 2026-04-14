@@ -382,6 +382,14 @@ function WalrusUploadContent() {
       {result && (
         <div className="sui-wup__result">
           <div className="sui-wup__result-title">✓ Uploaded ({result.mode})</div>
+
+          {/* Preview if image */}
+          {file?.type.startsWith('image/') && (
+            <div className="sui-wup__result-preview">
+              <img src={result.url} alt="Uploaded" className="sui-wup__result-img" />
+            </div>
+          )}
+
           <div className="sui-wup__result-row">
             <span className="sui-wup__result-label">Blob ID</span>
             <span className="sui-wup__result-val">
@@ -392,7 +400,7 @@ function WalrusUploadContent() {
             </span>
           </div>
           <div className="sui-wup__result-row">
-            <span className="sui-wup__result-label">URL</span>
+            <span className="sui-wup__result-label">View URL</span>
             <span className="sui-wup__result-val">
               <a
                 href={result.url}
@@ -400,7 +408,7 @@ function WalrusUploadContent() {
                 rel="noopener noreferrer"
                 className="sui-wup__link"
               >
-                Open ↗
+                Open in browser ↗
               </a>
               <button className="sui-wup__copy" onClick={() => copy(result.url, 'url')}>
                 {copied === 'url' ? '✓' : '⎘'}

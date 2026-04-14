@@ -125,6 +125,8 @@
   padding: 14px; margin-bottom: 12px;
 }
 .sui-wup__result-title { font-size: 13px; font-weight: 600; color: #34d399; margin-bottom: 8px; }
+.sui-wup__result-preview { margin-bottom: 10px; text-align: center; }
+.sui-wup__result-img { max-width: 100%; max-height: 200px; border-radius: 6px; }
 .sui-wup__result-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
 .sui-wup__result-label { color: #666; }
 .sui-wup__result-val { color: #ededed; font-weight: 500; font-family: monospace; word-break: break-all; }
