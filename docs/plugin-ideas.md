@@ -18,7 +18,7 @@ Plugin ideas based on `@mysten/*` SDKs available in the project.
 
 ## 🟣 WASM Plugins (real crypto/encoding)
 
-### 1. `sui-walrus-upload` — File Upload to Walrus
+### 1. `sui-walrus-upload` — File Upload to Walrus ✅ DONE
 
 Upload files to Walrus decentralized storage.
 
@@ -29,7 +29,7 @@ Upload files to Walrus decentralized storage.
 
 **WASM:** RedStuff encoding via `@mysten/walrus-wasm`
 
-### 2. `sui-walrus-viewer` — Blob Viewer
+### 2. `sui-walrus-viewer` ✅ DONE (v1) — Blob Viewer
 
 View/download files from Walrus by blob ID.
 
@@ -108,7 +108,7 @@ Create and sign multisig transactions.
 
 ## 🔵 ESM Plugins (high value, no WASM needed)
 
-### 9. `sui-payment` — Payment Requests
+### 9. `sui-payment` ✅ DONE — Payment Requests
 
 Create payment requests with QR codes.
 
@@ -177,19 +177,28 @@ Stake SUI with validators for rewards.
 
 ## Priority Matrix
 
-| Priority | Plugin | WASM | Effort | User Value |
-|----------|--------|------|--------|------------|
-| 🥇 | `sui-walrus-upload` | 🟣 Native WASM | Medium | High — practical utility |
-| 🥇 | `sui-nft-gallery` | 🔵 ESM | Low | High — visual, universal |
-| 🥇 | `sui-seal-vault` | 🟣 Native WASM | High | High — unique feature |
-| 🥈 | `sui-payment` | 🔵 ESM | Medium | High — merchant use case |
-| 🥈 | `sui-zksend` | 🟡 WASM-grade | Medium | High — viral sharing |
-| 🥈 | `sui-walrus-viewer` | 🟣 Native WASM | Low | Medium — complements upload |
-| 🥈 | `sui-staking` | 🔵 ESM | Medium | High — passive income |
-| 🥉 | `sui-seal-gated-content` | 🟣 Native WASM | High | Medium — creator economy |
-| 🥉 | `sui-zksend-claim` | 🔵 ESM | Low | Medium — complements zksend |
-| 🥉 | `sui-object-explorer` | 🔵 ESM | Low | Medium — developer tool |
-| 4 | `sui-payment-registry` | 🔵 ESM | Medium | Niche — merchants only |
-| 4 | `sui-seal-chat` | 🟣 Native WASM | High | Niche — messaging |
-| 4 | `sui-walrus-site` | 🟣 Native WASM | High | Niche — developers |
-| 4 | `sui-multisig` | 🟡 WASM-grade | High | Niche — advanced users |
+| Priority | Plugin | WASM | Effort | Status |
+|----------|--------|------|--------|--------|
+| 🥇 | `sui-walrus-upload` | 🟣 Native WASM | Medium | ✅ Done |
+| 🥇 | `sui-nft-gallery` | 🔵 ESM | Low | ❌ Not started |
+| 🥇 | `sui-seal-vault` | 🟣 Native WASM | High | ❌ Not started |
+| 🥈 | `sui-payment` | 🔵 ESM | Medium | ✅ Done |
+| 🥈 | `sui-zksend` | 🟡 WASM-grade | Medium | ❌ Not started |
+| 🥈 | `sui-walrus-viewer` | 🟣 Native WASM | Low | ✅ Done (v1, v2 planned) |
+| 🥈 | `sui-staking` | 🔵 ESM | Medium | ❌ Not started |
+| 🥉 | `sui-seal-gated-content` | 🟣 Native WASM | High | ❌ Not started |
+| 🥉 | `sui-zksend-claim` | 🔵 ESM | Low | ❌ Not started |
+| 🥉 | `sui-object-explorer` | 🔵 ESM | Low | ❌ Not started |
+| 4 | `sui-payment-registry` | 🔵 ESM | Medium | ❌ Not started |
+| 4 | `sui-seal-chat` | 🟣 Native WASM | High | ❌ Not started |
+| 4 | `sui-walrus-site` | 🟣 Native WASM | High | ❌ Not started |
+| 4 | `sui-multisig` | 🟡 WASM-grade | High | ❌ Not started |
+
+### Recommended build order for next session:
+1. `sui-seal-vault` — 🟣 WASM, unique feature, `@mysten/seal` ready
+2. `sui-nft-gallery` — 🔵 ESM, visual, every user needs
+3. `sui-zksend` — 🟡 WASM-grade, viral sharing, `@mysten/zksend` ready
+4. `sui-walrus-viewer` v2 — 🟣 WASM, blob management (see `docs/walrus/viewer-roadmap.md`)
+5. `sui-staking` — 🔵 ESM, passive income
+6. `sui-seal-gated-content` — 🟣 WASM, creator economy
+7. `sui-object-explorer` — 🔵 ESM, developer tool
