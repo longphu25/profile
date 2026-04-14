@@ -7,7 +7,7 @@ import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { Transaction } from '@mysten/sui/transactions'
-import { walrus, WalrusFile, TESTNET_WALRUS_PACKAGE_CONFIG } from '@mysten/walrus'
+import { walrus, TESTNET_WALRUS_PACKAGE_CONFIG } from '@mysten/walrus'
 import walrusWasmUrl from '@mysten/walrus-wasm/web/walrus_wasm_bg.wasm?url'
 
 import {
@@ -164,6 +164,8 @@ function WalrusUploadContent() {
         }
 
         // Encode + register + upload + certify
+        // Use writeBlobFlow (raw blob) NOT writeFilesFlow (quilt)
+        // Raw blob = aggregator serves file directly, viewable in browser
         setStep('encode')
         setDetail('WASM RedStuff encoding...')
         const wClient = client.$extend(
@@ -174,10 +176,8 @@ function WalrusUploadContent() {
           }),
         )
 
-        const flow = wClient.walrus.writeFilesFlow({
-          files: [WalrusFile.from({ contents: bytes, identifier: file.name })],
-        })
-        await flow.encode()
+        const flow = wClient.walrus.writeBlobFlow({ blob: bytes })
+        const encoded = await flow.encode()
 
         setStep('register')
         setDetail('Sign register tx in wallet...')
@@ -194,8 +194,7 @@ function WalrusUploadContent() {
         const certResult = await sharedHost.signAndExecuteTransaction(certTx)
         void certResult
 
-        const files = await flow.listFiles()
-        finishUpload(files[0]?.blobId ?? '', 'direct')
+        finishUpload(encoded.blobId, 'direct')
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
