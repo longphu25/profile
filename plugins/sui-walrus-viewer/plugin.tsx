@@ -7,6 +7,7 @@ import type { Plugin, HostAPI } from '../../src/plugins/types'
 import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import { useState, useCallback, useEffect } from 'react'
+import { blobIdFromInt } from '@mysten/walrus'
 import './style.css'
 
 const AGGREGATORS: Record<string, string> = {
@@ -125,15 +126,16 @@ function ViewerContent() {
         if (!type.includes('::blob::Blob')) continue
         const fields = obj.data?.content?.fields ?? {}
         const rawBlobId = fields.blob_id ?? ''
-        // blob_id is a big integer — convert to base64url for aggregator
-        let displayId = String(rawBlobId)
-        if (displayId.length > 30) {
-          // Numeric blob_id — use object ID as display, numeric as fetch key
-          displayId = obj.data?.objectId ?? displayId
+        // Convert numeric blob_id to base64url using Walrus SDK
+        let b64BlobId = ''
+        try {
+          b64BlobId = blobIdFromInt(BigInt(rawBlobId))
+        } catch {
+          b64BlobId = String(rawBlobId)
         }
         blobs.push({
           objectId: obj.data?.objectId ?? '',
-          blobId: displayId,
+          blobId: b64BlobId,
           size: Number(fields.size ?? 0),
           rawBlobId: String(rawBlobId),
         })
