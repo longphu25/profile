@@ -153,7 +153,7 @@ function WalrusUploadContent() {
           const tx = new Transaction()
           tx.setSender(walletAddr)
           const [suiCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(neededMist)])
-          const walCoin = tx.moveCall({
+          const [walCoin] = tx.moveCall({
             target: `${net.exchangePackage}::wal_exchange::exchange_for_wal`,
             arguments: [tx.object(exchangeId), suiCoin, tx.pure.u64(neededMist)],
           })
