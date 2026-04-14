@@ -7,7 +7,6 @@ import type { Plugin, HostAPI } from '../../src/plugins/types'
 import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import { useState, useCallback, useEffect } from 'react'
-import { SuiGrpcClient } from '@mysten/sui/grpc'
 import './style.css'
 
 const AGGREGATORS: Record<string, string> = {
@@ -19,12 +18,6 @@ const RPC: Record<string, string> = {
   mainnet: 'https://fullnode.mainnet.sui.io:443',
   testnet: 'https://fullnode.testnet.sui.io:443',
 }
-
-// Known Walrus blob object types (mainnet + testnet)
-const BLOB_TYPES = [
-  '0xfdc88f7d7cf30afab2f82e8380d11ee8f70efb90e863d1de8616fae1bb09ea77::blob::Blob',
-  '0x795e21e4ac0e0e1c498e91e40c4a4c2a1e935e0a0c474e1916a4e4e8724b9af0::blob::Blob',
-]
 
 const WALLET_KEY = 'walletProfile'
 
@@ -40,6 +33,7 @@ interface OwnedBlob {
   objectId: string
   blobId: string
   size: number
+  rawBlobId: string
 }
 
 let sharedHost: SuiHostAPI | null = null
@@ -110,31 +104,39 @@ function ViewerContent() {
     setOwnedLoading(true)
     try {
       const rpc = RPC[net] ?? RPC.mainnet
-      const client = new SuiGrpcClient({ network: net as 'mainnet' | 'testnet', baseUrl: rpc })
+      // Use JSON-RPC directly to filter by module::type pattern
+      // Package ID changes on upgrades, so we search all objects and filter
+      const res = await fetch(rpc, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'suix_getOwnedObjects',
+          params: [addr, { options: { showType: true, showContent: true } }, null, 50],
+        }),
+      })
+      const json = await res.json()
+      const objects = json.result?.data ?? []
 
       const blobs: OwnedBlob[] = []
-      for (const blobType of BLOB_TYPES) {
-        try {
-          const res = await client.core.listOwnedObjects({
-            owner: addr,
-            type: blobType,
-            include: { content: true },
-            limit: 20,
-          })
-          for (const obj of res.objects) {
-            if (obj instanceof Error) continue
-            const content = await obj.content
-            // Blob object has blobId and size in its fields
-            // Parse from BCS content — simplified: use object ID as fallback
-            blobs.push({
-              objectId: obj.objectId,
-              blobId: obj.objectId, // will be replaced if we can parse
-              size: content ? content.length : 0,
-            })
-          }
-        } catch {
-          // Type might not exist on this network
+      for (const obj of objects) {
+        const type = obj.data?.type ?? ''
+        if (!type.includes('::blob::Blob')) continue
+        const fields = obj.data?.content?.fields ?? {}
+        const rawBlobId = fields.blob_id ?? ''
+        // blob_id is a big integer — convert to base64url for aggregator
+        let displayId = String(rawBlobId)
+        if (displayId.length > 30) {
+          // Numeric blob_id — use object ID as display, numeric as fetch key
+          displayId = obj.data?.objectId ?? displayId
         }
+        blobs.push({
+          objectId: obj.data?.objectId ?? '',
+          blobId: displayId,
+          size: Number(fields.size ?? 0),
+          rawBlobId: String(rawBlobId),
+        })
       }
       setOwnedBlobs(blobs)
     } catch {
