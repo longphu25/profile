@@ -134,3 +134,108 @@ All plugins — completed and planned — for the Sui plugin dashboard.
 - `noShadow: true` for plugins needing full DOM (wallet popups)
 - Walrus gotchas: `docs/walrus/dev-notes.md`
 - Walrus bugs: `docs/walrus/bug-log.md`
+
+---
+
+## DeepBook Bot Plugins (from depbuk-hedging)
+
+Derived from `depbuk-hedging/src/lib/server/bot/` modules.
+These plugins bring bot-level trading operations to the browser dashboard.
+
+### Bot Operation Plugins
+
+#### `sui-deepbook-trade` — Place Orders UI
+**Source:** `deepbook-execution.ts`
+**Features:**
+- Place limit orders (POST_ONLY maker)
+- Place market orders
+- Margin limit orders with borrow factor
+- Order type selector: limit / market / POST_ONLY
+- Price input with tick size validation
+- Quantity input with lot size validation
+- Account A (Long) / Account B (Short) selector
+
+#### `sui-deepbook-cleanup` — Order & Position Cleanup
+**Source:** `deepbook-cleanup.ts`
+**Features:**
+- Cancel all open orders for a pool
+- Withdraw settled balances
+- Repay margin debt + withdraw collateral
+- Cancel conditional orders (TP/SL)
+- Compact cleanup (cancel + withdraw + repay in one tx)
+- One-click "Clean All" button
+
+#### `sui-deepbook-auto-balance` — Wallet Rebalancing
+**Source:** `runtime-auto-balance`, `deepbook-execution.ts`
+**Features:**
+- Preview balance requirements for N cycles
+- Auto-swap SUI↔USDC via 7K aggregator
+- Transfer tokens between Account A and Account B
+- Top-up gas reserves
+- Configurable buffer BPS
+
+#### `sui-deepbook-margin` — Margin Manager Operations
+**Source:** `deepbook-margin-state.ts`
+**Features:**
+- Create margin manager for a pool
+- Deposit/withdraw collateral (base + quote)
+- Borrow with configurable factor
+- View margin state: assets, debts, risk ratio
+- Liquidation risk indicator
+- Repay debt
+
+#### `sui-deepbook-bot` — Hedging Bot Dashboard (Enhanced)
+**Source:** `runtime.ts`, `runtime-cycle-executor.ts`
+**Features:**
+- Full bot control: start, stop, stop-and-clean
+- Settings editor (all bot config fields)
+- Live cycle execution: open → hold → close
+- Preflight checks: balance, price, manager state
+- Auto-topup status
+- Cycle history with PnL per cycle
+- Runtime logs with level filtering
+- SSE live stream
+
+#### `sui-deepbook-strategy` — Strategy Builder
+**Source:** `runtime-cycle-executor.ts`, `runtime-shared.ts`
+**Features:**
+- Configure hedging parameters:
+  - Notional size, hold time range, max cycles
+  - Slippage tolerance, maker reprice seconds
+  - Random size BPS, order delay range
+  - Borrow factors (A quote, B base)
+- Strategy presets: conservative, aggressive, scalping
+- Backtest estimate from historical data
+- PnL simulator
+
+### Bot Utility Plugins
+
+#### `sui-deepbook-aggregator` — Multi-DEX Swap
+**Source:** `deepbook-execution.ts` (swapExactInWithAggregator)
+**SDK:** `@7kprotocol/sdk-ts` (need to install)
+**Features:**
+- Quote from multiple DEXes (Cetus, FlowX, DeepBook, Bluefin)
+- Best route selection
+- Slippage protection
+- Swap execution with wallet signing
+
+#### `sui-deepbook-points` — Points Tracker
+**Source:** DeepBook Indexer `/get_points`
+**Features:**
+- Track DeepBook points earned
+- Points per address
+- Points projection based on volume
+- Leaderboard view
+
+### Priority for Bot Plugins
+
+| Priority | Plugin | Effort | Value |
+|----------|--------|--------|-------|
+| 🥇 | `sui-deepbook-trade` | Medium | High — core trading |
+| 🥇 | `sui-deepbook-cleanup` | Low | High — essential maintenance |
+| 🥈 | `sui-deepbook-margin` | Medium | High — margin operations |
+| 🥈 | `sui-deepbook-points` | Low | High — airdrop tracking |
+| 🥉 | `sui-deepbook-auto-balance` | Medium | Medium — automation |
+| 🥉 | `sui-deepbook-bot` | High | Medium — full bot (enhanced hedging-monitor) |
+| 4 | `sui-deepbook-strategy` | High | Niche — advanced users |
+| 4 | `sui-deepbook-aggregator` | Medium | Medium — needs @7kprotocol SDK |
