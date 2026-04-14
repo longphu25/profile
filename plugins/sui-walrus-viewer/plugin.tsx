@@ -35,6 +35,8 @@ interface OwnedBlob {
   blobId: string
   size: number
   rawBlobId: string
+  endEpoch: number
+  certified: boolean
 }
 
 let sharedHost: SuiHostAPI | null = null
@@ -133,11 +135,17 @@ function ViewerContent() {
         } catch {
           b64BlobId = String(rawBlobId)
         }
+        const storageFields = fields.storage?.fields ?? fields.storage ?? {}
+        const endEpoch = Number(storageFields.end_epoch ?? 0)
+        const certifiedEpoch = fields.certified_epoch
+
         blobs.push({
           objectId: obj.data?.objectId ?? '',
           blobId: b64BlobId,
           size: Number(fields.size ?? 0),
           rawBlobId: String(rawBlobId),
+          endEpoch,
+          certified: certifiedEpoch != null,
         })
       }
       setOwnedBlobs(blobs)
@@ -289,23 +297,35 @@ function ViewerContent() {
           {ownedBlobs.length === 0 && !ownedLoading && (
             <div className="sui-wvw__empty">No blob objects found for this wallet</div>
           )}
-          {ownedBlobs.map((b) => (
-            <div
-              key={b.objectId}
-              className="sui-wvw__history-row"
-              onClick={() => {
-                setBlobId(b.blobId)
-                fetchBlob(b.blobId)
-              }}
-            >
-              <span className="sui-wvw__history-id">
-                {b.objectId.slice(0, 12)}...{b.objectId.slice(-6)}
-              </span>
-              <span className="sui-wvw__history-size">
-                {b.size > 0 ? formatSize(b.size) : 'blob'}
-              </span>
-            </div>
-          ))}
+          {ownedBlobs.map((b) => {
+            const expired = b.endEpoch > 0 && b.endEpoch < 1000000 // heuristic: if endEpoch is set
+            return (
+              <div
+                key={b.objectId}
+                className="sui-wvw__history-row"
+                onClick={() => {
+                  setBlobId(b.blobId)
+                  fetchBlob(b.blobId)
+                }}
+              >
+                <div>
+                  <span className="sui-wvw__history-id">{b.blobId.slice(0, 20)}...</span>
+                  <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>
+                    {formatSize(b.size)}
+                    {' · '}
+                    {b.certified ? (
+                      <span style={{ color: '#34d399' }}>certified</span>
+                    ) : (
+                      <span style={{ color: '#fbbf24' }}>pending</span>
+                    )}
+                    {b.endEpoch > 0 && ` · expires epoch ${b.endEpoch}`}
+                    {expired && <span style={{ color: '#f87171' }}> (may be expired)</span>}
+                  </div>
+                </div>
+                <span className="sui-wvw__history-size">View →</span>
+              </div>
+            )
+          })}
         </>
       )}
 
