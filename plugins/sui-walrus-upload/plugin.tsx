@@ -157,7 +157,7 @@ function WalrusUploadContent() {
             target: `${net.exchangePackage}::wal_exchange::exchange_for_wal`,
             arguments: [tx.object(exchangeId), suiCoin, tx.pure.u64(neededMist)],
           })
-          tx.transferObjects([walCoin], walletAddr)
+          tx.transferObjects([walCoin, suiCoin], walletAddr)
           await sharedHost.signAndExecuteTransaction(tx)
         } else {
           // Mainnet: skip auto-swap, just warn
