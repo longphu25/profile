@@ -1,0 +1,68 @@
+/* SUI DeepBook Analysis Engine Plugin */
+
+.sui-da {
+  font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #f8fafc;
+  max-width: 100%;
+}
+
+.sui-da__header { margin-bottom: 16px; }
+.sui-da__title { font-size: 16px; font-weight: 600; margin: 0; color: #f8fafc; }
+.sui-da__desc { font-size: 12px; color: #64748b; margin: 4px 0 0; }
+
+.sui-da__card {
+  background: #0f172a; border: 1px solid #1e293b; border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 12px;
+}
+.sui-da__card-title {
+  font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase;
+  letter-spacing: 0.5px; margin-bottom: 8px;
+}
+
+.sui-da__signal {
+  text-align: center; padding: 16px 0; margin-bottom: 12px; border-radius: 8px;
+}
+.sui-da__signal-label { font-size: 24px; font-weight: 700; }
+.sui-da__signal-conf { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+
+.sui-da__bar { height: 8px; border-radius: 4px; overflow: hidden; display: flex; margin-bottom: 4px; }
+.sui-da__bar--long { background: #22c55e; }
+.sui-da__bar--short { background: #ef4444; }
+
+.sui-da__indicator { margin-bottom: 10px; }
+.sui-da__indicator-row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 3px; }
+.sui-da__indicator-label { color: #94a3b8; }
+.sui-da__indicator-value { color: #f8fafc; font-family: 'Fira Code', monospace; }
+.sui-da__indicator-track { height: 4px; background: #1e293b; border-radius: 2px; position: relative; }
+.sui-da__indicator-dot {
+  position: absolute; top: -3px; width: 10px; height: 10px; border-radius: 50%;
+  transform: translateX(-50%); border: 2px solid #0f172a;
+}
+
+.sui-da__select {
+  width: 100%; background: #020617; border: 1px solid #1e293b; border-radius: 6px;
+  color: #f8fafc; font-size: 12px; padding: 6px 10px; outline: none; cursor: pointer;
+}
+.sui-da__select:focus { border-color: #22c55e; }
+
+.sui-da__btn {
+  background: #22c55e; border: none; border-radius: 6px;
+  color: #020617; font-size: 12px; font-weight: 600; padding: 8px 16px;
+  cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
+}
+.sui-da__btn:hover { opacity: 0.85; }
+.sui-da__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sui-da__btn--ghost { background: transparent; border: 1px solid #1e293b; color: #94a3b8; font-weight: 500; }
+.sui-da__btn--ghost:hover { border-color: #334155; color: #f8fafc; }
+.sui-da__btn--sm { padding: 5px 10px; font-size: 11px; }
+
+.sui-da__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.sui-da__stat {
+  background: #020617; border: 1px solid #1e293b; border-radius: 6px;
+  padding: 8px 10px; display: flex; flex-direction: column; gap: 2px;
+}
+.sui-da__stat-label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+.sui-da__stat-value { font-size: 14px; font-weight: 600; font-family: 'Fira Code', monospace; }
+
+.sui-da__empty { text-align: center; color: #475569; padding: 24px 0; font-size: 12px; }
+.sui-da__footer { font-size: 9px; color: #475569; margin-top: 8px; }

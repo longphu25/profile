@@ -90,6 +90,10 @@ export default defineConfig({
           __dirname,
           'plugins/sui-deepbook-hedging-bot/plugin.tsx',
         ),
+        'plugins/sui-deepbook-analysis': resolve(
+          __dirname,
+          'plugins/sui-deepbook-analysis/plugin.tsx',
+        ),
       },
       external: ['gsap', 'motion'],
       preserveEntrySignatures: 'exports-only',

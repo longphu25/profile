@@ -150,6 +150,14 @@ const PLUGIN_GROUPS: PluginGroup[] = [
         src: pluginPath('sui-deepbook-hedging-bot'),
         wasmDesc: 'Ed25519Keypair + DeepBook SDK',
       },
+      {
+        id: 'sui-deepbook-analysis',
+        name: 'SuiDeepBookAnalysis',
+        label: 'Analysis',
+        desc: 'Trend detection + market analysis',
+        src: pluginPath('sui-deepbook-analysis'),
+        wasmDesc: 'EMA, RSI, VWAP, Orderbook',
+      },
     ],
   },
   {
