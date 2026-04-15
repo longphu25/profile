@@ -8,9 +8,14 @@ All documentation for DeepBook v3 integrations in this project.
 
 | File | Description |
 |------|-------------|
+| [SESSION-CONTEXT.md](SESSION-CONTEXT.md) | **Start here** — Kiro session context, project layout, known issues, refactoring status |
+| [error-log.md](error-log.md) | **15 lỗi đã gặp** — nguyên nhân gốc, code fix, pattern tổng kết |
 | [plugins.md](plugins.md) | All 9 DeepBook plugins — status, features, data sources |
 | [hedging-bot.md](hedging-bot.md) | Hedging bot — architecture, auto-balance, key management, points |
+| [margin-trading.md](margin-trading.md) | Margin Manager — borrow, leverage, repay, points strategy (ported từ depbuk-hedging) |
 | [api-reference.md](api-reference.md) | DeepBook Indexer REST API + SDK + Sui RPC reference |
+| [balance-manager.md](balance-manager.md) | Balance Manager — what it is, SDK API, common errors, token recycling |
+| [trading-strategies.md](trading-strategies.md) | Strategy comparison, lessons learned, cost analysis, pool selection |
 
 ---
 
