@@ -135,3 +135,8 @@ export async function getVaults() {
 export async function explainTransaction(digest: string) {
   return mcpCall('sui_explain_transaction', { digest })
 }
+
+// ─── Portfolio PnL ───
+export async function getPortfolioPnl(address: string, period: '1W' | '15D' | '1M' = '1W') {
+  return mcpCall('navi_get_portfolio_pnl', { address, period })
+}

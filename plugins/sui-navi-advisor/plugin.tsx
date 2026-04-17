@@ -7,7 +7,13 @@ import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import { useState, useEffect } from 'react'
 import { Transaction } from '@mysten/sui/transactions'
-import { getPools, type Pool } from '../sui-navi-dashboard/navi-api'
+import {
+  getPools,
+  getHealthFactor,
+  getCoins,
+  getAvailableRewards,
+  type Pool,
+} from '../sui-navi-dashboard/navi-api'
 import { RPC_URLS, type NetworkKey } from '../sui-seal-shared/config'
 import './style.css'
 
@@ -238,11 +244,102 @@ function NaviAdvisorContent() {
     setError(null)
     setStrategies([])
     try {
+      // Market data (always)
       const [poolData, vaultCsv] = await Promise.all([getPools(), mcpCall('volo_get_vaults')])
       const vaultData = typeof vaultCsv === 'string' ? parseVaultsCsv(vaultCsv) : []
       setPools(poolData)
       setVaults(vaultData)
-      setStrategies(generateStrategies(budget, poolData, vaultData))
+
+      const strats = generateStrategies(budget, poolData, vaultData)
+
+      // Portfolio-aware strategies (when wallet connected)
+      if (walletAddr) {
+        const [health, coins, rewards] = await Promise.all([
+          getHealthFactor(walletAddr).catch(() => null),
+          getCoins(walletAddr).catch(() => []),
+          getAvailableRewards(walletAddr).catch(() => null),
+        ])
+
+        // Strategy: Claim unclaimed rewards
+        if (rewards && typeof rewards === 'object') {
+          const rewardEntries = Array.isArray(rewards) ? rewards : Object.values(rewards)
+          const totalRewardUsd = rewardEntries.reduce(
+            (sum: number, r: Record<string, unknown>) => sum + Number(r?.usdValue ?? r?.value ?? 0),
+            0,
+          )
+          if (totalRewardUsd > 0.5) {
+            strats.push({
+              name: `Claim $${totalRewardUsd.toFixed(2)} Rewards`,
+              steps: ['Claim unclaimed lending rewards from NAVI'],
+              estApy: 0,
+              risk: 'Low',
+              detail: `${rewardEntries.length} reward(s) available | Claim and re-supply for compound yield`,
+              action: 'link',
+              actionUrl: 'https://app.naviprotocol.io/portfolio',
+              actionLabel: 'Claim on NAVI ↗',
+            })
+          }
+        }
+
+        // Strategy: Health factor warning
+        if (
+          health &&
+          health.healthFactor != null &&
+          health.healthFactor < 1.5 &&
+          health.healthFactor > 0
+        ) {
+          const repayNeeded = health.totalBorrowUsd * (1 - health.healthFactor / 2)
+          strats.unshift({
+            name: `⚠️ Health Factor ${health.healthFactor.toFixed(2)}`,
+            steps: [
+              `Current: supply $${health.totalSupplyUsd.toFixed(0)} / borrow $${health.totalBorrowUsd.toFixed(0)}`,
+              repayNeeded > 0
+                ? `Repay ~$${repayNeeded.toFixed(0)} to reach safe HF 2.0`
+                : 'Add more collateral',
+            ],
+            estApy: 0,
+            risk: 'High',
+            detail: `Liquidation risk! Health factor ${health.healthFactor.toFixed(2)} (safe > 1.5)`,
+            action: 'link',
+            actionUrl: 'https://app.naviprotocol.io/portfolio',
+            actionLabel: 'Manage Position ↗',
+          })
+        }
+
+        // Strategy: Idle assets in wallet
+        const idleCoins = (Array.isArray(coins) ? coins : []).filter((c) => {
+          const sym = c.symbol || ''
+          const hasPool = poolData.some((p) => p.symbol === sym)
+          return hasPool && c.usdValue > 1
+        })
+        for (const coin of idleCoins.slice(0, 2)) {
+          const pool = poolData.find((p) => p.symbol === coin.symbol)
+          if (pool && pool.supplyApy > 0.5) {
+            const earn = coin.usdValue * (pool.supplyApy / 100)
+            strats.push({
+              name: `Supply idle ${coin.symbol} ($${coin.usdValue.toFixed(0)})`,
+              steps: [
+                `You have ${coin.balance.toFixed(4)} ${coin.symbol} idle in wallet`,
+                `Supply to NAVI for ${pool.supplyApy.toFixed(2)}% APY`,
+              ],
+              estApy: pool.supplyApy,
+              risk: 'Low',
+              detail: `Idle asset earning 0% → could earn $${earn.toFixed(2)}/year`,
+              action: 'deposit',
+              actionLabel: `Supply ${coin.symbol} to NAVI`,
+            })
+          }
+        }
+      }
+
+      setStrategies(
+        strats.sort((a, b) => {
+          // Health warnings always first
+          if (a.risk === 'High' && a.estApy === 0) return -1
+          if (b.risk === 'High' && b.estApy === 0) return 1
+          return b.estApy - a.estApy
+        }),
+      )
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -587,7 +684,11 @@ function NaviAdvisorContent() {
           onChange={(e) => setBudget(Number(e.target.value))}
         />
         <button className="sui-na__btn" onClick={analyze} disabled={loading}>
-          {loading ? 'Analyzing…' : 'Find Strategies'}
+          {loading
+            ? 'Analyzing…'
+            : walletAddr
+              ? 'Find Strategies (+ Portfolio)'
+              : 'Find Strategies'}
         </button>
       </div>
 
