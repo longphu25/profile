@@ -1,0 +1,49 @@
+/* SUI Seal Time-Lock Plugin */
+
+.sui-st { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ededed; max-width: 100%; }
+.sui-st__header { margin-bottom: 16px; }
+.sui-st__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-st__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+.sui-st__warn { background: #2a1f00; border: 1px solid #4a3500; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #f0b429; margin-bottom: 12px; }
+
+.sui-st__panel { background: #18181c; border: 1px solid #1e1e22; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.sui-st__panel-title { font-size: 13px; font-weight: 600; color: #ededed; margin-bottom: 4px; }
+.sui-st__panel-desc { font-size: 11px; color: #666; margin: 0 0 10px; }
+
+.sui-st__textarea { width: 100%; background: #111114; border: 1px solid #1e1e22; border-radius: 6px; color: #ededed; font-size: 12px; padding: 10px 12px; outline: none; resize: vertical; font-family: monospace; box-sizing: border-box; transition: border-color 0.2s; margin-bottom: 8px; }
+.sui-st__textarea:focus { border-color: #4da2ff; }
+.sui-st__textarea::placeholder { color: #555; }
+
+.sui-st__delay-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.sui-st__label { font-size: 12px; color: #888; }
+.sui-st__input { background: #111114; border: 1px solid #1e1e22; border-radius: 6px; color: #ededed; font-size: 12px; padding: 6px 10px; outline: none; box-sizing: border-box; font-family: monospace; }
+.sui-st__input:focus { border-color: #4da2ff; }
+.sui-st__input--sm { width: 70px; text-align: center; }
+
+.sui-st__btn { width: 100%; background: #4da2ff; border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 500; padding: 10px; cursor: pointer; transition: opacity 0.2s; }
+.sui-st__btn:hover { opacity: 0.85; }
+.sui-st__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.sui-st__status { font-size: 12px; color: #4da2ff; margin-top: 8px; }
+.sui-st__status--err { color: #ff6b6b; }
+
+.sui-st__output { position: relative; margin-top: 10px; }
+.sui-st__pre { background: #111114; border-radius: 6px; padding: 10px; font-size: 11px; color: #ccc; font-family: monospace; white-space: pre-wrap; word-break: break-all; max-height: 100px; overflow-y: auto; margin: 0; }
+.sui-st__copy { position: absolute; top: 6px; right: 6px; background: #222; border: 1px solid #333; border-radius: 6px; color: #4da2ff; font-size: 11px; padding: 3px 8px; cursor: pointer; }
+.sui-st__copy:hover { border-color: #4da2ff; }
+
+/* Countdown */
+.sui-st__countdown { display: flex; align-items: center; gap: 10px; background: #1a1a2e; border: 1px solid #2a2a4e; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; }
+.sui-st__countdown--unlocked { background: #1a3a1a; border-color: #2a5a2a; }
+.sui-st__countdown-icon { font-size: 20px; }
+.sui-st__countdown-time { font-size: 14px; font-weight: 600; color: #f0b429; }
+.sui-st__countdown--unlocked .sui-st__countdown-time { color: #6f6; }
+.sui-st__countdown-date { font-size: 11px; color: #666; margin-top: 2px; }
+
+.sui-st__result { background: #1a3a1a; border: 1px solid #2a5a2a; border-radius: 6px; padding: 12px; font-size: 14px; color: #6f6; margin-top: 10px; word-break: break-word; }
+
+.sui-st__error { background: #2a0000; border: 1px solid #4a0000; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #ff6b6b; margin-bottom: 12px; word-break: break-word; }
+
+.sui-st__footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #1e1e22; font-size: 11px; }
+.sui-st__net { color: #4da2ff; text-transform: uppercase; font-weight: 600; }
+.sui-st__pkg { color: #666; font-family: monospace; }

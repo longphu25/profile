@@ -36,6 +36,12 @@ export interface TransactionResult {
   effects?: unknown
 }
 
+/** Result from signing a personal message */
+export interface PersonalMessageResult {
+  signature: string
+  bytes: string
+}
+
 /** Extended Host API with shared Sui wallet context */
 export interface SuiHostAPI extends HostAPI {
   /** Get current shared Sui context (wallet, network) */
@@ -50,6 +56,8 @@ export interface SuiHostAPI extends HostAPI {
   requestNetworkSwitch: (network: string) => void
   /** Sign and execute a transaction via the connected wallet */
   signAndExecuteTransaction: (transaction: Transaction) => Promise<TransactionResult>
+  /** Sign a personal message via the connected wallet */
+  signPersonalMessage: (message: Uint8Array) => Promise<PersonalMessageResult>
   /** Register a transaction signer (called by wallet plugins) */
   registerSigner: (signer: (transaction: Transaction) => Promise<TransactionResult>) => void
   /** Shared data store: set a value visible to all plugins */

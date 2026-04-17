@@ -1,0 +1,8 @@
+{
+  "baseFontSize": 15,
+  "theme": "obsidian",
+  "translucency": false,
+  "livePreview": true,
+  "readableLineLength": true,
+  "showFrontmatter": false
+}

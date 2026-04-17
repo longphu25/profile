@@ -1,0 +1,66 @@
+/* SUI Seal Allowlist Plugin */
+
+.sui-sa { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ededed; max-width: 100%; }
+.sui-sa__header { margin-bottom: 16px; }
+.sui-sa__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-sa__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+.sui-sa__warn { background: #2a1f00; border: 1px solid #4a3500; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #f0b429; margin-bottom: 12px; }
+
+/* Tabs */
+.sui-sa__tabs { display: flex; gap: 4px; margin-bottom: 14px; }
+.sui-sa__tab { background: #18181c; border: 1px solid #1e1e22; border-radius: 6px; color: #888; font-size: 12px; padding: 6px 14px; cursor: pointer; transition: all 0.2s; }
+.sui-sa__tab:hover { color: #ccc; }
+.sui-sa__tab--active { background: #4da2ff20; border-color: #4da2ff; color: #4da2ff; }
+
+/* Panel */
+.sui-sa__panel { background: #18181c; border: 1px solid #1e1e22; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.sui-sa__panel--disabled { opacity: 0.4; pointer-events: none; }
+.sui-sa__panel-title { font-size: 13px; font-weight: 600; color: #ededed; margin-bottom: 4px; }
+.sui-sa__panel-desc { font-size: 11px; color: #666; margin: 0 0 10px; }
+
+/* Inputs */
+.sui-sa__textarea { width: 100%; background: #111114; border: 1px solid #1e1e22; border-radius: 6px; color: #ededed; font-size: 12px; padding: 10px 12px; outline: none; resize: vertical; font-family: monospace; box-sizing: border-box; transition: border-color 0.2s; margin-bottom: 8px; }
+.sui-sa__textarea:focus { border-color: #4da2ff; }
+.sui-sa__textarea::placeholder { color: #555; }
+.sui-sa__input { flex: 1; background: #111114; border: 1px solid #1e1e22; border-radius: 6px; color: #ededed; font-size: 12px; padding: 8px 12px; outline: none; box-sizing: border-box; font-family: monospace; }
+.sui-sa__input:focus { border-color: #4da2ff; }
+.sui-sa__input::placeholder { color: #555; }
+
+/* Buttons */
+.sui-sa__btn { width: 100%; background: #4da2ff; border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 500; padding: 10px; cursor: pointer; transition: opacity 0.2s; }
+.sui-sa__btn:hover { opacity: 0.85; }
+.sui-sa__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sui-sa__btn--sm { width: auto; padding: 8px 16px; white-space: nowrap; }
+
+/* Add member row */
+.sui-sa__add-row { display: flex; gap: 8px; margin-bottom: 8px; }
+
+/* Meta */
+.sui-sa__meta { background: #111114; border-radius: 6px; padding: 10px; margin-bottom: 12px; }
+.sui-sa__meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 3px 0; }
+.sui-sa__meta-label { color: #666; }
+.sui-sa__meta-val { color: #ededed; font-family: monospace; font-size: 11px; }
+
+/* Members */
+.sui-sa__members { margin-top: 12px; }
+.sui-sa__members-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.sui-sa__member-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #1e1e22; }
+.sui-sa__member-addr { font-size: 12px; color: #ededed; font-family: monospace; }
+.sui-sa__btn-del { background: none; border: 1px solid #4a0000; border-radius: 6px; color: #ff6b6b; font-size: 10px; padding: 2px 8px; cursor: pointer; }
+.sui-sa__btn-del:hover { background: #2a0000; }
+
+/* Status & output */
+.sui-sa__status { font-size: 12px; color: #4da2ff; margin-top: 8px; }
+.sui-sa__status--err { color: #ff6b6b; }
+.sui-sa__output { position: relative; margin-top: 10px; }
+.sui-sa__pre { background: #111114; border-radius: 6px; padding: 10px; font-size: 11px; color: #ccc; font-family: monospace; white-space: pre-wrap; word-break: break-all; max-height: 100px; overflow-y: auto; margin: 0; }
+.sui-sa__copy { background: #222; border: 1px solid #333; border-radius: 6px; color: #4da2ff; font-size: 11px; padding: 3px 8px; cursor: pointer; font-family: monospace; }
+.sui-sa__copy:hover { border-color: #4da2ff; }
+
+.sui-sa__result { background: #1a3a1a; border: 1px solid #2a5a2a; border-radius: 6px; padding: 12px; font-size: 14px; color: #6f6; margin-top: 10px; word-break: break-word; }
+
+.sui-sa__error { background: #2a0000; border: 1px solid #4a0000; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #ff6b6b; margin-bottom: 12px; word-break: break-word; }
+
+.sui-sa__footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #1e1e22; font-size: 11px; }
+.sui-sa__net { color: #4da2ff; text-transform: uppercase; font-weight: 600; }
+.sui-sa__pkg { color: #666; font-family: monospace; }

@@ -1,0 +1,8 @@
+{
+  "graph": { "collapse-filter": false, "search": "", "showTags": true, "showAttachments": false, "showOrphans": true, "collapse-color-groups": false, "colorGroups": [
+    { "query": "path:seal", "color": { "a": 1, "rgb": 5285887 } },
+    { "query": "path:defi", "color": { "a": 1, "rgb": 3145695 } },
+    { "query": "path:deepbook", "color": { "a": 1, "rgb": 16744448 } },
+    { "query": "path:walrus", "color": { "a": 1, "rgb": 65408 } }
+  ], "collapse-display": false, "showArrow": true, "textFadeMultiplier": 0, "nodeSizeMultiplier": 1, "lineSizeMultiplier": 1, "collapse-forces": false, "centerStrength": 0.5, "repelStrength": 10, "linkStrength": 1, "linkDistance": 250 }
+}

@@ -1,0 +1,82 @@
+/* SUI NAVI Dashboard Plugin */
+
+.sui-nv { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ededed; max-width: 100%; }
+.sui-nv__header { margin-bottom: 16px; }
+.sui-nv__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-nv__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+.sui-nv__warn { text-align: center; color: #f0b429; font-size: 12px; padding: 16px 0; }
+
+/* Tabs */
+.sui-nv__tabs { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
+.sui-nv__tab { background: #18181c; border: 1px solid #1e1e22; border-radius: 6px; color: #888; font-size: 12px; padding: 6px 12px; cursor: pointer; transition: all 0.2s; }
+.sui-nv__tab:hover { color: #ccc; }
+.sui-nv__tab--active { background: #4da2ff20; border-color: #4da2ff; color: #4da2ff; }
+
+/* Panel */
+.sui-nv__panel { background: #18181c; border: 1px solid #1e1e22; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.sui-nv__panel-title { font-size: 13px; font-weight: 600; color: #ededed; margin-bottom: 10px; }
+.sui-nv__loading { text-align: center; color: #666; font-size: 12px; padding: 16px 0; }
+
+/* Stats grid */
+.sui-nv__stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.sui-nv__stat { background: #111114; border-radius: 6px; padding: 10px; }
+.sui-nv__stat-label { display: block; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.sui-nv__stat-val { font-size: 16px; font-weight: 600; color: #ededed; }
+.sui-nv__stat-val--green { color: #4ade80; }
+
+/* Pools */
+.sui-nv__sort-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.sui-nv__sort-label { font-size: 11px; color: #666; }
+.sui-nv__sort-btn { background: #111114; border: 1px solid #1e1e22; border-radius: 4px; color: #888; font-size: 10px; padding: 3px 8px; cursor: pointer; }
+.sui-nv__sort-btn--active { border-color: #4da2ff; color: #4da2ff; }
+.sui-nv__pool { background: #111114; border-radius: 6px; padding: 10px; margin-bottom: 6px; }
+.sui-nv__pool-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.sui-nv__pool-symbol { font-size: 13px; font-weight: 600; color: #ededed; }
+.sui-nv__pool-tvl { font-size: 12px; color: #888; }
+.sui-nv__pool-rates { display: flex; gap: 10px; font-size: 11px; }
+.sui-nv__pool-rate { color: #888; }
+.sui-nv__pool-rate--green { color: #4ade80; }
+.sui-nv__pool-rate--red { color: #f87171; }
+
+/* Portfolio */
+.sui-nv__health { background: #111114; border-radius: 6px; padding: 12px; margin: 10px 0; border-left: 3px solid #4ade80; }
+.sui-nv__health--danger { border-left-color: #f87171; }
+.sui-nv__health-label { font-size: 10px; color: #666; text-transform: uppercase; }
+.sui-nv__health-val { display: block; font-size: 20px; font-weight: 700; color: #ededed; margin: 2px 0; }
+.sui-nv__health--danger .sui-nv__health-val { color: #f87171; }
+.sui-nv__health-detail { font-size: 11px; color: #888; }
+.sui-nv__section { margin-top: 12px; }
+.sui-nv__section-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.sui-nv__coin-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #1e1e22; font-size: 12px; }
+.sui-nv__coin-symbol { color: #ededed; font-weight: 500; min-width: 60px; }
+.sui-nv__coin-bal { color: #888; font-family: monospace; }
+.sui-nv__coin-usd { color: #4da2ff; font-weight: 500; min-width: 70px; text-align: right; }
+
+/* Swap */
+.sui-nv__swap-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.sui-nv__swap-arrow { color: #4da2ff; font-size: 16px; font-weight: 600; }
+
+/* Inputs & buttons */
+.sui-nv__input { flex: 1; background: #111114; border: 1px solid #1e1e22; border-radius: 6px; color: #ededed; font-size: 12px; padding: 8px 10px; outline: none; box-sizing: border-box; font-family: monospace; }
+.sui-nv__input:focus { border-color: #4da2ff; }
+.sui-nv__input::placeholder { color: #555; }
+.sui-nv__input--sm { max-width: 80px; }
+.sui-nv__row { display: flex; gap: 6px; margin-bottom: 8px; }
+.sui-nv__btn { width: 100%; background: #4da2ff; border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 500; padding: 10px; cursor: pointer; transition: opacity 0.2s; margin-bottom: 8px; }
+.sui-nv__btn:hover { opacity: 0.85; }
+.sui-nv__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sui-nv__btn-sm { background: #222; border: 1px solid #333; border-radius: 6px; color: #4da2ff; font-size: 11px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.sui-nv__btn-sm:hover { border-color: #4da2ff; }
+.sui-nv__btn-sm:disabled { opacity: 0.5; }
+
+/* JSON output */
+.sui-nv__json { background: #111114; border-radius: 6px; padding: 10px; font-size: 11px; color: #ccc; font-family: monospace; white-space: pre-wrap; word-break: break-word; max-height: 250px; overflow-y: auto; margin-top: 8px; }
+
+/* Error */
+.sui-nv__error { background: #2a0000; border: 1px solid #4a0000; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #ff6b6b; margin-bottom: 12px; word-break: break-word; }
+
+/* Footer */
+.sui-nv__footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #1e1e22; font-size: 11px; }
+.sui-nv__badge { background: #4da2ff20; color: #4da2ff; border-radius: 4px; padding: 2px 8px; font-weight: 600; font-size: 10px; }
+.sui-nv__link { color: #666; text-decoration: none; }
+.sui-nv__link:hover { color: #4da2ff; }

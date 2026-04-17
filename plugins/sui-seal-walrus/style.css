@@ -1,0 +1,64 @@
+/* SUI Seal + Walrus Plugin */
+
+.sui-sw { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ededed; max-width: 100%; }
+.sui-sw__header { margin-bottom: 16px; }
+.sui-sw__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-sw__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+.sui-sw__warn { background: #2a1f00; border: 1px solid #4a3500; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #f0b429; margin-bottom: 12px; }
+
+/* Tabs */
+.sui-sw__tabs { display: flex; gap: 4px; margin-bottom: 14px; }
+.sui-sw__tab { background: #18181c; border: 1px solid #1e1e22; border-radius: 6px; color: #888; font-size: 12px; padding: 6px 14px; cursor: pointer; transition: all 0.2s; }
+.sui-sw__tab:hover { color: #ccc; }
+.sui-sw__tab--active { background: #4da2ff20; border-color: #4da2ff; color: #4da2ff; }
+
+/* Drop zone */
+.sui-sw__drop { background: #18181c; border: 2px dashed #1e1e22; border-radius: 8px; padding: 24px; text-align: center; font-size: 12px; color: #666; cursor: pointer; transition: all 0.2s; margin-bottom: 12px; }
+.sui-sw__drop:hover { border-color: #4da2ff40; color: #888; }
+.sui-sw__drop--active { border-color: #4da2ff; background: #4da2ff10; color: #4da2ff; }
+
+/* Inputs */
+.sui-sw__field { margin-bottom: 10px; }
+.sui-sw__label { display: block; font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.sui-sw__input { width: 100%; background: #18181c; border: 1px solid #1e1e22; border-radius: 8px; color: #ededed; font-size: 12px; padding: 8px 12px; outline: none; box-sizing: border-box; transition: border-color 0.2s; font-family: monospace; }
+.sui-sw__input:focus { border-color: #4da2ff; }
+.sui-sw__input::placeholder { color: #555; }
+
+/* Step */
+.sui-sw__step { font-size: 12px; color: #4da2ff; margin-bottom: 10px; padding: 6px 0; }
+
+/* Button */
+.sui-sw__btn { width: 100%; background: #4da2ff; border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 500; padding: 10px; cursor: pointer; transition: opacity 0.2s; margin-bottom: 12px; }
+.sui-sw__btn:hover { opacity: 0.85; }
+.sui-sw__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Error */
+.sui-sw__error { background: #2a0000; border: 1px solid #4a0000; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #ff6b6b; margin-bottom: 12px; word-break: break-word; }
+
+/* Result */
+.sui-sw__result { background: #18181c; border: 1px solid #1e1e22; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.sui-sw__result-title { font-size: 13px; font-weight: 600; color: #4da2ff; margin-bottom: 10px; }
+.sui-sw__meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 4px 0; }
+.sui-sw__meta-label { color: #666; }
+.sui-sw__meta-val { color: #ededed; font-weight: 500; }
+.sui-sw__copy { background: none; border: 1px solid #1e1e22; border-radius: 6px; color: #4da2ff; font-size: 11px; padding: 3px 8px; cursor: pointer; font-family: monospace; transition: all 0.2s; }
+.sui-sw__copy:hover { border-color: #4da2ff; }
+
+/* Preview */
+.sui-sw__preview-text { background: #111114; border-radius: 6px; padding: 12px; font-size: 12px; color: #ccc; font-family: monospace; white-space: pre-wrap; word-break: break-word; max-height: 300px; overflow-y: auto; margin-bottom: 10px; }
+.sui-sw__preview-binary { text-align: center; color: #888; font-size: 13px; padding: 16px 0; margin-bottom: 10px; }
+.sui-sw__actions { display: flex; gap: 8px; }
+.sui-sw__btn-sm { background: #18181c; border: 1px solid #1e1e22; border-radius: 6px; color: #ededed; font-size: 11px; padding: 5px 10px; cursor: pointer; transition: all 0.2s; }
+.sui-sw__btn-sm:hover { border-color: #4da2ff; color: #4da2ff; }
+
+/* History */
+.sui-sw__history { margin-bottom: 12px; }
+.sui-sw__history-title { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.sui-sw__history-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #1e1e22; font-size: 12px; }
+.sui-sw__history-name { color: #ededed; }
+
+/* Footer */
+.sui-sw__footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #1e1e22; font-size: 11px; }
+.sui-sw__net { color: #4da2ff; text-transform: uppercase; font-weight: 600; }
+.sui-sw__link { color: #666; text-decoration: none; }
+.sui-sw__link:hover { color: #4da2ff; }

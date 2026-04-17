@@ -1,0 +1,59 @@
+/* SUI Seal Encrypt Plugin */
+
+.sui-se { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ededed; max-width: 100%; }
+.sui-se__header { margin-bottom: 16px; }
+.sui-se__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-se__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+.sui-se__warn { background: #2a1f00; border: 1px solid #4a3500; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #f0b429; margin-bottom: 12px; }
+
+/* Tabs */
+.sui-se__tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.sui-se__tab { background: #18181c; border: 1px solid #1e1e22; border-radius: 6px; color: #888; font-size: 12px; padding: 6px 14px; cursor: pointer; transition: all 0.2s; }
+.sui-se__tab:hover { color: #ccc; }
+.sui-se__tab--active { background: #4da2ff20; border-color: #4da2ff; color: #4da2ff; }
+
+/* Inputs */
+.sui-se__textarea { width: 100%; background: #18181c; border: 1px solid #1e1e22; border-radius: 8px; color: #ededed; font-size: 12px; padding: 10px 12px; outline: none; resize: vertical; font-family: monospace; box-sizing: border-box; transition: border-color 0.2s; margin-bottom: 10px; }
+.sui-se__textarea:focus { border-color: #4da2ff; }
+.sui-se__textarea::placeholder { color: #555; }
+.sui-se__field { margin-bottom: 10px; }
+.sui-se__label { display: block; font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.sui-se__input { width: 100%; background: #18181c; border: 1px solid #1e1e22; border-radius: 8px; color: #ededed; font-size: 12px; padding: 8px 12px; outline: none; box-sizing: border-box; transition: border-color 0.2s; font-family: monospace; }
+.sui-se__input:focus { border-color: #4da2ff; }
+.sui-se__input::placeholder { color: #555; }
+.sui-se__input--sm { width: 80px; }
+
+/* File */
+.sui-se__file-zone { background: #18181c; border: 1px dashed #1e1e22; border-radius: 8px; padding: 14px; margin-bottom: 10px; text-align: center; }
+.sui-se__file-input { font-size: 12px; color: #888; }
+.sui-se__file-name { display: block; font-size: 12px; color: #4da2ff; margin-top: 6px; }
+
+/* Button */
+.sui-se__btn { width: 100%; background: #4da2ff; border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 500; padding: 10px; cursor: pointer; transition: opacity 0.2s; margin-bottom: 12px; }
+.sui-se__btn:hover { opacity: 0.85; }
+.sui-se__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Error */
+.sui-se__error { background: #2a0000; border: 1px solid #4a0000; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #ff6b6b; margin-bottom: 12px; word-break: break-word; }
+
+/* Result */
+.sui-se__result { background: #18181c; border: 1px solid #1e1e22; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.sui-se__result-title { font-size: 13px; font-weight: 600; color: #4da2ff; margin-bottom: 10px; }
+.sui-se__meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 4px 0; }
+.sui-se__meta-label { color: #666; }
+.sui-se__meta-val { color: #ededed; font-weight: 500; }
+.sui-se__copy { background: none; border: 1px solid #1e1e22; border-radius: 6px; color: #4da2ff; font-size: 11px; padding: 3px 8px; cursor: pointer; font-family: monospace; transition: all 0.2s; }
+.sui-se__copy:hover { border-color: #4da2ff; }
+
+/* History */
+.sui-se__history { margin-bottom: 12px; }
+.sui-se__history-title { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.sui-se__history-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #1e1e22; font-size: 12px; }
+.sui-se__history-id { color: #888; font-family: monospace; }
+.sui-se__history-size { color: #666; }
+
+/* Footer */
+.sui-se__footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #1e1e22; font-size: 11px; }
+.sui-se__net { color: #4da2ff; text-transform: uppercase; font-weight: 600; }
+.sui-se__link { color: #666; text-decoration: none; }
+.sui-se__link:hover { color: #4da2ff; }

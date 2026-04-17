@@ -163,6 +163,10 @@ function DashboardInner() {
         }
         return { digest: tx!.digest, effects: tx }
       },
+      onSignPersonalMessage: async (message) => {
+        const result = await dAppKitInstance.signPersonalMessage({ message })
+        return { signature: result.signature, bytes: result.bytes }
+      },
     })
   }, [dAppKitInstance])
 

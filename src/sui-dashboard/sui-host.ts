@@ -2,7 +2,13 @@
 // Extends base HostAPI with shared wallet context and cross-plugin data store
 
 import type { ComponentType } from 'react'
-import type { SuiHostAPI, SuiContext, SuiContextListener, TransactionResult } from './sui-types'
+import type {
+  SuiHostAPI,
+  SuiContext,
+  SuiContextListener,
+  TransactionResult,
+  PersonalMessageResult,
+} from './sui-types'
 import type { Transaction } from '@mysten/sui/transactions'
 
 // --- Component registry (same as base host) ---
@@ -27,6 +33,8 @@ let connectCallback: (() => void) | null = null
 let disconnectCallback: (() => void) | null = null
 let networkSwitchCallback: ((network: string) => void) | null = null
 let signAndExecuteCallback: ((transaction: Transaction) => Promise<TransactionResult>) | null = null
+let signPersonalMessageCallback: ((message: Uint8Array) => Promise<PersonalMessageResult>) | null =
+  null
 
 /** Register dashboard-level action handlers */
 export function registerActions(actions: {
@@ -34,11 +42,13 @@ export function registerActions(actions: {
   onDisconnect: () => void
   onNetworkSwitch: (network: string) => void
   onSignAndExecuteTransaction: (transaction: Transaction) => Promise<TransactionResult>
+  onSignPersonalMessage: (message: Uint8Array) => Promise<PersonalMessageResult>
 }) {
   connectCallback = actions.onConnect
   disconnectCallback = actions.onDisconnect
   networkSwitchCallback = actions.onNetworkSwitch
   signAndExecuteCallback = actions.onSignAndExecuteTransaction
+  signPersonalMessageCallback = actions.onSignPersonalMessage
 }
 
 /** Update shared context (called by dashboard when wallet/network changes) */
@@ -92,6 +102,13 @@ export const suiHostAPI: SuiHostAPI = {
       throw new Error('Wallet not connected — cannot sign transaction')
     }
     return signAndExecuteCallback(transaction)
+  },
+
+  async signPersonalMessage(message: Uint8Array) {
+    if (!signPersonalMessageCallback) {
+      throw new Error('Wallet not connected — cannot sign personal message')
+    }
+    return signPersonalMessageCallback(message)
   },
 
   registerSigner(signer: (transaction: Transaction) => Promise<TransactionResult>) {

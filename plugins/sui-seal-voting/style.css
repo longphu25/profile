@@ -1,0 +1,89 @@
+/* SUI Seal Voting Plugin */
+
+.sui-sv2 { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ededed; max-width: 100%; }
+.sui-sv2__header { margin-bottom: 16px; }
+.sui-sv2__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-sv2__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+.sui-sv2__warn { background: #2a1f00; border: 1px solid #4a3500; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #f0b429; margin-bottom: 12px; }
+
+/* Config */
+.sui-sv2__config { margin-bottom: 12px; }
+
+/* Tabs */
+.sui-sv2__tabs { display: flex; gap: 4px; margin-bottom: 14px; }
+.sui-sv2__tab { background: #18181c; border: 1px solid #1e1e22; border-radius: 6px; color: #888; font-size: 12px; padding: 6px 14px; cursor: pointer; transition: all 0.2s; }
+.sui-sv2__tab:hover { color: #ccc; }
+.sui-sv2__tab--active { background: #4da2ff20; border-color: #4da2ff; color: #4da2ff; }
+
+/* Panel */
+.sui-sv2__panel { background: #18181c; border: 1px solid #1e1e22; border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+.sui-sv2__panel-title { font-size: 13px; font-weight: 600; color: #ededed; margin-bottom: 10px; }
+
+/* Fields */
+.sui-sv2__field { margin-bottom: 12px; }
+.sui-sv2__label { display: block; font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.sui-sv2__input { width: 100%; background: #111114; border: 1px solid #1e1e22; border-radius: 6px; color: #ededed; font-size: 12px; padding: 8px 12px; outline: none; box-sizing: border-box; font-family: monospace; transition: border-color 0.2s; }
+.sui-sv2__input:focus { border-color: #4da2ff; }
+.sui-sv2__input::placeholder { color: #555; }
+
+/* Rows */
+.sui-sv2__row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.sui-sv2__row .sui-sv2__input { flex: 1; }
+
+/* Buttons */
+.sui-sv2__btn { width: 100%; background: #4da2ff; border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 500; padding: 10px; cursor: pointer; transition: opacity 0.2s; margin-top: 8px; }
+.sui-sv2__btn:hover { opacity: 0.85; }
+.sui-sv2__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sui-sv2__btn--warn { background: #e55; }
+.sui-sv2__btn-add { background: #222; border: 1px solid #333; border-radius: 6px; color: #4da2ff; font-size: 11px; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.sui-sv2__btn-add:hover { border-color: #4da2ff; }
+.sui-sv2__btn-add:disabled { opacity: 0.5; }
+.sui-sv2__btn-x { background: none; border: 1px solid #4a0000; border-radius: 4px; color: #ff6b6b; font-size: 11px; padding: 2px 6px; cursor: pointer; line-height: 1; }
+.sui-sv2__btn-x:hover { background: #2a0000; }
+
+/* Voter list */
+.sui-sv2__voter-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #1e1e22; }
+.sui-sv2__voter-addr { font-size: 12px; color: #ededed; font-family: monospace; }
+
+/* Session info */
+.sui-sv2__session-info { background: #111114; border-radius: 6px; padding: 10px; margin: 10px 0; }
+.sui-sv2__session-topic { font-size: 14px; font-weight: 600; color: #ededed; margin-bottom: 4px; }
+.sui-sv2__session-meta { font-size: 11px; color: #888; }
+
+/* Vote options */
+.sui-sv2__options { margin: 10px 0; }
+.sui-sv2__option { display: flex; align-items: center; gap: 8px; padding: 8px 12px; margin-bottom: 4px; background: #111114; border: 1px solid #1e1e22; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+.sui-sv2__option:hover { border-color: #333; }
+.sui-sv2__option--selected { border-color: #4da2ff; background: #4da2ff10; }
+.sui-sv2__option input { accent-color: #4da2ff; }
+
+/* Status */
+.sui-sv2__status { font-size: 12px; color: #4da2ff; margin-top: 8px; }
+.sui-sv2__progress { font-size: 11px; color: #888; margin-top: 4px; }
+
+/* Results */
+.sui-sv2__results { margin-top: 14px; }
+.sui-sv2__results-title { font-size: 13px; font-weight: 600; color: #ededed; margin-bottom: 10px; }
+.sui-sv2__result-row { margin-bottom: 8px; }
+.sui-sv2__result-label { display: flex; justify-content: space-between; font-size: 12px; color: #ededed; margin-bottom: 3px; }
+.sui-sv2__bar { height: 8px; background: #111114; border-radius: 4px; overflow: hidden; }
+.sui-sv2__bar-fill { height: 100%; background: #4da2ff; border-radius: 4px; transition: width 0.5s ease; min-width: 0; }
+.sui-sv2__result-total { font-size: 11px; color: #888; margin-top: 8px; padding-top: 8px; border-top: 1px solid #1e1e22; }
+
+/* Verified badge */
+.sui-sv2__verified { color: #6f6; font-weight: 600; }
+
+/* Mode toggle */
+.sui-sv2__mode-toggle { display: flex; gap: 6px; margin-bottom: 10px; }
+.sui-sv2__mode { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #111114; border: 1px solid #1e1e22; border-radius: 6px; cursor: pointer; font-size: 12px; color: #888; transition: all 0.2s; }
+.sui-sv2__mode:hover { border-color: #333; }
+.sui-sv2__mode--active { border-color: #4da2ff; color: #4da2ff; background: #4da2ff10; }
+.sui-sv2__mode input { accent-color: #4da2ff; }
+
+/* Error */
+.sui-sv2__error { background: #2a0000; border: 1px solid #4a0000; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #ff6b6b; margin-bottom: 12px; word-break: break-word; }
+
+/* Footer */
+.sui-sv2__footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #1e1e22; font-size: 11px; }
+.sui-sv2__net { color: #4da2ff; text-transform: uppercase; font-weight: 600; }
+.sui-sv2__pkg { color: #666; font-family: monospace; }

@@ -1,0 +1,56 @@
+/* NAVI Strategy Advisor Plugin */
+
+.sui-na { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ededed; max-width: 100%; }
+.sui-na__header { margin-bottom: 16px; }
+.sui-na__title { font-size: 16px; font-weight: 600; margin: 0; color: #ededed; }
+.sui-na__desc { font-size: 12px; color: #666; margin: 4px 0 0; }
+
+/* Budget input */
+.sui-na__budget-row { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+.sui-na__label { font-size: 11px; color: #888; white-space: nowrap; }
+.sui-na__input { width: 100px; background: #18181c; border: 1px solid #1e1e22; border-radius: 6px; color: #ededed; font-size: 14px; font-weight: 600; padding: 8px 12px; outline: none; text-align: center; }
+.sui-na__input:focus { border-color: #4da2ff; }
+.sui-na__btn { flex: 1; background: #4da2ff; border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 500; padding: 10px; cursor: pointer; transition: opacity 0.2s; }
+.sui-na__btn:hover { opacity: 0.85; }
+.sui-na__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Strategies */
+.sui-na__strategies { margin-bottom: 14px; }
+.sui-na__strategy { background: #18181c; border: 1px solid #1e1e22; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+.sui-na__strategy-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.sui-na__strategy-rank { background: #4da2ff20; color: #4da2ff; border-radius: 4px; padding: 1px 6px; font-size: 11px; font-weight: 700; }
+.sui-na__strategy-name { font-size: 13px; font-weight: 600; color: #ededed; flex: 1; }
+.sui-na__strategy-apy { font-size: 14px; font-weight: 700; }
+.sui-na__strategy-risk { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+
+/* Steps */
+.sui-na__strategy-steps { margin-bottom: 8px; }
+.sui-na__step { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: #ccc; padding: 3px 0; }
+.sui-na__step-num { background: #111114; color: #4da2ff; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+.sui-na__strategy-detail { font-size: 11px; color: #888; border-top: 1px solid #1e1e22; padding-top: 6px; }
+
+/* Snapshot */
+.sui-na__snapshot { background: #18181c; border: 1px solid #1e1e22; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.sui-na__snapshot-title { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.sui-na__snapshot-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; border-bottom: 1px solid #111114; }
+.sui-na__snapshot-apy { color: #4ade80; font-weight: 600; }
+
+/* Error & Success */
+.sui-na__error { background: #2a0000; border: 1px solid #4a0000; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #ff6b6b; margin-bottom: 12px; word-break: break-word; }
+.sui-na__success { background: #0a2a0a; border: 1px solid #1a4a1a; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #4ade80; margin-bottom: 12px; }
+
+/* Execute button */
+.sui-na__btn-exec { width: 100%; background: #1a3a1a; border: 1px solid #2a5a2a; border-radius: 6px; color: #4ade80; font-size: 12px; font-weight: 600; padding: 8px; cursor: pointer; margin-top: 8px; transition: all 0.2s; }
+.sui-na__btn-exec:hover { background: #2a5a2a; }
+.sui-na__btn-exec:disabled { opacity: 0.5; cursor: not-allowed; }
+.sui-na__btn-exec--warn { background: #3a2a1a; border-color: #5a4a2a; color: #f0b429; }
+.sui-na__btn-exec--warn:hover { background: #5a4a2a; }
+
+/* Link button */
+.sui-na__btn-link { display: block; width: 100%; background: #1a1a3a; border: 1px solid #2a2a5a; border-radius: 6px; color: #4da2ff; font-size: 12px; font-weight: 600; padding: 8px; cursor: pointer; margin-top: 8px; transition: all 0.2s; text-align: center; text-decoration: none; box-sizing: border-box; }
+.sui-na__btn-link:hover { background: #2a2a5a; }
+
+/* Footer */
+.sui-na__footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #1e1e22; font-size: 11px; }
+.sui-na__badge { background: #4da2ff20; color: #4da2ff; border-radius: 4px; padding: 2px 8px; font-weight: 600; font-size: 10px; }
+.sui-na__disclaimer { color: #555; font-style: italic; }
