@@ -1,5 +1,5 @@
 import { resolve } from 'path'
-import { readdirSync, copyFileSync, mkdirSync } from 'fs'
+import { readdirSync, copyFileSync, mkdirSync, existsSync } from 'fs'
 import { defineConfig, type Plugin as VitePlugin } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
@@ -20,6 +20,17 @@ function copyPluginAssets(): VitePlugin {
           copyFileSync(src, resolve(dest, 'style.css'))
         } catch {
           // plugin has no style.css — skip
+        }
+        // Copy WASM pkg if exists
+        const pkgDir = resolve(pluginsDir, name, 'pkg')
+        if (existsSync(pkgDir)) {
+          const destPkg = resolve(__dirname, 'dist/plugins', name, 'pkg')
+          mkdirSync(destPkg, { recursive: true })
+          for (const f of readdirSync(pkgDir)) {
+            if (f.endsWith('.js') || f.endsWith('.wasm') || f.endsWith('.d.ts')) {
+              copyFileSync(resolve(pkgDir, f), resolve(destPkg, f))
+            }
+          }
         }
       }
     },
@@ -43,7 +54,55 @@ export default defineConfig({
       '@mysten/sui/faucet',
       '@mysten/sui/utils',
       'nanostores',
+      'ethers',
+      '@scure/bip39',
+      '@scure/bip39/wordlists/english.js',
     ],
+    entries: [
+      'index.html',
+      'app.html',
+      'plugin-demo.html',
+      'sui-plugin.html',
+      'sui-plugin-wasm.html',
+      'sui-deepbook-hedging-bot.html',
+      'sui-deepbook-predict.html',
+      'polymarket-dashboard.html',
+      'marketplace.html',
+    ],
+  },
+  server: {
+    proxy: {
+      '/api/polymarket/auth': {
+        target: 'https://clob.polymarket.com',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api\/polymarket/, ''),
+      },
+      '/api/polymarket/book': {
+        target: 'https://clob.polymarket.com',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api\/polymarket/, ''),
+      },
+      '/api/polymarket/order': {
+        target: 'https://clob.polymarket.com',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api\/polymarket/, ''),
+      },
+      '/api/polymarket/orders': {
+        target: 'https://clob.polymarket.com',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api\/polymarket/, ''),
+      },
+      '/api/polymarket/positions': {
+        target: 'https://clob.polymarket.com',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api\/polymarket/, ''),
+      },
+      '/api/polymarket': {
+        target: 'https://gamma-api.polymarket.com',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api\/polymarket/, ''),
+      },
+    },
   },
   build: {
     modulePreload: false,
@@ -51,10 +110,13 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         app: resolve(__dirname, 'app.html'),
+        marketplace: resolve(__dirname, 'marketplace.html'),
         'plugin-demo': resolve(__dirname, 'plugin-demo.html'),
         'sui-plugin': resolve(__dirname, 'sui-plugin.html'),
         'sui-plugin-wasm': resolve(__dirname, 'sui-plugin-wasm.html'),
         'sui-deepbook-hedging-bot': resolve(__dirname, 'sui-deepbook-hedging-bot.html'),
+        'sui-deepbook-predict': resolve(__dirname, 'sui-deepbook-predict.html'),
+        'polymarket-dashboard': resolve(__dirname, 'polymarket-dashboard.html'),
         // Build plugins as separate entry points
         'plugins/hello-plugin': resolve(__dirname, 'plugins/hello-plugin/plugin.tsx'),
         'plugins/hello-world-sui': resolve(__dirname, 'plugins/hello-world-sui/plugin.tsx'),
@@ -94,6 +156,10 @@ export default defineConfig({
           __dirname,
           'plugins/sui-deepbook-analysis/plugin.tsx',
         ),
+        'plugins/sui-deepbook-predict': resolve(
+          __dirname,
+          'plugins/sui-deepbook-predict/plugin.tsx',
+        ),
         'plugins/sui-seal-encrypt': resolve(__dirname, 'plugins/sui-seal-encrypt/plugin.tsx'),
         'plugins/sui-seal-decrypt': resolve(__dirname, 'plugins/sui-seal-decrypt/plugin.tsx'),
         'plugins/sui-seal-vault': resolve(__dirname, 'plugins/sui-seal-vault/plugin.tsx'),
@@ -104,6 +170,18 @@ export default defineConfig({
         'plugins/sui-seal-voting': resolve(__dirname, 'plugins/sui-seal-voting/plugin.tsx'),
         'plugins/sui-navi-dashboard': resolve(__dirname, 'plugins/sui-navi-dashboard/plugin.tsx'),
         'plugins/sui-navi-advisor': resolve(__dirname, 'plugins/sui-navi-advisor/plugin.tsx'),
+        'plugins/sui-navi-chatbot': resolve(__dirname, 'plugins/sui-navi-chatbot/plugin.tsx'),
+        'plugins/sui-navi-analysis': resolve(__dirname, 'plugins/sui-navi-analysis/plugin.tsx'),
+        'plugins/sui-zk-login': resolve(__dirname, 'plugins/sui-zk-login/plugin.tsx'),
+        'plugins/sui-zk-merkle': resolve(__dirname, 'plugins/sui-zk-merkle/plugin.tsx'),
+        'plugins/sui-seal-walrus-upload': resolve(
+          __dirname,
+          'plugins/sui-seal-walrus-upload/plugin.tsx',
+        ),
+        'plugins/polymarket-weather': resolve(__dirname, 'plugins/polymarket-weather/plugin.tsx'),
+        'plugins/polymarket-detail': resolve(__dirname, 'plugins/polymarket-detail/plugin.tsx'),
+        'plugins/polymarket-wallet': resolve(__dirname, 'plugins/polymarket-wallet/plugin.tsx'),
+        'plugins/polymarket': resolve(__dirname, 'plugins/polymarket/plugin.tsx'),
       },
       external: ['gsap', 'motion'],
       preserveEntrySignatures: 'exports-only',

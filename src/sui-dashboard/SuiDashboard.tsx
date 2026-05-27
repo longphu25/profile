@@ -98,6 +98,14 @@ const SUI_PLUGINS = [
     src: pluginPath('sui-create-wallet'),
     icon: '🔐',
   },
+  {
+    id: 'sui-deepbook-predict',
+    name: 'SuiDeepBookPredict',
+    label: 'Predict',
+    desc: 'DeepBook Predict market',
+    src: pluginPath('sui-deepbook-predict'),
+    icon: '📊',
+  },
 ]
 
 interface LoadedPlugin {
