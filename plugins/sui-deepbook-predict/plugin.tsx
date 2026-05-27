@@ -336,35 +336,144 @@ function PredictContent() {
   )
 
   // ── Trade Tab (Mint/Redeem + Range) ────────────────────────────────────────
-  const renderTrade = () => (
-    <div className="sui-predict__grid">
-      {!isConnected ? (
+  const renderTrade = () => {
+    const spot = oracleState?.latest_price?.spot
+    const forward = oracleState?.latest_price?.forward
+    const spotUsd = spot ? (spot / PRICE_SCALE).toFixed(2) : '—'
+    const forwardUsd = forward ? (forward / PRICE_SCALE).toFixed(2) : '—'
+    const spread = spot && forward ? (((forward - spot) / spot) * 100).toFixed(3) : '—'
+    const expiry = oracleState?.oracle?.expiry
+    const svi = oracleState?.latest_svi
+    const lastUpdate = oracleState?.latest_price?.onchain_timestamp
+
+    return (
+      <div className="sui-predict__grid">
+        {/* BTC Price Context */}
         <div className="sui-predict__card sui-predict__card--wide">
-          <div className="sui-predict__empty">
-            <p>Connect wallet to mint/redeem positions</p>
-            <button className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
-              Connect Wallet
-            </button>
+          <div className="sui-predict__card-header">
+            <h3 className="sui-predict__card-title">BTC Price Context</h3>
+            {lastUpdate && (
+              <span className="sui-predict__stat-value--mono">
+                Updated: {new Date(lastUpdate).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+          <div className="sui-predict__stats">
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Spot Price</span>
+              <span className="sui-predict__stat-value sui-predict__stat-value--green">
+                ${spotUsd}
+              </span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Forward Price</span>
+              <span className="sui-predict__stat-value">${forwardUsd}</span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Basis (F−S)</span>
+              <span className="sui-predict__stat-value">{spread}%</span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Expiry</span>
+              <span className="sui-predict__stat-value">{expiry ? fmtDate(expiry) : '—'}</span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Time Left</span>
+              <span className="sui-predict__stat-value">{expiry ? timeLeft(expiry) : '—'}</span>
+            </div>
+            {svi && (
+              <div className="sui-predict__stat">
+                <span className="sui-predict__stat-label">ATM Vol (a)</span>
+                <span className="sui-predict__stat-value">{((svi.a / 1e6) * 100).toFixed(2)}%</span>
+              </div>
+            )}
           </div>
         </div>
-      ) : (
-        <>
+
+        {/* Price mini-chart */}
+        {prices.length > 0 && (
           <div className="sui-predict__card sui-predict__card--wide">
             <div className="sui-predict__card-header">
-              <h3 className="sui-predict__card-title">Connected</h3>
-              <span className="sui-predict__stat-value--mono">{fmtAddr(walletAddress || '')}</span>
+              <h3 className="sui-predict__card-title">Recent Price ({prices.length} ticks)</h3>
+              {prices.length >= 2 &&
+                (() => {
+                  const first = prices[0].spot / PRICE_SCALE
+                  const last = prices[prices.length - 1].spot / PRICE_SCALE
+                  const chg = ((last - first) / first) * 100
+                  return (
+                    <span
+                      className={`sui-predict__badge ${chg >= 0 ? 'sui-predict__badge--green' : 'sui-predict__badge--red'}`}
+                    >
+                      {chg >= 0 ? '+' : ''}
+                      {chg.toFixed(3)}%
+                    </span>
+                  )
+                })()}
+            </div>
+            <div className="sui-predict__price-chart">
+              <div className="sui-predict__bars">
+                {prices.slice(-30).map((p, i, arr) => {
+                  const vals = arr.map((x) => x.spot / PRICE_SCALE)
+                  const min = Math.min(...vals),
+                    max = Math.max(...vals),
+                    range = max - min || 1
+                  const v = p.spot / PRICE_SCALE
+                  const pct = ((v - min) / range) * 100
+                  const isUp = i > 0 ? v >= arr[i - 1].spot / PRICE_SCALE : true
+                  return (
+                    <div key={i} className="sui-predict__bar-col">
+                      <div
+                        className={`sui-predict__bar ${isUp ? 'sui-predict__bar--green' : 'sui-predict__bar--red'}`}
+                        style={{ height: `${Math.max(4, pct)}%` }}
+                        title={`$${v.toFixed(2)}`}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="sui-predict__price-range">
+                <span>
+                  ${Math.min(...prices.slice(-30).map((p) => p.spot / PRICE_SCALE)).toFixed(0)}
+                </span>
+                <span>
+                  ${Math.max(...prices.slice(-30).map((p) => p.spot / PRICE_SCALE)).toFixed(0)}
+                </span>
+              </div>
             </div>
           </div>
-          <TradePanel
-            oracleState={oracleState}
-            oracles={oracles}
-            selectedOracle={selectedOracle}
-            walletAddress={walletAddress!}
-          />
-        </>
-      )}
-    </div>
-  )
+        )}
+
+        {/* Trade form */}
+        {!isConnected ? (
+          <div className="sui-predict__card sui-predict__card--wide">
+            <div className="sui-predict__empty">
+              <p>Connect wallet to mint/redeem positions</p>
+              <button className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
+                Connect Wallet
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="sui-predict__card sui-predict__card--wide">
+              <div className="sui-predict__card-header">
+                <h3 className="sui-predict__card-title">Connected</h3>
+                <span className="sui-predict__stat-value--mono">
+                  {fmtAddr(walletAddress || '')}
+                </span>
+              </div>
+            </div>
+            <TradePanel
+              oracleState={oracleState}
+              oracles={oracles}
+              selectedOracle={selectedOracle}
+              walletAddress={walletAddress!}
+            />
+          </>
+        )}
+      </div>
+    )
+  }
 
   // ── Vault Tab (Supply/Withdraw) ────────────────────────────────────────────
   const renderVault = () => (
@@ -441,13 +550,13 @@ function PredictContent() {
         {(
           [
             'market',
+            'trade',
             'surface',
             'risk',
             'strategy',
             'plphedge',
             'loop',
             'arb',
-            'trade',
             'vault',
           ] as const
         ).map((t) => (
@@ -458,20 +567,20 @@ function PredictContent() {
           >
             {t === 'market'
               ? '◉ Market'
-              : t === 'surface'
-                ? '◊ Surface'
-                : t === 'risk'
-                  ? '⬡ Risk'
-                  : t === 'strategy'
-                    ? '⬢ Strategy'
-                    : t === 'plphedge'
-                      ? '⛨ PLP+Hedge'
-                      : t === 'loop'
-                        ? '∞ Loop'
-                        : t === 'arb'
-                          ? '⇄ Arb'
-                          : t === 'trade'
-                            ? '◇ Trade'
+              : t === 'trade'
+                ? '◇ Trade'
+                : t === 'surface'
+                  ? '◊ Surface'
+                  : t === 'risk'
+                    ? '⬡ Risk'
+                    : t === 'strategy'
+                      ? '⬢ Strategy'
+                      : t === 'plphedge'
+                        ? '⛨ PLP+Hedge'
+                        : t === 'loop'
+                          ? '∞ Loop'
+                          : t === 'arb'
+                            ? '⇄ Arb'
                             : '◈ Vault'}
           </button>
         ))}
