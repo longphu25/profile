@@ -514,7 +514,15 @@ function PredictContent() {
         <ArbTab oracleState={oracleState} oracles={oracles} selectedOracle={selectedOracle} />
       )}
       {tab === 'plphedge' && <PLPHedgeTab oracleState={oracleState} vaultData={vaultData} />}
-      {tab === 'loop' && <MarginLoopTab oracleState={oracleState} />}
+      {tab === 'loop' && (
+        <MarginLoopTab
+          oracleState={oracleState}
+          sharedHost={sharedHost}
+          walletAddress={walletAddress}
+          isConnected={isConnected}
+          selectedOracle={selectedOracle}
+        />
+      )}
       {tab === 'trade' && renderTrade()}
       {tab === 'vault' && renderVault()}
     </div>
