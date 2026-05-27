@@ -1083,6 +1083,7 @@ function TradePanel({
   const [txDigest, setTxDigest] = useState<string | null>(null)
   const [txError, setTxError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [managerId, setManagerId] = useState<string | null>(null)
 
   const spotPrice = oracleState?.latest_price?.spot
     ? (oracleState.latest_price.spot / PRICE_SCALE).toFixed(0)
@@ -1095,20 +1096,47 @@ function TradePanel({
     setTxDigest(null)
 
     try {
+      // Step 1: Ensure user has a PredictManager
+      // Check if we already have one stored
+      let mgr = managerId
+      if (!mgr) {
+        // Create manager first
+        const txMgr = new Transaction()
+        txMgr.setSender(walletAddress)
+        txMgr.moveCall({ target: `${PREDICT_PACKAGE}::predict::create_manager` })
+        await sharedHost.signAndExecuteTransaction(txMgr)
+
+        // Wait for indexer to pick it up
+        await new Promise((r) => setTimeout(r, 2500))
+
+        // Query for our manager
+        try {
+          const res = await fetch(`${PREDICT_SERVER}/managers`)
+          const mgrs = (await res.json()) as { owner: string; manager_id: string }[]
+          const mine = mgrs.find((m) => m.owner === walletAddress)
+          if (mine) {
+            mgr = mine.manager_id
+            setManagerId(mgr)
+          }
+        } catch {
+          /* fallback */
+        }
+
+        if (!mgr) {
+          setTxError('Manager created but not found by indexer. Please try again in a few seconds.')
+          setSubmitting(false)
+          return
+        }
+      }
+
+      // Step 2: Build mint/redeem TX
       const tx = new Transaction()
       tx.setSender(walletAddress)
       const amountRaw = Math.floor(Number(amount) * 10 ** DUSDC_DECIMALS)
       const expiry = oracleState?.oracle?.expiry || 0
 
-      // Create PredictManager (idempotent — creates new each time for demo)
-      const managerId = tx.moveCall({
-        target: `${PREDICT_PACKAGE}::predict::create_manager`,
-      })
-
       if (mode === 'binary') {
         const strikeRaw = Math.floor(Number(strike) * STRIKE_SCALE)
-        // Construct MarketKey: market_key::new(oracle_id, expiry, strike, direction)
-        // direction: 0 = up, 1 = down (from market_key module)
         const direction = isUp ? 0 : 1
         const marketKey = tx.moveCall({
           target: `${PREDICT_PACKAGE}::market_key::new`,
@@ -1125,17 +1153,16 @@ function TradePanel({
           typeArguments: [DUSDC_TYPE],
           arguments: [
             tx.object(PREDICT_ID),
-            managerId,
+            tx.object(mgr),
             tx.object(selectedOracle),
             marketKey[0],
             tx.pure.u64(amountRaw),
-            tx.object('0x6'), // Clock
+            tx.object('0x6'),
           ],
         })
       } else {
         const lowerRaw = Math.floor(Number(lowerStrike) * STRIKE_SCALE)
         const upperRaw = Math.floor(Number(upperStrike) * STRIKE_SCALE)
-        // Construct RangeKey
         const rangeKey = tx.moveCall({
           target: `${PREDICT_PACKAGE}::range_key::new`,
           arguments: [
@@ -1151,11 +1178,11 @@ function TradePanel({
           typeArguments: [DUSDC_TYPE],
           arguments: [
             tx.object(PREDICT_ID),
-            managerId,
+            tx.object(mgr),
             tx.object(selectedOracle),
             rangeKey[0],
             tx.pure.u64(amountRaw),
-            tx.object('0x6'), // Clock
+            tx.object('0x6'),
           ],
         })
       }

@@ -13,6 +13,7 @@ import {
   PRICE_SCALE,
   PREDICT_PACKAGE,
   PREDICT_ID,
+  PREDICT_SERVER,
   STRIKE_SCALE,
   DUSDC_DECIMALS,
   DUSDC_TYPE,
@@ -131,12 +132,64 @@ export function MarginLoopTab({
     setExecSteps([...steps])
 
     // Steps 3+: predict mint_range (REAL on-chain transactions)
-    for (let i = 2; i < steps.length; i++) {
+    // First, create a PredictManager (separate TX — it's a shared object)
+    let managerObjectId: string | null = null
+
+    // Insert a "create manager" step before ranges
+    const createMgrStep: ExecutionStep = {
+      protocol: 'predict',
+      action: 'Create PredictManager (shared object)',
+      status: 'executing',
+    }
+    steps.splice(2, 0, createMgrStep)
+    setExecSteps([...steps])
+
+    try {
+      const txMgr = new Transaction()
+      txMgr.setSender(walletAddress)
+      txMgr.moveCall({ target: `${PREDICT_PACKAGE}::predict::create_manager` })
+      const mgrResult = await sharedHost.signAndExecuteTransaction(txMgr)
+      steps[2].status = 'done'
+      steps[2].txDigest = mgrResult.digest
+
+      // Extract manager ID from transaction effects (created objects)
+      // The manager is the shared object created in this TX
+      // We need to query it from the server after a short delay
+      await new Promise((r) => setTimeout(r, 2000))
+      // Query managers for our address
+      try {
+        const mgrsRes = await fetch(`${PREDICT_SERVER}/managers`)
+        const mgrs = await mgrsRes.json()
+        const myMgr = (mgrs as any[]).find((m: any) => m.owner === walletAddress)
+        if (myMgr) managerObjectId = myMgr.manager_id
+      } catch {
+        /* fallback below */
+      }
+
+      // Fallback: parse from digest events
+      if (!managerObjectId) {
+        steps[2].error = 'Manager created but ID not found. Try again.'
+        steps[2].status = 'error'
+        setExecSteps([...steps])
+        setExecuting(false)
+        return
+      }
+    } catch (e) {
+      steps[2].status = 'error'
+      steps[2].error = e instanceof Error ? e.message : String(e)
+      setExecSteps([...steps])
+      setExecuting(false)
+      return
+    }
+    setExecSteps([...steps])
+
+    // Now mint ranges using the manager
+    for (let i = 3; i < steps.length; i++) {
       steps[i].status = 'executing'
       setExecSteps([...steps])
 
       try {
-        const rangeIdx = i - 2
+        const rangeIdx = i - 3
         const center = spot + (rangeIdx - (nRanges - 1) / 2) * ((halfWidth * 2) / nRanges)
         const lower = Math.floor(center - halfWidth / nRanges)
         const upper = Math.ceil(center + halfWidth / nRanges)
@@ -144,14 +197,12 @@ export function MarginLoopTab({
         const lowerRaw = Math.floor(lower * STRIKE_SCALE)
         const upperRaw = Math.floor(upper * STRIKE_SCALE)
         const amountRaw = Math.floor(capitalPerRange * 10 ** DUSDC_DECIMALS)
-
-        // Get oracle expiry from oracleState
         const expiry = oracleState?.oracle?.expiry || 0
 
         const tx = new Transaction()
         tx.setSender(walletAddress)
 
-        // 1. Construct RangeKey: range_key::new(oracle_id, expiry, lower_strike, higher_strike)
+        // Construct RangeKey
         const rangeKey = tx.moveCall({
           target: `${PREDICT_PACKAGE}::range_key::new`,
           arguments: [
@@ -162,22 +213,17 @@ export function MarginLoopTab({
           ],
         })
 
-        // 2. Call predict::mint_range<DUSDC>(Predict, PredictManager, OracleSVI, RangeKey, amount, Clock)
-        // Note: User needs a PredictManager. For demo, we create one in the same PTB if needed.
-        const managerId = tx.moveCall({
-          target: `${PREDICT_PACKAGE}::predict::create_manager`,
-        })
-
+        // mint_range<DUSDC>(Predict, PredictManager, OracleSVI, RangeKey, amount, Clock)
         tx.moveCall({
           target: `${PREDICT_PACKAGE}::predict::mint_range`,
           typeArguments: [DUSDC_TYPE],
           arguments: [
             tx.object(PREDICT_ID),
-            managerId,
+            tx.object(managerObjectId!),
             tx.object(selectedOracle),
             rangeKey[0],
             tx.pure.u64(amountRaw),
-            tx.object('0x6'), // Clock
+            tx.object('0x6'),
           ],
         })
 
