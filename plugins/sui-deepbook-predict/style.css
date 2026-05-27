@@ -1,0 +1,738 @@
+/* SUI DeepBook Predict Plugin — Prediction Market Dashboard */
+
+.sui-predict {
+  font-family:
+    'Fira Sans',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  color: #f8fafc;
+  max-width: 100%;
+}
+
+/* Tabs */
+.sui-predict__tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #1e293b;
+  padding-bottom: 8px;
+  align-items: center;
+}
+
+.sui-predict__tab {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sui-predict__tab:hover {
+  color: #f8fafc;
+  background: #1e293b;
+}
+.sui-predict__tab--active {
+  color: #a855f7;
+  background: #0f172a;
+}
+
+/* Grid layout */
+.sui-predict__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+/* Card */
+.sui-predict__card {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.sui-predict__card--wide {
+  grid-column: 1 / -1;
+}
+
+.sui-predict__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sui-predict__card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+/* Stats grid */
+.sui-predict__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.sui-predict__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.sui-predict__stat-label {
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sui-predict__stat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.sui-predict__stat-value--mono {
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+}
+.sui-predict__stat-value--green {
+  color: #22c55e;
+}
+.sui-predict__stat-value--red {
+  color: #ef4444;
+}
+
+/* Badge */
+.sui-predict__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.sui-predict__badge--green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+.sui-predict__badge--red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+.sui-predict__badge--yellow {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+}
+.sui-predict__badge--gray {
+  background: rgba(100, 116, 139, 0.15);
+  color: #64748b;
+}
+
+/* Oracle list */
+.sui-predict__oracle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.sui-predict__oracle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #020617;
+  border: 1px solid #1e293b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sui-predict__oracle-row:hover {
+  border-color: #334155;
+}
+.sui-predict__oracle-row--active {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.05);
+}
+
+.sui-predict__oracle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sui-predict__oracle-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+.sui-predict__oracle-expiry {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.sui-predict__oracle-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sui-predict__oracle-price {
+  font-size: 13px;
+  font-weight: 600;
+  color: #22c55e;
+  font-family: 'Fira Code', monospace;
+}
+
+/* Price chart bars */
+.sui-predict__price-chart {
+  padding: 8px 0;
+}
+
+.sui-predict__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 100px;
+  padding: 4px 0;
+}
+
+.sui-predict__bar-col {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.sui-predict__bar {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  min-height: 4px;
+  transition: height 0.3s;
+}
+
+.sui-predict__bar--green {
+  background: #22c55e;
+}
+.sui-predict__bar--red {
+  background: #ef4444;
+}
+
+.sui-predict__price-range {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 4px;
+  font-family: 'Fira Code', monospace;
+}
+
+/* Buttons */
+.sui-predict__btn {
+  background: #a855f7;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.sui-predict__btn:hover {
+  opacity: 0.85;
+}
+.sui-predict__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.sui-predict__btn--ghost {
+  background: transparent;
+  border: 1px solid #1e293b;
+  color: #94a3b8;
+  font-weight: 500;
+}
+.sui-predict__btn--ghost:hover {
+  border-color: #334155;
+  color: #f8fafc;
+}
+.sui-predict__btn--sm {
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+/* Table */
+.sui-predict__table {
+  font-size: 11px;
+  overflow-x: auto;
+}
+
+.sui-predict__table-header {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  padding: 6px 8px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.sui-predict__table-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid #0f172a;
+  align-items: center;
+  color: #cbd5e1;
+}
+
+.sui-predict__table-row--6col {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.sui-predict__table-row--6col + .sui-predict__table-header {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.sui-predict__table-row:hover {
+  background: rgba(168, 85, 247, 0.03);
+}
+
+/* Text colors */
+.sui-predict__text--green {
+  color: #22c55e;
+  font-weight: 600;
+}
+.sui-predict__text--red {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+/* Info text */
+.sui-predict__info-text {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.7;
+}
+
+.sui-predict__info-text h4 {
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 12px 0 4px;
+}
+
+.sui-predict__info-text h4:first-child {
+  margin-top: 0;
+}
+
+.sui-predict__info-text p {
+  margin: 4px 0;
+}
+
+.sui-predict__info-text code {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  color: #a855f7;
+}
+
+.sui-predict__info-text ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.sui-predict__info-text li {
+  margin: 4px 0;
+}
+
+/* Empty state */
+.sui-predict__empty {
+  text-align: center;
+  color: #475569;
+  padding: 24px 0;
+  font-size: 12px;
+}
+
+/* Error */
+.sui-predict__error {
+  background: #1c0a0a;
+  border: 1px solid #450a0a;
+  border-radius: 8px;
+  color: #ef4444;
+  padding: 10px 14px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+/* 6-column table variant */
+.sui-predict__table-header--6col {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.sui-predict__table-row--6col {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+/* Oracle strike in meta */
+.sui-predict__oracle-strike {
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: 'Fira Code', monospace;
+}
+
+/* SVI section */
+.sui-predict__svi-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #1e293b;
+}
+
+/* Vol surface chart */
+.sui-predict__vol-chart {
+  display: flex;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.sui-predict__vol-y-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #64748b;
+  font-family: 'Fira Code', monospace;
+  padding: 4px 0;
+  min-width: 50px;
+  text-align: right;
+}
+
+.sui-predict__vol-bars {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 120px;
+  border-left: 1px solid #1e293b;
+  border-bottom: 1px solid #1e293b;
+  padding: 4px 4px 0;
+}
+
+.sui-predict__vol-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  position: relative;
+}
+
+.sui-predict__vol-bar {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  min-height: 4px;
+  background: #a855f7;
+  transition: height 0.3s;
+}
+
+.sui-predict__vol-bar--atm {
+  background: #3b82f6;
+}
+.sui-predict__vol-bar--violation {
+  background: #ef4444;
+}
+
+.sui-predict__vol-atm-label {
+  position: absolute;
+  bottom: -16px;
+  font-size: 8px;
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.sui-predict__vol-x-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #64748b;
+  margin-top: 4px;
+  padding-left: 54px;
+  font-family: 'Fira Code', monospace;
+}
+
+/* Slider */
+.sui-predict__slider {
+  width: 100%;
+  height: 4px;
+  appearance: none;
+  background: #1e293b;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.sui-predict__slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #a855f7;
+  cursor: pointer;
+}
+
+.sui-predict__slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+/* Select */
+.sui-predict__select {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 11px;
+  padding: 6px 10px;
+  outline: none;
+  cursor: pointer;
+  max-width: 300px;
+}
+
+.sui-predict__select:focus {
+  border-color: #a855f7;
+}
+
+/* Surface meta */
+.sui-predict__surface-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+  color: #64748b;
+  font-family: 'Fira Code', monospace;
+}
+
+/* Gauge */
+.sui-predict__gauge {
+  padding: 8px 0;
+}
+
+.sui-predict__gauge-bar {
+  width: 100%;
+  height: 8px;
+  background: #1e293b;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.sui-predict__gauge-fill {
+  height: 100%;
+  border-radius: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  transition: width 0.3s;
+}
+
+.sui-predict__gauge-fill--mtm {
+  background: #22c55e;
+  z-index: 2;
+}
+.sui-predict__gauge-fill--maxpay {
+  background: rgba(234, 179, 8, 0.4);
+  z-index: 1;
+}
+
+.sui-predict__gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+/* Scenario */
+.sui-predict__scenario {
+  padding: 4px 0;
+}
+
+.sui-predict__scenario-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sui-predict__scenario-value {
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+  min-width: 50px;
+}
+
+/* 4-column table */
+.sui-predict__table-header--4col {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.sui-predict__table-row--4col {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Toggle buttons */
+.sui-predict__toggle-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sui-predict__toggle {
+  display: flex;
+  gap: 2px;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.sui-predict__toggle-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sui-predict__toggle-btn:hover {
+  color: #f8fafc;
+}
+.sui-predict__toggle-btn--active {
+  background: #1e293b;
+  color: #a855f7;
+}
+.sui-predict__toggle-btn--green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+.sui-predict__toggle-btn--red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* Form */
+.sui-predict__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sui-predict__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sui-predict__field-label {
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sui-predict__input {
+  width: 100%;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 13px;
+  font-family: 'Fira Code', monospace;
+  padding: 10px 12px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.sui-predict__input:focus {
+  border-color: #a855f7;
+}
+.sui-predict__input::placeholder {
+  color: #334155;
+}
+
+.sui-predict__btn--full {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* Trade info row */
+.sui-predict__trade-info {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: #94a3b8;
+  padding: 6px 0;
+}
+
+/* Success message */
+.sui-predict__success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 6px;
+  color: #22c55e;
+  padding: 8px 12px;
+  font-size: 11px;
+  margin-top: 8px;
+  font-family: 'Fira Code', monospace;
+}
+
+/* Formula display */
+.sui-predict__formula {
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  color: #e2e8f0;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin: 6px 0;
+  display: block;
+}
