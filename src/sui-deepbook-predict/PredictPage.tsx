@@ -227,26 +227,37 @@ function PredictInner() {
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto p-4">
-        <div className="mx-auto max-w-7xl">
-          {PLUGINS.map((p) => (
-            <div key={p.id}>
-              {errors[p.id] && (
-                <div className="mb-3 rounded-lg border border-red-900 bg-red-950 px-3 py-2 text-xs text-red-400">
-                  {errors[p.id]}
-                </div>
-              )}
-              {loaded.has(p.id) ? (
-                <ShadowContainer styleUrls={[p.styleUrl]}>
-                  {(() => {
-                    const C = suiHostAPI.getComponent(p.name)
-                    return C ? <C /> : null
-                  })()}
-                </ShadowContainer>
-              ) : !errors[p.id] ? (
-                <div className="text-center text-[#64748b] py-12 text-xs">Loading {p.label}…</div>
-              ) : null}
-            </div>
-          ))}
+        <div className="mx-auto max-w-[1440px] grid grid-cols-[1fr_280px] gap-4">
+          {/* Left: Plugin */}
+          <div>
+            {PLUGINS.map((p) => (
+              <div key={p.id}>
+                {errors[p.id] && (
+                  <div className="mb-3 rounded-lg border border-red-900 bg-red-950 px-3 py-2 text-xs text-red-400">
+                    {errors[p.id]}
+                  </div>
+                )}
+                {loaded.has(p.id) ? (
+                  <ShadowContainer styleUrls={[p.styleUrl]}>
+                    {(() => {
+                      const C = suiHostAPI.getComponent(p.name)
+                      return C ? <C /> : null
+                    })()}
+                  </ShadowContainer>
+                ) : !errors[p.id] ? (
+                  <div className="text-center text-[#64748b] py-12 text-xs">Loading {p.label}…</div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          {/* Right: Account Info */}
+          <AccountPanel
+            address={account?.address ?? null}
+            isConnected={connection.isConnected}
+            network={network}
+            onConnect={() => setShowWallets(true)}
+          />
         </div>
       </main>
 
@@ -254,6 +265,200 @@ function PredictInner() {
       <footer className="border-t border-[#1e293b] px-4 py-2 text-center text-[10px] text-[#475569]">
         DeepBook Predict — Testnet Integration · Data from predict-server.testnet.mystenlabs.com
       </footer>
+    </div>
+  )
+}
+
+// --- Account Panel (right sidebar) ---
+const REQUIRED_COINS = [
+  { symbol: 'SUI', desc: 'Gas fees', type: '0x2::sui::SUI' },
+  {
+    symbol: 'DUSDC',
+    desc: 'Quote asset for Predict',
+    type: '0xe95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC',
+  },
+  {
+    symbol: 'PLP',
+    desc: 'Vault LP shares',
+    type: '0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138::plp::PLP',
+  },
+]
+
+function AccountPanel({
+  address,
+  isConnected,
+  network,
+  onConnect,
+}: {
+  address: string | null
+  isConnected: boolean
+  network: string
+  onConnect: () => void
+}) {
+  const [coins, setCoins] = useState<{ symbol: string; balance: string; coinType: string }[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const fetchBalances = useCallback(async () => {
+    if (!address) return
+    setLoading(true)
+    try {
+      const rpc = GRPC_URLS[network] || GRPC_URLS.testnet
+      const res = await fetch(rpc, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'suix_getAllBalances',
+          params: [address],
+        }),
+      })
+      const data = (await res.json()) as { result?: { coinType: string; totalBalance: string }[] }
+      const parsed = (data.result ?? [])
+        .map((c) => {
+          const parts = c.coinType.split('::')
+          const symbol = parts[parts.length - 1]
+          const dec = ['SUI', 'WAL'].includes(symbol) ? 9 : 6
+          return {
+            symbol,
+            balance: (parseInt(c.totalBalance, 10) / 10 ** dec).toFixed(4),
+            coinType: c.coinType,
+          }
+        })
+        .filter((c) => parseFloat(c.balance) > 0)
+      setCoins(parsed)
+    } catch {
+      setCoins([])
+    }
+    setLoading(false)
+  }, [address, network])
+
+  useEffect(() => {
+    const id = setTimeout(fetchBalances, 0)
+    return () => clearTimeout(id)
+  }, [fetchBalances])
+
+  if (!isConnected) {
+    return (
+      <div className="sticky top-4">
+        <div className="rounded-xl border border-[#1e293b] bg-[#0f172a] p-4">
+          <h3 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-3">
+            Account
+          </h3>
+          <p className="text-xs text-[#64748b] mb-3">Connect wallet to view balances and trade.</p>
+          <button
+            onClick={onConnect}
+            className="w-full rounded-md bg-[#a855f7] py-2 text-xs font-semibold text-white hover:opacity-85 transition-opacity cursor-pointer"
+          >
+            Connect Wallet
+          </button>
+          <div className="mt-4 pt-3 border-t border-[#1e293b]">
+            <h4 className="text-[10px] font-semibold text-[#64748b] uppercase mb-2">
+              Required Tokens
+            </h4>
+            {REQUIRED_COINS.map((c) => (
+              <div key={c.symbol} className="flex items-center justify-between py-1.5">
+                <div>
+                  <span className="text-xs font-medium text-[#f8fafc]">{c.symbol}</span>
+                  <span className="text-[10px] text-[#475569] ml-2">{c.desc}</span>
+                </div>
+                <span className="text-[10px] text-[#475569]">—</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="sticky top-4 flex flex-col gap-3">
+      {/* Address card */}
+      <div className="rounded-xl border border-[#1e293b] bg-[#0f172a] p-4">
+        <h3 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">
+          Account
+        </h3>
+        <div className="flex items-center gap-2 mb-1">
+          <div className="h-2 w-2 rounded-full bg-[#22c55e]" />
+          <span className="text-xs text-[#f8fafc] font-mono">
+            {address?.slice(0, 10)}…{address?.slice(-6)}
+          </span>
+        </div>
+        <span className="text-[10px] text-[#64748b]">Network: {network}</span>
+      </div>
+
+      {/* Balances */}
+      <div className="rounded-xl border border-[#1e293b] bg-[#0f172a] p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide">Balances</h3>
+          <button
+            onClick={fetchBalances}
+            className="text-[10px] text-[#64748b] hover:text-[#f8fafc] cursor-pointer"
+          >
+            {loading ? '⟳' : '↻'}
+          </button>
+        </div>
+        {coins.length === 0 && !loading ? (
+          <p className="text-[10px] text-[#475569]">No tokens found</p>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {coins.map((c) => (
+              <div
+                key={c.coinType}
+                className="flex items-center justify-between py-1 border-b border-[#1e293b] last:border-0"
+              >
+                <span className="text-xs font-medium text-[#f8fafc]">{c.symbol}</span>
+                <span className="text-xs text-[#94a3b8] font-mono">{c.balance}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Required for Predict */}
+      <div className="rounded-xl border border-[#1e293b] bg-[#0f172a] p-4">
+        <h3 className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">
+          Required for Predict
+        </h3>
+        {REQUIRED_COINS.map((req) => {
+          const found = coins.find(
+            (c) => c.symbol === req.symbol || c.coinType.includes(req.symbol.toLowerCase()),
+          )
+          const hasBalance = found && parseFloat(found.balance) > 0
+          return (
+            <div
+              key={req.symbol}
+              className="flex items-center justify-between py-1.5 border-b border-[#1e293b] last:border-0"
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className={`h-1.5 w-1.5 rounded-full ${hasBalance ? 'bg-[#22c55e]' : 'bg-[#ef4444]'}`}
+                />
+                <div>
+                  <span className="text-xs font-medium text-[#f8fafc]">{req.symbol}</span>
+                  <span className="text-[10px] text-[#475569] ml-1.5">{req.desc}</span>
+                </div>
+              </div>
+              <span
+                className={`text-xs font-mono ${hasBalance ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}
+              >
+                {found ? found.balance : '0'}
+              </span>
+            </div>
+          )
+        })}
+        <p className="text-[10px] text-[#475569] mt-2">
+          Request DUSDC:{' '}
+          <a
+            href="https://tally.so/r/Xx102L"
+            target="_blank"
+            rel="noopener"
+            className="text-[#a855f7] hover:underline"
+          >
+            tally.so/r/Xx102L
+          </a>
+        </p>
+      </div>
     </div>
   )
 }
