@@ -1244,8 +1244,17 @@ function TradePanel({
       const amountRaw = Math.floor(Number(amount) * 10 ** DUSDC_DECIMALS)
       const expiry = oracleState?.oracle?.expiry || 0
 
+      // Strike validation: must be >= min_strike and aligned to tick_size
+      const minStrike = oracleState?.oracle?.min_strike || 50000000000000
+      const tickSize = oracleState?.oracle?.tick_size || 1000000000
+      const snapStrike = (usd: number) => {
+        const raw = Math.floor(usd * STRIKE_SCALE)
+        const aligned = minStrike + Math.round((raw - minStrike) / tickSize) * tickSize
+        return Math.max(minStrike, aligned)
+      }
+
       if (mode === 'binary') {
-        const strikeRaw = Math.floor(Number(strike) * STRIKE_SCALE)
+        const strikeRaw = snapStrike(Number(strike))
         const direction = isUp ? 0 : 1
         const marketKey = tx.moveCall({
           target: `${PREDICT_PACKAGE}::market_key::new`,
@@ -1270,8 +1279,8 @@ function TradePanel({
           ],
         })
       } else {
-        const lowerRaw = Math.floor(Number(lowerStrike) * STRIKE_SCALE)
-        const upperRaw = Math.floor(Number(upperStrike) * STRIKE_SCALE)
+        const lowerRaw = snapStrike(Number(lowerStrike))
+        const upperRaw = snapStrike(Number(upperStrike))
         const rangeKey = tx.moveCall({
           target: `${PREDICT_PACKAGE}::range_key::new`,
           arguments: [
@@ -1367,13 +1376,17 @@ function TradePanel({
           {mode === 'binary' ? (
             <>
               <div className="sui-predict__field">
-                <label className="sui-predict__field-label">Strike Price (USD)</label>
+                <label className="sui-predict__field-label">
+                  Strike Price (USD) — min $50,000, tick $1
+                </label>
                 <input
                   className="sui-predict__input"
                   type="number"
                   placeholder={spotPrice || '75000'}
                   value={strike}
                   onChange={(e) => setStrike(e.target.value)}
+                  step="1"
+                  min="50000"
                 />
               </div>
               <div className="sui-predict__field">
