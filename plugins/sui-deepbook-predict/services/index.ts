@@ -1,0 +1,1 @@
+export { fetchExternalBTCPrice } from '../sdk'
