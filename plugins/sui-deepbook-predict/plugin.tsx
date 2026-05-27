@@ -11,6 +11,7 @@ import { StrategyTab } from './components/StrategyTab'
 import { ArbTab } from './components/ArbTab'
 import { PLPHedgeTab } from './components/PLPHedgeTab'
 import { MarginLoopTab } from './components/MarginLoopTab'
+import { useTour } from './hooks/useTour'
 import './style.css'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -110,6 +111,7 @@ function PredictContent() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const { startTour } = useTour()
 
   // ── Wallet sync ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -480,6 +482,25 @@ function PredictContent() {
           style={{ marginLeft: 'auto' }}
         >
           {loading ? '⟳' : '↻'} Refresh
+        </button>
+        <button
+          className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm sui-predict__btn--guide"
+          onClick={() => {
+            const tourMap: Record<string, Parameters<typeof startTour>[0]> = {
+              market: 'overview',
+              surface: 'surface',
+              risk: 'overview',
+              strategy: 'overview',
+              plphedge: 'plpHedge',
+              loop: 'marginLoop',
+              arb: 'overview',
+              trade: 'trade',
+              vault: 'overview',
+            }
+            startTour(tourMap[tab] || 'overview')
+          }}
+        >
+          ? Guide
         </button>
       </div>
       {error && <div className="sui-predict__error">{error}</div>}
