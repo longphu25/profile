@@ -1098,31 +1098,64 @@ function TradePanel({
       const tx = new Transaction()
       tx.setSender(walletAddress)
       const amountRaw = Math.floor(Number(amount) * 10 ** DUSDC_DECIMALS)
+      const expiry = oracleState?.oracle?.expiry || 0
+
+      // Create PredictManager (idempotent — creates new each time for demo)
+      const managerId = tx.moveCall({
+        target: `${PREDICT_PACKAGE}::predict::create_manager`,
+      })
 
       if (mode === 'binary') {
         const strikeRaw = Math.floor(Number(strike) * STRIKE_SCALE)
-        // Call predict::mint_position or predict::redeem_position
+        // Construct MarketKey: market_key::new(oracle_id, expiry, strike, direction)
+        // direction: 0 = up, 1 = down (from market_key module)
+        const direction = isUp ? 0 : 1
+        const marketKey = tx.moveCall({
+          target: `${PREDICT_PACKAGE}::market_key::new`,
+          arguments: [
+            tx.pure.id(selectedOracle),
+            tx.pure.u64(expiry),
+            tx.pure.u64(strikeRaw),
+            tx.pure.u8(direction),
+          ],
+        })
+
         tx.moveCall({
-          target: `${PREDICT_PACKAGE}::predict::${action === 'mint' ? 'mint_position' : 'redeem_position'}`,
+          target: `${PREDICT_PACKAGE}::predict::${action === 'mint' ? 'mint' : 'redeem'}`,
+          typeArguments: [DUSDC_TYPE],
           arguments: [
             tx.object(PREDICT_ID),
+            managerId,
             tx.object(selectedOracle),
-            tx.pure.u64(strikeRaw),
-            tx.pure.bool(isUp),
+            marketKey[0],
             tx.pure.u64(amountRaw),
+            tx.object('0x6'), // Clock
           ],
         })
       } else {
         const lowerRaw = Math.floor(Number(lowerStrike) * STRIKE_SCALE)
         const upperRaw = Math.floor(Number(upperStrike) * STRIKE_SCALE)
-        tx.moveCall({
-          target: `${PREDICT_PACKAGE}::predict::${action === 'mint' ? 'mint_range' : 'redeem_range'}`,
+        // Construct RangeKey
+        const rangeKey = tx.moveCall({
+          target: `${PREDICT_PACKAGE}::range_key::new`,
           arguments: [
-            tx.object(PREDICT_ID),
-            tx.object(selectedOracle),
+            tx.pure.id(selectedOracle),
+            tx.pure.u64(expiry),
             tx.pure.u64(lowerRaw),
             tx.pure.u64(upperRaw),
+          ],
+        })
+
+        tx.moveCall({
+          target: `${PREDICT_PACKAGE}::predict::${action === 'mint' ? 'mint_range' : 'redeem_range'}`,
+          typeArguments: [DUSDC_TYPE],
+          arguments: [
+            tx.object(PREDICT_ID),
+            managerId,
+            tx.object(selectedOracle),
+            rangeKey[0],
             tx.pure.u64(amountRaw),
+            tx.object('0x6'), // Clock
           ],
         })
       }

@@ -9,7 +9,14 @@
 import { useState, useMemo, useCallback } from 'react'
 import { Transaction } from '@mysten/sui/transactions'
 import { simulateMarginLoop } from '../strategies'
-import { PRICE_SCALE, PREDICT_PACKAGE, PREDICT_ID, STRIKE_SCALE, DUSDC_DECIMALS } from '../types'
+import {
+  PRICE_SCALE,
+  PREDICT_PACKAGE,
+  PREDICT_ID,
+  STRIKE_SCALE,
+  DUSDC_DECIMALS,
+  DUSDC_TYPE,
+} from '../types'
 import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
 
 interface Props {
@@ -138,16 +145,39 @@ export function MarginLoopTab({
         const upperRaw = Math.floor(upper * STRIKE_SCALE)
         const amountRaw = Math.floor(capitalPerRange * 10 ** DUSDC_DECIMALS)
 
+        // Get oracle expiry from oracleState
+        const expiry = oracleState?.oracle?.expiry || 0
+
         const tx = new Transaction()
         tx.setSender(walletAddress)
-        tx.moveCall({
-          target: `${PREDICT_PACKAGE}::predict::mint_range`,
+
+        // 1. Construct RangeKey: range_key::new(oracle_id, expiry, lower_strike, higher_strike)
+        const rangeKey = tx.moveCall({
+          target: `${PREDICT_PACKAGE}::range_key::new`,
           arguments: [
-            tx.object(PREDICT_ID),
-            tx.object(selectedOracle),
+            tx.pure.id(selectedOracle),
+            tx.pure.u64(expiry),
             tx.pure.u64(lowerRaw),
             tx.pure.u64(upperRaw),
+          ],
+        })
+
+        // 2. Call predict::mint_range<DUSDC>(Predict, PredictManager, OracleSVI, RangeKey, amount, Clock)
+        // Note: User needs a PredictManager. For demo, we create one in the same PTB if needed.
+        const managerId = tx.moveCall({
+          target: `${PREDICT_PACKAGE}::predict::create_manager`,
+        })
+
+        tx.moveCall({
+          target: `${PREDICT_PACKAGE}::predict::mint_range`,
+          typeArguments: [DUSDC_TYPE],
+          arguments: [
+            tx.object(PREDICT_ID),
+            managerId,
+            tx.object(selectedOracle),
+            rangeKey[0],
             tx.pure.u64(amountRaw),
+            tx.object('0x6'), // Clock
           ],
         })
 
