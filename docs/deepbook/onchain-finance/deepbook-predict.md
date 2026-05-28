@@ -463,3 +463,119 @@ Liquidation path: if LTV breaches threshold, close predict → repay margin → 
 - [SDK Reference](./sdk-reference.md) — code examples
 - [Plugin source](../../plugins/sui-deepbook-predict/) — full reference implementation
 - [Test token request](https://tally.so/r/Xx102L)
+
+
+---
+
+## Critical implementation details
+
+These are non-obvious behaviors discovered from `predict-testnet-4-16` source and verified by [predict-cli](https://github.com/SeventhOdyssey71/predict-cli):
+
+### Manager deposit is a separate step
+
+`predict::mint<T>` reads from the **manager's aggregate balance**, not the wallet directly. The full flow is **3 transactions**, not 2:
+
+```
+TX 1: predict::create_manager
+        → returns ID, manager is shared
+        → wait for indexer (~2s)
+
+TX 2: predict_manager::deposit<DUSDC>(manager, coin, ctx)
+        → moves DUSDC from wallet → PredictManager
+        → manager now has spendable balance
+
+TX 3: predict::mint<DUSDC>(predict, manager, oracle, market_key, amount, clock, ctx)
+        → spends from manager balance
+        → cost = fair_value + spread + utilization_adjustment
+```
+
+If you skip TX 2, the mint will fail or the manager will have insufficient funds.
+
+### Exact pricing formula
+
+For a binary call (UP position) at strike `K` with forward `F` and SVI params `(a, b, ρ, m, σ)`:
+
+```
+k = ln(K / F)                                   // log-moneyness
+w(k) = a + b · (ρ·(k − m) + √((k − m)² + σ²))   // SVI total variance
+d₂ = −k / √w − √w / 2                            // Black-Scholes d₂
+P(S_T > K) = N(d₂)                               // standard normal CDF
+```
+
+For DOWN positions: `P(S_T < K) = 1 − N(d₂)`.
+
+Range price = difference of two binary calls (open-closed boundary):
+
+```
+P(lower < S_T ≤ higher) = N(d₂(lower)) − N(d₂(higher))
+```
+
+This is the **fair-value** price. The on-chain price adds:
+- Protocol spread (bid/ask)
+- Utilization adjustment (depends on vault state)
+
+You **cannot reproduce the all-in price client-side** without `devInspect`. The CLI/SDK preview is fair-value only.
+
+### Settlement boundaries (strict)
+
+```
+Binary UP wins if:    settlement > strike   (strict >)
+Binary DOWN wins if:  settlement < strike   (strict <)
+                       settlement = strike  → DOWN wins (UP loses)
+
+Range wins if:  lower < settlement ≤ higher  (open-closed)
+                settlement = lower            → loses
+                settlement = higher           → wins
+```
+
+### Sentinel strikes for unbounded ranges
+
+```
+NEG_INF = 0           // open lower bound
+POS_INF = u64::MAX    // open upper bound
+
+Range (NEG_INF, K]: pays if settlement ≤ K  (call-spread-like)
+Range (K, POS_INF):  pays if settlement > K (binary UP equivalent)
+```
+
+### Spend safety pattern (from predict-cli)
+
+To prevent over-spending the manager:
+
+```typescript
+// 1. Empty-manager-by-default
+//    Mint aborts if manager already holds DUSDC
+//    Override with --allow-manager-balance
+
+// 2. Hard cap on (existing_balance + deposit)
+//    Checked before submission
+//    Use --max-cost to set ceiling
+```
+
+This protects against runaway costs from utilization-fee components that the local preview can't model exactly.
+
+---
+
+## Tài liệu tham khảo (References)
+
+### Official Sui docs
+
+- [DeepBook Predict Overview](https://docs.sui.io/onchain-finance/deepbook-predict/) — Sui official
+- [Design](https://docs.sui.io/onchain-finance/deepbook-predict/design)
+- [Contract Information](https://docs.sui.io/onchain-finance/deepbook-predict/contract-information)
+- [Source code: predict-testnet-4-16 branch](https://github.com/MystenLabs/deepbookv3/tree/predict-testnet-4-16/packages/predict)
+
+### Reference implementations
+
+- **[predict-cli](https://github.com/SeventhOdyssey71/predict-cli)** — Production-grade Rust CLI for DeepBook Predict on testnet. Most accurate reference for the full mint/redeem flow with proper manager.deposit step. Includes:
+  - Local SVI pricing port (`pricing.rs`) — verified Black-Scholes binary call formula
+  - Spend semantics (`--max-cost`, empty-manager default)
+  - Doctor / setup workflow
+  - Agentic perps layer (intent → mint+redeem cycles)
+- **[mcxross/deepbook-cli](https://github.com/mcxross/deepbook-cli)** — TypeScript CLI + TUI. Predict support is read-only but covers all server endpoints. Also implements spot and margin trading.
+- **[mcxross/skills](https://github.com/mcxross/skills)** — Collection of skill packages including `deepbook-cli` skill for AI agents.
+- **[KZN-Labs/DeepDive](https://github.com/KZN-Labs/DeepDive)** — Real-time DeepBook V3 order book streaming layer (Go). Not Predict-specific, but excellent reference for the data layer pattern (event subscriber → order book reconstruction → WebSocket delta + REST snapshot).
+
+### Token request
+
+- [DeepBook Predict Testnet Token Request Form](https://tally.so/r/Xx102L)

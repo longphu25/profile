@@ -485,3 +485,38 @@ The SDK ships its full source in `node_modules/@mysten/deepbook-v3/src/`. Readin
 - [DeepBook Margin](./deepbook-margin.md) — margin trading concepts
 - [DeepBook Predict](./deepbook-predict.md) — separate from this SDK (build PTBs manually)
 - [Sui TypeScript SDK 2 migration](../../../.agents/skills/sui-sdk-2-migration/SKILL.md)
+
+
+---
+
+## Tài liệu tham khảo (References)
+
+### Official
+
+- [@mysten/deepbook-v3 on npm](https://www.npmjs.com/package/@mysten/deepbook-v3)
+- [DeepBookV3 SDK docs](https://docs.sui.io/onchain-finance/deepbookv3-sdk/)
+- [DeepBook Margin SDK docs](https://docs.sui.io/onchain-finance/deepbook-margin-sdk/)
+- [TypeScript SDK monorepo](https://github.com/MystenLabs/ts-sdks)
+- [DeepBookV3 SDK source](https://github.com/MystenLabs/ts-sdks/tree/main/packages/deepbook-v3)
+
+### CLI implementations
+
+- **[mcxross/deepbook-cli](https://github.com/mcxross/deepbook-cli)** — Production CLI built on top of this SDK. Best reference for:
+  - Correct PTB structure for spot, margin, swap operations
+  - Provider-backed reads (Surflux, REST, SSE)
+  - Strategy implementation patterns (TWAP, DCA, grid, trailing-stop)
+  - Wallet/keypair handling via Sui CLI integration
+- **[SeventhOdyssey71/predict-cli](https://github.com/SeventhOdyssey71/predict-cli)** — Rust CLI for Predict (not in this SDK). Reference for:
+  - Manual PTB construction (no SDK bindings yet)
+  - Local SVI pricing port
+  - Spend safety patterns (`--max-cost`, empty-manager-by-default)
+- **[mcxross/skills](https://github.com/mcxross/skills)** — AI-agent skill packages
+
+### Data layer
+
+- **[KZN-Labs/DeepDive](https://github.com/KZN-Labs/DeepDive)** — Reference architecture for real-time order book streaming. Pattern: event subscriber → in-memory book → WebSocket delta + REST snapshot.
+
+### Sui SDK
+
+- [@mysten/sui v2 migration guide](../../../.agents/skills/sui-sdk-2-migration/SKILL.md)
+- [Sui TypeScript SDK docs](https://docs.sui.io/concepts/components#typescript-sdk)

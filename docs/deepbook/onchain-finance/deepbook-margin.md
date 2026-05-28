@@ -325,3 +325,33 @@ for (const m of managers) {
 - [DeepBook Predict](./deepbook-predict.md) — composable with margin (Three-Protocol Loop)
 - [SDK Reference](./sdk-reference.md) — full TypeScript API
 - [Risk Ratio docs](https://docs.sui.io/onchain-finance/deepbook-margin/contract-information/risk-ratio)
+
+
+---
+
+## Tài liệu tham khảo (References)
+
+### Official Sui docs
+
+- [DeepBook Margin Overview](https://docs.sui.io/onchain-finance/deepbook-margin/)
+- [Design](https://docs.sui.io/onchain-finance/deepbook-margin/design)
+- [Margin Risks](https://docs.sui.io/onchain-finance/deepbook-margin/margin-risks)
+- [Contract Information](https://docs.sui.io/onchain-finance/deepbook-margin/contract-information)
+- [Risk Ratio](https://docs.sui.io/onchain-finance/deepbook-margin/contract-information/risk-ratio)
+- [Margin SDK](https://docs.sui.io/onchain-finance/deepbook-margin-sdk/)
+- [Margin Indexer](https://docs.sui.io/onchain-finance/deepbook-margin/deepbook-margin-indexer)
+
+### CLI tools
+
+- **[mcxross/deepbook-cli](https://github.com/mcxross/deepbook-cli)** — Includes full margin trading flow:
+  - `deepbook margin pools` — discover margin pools
+  - `deepbook margin managers` — list user's margin managers
+  - `deepbook margin deposit/market/limit/position/close` — full lifecycle
+  - `--leverage`, `--reduce-only`, `--no-pay-with-deep`, `--dry-run` flags
+  - Auto-selects compatible manager or creates one in tx
+- **[mcxross/skills](https://github.com/mcxross/skills)** — `deepbook-cli` skill for AI agents
+
+### Source
+
+- [DeepBookV3 source (margin module)](https://github.com/MystenLabs/deepbookv3/tree/main/packages/deepbook/sources)
+- [TypeScript SDK source](https://github.com/MystenLabs/ts-sdks/tree/main/packages/deepbook-v3/src/transactions) — see `marginManager.ts`, `marginPool.ts`, `marginLiquidations.ts`, `poolProxy.ts`

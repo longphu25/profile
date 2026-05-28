@@ -145,3 +145,22 @@ const policy = await client.core.getObject({ id: POLICY_ID, options: { showConte
 
 - [Permissioned Asset Standard](./pas.vi.md) — model đầy đủ dựa trên account, mở rộng concept của CLT
 - [Module `sui::token`](https://github.com/MystenLabs/sui/blob/main/crates/sui-framework/docs/sui/token.md)
+
+
+---
+
+## Tài liệu tham khảo
+
+### Sui official docs
+
+- [Closed-Loop Token Overview](https://docs.sui.io/onchain-finance/closed-loop-token)
+- [Token Policy](https://docs.sui.io/onchain-finance/closed-loop-token/token-policy)
+- [Action Request](https://docs.sui.io/onchain-finance/closed-loop-token/action-request)
+- [Rules](https://docs.sui.io/onchain-finance/closed-loop-token/rules)
+- [Spending](https://docs.sui.io/onchain-finance/closed-loop-token/spending)
+- [Currency Standard (open-loop counterpart)](https://docs.sui.io/onchain-finance/fungible-tokens/currency)
+
+### Source
+
+- [`sui::token` module documentation](https://github.com/MystenLabs/sui/blob/main/crates/sui-framework/docs/sui/token.md)
+- [`sui::token` source](https://github.com/MystenLabs/sui/blob/main/crates/sui-framework/packages/sui-framework/sources/token.move)

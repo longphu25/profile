@@ -226,3 +226,22 @@ await client.signAndExecute({ transaction: tx, signer })
 - [Address Balances](https://docs.sui.io/onchain-finance/asset-custody/address-balances/using-address-balances)
 - [GitHub: MystenLabs/pas](https://github.com/MystenLabs/pas)
 - [npm: @mysten/pas](https://www.npmjs.com/package/@mysten/pas)
+
+
+---
+
+## Tài liệu tham khảo
+
+### Sui official docs
+
+- [PAS Overview](https://docs.sui.io/onchain-finance/pas/)
+- [Architecture](https://docs.sui.io/onchain-finance/pas/pas-architecture)
+- [Workflows / Actions](https://docs.sui.io/onchain-finance/pas/pas-workflows)
+- [Integration](https://docs.sui.io/onchain-finance/pas/integrating-pas)
+- [Querying Assets](https://docs.sui.io/onchain-finance/pas/querying-assets)
+- [Address Balances](https://docs.sui.io/onchain-finance/asset-custody/address-balances/using-address-balances)
+
+### Source & SDK
+
+- [GitHub: MystenLabs/pas](https://github.com/MystenLabs/pas)
+- [npm: @mysten/pas](https://www.npmjs.com/package/@mysten/pas)

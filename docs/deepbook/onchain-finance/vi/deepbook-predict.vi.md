@@ -463,3 +463,119 @@ Stack iron_bank + deepbook_margin + predict trong 1 PTB:
 - [SDK Reference](./sdk-reference.vi.md) — code examples
 - [Plugin source](../../../../plugins/sui-deepbook-predict/) — reference implementation đầy đủ
 - [Test token request](https://tally.so/r/Xx102L)
+
+
+---
+
+## Chi tiết implementation quan trọng
+
+Đây là các hành vi không hiển nhiên phát hiện từ source `predict-testnet-4-16` và verify bằng [predict-cli](https://github.com/SeventhOdyssey71/predict-cli):
+
+### Manager deposit là bước riêng
+
+`predict::mint<T>` đọc từ **balance tổng của manager**, không phải wallet trực tiếp. Luồng đầy đủ là **3 transactions**, không phải 2:
+
+```
+TX 1: predict::create_manager
+        → trả ID, manager được share
+        → đợi indexer (~2s)
+
+TX 2: predict_manager::deposit<DUSDC>(manager, coin, ctx)
+        → chuyển DUSDC từ wallet → PredictManager
+        → manager giờ có balance để chi
+
+TX 3: predict::mint<DUSDC>(predict, manager, oracle, market_key, amount, clock, ctx)
+        → chi từ balance manager
+        → cost = fair_value + spread + utilization_adjustment
+```
+
+Nếu bỏ qua TX 2, mint sẽ thất bại hoặc manager không đủ tiền.
+
+### Công thức pricing chính xác
+
+Cho binary call (UP position) tại strike `K` với forward `F` và SVI params `(a, b, ρ, m, σ)`:
+
+```
+k = ln(K / F)                                   // log-moneyness
+w(k) = a + b · (ρ·(k − m) + √((k − m)² + σ²))   // SVI total variance
+d₂ = −k / √w − √w / 2                            // Black-Scholes d₂
+P(S_T > K) = N(d₂)                               // CDF chuẩn
+```
+
+Cho DOWN: `P(S_T < K) = 1 − N(d₂)`.
+
+Giá range = chênh lệch 2 binary call (boundary open-closed):
+
+```
+P(lower < S_T ≤ higher) = N(d₂(lower)) − N(d₂(higher))
+```
+
+Đây là giá **fair-value**. Giá on-chain thêm:
+- Protocol spread (bid/ask)
+- Utilization adjustment (phụ thuộc vault state)
+
+**Không thể reproduce all-in price client-side** mà không có `devInspect`. Preview của CLI/SDK chỉ là fair-value.
+
+### Boundary settlement (strict)
+
+```
+Binary UP thắng nếu:    settlement > strike   (strict >)
+Binary DOWN thắng nếu:  settlement < strike   (strict <)
+                         settlement = strike  → DOWN thắng (UP thua)
+
+Range thắng nếu:  lower < settlement ≤ higher  (open-closed)
+                  settlement = lower            → thua
+                  settlement = higher           → thắng
+```
+
+### Sentinel strikes cho range không giới hạn
+
+```
+NEG_INF = 0           // open lower bound
+POS_INF = u64::MAX    // open upper bound
+
+Range (NEG_INF, K]: trả nếu settlement ≤ K  (giống call-spread)
+Range (K, POS_INF):  trả nếu settlement > K (giống binary UP)
+```
+
+### Pattern an toàn chi tiêu (từ predict-cli)
+
+Để chống chi vượt manager:
+
+```typescript
+// 1. Empty-manager-by-default
+//    Mint abort nếu manager đã có DUSDC
+//    Override bằng --allow-manager-balance
+
+// 2. Hard cap trên (existing_balance + deposit)
+//    Check trước khi submit
+//    Dùng --max-cost để set ngưỡng
+```
+
+Bảo vệ khỏi cost runaway từ utilization-fee mà preview local không model chính xác.
+
+---
+
+## Tài liệu tham khảo
+
+### Sui official docs
+
+- [DeepBook Predict Overview](https://docs.sui.io/onchain-finance/deepbook-predict/) — Sui official
+- [Design](https://docs.sui.io/onchain-finance/deepbook-predict/design)
+- [Contract Information](https://docs.sui.io/onchain-finance/deepbook-predict/contract-information)
+- [Source code: predict-testnet-4-16 branch](https://github.com/MystenLabs/deepbookv3/tree/predict-testnet-4-16/packages/predict)
+
+### Reference implementations
+
+- **[predict-cli](https://github.com/SeventhOdyssey71/predict-cli)** — CLI Rust production-grade cho DeepBook Predict trên testnet. Reference chính xác nhất cho full mint/redeem flow với bước manager.deposit đúng. Bao gồm:
+  - Local SVI pricing port (`pricing.rs`) — Black-Scholes binary call formula đã verify
+  - Spend semantics (`--max-cost`, empty-manager default)
+  - Doctor / setup workflow
+  - Agentic perps layer (intent → mint+redeem cycles)
+- **[mcxross/deepbook-cli](https://github.com/mcxross/deepbook-cli)** — CLI TypeScript + TUI. Predict support read-only nhưng cover hết server endpoints. Cũng impl spot và margin trading.
+- **[mcxross/skills](https://github.com/mcxross/skills)** — Collection skill packages bao gồm skill `deepbook-cli` cho AI agents.
+- **[KZN-Labs/DeepDive](https://github.com/KZN-Labs/DeepDive)** — Real-time DeepBook V3 order book streaming layer (Go). Không phải Predict-specific, nhưng reference tuyệt vời cho data layer pattern (event subscriber → reconstruct order book → WebSocket delta + REST snapshot).
+
+### Token request
+
+- [DeepBook Predict Testnet Token Request Form](https://tally.so/r/Xx102L)

@@ -318,3 +318,38 @@ new DeepBookClient({ ..., network: 'mainnet', marginManagers: {...} })
 - [DeepBook Predict](./deepbook-predict.vi.md) — prediction market vol-surface
 - [SDK Reference](./sdk-reference.vi.md) — API TypeScript thực tế
 - [Whitepaper: DeepBook Token](https://docs.sui.io/assets/files/deepbook-3e24e6e1deeb8cd860682c1fb473b597.pdf)
+
+
+---
+
+## Tài liệu tham khảo
+
+### Sui official docs
+
+- [DeepBookV3 Overview](https://docs.sui.io/onchain-finance/deepbookv3/deepbook)
+- [Design](https://docs.sui.io/onchain-finance/deepbookv3/design)
+- [Contract Information](https://docs.sui.io/onchain-finance/deepbookv3/contract-information)
+- [Indexer](https://docs.sui.io/onchain-finance/deepbookv3/deepbookv3-indexer)
+- [DeepBookV3 Whitepaper (PDF)](https://docs.sui.io/assets/files/deepbook-3e24e6e1deeb8cd860682c1fb473b597.pdf)
+
+### SDK & CLI tools
+
+- **[@mysten/deepbook-v3](https://www.npmjs.com/package/@mysten/deepbook-v3)** — TypeScript SDK chính thức
+- **[mcxross/deepbook-cli](https://github.com/mcxross/deepbook-cli)** — CLI + TUI production cho DeepBook (spot + margin + predict). Reference tốt cho transaction structure chính xác. Support:
+  - `deepbook spot buy/sell/limit` — trading order book
+  - `deepbook swap` — swap pool trực tiếp
+  - `deepbook orderbook`, `deepbook trades`, `deepbook ohlcv` — provider-backed reads
+  - `deepbook stream` — SSE cho real-time data
+  - `deepbook run twap/dca/grid/trailing-stop` — strategy loops
+- **[mcxross/skills](https://github.com/mcxross/skills)** — Skill packages cho AI agent, bao gồm skill `deepbook-cli`
+- **[KZN-Labs/DeepDive](https://github.com/KZN-Labs/DeepDive)** — Server streaming order book real-time (Go). Listen chain events, reconstruct in-memory book, serve qua WebSocket + REST. Reference architecture cho data layer:
+  - Event subscriber (suix_queryEvents, polling)
+  - Order book registry single-writer (BTree per pool)
+  - Protocol WebSocket snapshot + delta
+  - REST snapshot và ticker
+
+### Source code
+
+- [Sui repository](https://github.com/MystenLabs/sui)
+- [DeepBookV3 source](https://github.com/MystenLabs/deepbookv3)
+- [TypeScript SDK source](https://github.com/MystenLabs/ts-sdks/tree/main/packages/deepbook-v3)
