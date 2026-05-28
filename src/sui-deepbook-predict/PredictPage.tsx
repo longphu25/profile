@@ -83,6 +83,11 @@ function PredictInner() {
       isConnected: connection.isConnected,
       accounts: [],
     })
+    // Also set walletProfile shared data so plugins like sui-swap can detect connection
+    suiHostAPI.setSharedData(
+      'walletProfile',
+      account?.address ? { address: account.address } : null,
+    )
   }, [account?.address, network, connection.isConnected])
 
   // Register wallet actions so plugins can call requestConnect, signAndExecuteTransaction, etc.
