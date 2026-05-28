@@ -1238,11 +1238,67 @@ function TradePanel({
         }
       }
 
-      // Step 2: Build mint/redeem TX
-      const tx = new Transaction()
-      tx.setSender(walletAddress)
+      // Step 2: For mint, deposit DUSDC into manager first (separate TX)
+      // predict::mint reads from manager balance, not wallet directly
       const amountRaw = Math.floor(Number(amount) * 10 ** DUSDC_DECIMALS)
       const expiry = oracleState?.oracle?.expiry || 0
+
+      if (action === 'mint') {
+        // Find user's DUSDC coins
+        const coinsRes = await fetch('https://fullnode.testnet.sui.io:443', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'suix_getCoins',
+            params: [walletAddress, DUSDC_TYPE, null, 50],
+          }),
+        })
+        const coinsData = (await coinsRes.json()) as {
+          result?: { data: { coinObjectId: string; balance: string }[] }
+        }
+        const dusdc_coins = coinsData.result?.data || []
+
+        if (dusdc_coins.length === 0) {
+          setTxError('No DUSDC coins found in wallet. Request tokens from the faucet.')
+          setSubmitting(false)
+          return
+        }
+
+        // Build deposit TX: merge coins if needed, split exact amount, deposit into manager
+        const txDeposit = new Transaction()
+        txDeposit.setSender(walletAddress)
+
+        // If multiple coins, merge into first
+        const primaryCoin = dusdc_coins[0].coinObjectId
+        if (dusdc_coins.length > 1) {
+          txDeposit.mergeCoins(
+            txDeposit.object(primaryCoin),
+            dusdc_coins.slice(1).map((c) => txDeposit.object(c.coinObjectId)),
+          )
+        }
+
+        // Split exact amount for deposit
+        const [depositCoin] = txDeposit.splitCoins(txDeposit.object(primaryCoin), [
+          txDeposit.pure.u64(amountRaw),
+        ])
+
+        // Deposit into PredictManager
+        txDeposit.moveCall({
+          target: `${PREDICT_PACKAGE}::predict_manager::deposit`,
+          typeArguments: [DUSDC_TYPE],
+          arguments: [txDeposit.object(mgr), depositCoin],
+        })
+
+        await sharedHost.signAndExecuteTransaction(txDeposit)
+        // Wait briefly for state to propagate
+        await new Promise((r) => setTimeout(r, 1500))
+      }
+
+      // Step 3: Build mint/redeem TX
+      const tx = new Transaction()
+      tx.setSender(walletAddress)
 
       // Strike validation: must be >= min_strike and aligned to tick_size
       const minStrike = oracleState?.oracle?.min_strike || 50000000000000

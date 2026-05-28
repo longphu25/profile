@@ -183,13 +183,84 @@ export function MarginLoopTab({
     }
     setExecSteps([...steps])
 
-    // Now mint ranges using the manager
-    for (let i = 3; i < steps.length; i++) {
+    // Now deposit DUSDC into manager, then mint ranges
+    // Step: Deposit total capital into manager (one TX before minting)
+    const depositStep: ExecutionStep = {
+      protocol: 'predict',
+      action: `Deposit ${borrowAmount.toFixed(0)} DUSDC into PredictManager`,
+      status: 'executing',
+    }
+    steps.splice(3, 0, depositStep)
+    setExecSteps([...steps])
+
+    try {
+      // Find user's DUSDC coins
+      const coinsRes = await fetch('https://fullnode.testnet.sui.io:443', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'suix_getCoins',
+          params: [walletAddress, DUSDC_TYPE, null, 50],
+        }),
+      })
+      const coinsData = (await coinsRes.json()) as {
+        result?: { data: { coinObjectId: string; balance: string }[] }
+      }
+      const dusdc_coins = coinsData.result?.data || []
+
+      if (dusdc_coins.length === 0) {
+        steps[3].status = 'error'
+        steps[3].error = 'No DUSDC coins in wallet. Request from faucet.'
+        setExecSteps([...steps])
+        setExecuting(false)
+        return
+      }
+
+      const totalDepositRaw = Math.floor(borrowAmount * 10 ** DUSDC_DECIMALS)
+      const txDep = new Transaction()
+      txDep.setSender(walletAddress)
+
+      // Merge coins if needed
+      const primaryCoin = dusdc_coins[0].coinObjectId
+      if (dusdc_coins.length > 1) {
+        txDep.mergeCoins(
+          txDep.object(primaryCoin),
+          dusdc_coins.slice(1).map((c) => txDep.object(c.coinObjectId)),
+        )
+      }
+
+      // Split exact amount and deposit
+      const [depositCoin] = txDep.splitCoins(txDep.object(primaryCoin), [
+        txDep.pure.u64(totalDepositRaw),
+      ])
+      txDep.moveCall({
+        target: `${PREDICT_PACKAGE}::predict_manager::deposit`,
+        typeArguments: [DUSDC_TYPE],
+        arguments: [txDep.object(managerObjectId!), depositCoin],
+      })
+
+      const depResult = await sharedHost.signAndExecuteTransaction(txDep)
+      steps[3].status = 'done'
+      steps[3].txDigest = depResult.digest
+      setExecSteps([...steps])
+      await new Promise((r) => setTimeout(r, 1500))
+    } catch (e) {
+      steps[3].status = 'error'
+      steps[3].error = e instanceof Error ? e.message : String(e)
+      setExecSteps([...steps])
+      setExecuting(false)
+      return
+    }
+
+    // Now mint ranges (manager has funds)
+    for (let i = 4; i < steps.length; i++) {
       steps[i].status = 'executing'
       setExecSteps([...steps])
 
       try {
-        const rangeIdx = i - 3
+        const rangeIdx = i - 4
         const center = spot + (rangeIdx - (nRanges - 1) / 2) * ((halfWidth * 2) / nRanges)
         const lower = Math.floor(center - halfWidth / nRanges)
         const upper = Math.ceil(center + halfWidth / nRanges)
