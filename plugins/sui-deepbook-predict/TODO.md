@@ -74,17 +74,33 @@
 ```
 # Portfolio
 GET /managers/:id/summary
+  → owner, balances[], trading_balance, open_exposure, account_value,
+    realized_pnl, unrealized_pnl, open_positions, awaiting_settlement_positions
 GET /managers/:id/positions/summary
+  → [{oracle_id, underlying_asset, expiry, strike, is_up, open_quantity,
+      average_entry_price, mark_price, unrealized_pnl}]
 GET /managers/:id/pnl?range=ALL
+GET /ranges/minted?manager_id=X
+GET /ranges/redeemed?manager_id=X
 
 # Settlement
 GET /predicts/:id/oracles          → filter status="settled"
 GET /oracles/:id/state             → settlement_price
 
-# On-chain calls
-predict::redeem<T>(predict, manager, oracle, market_key, amount, clock, ctx)
-predict::redeem_range<T>(predict, manager, oracle, range_key, amount, clock, ctx)
-predict::redeem_permissionless(predict, manager, oracle, market_key, clock, ctx)
+# On-chain calls (from predict-workshop reference)
+# IMPORTANT: market_key uses market_key::up / market_key::down (NOT market_key::new with direction byte)
+market_key::up(oracle_id, expiry, strike) → MarketKey
+market_key::down(oracle_id, expiry, strike) → MarketKey
+range_key::new(oracle_id, expiry, lower, higher) → RangeKey
+
+predict::mint<T>(predict, manager, oracle, market_key, quantity, clock)
+predict::mint_range<T>(predict, manager, oracle, range_key, quantity, clock)
+predict::redeem<T>(predict, manager, oracle, market_key, quantity, clock)
+predict::redeem_range<T>(predict, manager, oracle, range_key, quantity, clock)
+predict::redeem_permissionless<T>(predict, manager, oracle, market_key, quantity, clock)
+predict::supply<T>(predict, coin_dusdc, clock) → Coin<PLP>
+predict::withdraw<T>(predict, coin_plp, clock) → Coin<DUSDC>
+predict_manager::deposit<T>(manager, coin)
 
 # Pricing formula
 k = ln(K / F)
@@ -94,3 +110,37 @@ P(UP) = N(d₂)
 P(DOWN) = 1 − N(d₂)
 P(range) = N(d₂(lower)) − N(d₂(higher))
 ```
+
+---
+
+## Bugs to Fix (from predict-workshop comparison)
+
+### BUG-1: market_key construction uses wrong function ⚠️
+**Current:** `market_key::new(oracle_id, expiry, strike, direction_u8)`
+**Correct:** `market_key::up(oracle_id, expiry, strike)` or `market_key::down(oracle_id, expiry, strike)`
+**Impact:** All binary mint/redeem transactions may fail
+**Files:** plugin.tsx (TradePanel), PortfolioTab.tsx (claim)
+
+### BUG-2: Portfolio API response shape
+**Current:** Assumes `positions.binaries[]` and `positions.ranges[]`
+**Correct:** `/managers/:id/positions/summary` returns flat array with `is_up`, `open_quantity`, `average_entry_price`, `mark_price`, `unrealized_pnl`
+**Files:** PortfolioTab.tsx
+
+---
+
+## Workshop-Inspired Improvements
+
+### W1: Enhanced Portfolio Summary
+- [ ] Use `/managers/:id/summary` for headline numbers (trading_balance, account_value, realized/unrealized PnL)
+- [ ] Show `awaiting_settlement_positions` count prominently
+- [ ] Display `average_entry_price` and `mark_price` per position
+
+### W2: Range Position Tracking via Events
+- [ ] Fetch `/ranges/minted?manager_id=X` and `/ranges/redeemed?manager_id=X`
+- [ ] Compute net open ranges (minted - redeemed) client-side
+- [ ] Show range positions alongside binary positions
+
+### W3: Permissionless Redeem for Others
+- [ ] Allow redeeming settled positions for ANY manager (not just own)
+- [ ] Input field for manager_id → scan settled positions → batch redeem
+- [ ] Useful as a "keeper" service for the protocol
