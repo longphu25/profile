@@ -1463,15 +1463,10 @@ function TradePanel({
       // Command 2: Mint or Redeem (chained in same PTB)
       if (mode === 'binary') {
         const strikeRaw = snapStrike(Number(strike))
-        const direction = isUp ? 0 : 1
+        const keyFn = isUp ? 'up' : 'down'
         const [marketKey] = tx.moveCall({
-          target: `${PREDICT_PACKAGE}::market_key::new`,
-          arguments: [
-            tx.pure.id(selectedOracle),
-            tx.pure.u64(expiry),
-            tx.pure.u64(strikeRaw),
-            tx.pure.u8(direction),
-          ],
+          target: `${PREDICT_PACKAGE}::market_key::${keyFn}`,
+          arguments: [tx.pure.id(selectedOracle), tx.pure.u64(expiry), tx.pure.u64(strikeRaw)],
         })
 
         tx.moveCall({

@@ -97,7 +97,9 @@ export function PortfolioTab({
   sharedHost,
   managerId,
 }: Props) {
-  const [positions, setPositions] = useState<any>(null)
+  const [positions, setPositions] = useState<any[]>([])
+  const [ranges, setRanges] = useState<any[]>([])
+  const [summary, setSummary] = useState<any>(null)
   const [pnlHistory, setPnlHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [claimingId, setClaimingId] = useState<string | null>(null)
@@ -107,11 +109,33 @@ export function PortfolioTab({
   const fetchPortfolio = useCallback(async () => {
     if (!managerId) return
     setLoading(true)
-    const [pos, pnl] = await Promise.all([
-      fetchJSON<any>(`/managers/${managerId}/positions/summary`),
+    const [summ, pos, minted, redeemed, pnl] = await Promise.all([
+      fetchJSON<any>(`/managers/${managerId}/summary`),
+      fetchJSON<any[]>(`/managers/${managerId}/positions/summary`),
+      fetchJSON<any[]>(`/ranges/minted?manager_id=${managerId}`),
+      fetchJSON<any[]>(`/ranges/redeemed?manager_id=${managerId}`),
       fetchJSON<any>(`/managers/${managerId}/pnl?range=ALL`),
     ])
-    if (pos) setPositions(pos)
+    if (summ) setSummary(summ)
+    if (pos && Array.isArray(pos)) setPositions(pos.filter((p: any) => Number(p.open_quantity) > 0))
+    // Compute net open ranges from events
+    if (minted || redeemed) {
+      const net = new Map<string, { row: any; qty: number }>()
+      for (const m of minted || []) {
+        const k = `${m.oracle_id}|${m.expiry}|${m.lower_strike}|${m.higher_strike}`
+        const cur = net.get(k)
+        if (cur) cur.qty += Number(m.quantity)
+        else net.set(k, { row: m, qty: Number(m.quantity) })
+      }
+      for (const r of redeemed || []) {
+        const k = `${r.oracle_id}|${r.expiry}|${r.lower_strike}|${r.higher_strike}`
+        const cur = net.get(k)
+        if (cur) cur.qty -= Number(r.quantity)
+      }
+      setRanges(
+        [...net.values()].filter((r) => r.qty > 0).map((r) => ({ ...r.row, open_quantity: r.qty })),
+      )
+    }
     if (pnl?.points) setPnlHistory(pnl.points)
     setLoading(false)
   }, [managerId])
@@ -140,14 +164,10 @@ export function PortfolioTab({
 
       if (position.market_key) {
         const mk = position.market_key
+        const keyFn = mk.is_up ? 'up' : 'down'
         const [marketKey] = tx.moveCall({
-          target: `${PREDICT_PACKAGE}::market_key::new`,
-          arguments: [
-            tx.pure.id(mk.oracle_id),
-            tx.pure.u64(mk.expiry),
-            tx.pure.u64(mk.strike),
-            tx.pure.u8(mk.direction),
-          ],
+          target: `${PREDICT_PACKAGE}::market_key::${keyFn}`,
+          arguments: [tx.pure.id(mk.oracle_id), tx.pure.u64(mk.expiry), tx.pure.u64(mk.strike)],
         })
         tx.moveCall({
           target: `${PREDICT_PACKAGE}::predict::redeem`,
@@ -213,14 +233,10 @@ export function PortfolioTab({
       for (const pos of settled) {
         if (pos.market_key) {
           const mk = pos.market_key
+          const keyFn = mk.is_up ? 'up' : 'down'
           const [marketKey] = tx.moveCall({
-            target: `${PREDICT_PACKAGE}::market_key::new`,
-            arguments: [
-              tx.pure.id(mk.oracle_id),
-              tx.pure.u64(mk.expiry),
-              tx.pure.u64(mk.strike),
-              tx.pure.u8(mk.direction),
-            ],
+            target: `${PREDICT_PACKAGE}::market_key::${keyFn}`,
+            arguments: [tx.pure.id(mk.oracle_id), tx.pure.u64(mk.expiry), tx.pure.u64(mk.strike)],
           })
           tx.moveCall({
             target: `${PREDICT_PACKAGE}::predict::redeem`,
@@ -272,13 +288,27 @@ export function PortfolioTab({
 
   // Helper: get positions on settled oracles
   const getSettledPositions = (): any[] => {
-    if (!positions) return []
     const settledIds = new Set(settledOracles.map((o) => o.oracle_id))
-    const all = [...(positions.binaries || []), ...(positions.ranges || [])]
-    return all.filter((p: any) => {
-      const oId = p.market_key?.oracle_id || p.range_key?.oracle_id
-      return settledIds.has(oId)
-    })
+    const binarySettled = positions
+      .filter((p: any) => settledIds.has(p.oracle_id))
+      .map((p: any) => ({
+        ...p,
+        market_key: { oracle_id: p.oracle_id, expiry: p.expiry, strike: p.strike, is_up: p.is_up },
+        quantity: p.open_quantity,
+      }))
+    const rangeSettled = ranges
+      .filter((r: any) => settledIds.has(r.oracle_id))
+      .map((r: any) => ({
+        ...r,
+        range_key: {
+          oracle_id: r.oracle_id,
+          expiry: r.expiry,
+          lower_strike: r.lower_strike,
+          higher_strike: r.higher_strike,
+        },
+        quantity: r.open_quantity,
+      }))
+    return [...binarySettled, ...rangeSettled]
   }
 
   const settledPositions = getSettledPositions()
@@ -312,6 +342,55 @@ export function PortfolioTab({
 
   return (
     <div className="sui-predict__grid">
+      {/* Account Summary */}
+      {summary && (
+        <div className="sui-predict__card sui-predict__card--wide">
+          <div className="sui-predict__card-header">
+            <h3 className="sui-predict__card-title">Account Summary</h3>
+          </div>
+          <div className="sui-predict__stats">
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Account Value</span>
+              <span className="sui-predict__stat-value sui-predict__stat-value--green">
+                ${(Number(summary.account_value || 0) / 1e6).toFixed(2)}
+              </span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Trading Balance</span>
+              <span className="sui-predict__stat-value">
+                ${(Number(summary.trading_balance || 0) / 1e6).toFixed(2)}
+              </span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Realized PnL</span>
+              <span
+                className={`sui-predict__stat-value ${Number(summary.realized_pnl || 0) >= 0 ? 'sui-predict__stat-value--green' : 'sui-predict__stat-value--red'}`}
+              >
+                ${(Number(summary.realized_pnl || 0) / 1e6).toFixed(2)}
+              </span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Unrealized PnL</span>
+              <span
+                className={`sui-predict__stat-value ${Number(summary.unrealized_pnl || 0) >= 0 ? 'sui-predict__stat-value--green' : 'sui-predict__stat-value--red'}`}
+              >
+                ${(Number(summary.unrealized_pnl || 0) / 1e6).toFixed(2)}
+              </span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Open Positions</span>
+              <span className="sui-predict__stat-value">{summary.open_positions || 0}</span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Awaiting Settlement</span>
+              <span className="sui-predict__stat-value">
+                {summary.awaiting_settlement_positions || 0}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Claim Settled — TOP priority action */}
       {settledPositions.length > 0 && (
         <div className="sui-predict__card sui-predict__card--wide">
@@ -394,78 +473,59 @@ export function PortfolioTab({
             {loading ? '⟳' : '↻'}
           </button>
         </div>
-        {!positions ||
-        ((!positions.binaries || positions.binaries.length === 0) &&
-          (!positions.ranges || positions.ranges.length === 0)) ? (
+        {!positions || (positions.length === 0 && ranges.length === 0) ? (
           <div className="sui-predict__empty">No open positions</div>
         ) : (
           <div className="sui-predict__table">
             <div className="sui-predict__table-header sui-predict__table-header--6col">
               <span>Type</span>
               <span>Strike</span>
-              <span>Expiry</span>
               <span>Qty</span>
-              <span>Fair Value</span>
-              <span>PnL</span>
+              <span>Entry</span>
+              <span>Mark</span>
+              <span>uPnL</span>
             </div>
-            {[...(positions.binaries || []), ...(positions.ranges || [])].map(
-              (p: any, i: number) => {
-                const isBinary = !!p.market_key
-                const expiry = isBinary ? p.market_key.expiry : p.range_key.expiry
-                const isExpired = expiry < Date.now()
-                const qty = p.quantity / 10 ** DUSDC_DECIMALS
-                const cost = (p.cost_basis || 0) / 10 ** DUSDC_DECIMALS
+            {/* Binary positions */}
+            {positions.map((p: any, i: number) => {
+              const qty = Number(p.open_quantity) / 10 ** DUSDC_DECIMALS
+              const entry = p.average_entry_price
+                ? (Number(p.average_entry_price) / PRICE_SCALE).toFixed(4)
+                : '—'
+              const mark = p.mark_price ? (Number(p.mark_price) / PRICE_SCALE).toFixed(4) : '—'
+              const upnl = p.unrealized_pnl ? Number(p.unrealized_pnl) / 10 ** DUSDC_DECIMALS : 0
+              const strikeLabel = `$${(Number(p.strike) / STRIKE_SCALE).toFixed(0)} ${p.is_up ? '▲' : '▼'}`
 
-                let fairVal = 0
-                if (svi && forward && !isExpired) {
-                  if (isBinary) {
-                    fairVal = computeFairValue(
-                      svi,
-                      forward,
-                      expiry,
-                      p.market_key.strike,
-                      p.market_key.direction,
-                    )
-                  } else {
-                    fairVal = computeRangeFairValue(
-                      svi,
-                      forward,
-                      expiry,
-                      p.range_key.lower_strike,
-                      p.range_key.higher_strike,
-                    )
-                  }
-                }
-                const currentValue = fairVal * qty
-                const pnl = cost > 0 ? currentValue - cost : 0
+              return (
+                <div key={`b${i}`} className="sui-predict__table-row sui-predict__table-row--6col">
+                  <span>Binary</span>
+                  <span>{strikeLabel}</span>
+                  <span>${qty.toFixed(0)}</span>
+                  <span>{entry}</span>
+                  <span>{mark}</span>
+                  <span
+                    className={upnl >= 0 ? 'sui-predict__text--green' : 'sui-predict__text--red'}
+                  >
+                    {upnl !== 0 ? `${upnl >= 0 ? '+' : ''}$${upnl.toFixed(2)}` : '—'}
+                  </span>
+                </div>
+              )
+            })}
+            {/* Range positions */}
+            {ranges.map((r: any, i: number) => {
+              const qty = Number(r.open_quantity) / 10 ** DUSDC_DECIMALS
+              const strikeLabel = `$${(Number(r.lower_strike) / STRIKE_SCALE).toFixed(0)}–$${(Number(r.higher_strike) / STRIKE_SCALE).toFixed(0)}`
 
-                const strike = isBinary
-                  ? `$${(p.market_key.strike / STRIKE_SCALE).toFixed(0)} ${p.market_key.direction === 0 ? '▲' : '▼'}`
-                  : `$${(p.range_key.lower_strike / STRIKE_SCALE).toFixed(0)}–$${(p.range_key.higher_strike / STRIKE_SCALE).toFixed(0)}`
-
-                const timeLeft = expiry - Date.now()
-                const expiryStr = isExpired
-                  ? 'Expired'
-                  : timeLeft < 3600000
-                    ? `${Math.floor(timeLeft / 60000)}m`
-                    : `${Math.floor(timeLeft / 3600000)}h`
-
-                return (
-                  <div key={i} className="sui-predict__table-row sui-predict__table-row--6col">
-                    <span>{isBinary ? 'Binary' : 'Range'}</span>
-                    <span>{strike}</span>
-                    <span className={isExpired ? 'sui-predict__text--red' : ''}>{expiryStr}</span>
-                    <span>{qty.toFixed(2)}</span>
-                    <span>{fairVal > 0 ? `${(fairVal * 100).toFixed(1)}%` : '—'}</span>
-                    <span
-                      className={pnl >= 0 ? 'sui-predict__text--green' : 'sui-predict__text--red'}
-                    >
-                      {cost > 0 ? `${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}` : '—'}
-                    </span>
-                  </div>
-                )
-              },
-            )}
+              return (
+                <div key={`r${i}`} className="sui-predict__table-row sui-predict__table-row--6col">
+                  <span>Range</span>
+                  <span>{strikeLabel}</span>
+                  <span>${qty.toFixed(0)}</span>
+                  <span>—</span>
+                  <span>—</span>
+                  <span>—</span>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
