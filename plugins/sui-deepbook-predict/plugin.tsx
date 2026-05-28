@@ -11,7 +11,11 @@ import { StrategyTab } from './components/StrategyTab'
 import { ArbTab } from './components/ArbTab'
 import { PLPHedgeTab } from './components/PLPHedgeTab'
 import { MarginLoopTab } from './components/MarginLoopTab'
+import { PortfolioTab } from './components/PortfolioTab'
+import { LendingTab } from './components/LendingTab'
+import { CollapsibleNotes } from './components/shared'
 import { useTour } from './hooks/useTour'
+import { useEventStream } from './hooks/useEventStream'
 import './style.css'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -98,7 +102,17 @@ function checkButterflyViolations(surface: { strike: number; iv: number }[]) {
 
 function PredictContent() {
   const [tab, setTab] = useState<
-    'market' | 'surface' | 'risk' | 'trade' | 'vault' | 'strategy' | 'arb' | 'plphedge' | 'loop'
+    | 'market'
+    | 'surface'
+    | 'risk'
+    | 'trade'
+    | 'vault'
+    | 'strategy'
+    | 'arb'
+    | 'plphedge'
+    | 'loop'
+    | 'portfolio'
+    | 'lending'
   >('market')
   const [oracles, setOracles] = useState<any[]>([])
   const [selectedOracle, setSelectedOracle] = useState<string | null>(null)
@@ -110,8 +124,49 @@ function PredictContent() {
   const [serverStatus, setServerStatus] = useState<string>('checking')
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
+  const [managerId, setManagerId] = useState<string | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const { startTour } = useTour()
+
+  // ── Live event stream (replaces 20s polling with real-time) ────────────────
+  const { connected: wsConnected, lag: wsLag } = useEventStream({
+    network: 'testnet',
+    onPriceUpdate: (oracleId, spot, forward) => {
+      if (oracleId === selectedOracle) {
+        setOracleState((prev: any) =>
+          prev
+            ? {
+                ...prev,
+                latest_price: {
+                  ...prev.latest_price,
+                  spot,
+                  forward,
+                  onchain_timestamp: Date.now(),
+                },
+              }
+            : prev,
+        )
+        setPrices((prev) => [...prev.slice(-49), { spot, forward, timestamp: Date.now() }])
+      }
+    },
+    onSVIUpdate: (oracleId, svi) => {
+      if (oracleId === selectedOracle) {
+        setOracleState((prev: any) =>
+          prev
+            ? {
+                ...prev,
+                latest_svi: { ...svi, onchain_timestamp: Date.now() },
+              }
+            : prev,
+        )
+      }
+    },
+    onSettled: (oracleId) => {
+      setOracles((prev) =>
+        prev.map((o) => (o.oracle_id === oracleId ? { ...o, status: 'settled' } : o)),
+      )
+    },
+  })
 
   // ── Wallet sync ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -124,6 +179,21 @@ function PredictContent() {
       setIsConnected(c.isConnected)
     })
   }, [])
+
+  // ── Fetch manager ID ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!walletAddress) {
+      setManagerId(null)
+      return
+    }
+    fetch(`${PREDICT_SERVER}/managers`)
+      .then((r) => r.json())
+      .then((mgrs: any[]) => {
+        const mine = mgrs.find((m) => m.owner === walletAddress)
+        setManagerId(mine?.manager_id ?? null)
+      })
+      .catch(() => setManagerId(null))
+  }, [walletAddress])
 
   // ── Data fetching ──────────────────────────────────────────────────────────
   const checkServer = useCallback(async () => {
@@ -169,7 +239,8 @@ function PredictContent() {
 
   useEffect(() => {
     refreshAll()
-    pollRef.current = setInterval(refreshAll, 20000)
+    // Fallback poll: 60s (WS handles real-time updates)
+    pollRef.current = setInterval(refreshAll, 60000)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
@@ -550,6 +621,7 @@ function PredictContent() {
         {(
           [
             'market',
+            'portfolio',
             'trade',
             'surface',
             'risk',
@@ -558,6 +630,7 @@ function PredictContent() {
             'loop',
             'arb',
             'vault',
+            'lending',
           ] as const
         ).map((t) => (
           <button
@@ -567,30 +640,40 @@ function PredictContent() {
           >
             {t === 'market'
               ? '◉ Market'
-              : t === 'trade'
-                ? '◇ Trade'
-                : t === 'surface'
-                  ? '◊ Surface'
-                  : t === 'risk'
-                    ? '⬡ Risk'
-                    : t === 'strategy'
-                      ? '⬢ Strategy'
-                      : t === 'plphedge'
-                        ? '⛨ PLP+Hedge'
-                        : t === 'loop'
-                          ? '∞ Loop'
-                          : t === 'arb'
-                            ? '⇄ Arb'
-                            : '◈ Vault'}
+              : t === 'portfolio'
+                ? '◫ Portfolio'
+                : t === 'trade'
+                  ? '◇ Trade'
+                  : t === 'surface'
+                    ? '◊ Surface'
+                    : t === 'risk'
+                      ? '⬡ Risk'
+                      : t === 'strategy'
+                        ? '⬢ Strategy'
+                        : t === 'plphedge'
+                          ? '⛨ PLP+Hedge'
+                          : t === 'loop'
+                            ? '∞ Loop'
+                            : t === 'arb'
+                              ? '⇄ Arb'
+                              : t === 'vault'
+                                ? '◈ Vault'
+                                : '⊕ Lending'}
           </button>
         ))}
+        <span
+          className={`sui-predict__badge ${wsConnected ? 'sui-predict__badge--green' : 'sui-predict__badge--yellow'}`}
+          style={{ marginLeft: 'auto', fontSize: '9px' }}
+          title={wsLag != null ? `Last event: ${wsLag.toFixed(1)}s ago` : 'Connecting…'}
+        >
+          {wsConnected ? '● LIVE' : '○ POLL'}
+        </span>
         <button
           className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
           onClick={refreshAll}
           disabled={loading}
-          style={{ marginLeft: 'auto' }}
         >
-          {loading ? '⟳' : '↻'} Refresh
+          {loading ? '⟳' : '↻'}
         </button>
         <button
           className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm sui-predict__btn--guide"
@@ -614,6 +697,16 @@ function PredictContent() {
       </div>
       {error && <div className="sui-predict__error">{error}</div>}
       {tab === 'market' && renderMarket()}
+      {tab === 'portfolio' && (
+        <PortfolioTab
+          oracleState={oracleState}
+          oracles={oracles}
+          walletAddress={walletAddress}
+          isConnected={isConnected}
+          sharedHost={sharedHost}
+          managerId={managerId}
+        />
+      )}
       {tab === 'surface' && <SurfaceStudio oracleId={selectedOracle} oracles={oracles} />}
       {tab === 'risk' && <PLPRiskDashboard />}
       {tab === 'strategy' && (
@@ -634,6 +727,14 @@ function PredictContent() {
       )}
       {tab === 'trade' && renderTrade()}
       {tab === 'vault' && renderVault()}
+      {tab === 'lending' && (
+        <LendingTab
+          walletAddress={walletAddress}
+          isConnected={isConnected}
+          sharedHost={sharedHost}
+          network="testnet"
+        />
+      )}
     </div>
   )
 }
@@ -684,7 +785,7 @@ function SurfaceStudio({ oracleId, oracles }: { oracleId: string | null; oracles
 
   return (
     <div className="sui-predict__grid">
-      {/* Feature description */}
+      {/* Oracle selector — TOP */}
       <div className="sui-predict__card sui-predict__card--wide">
         <div className="sui-predict__card-header">
           <h3 className="sui-predict__card-title">Predict Surface Studio</h3>
@@ -705,45 +806,6 @@ function SurfaceStudio({ oracleId, oracles }: { oracleId: string | null; oracles
               </option>
             ))}
           </select>
-        </div>
-        <div className="sui-predict__info-text">
-          <h4>How it works</h4>
-          <p>
-            Live implied volatility surface streamed from <code>oracle::OracleSVIUpdated</code>{' '}
-            events. The SVI (Stochastic Volatility Inspired) parameterization models the entire
-            smile with 5 parameters.
-          </p>
-          <h4>SVI Formula</h4>
-          <p className="sui-predict__formula">w(k) = a + b · (ρ·(k − m) + √((k − m)² + σ²))</p>
-          <p className="sui-predict__formula">IV(K) = √(w(k) / T) × 100%</p>
-          <p>
-            Where: <code>k = ln(K/F)</code> is log-moneyness, <code>K</code> = strike,{' '}
-            <code>F</code> = forward price, <code>T</code> = time to expiry (years)
-          </p>
-          <h4>Parameters</h4>
-          <ul>
-            <li>
-              <code>a</code> — overall variance level
-            </li>
-            <li>
-              <code>b</code> — slope (controls wing steepness)
-            </li>
-            <li>
-              <code>ρ</code> — skew (negative = put skew)
-            </li>
-            <li>
-              <code>m</code> — horizontal shift of the smile minimum
-            </li>
-            <li>
-              <code>σ</code> — curvature at the vertex
-            </li>
-          </ul>
-          <h4>Arbitrage-Free Check</h4>
-          <p>
-            Butterfly condition: for consecutive strikes K₁ &lt; K₂ &lt; K₃, the interpolated IV
-            must not exceed actual IV by &gt;2%. Violations indicate potential arbitrage
-            opportunities.
-          </p>
         </div>
       </div>
 
@@ -891,11 +953,49 @@ function SurfaceStudio({ oracleId, oracles }: { oracleId: string | null; oracles
           </div>
         </div>
       )}
+
+      {/* Notes — BOTTOM, collapsible */}
+      <CollapsibleNotes title="SVI Documentation">
+        <h4>How it works</h4>
+        <p>
+          Live implied volatility surface streamed from <code>oracle::OracleSVIUpdated</code>{' '}
+          events. The SVI (Stochastic Volatility Inspired) parameterization models the entire smile
+          with 5 parameters.
+        </p>
+        <h4>SVI Formula</h4>
+        <p className="sui-predict__formula">w(k) = a + b · (ρ·(k − m) + √((k − m)² + σ²))</p>
+        <p className="sui-predict__formula">IV(K) = √(w(k) / T) × 100%</p>
+        <p>
+          Where: <code>k = ln(K/F)</code> is log-moneyness, <code>K</code> = strike, <code>F</code>{' '}
+          = forward price, <code>T</code> = time to expiry (years)
+        </p>
+        <h4>Parameters</h4>
+        <ul>
+          <li>
+            <code>a</code> — overall variance level
+          </li>
+          <li>
+            <code>b</code> — slope (controls wing steepness)
+          </li>
+          <li>
+            <code>ρ</code> — skew (negative = put skew)
+          </li>
+          <li>
+            <code>m</code> — horizontal shift of the smile minimum
+          </li>
+          <li>
+            <code>σ</code> — curvature at the vertex
+          </li>
+        </ul>
+        <h4>Arbitrage-Free Check</h4>
+        <p>
+          Butterfly condition: for consecutive strikes K₁ &lt; K₂ &lt; K₃, the interpolated IV must
+          not exceed actual IV by &gt;2%. Violations indicate potential arbitrage opportunities.
+        </p>
+      </CollapsibleNotes>
     </div>
   )
 }
-
-// ── PLP Risk Dashboard ──────────────────────────────────────────────────────────
 
 function PLPRiskDashboard() {
   const [vault, setVault] = useState<any>(null)
@@ -934,51 +1034,7 @@ function PLPRiskDashboard() {
 
   return (
     <div className="sui-predict__grid">
-      {/* Feature description */}
-      <div className="sui-predict__card sui-predict__card--wide">
-        <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">PLP Risk Dashboard</h3>
-        </div>
-        <div className="sui-predict__info-text">
-          <h4>How it works</h4>
-          <p>
-            The vault takes the opposite side of every Predict trade. LPs supply DUSDC and receive
-            PLP shares proportional to their deposit relative to current vault value.
-          </p>
-          <h4>Key Formulas</h4>
-          <p className="sui-predict__formula">
-            PLP_shares = deposit × (total_PLP_supply / vault_value)
-          </p>
-          <p className="sui-predict__formula">share_price = vault_value / total_PLP_supply</p>
-          <p className="sui-predict__formula">utilization = total_MTM / vault_value</p>
-          <p className="sui-predict__formula">max_payout_util = max_payout / vault_balance</p>
-          <h4>Risk Metrics</h4>
-          <ul>
-            <li>
-              <strong>MTM (Mark-to-Market)</strong> — current liability from open positions
-            </li>
-            <li>
-              <strong>Max Payout</strong> — worst-case payout if all positions settle ITM
-            </li>
-            <li>
-              <strong>Utilization</strong> — how much of vault value is at risk
-            </li>
-            <li>
-              <strong>Available Liquidity</strong> — vault_balance − max_payout (withdrawable)
-            </li>
-          </ul>
-          <h4>What-If Simulator</h4>
-          <p>
-            Simulates PLP PnL under a BTC price move. MTM increases proportionally with |move%|,
-            reducing vault value and share price.
-          </p>
-          <p className="sui-predict__formula">
-            PnL = −(MTM_new − MTM_current) where MTM_new = MTM × (1 + |move%|)
-          </p>
-        </div>
-      </div>
-
-      {/* Vault health */}
+      {/* Vault health — TOP (interactive data) */}
       {vault && (
         <div className="sui-predict__card sui-predict__card--wide">
           <div className="sui-predict__card-header">
@@ -1165,6 +1221,45 @@ function PLPRiskDashboard() {
           ))}
         </div>
       </div>
+
+      {/* Notes — BOTTOM, collapsible */}
+      <CollapsibleNotes title="PLP Risk Documentation">
+        <h4>How it works</h4>
+        <p>
+          The vault takes the opposite side of every Predict trade. LPs supply DUSDC and receive PLP
+          shares proportional to their deposit relative to current vault value.
+        </p>
+        <h4>Key Formulas</h4>
+        <p className="sui-predict__formula">
+          PLP_shares = deposit × (total_PLP_supply / vault_value)
+        </p>
+        <p className="sui-predict__formula">share_price = vault_value / total_PLP_supply</p>
+        <p className="sui-predict__formula">utilization = total_MTM / vault_value</p>
+        <p className="sui-predict__formula">max_payout_util = max_payout / vault_balance</p>
+        <h4>Risk Metrics</h4>
+        <ul>
+          <li>
+            <strong>MTM (Mark-to-Market)</strong> — current liability from open positions
+          </li>
+          <li>
+            <strong>Max Payout</strong> — worst-case payout if all positions settle ITM
+          </li>
+          <li>
+            <strong>Utilization</strong> — how much of vault value is at risk
+          </li>
+          <li>
+            <strong>Available Liquidity</strong> — vault_balance − max_payout (withdrawable)
+          </li>
+        </ul>
+        <h4>What-If Simulator</h4>
+        <p>
+          Simulates PLP PnL under a BTC price move. MTM increases proportionally with |move%|,
+          reducing vault value and share price.
+        </p>
+        <p className="sui-predict__formula">
+          PnL = −(MTM_new − MTM_current) where MTM_new = MTM × (1 + |move%|)
+        </p>
+      </CollapsibleNotes>
     </div>
   )
 }
@@ -1205,20 +1300,15 @@ function TradePanel({
     setTxDigest(null)
 
     try {
-      // Step 1: Ensure user has a PredictManager
-      // Check if we already have one stored
+      // Ensure user has a PredictManager
       let mgr = managerId
       if (!mgr) {
-        // Create manager first
         const txMgr = new Transaction()
         txMgr.setSender(walletAddress)
         txMgr.moveCall({ target: `${PREDICT_PACKAGE}::predict::create_manager` })
         await sharedHost.signAndExecuteTransaction(txMgr)
-
-        // Wait for indexer to pick it up
         await new Promise((r) => setTimeout(r, 2500))
 
-        // Query for our manager
         try {
           const res = await fetch(`${PREDICT_SERVER}/managers`)
           const mgrs = (await res.json()) as { owner: string; manager_id: string }[]
@@ -1238,13 +1328,22 @@ function TradePanel({
         }
       }
 
-      // Step 2: For mint, deposit DUSDC into manager first (separate TX)
-      // predict::mint reads from manager balance, not wallet directly
       const amountRaw = Math.floor(Number(amount) * 10 ** DUSDC_DECIMALS)
       const expiry = oracleState?.oracle?.expiry || 0
+      const minStrike = oracleState?.oracle?.min_strike || 50000000000000
+      const tickSize = oracleState?.oracle?.tick_size || 1000000000
+      const snapStrike = (usd: number) => {
+        const raw = Math.floor(usd * STRIKE_SCALE)
+        const aligned = minStrike + Math.round((raw - minStrike) / tickSize) * tickSize
+        return Math.max(minStrike, aligned)
+      }
+
+      // Single PTB: deposit (if mint) + mint/redeem — all in one atomic transaction
+      const tx = new Transaction()
+      tx.setSender(walletAddress)
 
       if (action === 'mint') {
-        // Find user's DUSDC coins
+        // Fetch DUSDC coins for deposit
         const coinsRes = await fetch('https://fullnode.testnet.sui.io:443', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1259,60 +1358,35 @@ function TradePanel({
           result?: { data: { coinObjectId: string; balance: string }[] }
         }
         const dusdc_coins = coinsData.result?.data || []
-
         if (dusdc_coins.length === 0) {
           setTxError('No DUSDC coins found in wallet. Request tokens from the faucet.')
           setSubmitting(false)
           return
         }
 
-        // Build deposit TX: merge coins if needed, split exact amount, deposit into manager
-        const txDeposit = new Transaction()
-        txDeposit.setSender(walletAddress)
-
-        // If multiple coins, merge into first
+        // Merge + split coins
         const primaryCoin = dusdc_coins[0].coinObjectId
         if (dusdc_coins.length > 1) {
-          txDeposit.mergeCoins(
-            txDeposit.object(primaryCoin),
-            dusdc_coins.slice(1).map((c) => txDeposit.object(c.coinObjectId)),
+          tx.mergeCoins(
+            tx.object(primaryCoin),
+            dusdc_coins.slice(1).map((c) => tx.object(c.coinObjectId)),
           )
         }
+        const [depositCoin] = tx.splitCoins(tx.object(primaryCoin), [tx.pure.u64(amountRaw)])
 
-        // Split exact amount for deposit
-        const [depositCoin] = txDeposit.splitCoins(txDeposit.object(primaryCoin), [
-          txDeposit.pure.u64(amountRaw),
-        ])
-
-        // Deposit into PredictManager
-        txDeposit.moveCall({
+        // Command 1: Deposit into PredictManager
+        tx.moveCall({
           target: `${PREDICT_PACKAGE}::predict_manager::deposit`,
           typeArguments: [DUSDC_TYPE],
-          arguments: [txDeposit.object(mgr), depositCoin],
+          arguments: [tx.object(mgr), depositCoin],
         })
-
-        await sharedHost.signAndExecuteTransaction(txDeposit)
-        // Wait briefly for state to propagate
-        await new Promise((r) => setTimeout(r, 1500))
       }
 
-      // Step 3: Build mint/redeem TX
-      const tx = new Transaction()
-      tx.setSender(walletAddress)
-
-      // Strike validation: must be >= min_strike and aligned to tick_size
-      const minStrike = oracleState?.oracle?.min_strike || 50000000000000
-      const tickSize = oracleState?.oracle?.tick_size || 1000000000
-      const snapStrike = (usd: number) => {
-        const raw = Math.floor(usd * STRIKE_SCALE)
-        const aligned = minStrike + Math.round((raw - minStrike) / tickSize) * tickSize
-        return Math.max(minStrike, aligned)
-      }
-
+      // Command 2: Mint or Redeem (chained in same PTB)
       if (mode === 'binary') {
         const strikeRaw = snapStrike(Number(strike))
         const direction = isUp ? 0 : 1
-        const marketKey = tx.moveCall({
+        const [marketKey] = tx.moveCall({
           target: `${PREDICT_PACKAGE}::market_key::new`,
           arguments: [
             tx.pure.id(selectedOracle),
@@ -1329,15 +1403,15 @@ function TradePanel({
             tx.object(PREDICT_ID),
             tx.object(mgr),
             tx.object(selectedOracle),
-            marketKey[0],
+            marketKey,
             tx.pure.u64(amountRaw),
-            tx.object('0x6'),
+            tx.object.clock(),
           ],
         })
       } else {
         const lowerRaw = snapStrike(Number(lowerStrike))
         const upperRaw = snapStrike(Number(upperStrike))
-        const rangeKey = tx.moveCall({
+        const [rangeKey] = tx.moveCall({
           target: `${PREDICT_PACKAGE}::range_key::new`,
           arguments: [
             tx.pure.id(selectedOracle),
@@ -1354,15 +1428,16 @@ function TradePanel({
             tx.object(PREDICT_ID),
             tx.object(mgr),
             tx.object(selectedOracle),
-            rangeKey[0],
+            rangeKey,
             tx.pure.u64(amountRaw),
-            tx.object('0x6'),
+            tx.object.clock(),
           ],
         })
       }
 
       const result = await sharedHost.signAndExecuteTransaction(tx)
       setTxDigest(result.digest)
+      sharedHost.setSharedData('txRefresh', Date.now())
     } catch (e) {
       setTxError(e instanceof Error ? e.message : String(e))
     }
@@ -1512,21 +1587,19 @@ function TradePanel({
         {txError && <div className="sui-predict__error">{txError}</div>}
       </div>
 
-      {/* Info */}
-      <div className="sui-predict__card sui-predict__card--wide">
-        <div className="sui-predict__info-text">
-          <h4>Binary Positions</h4>
-          <p>
-            Key: <code>(oracle_id, expiry, strike, is_up)</code>. UP pays if settlement &gt; strike.
-            DOWN pays if settlement &lt; strike.
-          </p>
-          <h4>Vertical Ranges</h4>
-          <p>
-            Key: <code>(oracle_id, expiry, lower, upper)</code>. Pays when settlement ∈ (lower,
-            upper]. Priced as a bounded instrument.
-          </p>
-        </div>
-      </div>
+      {/* Info — collapsible */}
+      <CollapsibleNotes title="Position Types">
+        <h4>Binary Positions</h4>
+        <p>
+          Key: <code>(oracle_id, expiry, strike, is_up)</code>. UP pays if settlement &gt; strike.
+          DOWN pays if settlement &lt; strike.
+        </p>
+        <h4>Vertical Ranges</h4>
+        <p>
+          Key: <code>(oracle_id, expiry, lower, upper)</code>. Pays when settlement ∈ (lower,
+          upper]. Priced as a bounded instrument.
+        </p>
+      </CollapsibleNotes>
     </>
   )
 }
@@ -1539,6 +1612,34 @@ function VaultPanel({ walletAddress, vaultData }: { walletAddress: string; vault
   const [txDigest, setTxDigest] = useState<string | null>(null)
   const [txError, setTxError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [balance, setBalance] = useState<number>(0)
+
+  const PLP_TYPE = `${PREDICT_PACKAGE}::plp::PLP`
+
+  const fetchBalance = useCallback(async () => {
+    const coinType = action === 'supply' ? DUSDC_TYPE : PLP_TYPE
+    try {
+      const res = await fetch('https://fullnode.testnet.sui.io:443', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'suix_getBalance',
+          params: [walletAddress, coinType],
+        }),
+      })
+      const data = (await res.json()) as { result?: { totalBalance: string } }
+      const raw = parseInt(data.result?.totalBalance || '0', 10)
+      setBalance(raw / 10 ** DUSDC_DECIMALS)
+    } catch {
+      setBalance(0)
+    }
+  }, [walletAddress, action])
+
+  useEffect(() => {
+    fetchBalance()
+  }, [fetchBalance])
 
   const handleSubmit = async () => {
     if (!sharedHost || !amount) return
@@ -1552,21 +1653,87 @@ function VaultPanel({ walletAddress, vaultData }: { walletAddress: string; vault
       const amountRaw = Math.floor(Number(amount) * 10 ** DUSDC_DECIMALS)
 
       if (action === 'supply') {
-        tx.moveCall({
+        // Need to pass a Coin<DUSDC> object, not a raw u64
+        const coinsRes = await fetch('https://fullnode.testnet.sui.io:443', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'suix_getCoins',
+            params: [walletAddress, DUSDC_TYPE, null, 50],
+          }),
+        })
+        const coinsData = (await coinsRes.json()) as {
+          result?: { data: { coinObjectId: string; balance: string }[] }
+        }
+        const dusdc_coins = coinsData.result?.data || []
+        if (dusdc_coins.length === 0) {
+          setTxError('No DUSDC coins found in wallet.')
+          setSubmitting(false)
+          return
+        }
+
+        const primaryCoin = dusdc_coins[0].coinObjectId
+        if (dusdc_coins.length > 1) {
+          tx.mergeCoins(
+            tx.object(primaryCoin),
+            dusdc_coins.slice(1).map((c) => tx.object(c.coinObjectId)),
+          )
+        }
+        const [supplyCoin] = tx.splitCoins(tx.object(primaryCoin), [tx.pure.u64(amountRaw)])
+
+        const [plpCoin] = tx.moveCall({
           target: `${PREDICT_PACKAGE}::predict::supply`,
           typeArguments: [DUSDC_TYPE],
-          arguments: [tx.object(PREDICT_ID), tx.pure.u64(amountRaw)],
+          arguments: [tx.object(PREDICT_ID), supplyCoin, tx.object.clock()],
         })
+        tx.transferObjects([plpCoin], tx.pure.address(walletAddress))
       } else {
-        tx.moveCall({
+        // Withdraw: burn PLP shares → receive DUSDC
+        // Need PLP coin object
+        const PLP_TYPE = `${PREDICT_PACKAGE}::plp::PLP`
+        const coinsRes = await fetch('https://fullnode.testnet.sui.io:443', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'suix_getCoins',
+            params: [walletAddress, PLP_TYPE, null, 50],
+          }),
+        })
+        const coinsData = (await coinsRes.json()) as {
+          result?: { data: { coinObjectId: string; balance: string }[] }
+        }
+        const plp_coins = coinsData.result?.data || []
+        if (plp_coins.length === 0) {
+          setTxError('No PLP coins found in wallet.')
+          setSubmitting(false)
+          return
+        }
+
+        const primaryCoin = plp_coins[0].coinObjectId
+        if (plp_coins.length > 1) {
+          tx.mergeCoins(
+            tx.object(primaryCoin),
+            plp_coins.slice(1).map((c) => tx.object(c.coinObjectId)),
+          )
+        }
+        const [withdrawCoin] = tx.splitCoins(tx.object(primaryCoin), [tx.pure.u64(amountRaw)])
+
+        const [dusdcCoin] = tx.moveCall({
           target: `${PREDICT_PACKAGE}::predict::withdraw`,
           typeArguments: [DUSDC_TYPE],
-          arguments: [tx.object(PREDICT_ID), tx.pure.u64(amountRaw)],
+          arguments: [tx.object(PREDICT_ID), withdrawCoin, tx.object.clock()],
         })
+        tx.transferObjects([dusdcCoin], tx.pure.address(walletAddress))
       }
 
       const result = await sharedHost.signAndExecuteTransaction(tx)
       setTxDigest(result.digest)
+      sharedHost.setSharedData('txRefresh', Date.now())
+      fetchBalance()
     } catch (e) {
       setTxError(e instanceof Error ? e.message : String(e))
     }
@@ -1603,9 +1770,14 @@ function VaultPanel({ walletAddress, vaultData }: { walletAddress: string; vault
       </div>
       <div className="sui-predict__form">
         <div className="sui-predict__field">
-          <label className="sui-predict__field-label">
-            {action === 'supply' ? 'DUSDC Amount' : 'PLP Amount'}
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label className="sui-predict__field-label">
+              {action === 'supply' ? 'DUSDC Amount' : 'PLP Amount'}
+            </label>
+            <span style={{ fontSize: '10px', color: '#9fb9b1' }}>
+              Balance: {balance > 0 ? parseFloat(balance.toFixed(4)).toString() : '0'}
+            </span>
+          </div>
           <input
             className="sui-predict__input"
             type="number"
@@ -1613,6 +1785,18 @@ function VaultPanel({ walletAddress, vaultData }: { walletAddress: string; vault
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
+          <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
+            {[5, 10, 50, 100].map((pct) => (
+              <button
+                key={pct}
+                className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
+                onClick={() => setAmount(parseFloat(((balance * pct) / 100).toFixed(4)).toString())}
+                disabled={balance <= 0}
+              >
+                {pct === 100 ? 'Max' : `${pct}%`}
+              </button>
+            ))}
+          </div>
         </div>
         {action === 'supply' && estimatedShares && (
           <div className="sui-predict__trade-info">
@@ -1634,7 +1818,7 @@ function VaultPanel({ walletAddress, vaultData }: { walletAddress: string; vault
       </div>
       {txDigest && <div className="sui-predict__success">TX: {txDigest.slice(0, 16)}…</div>}
       {txError && <div className="sui-predict__error">{txError}</div>}
-      <div className="sui-predict__info-text" style={{ marginTop: '12px' }}>
+      <CollapsibleNotes title="How Supply/Withdraw works">
         <p>
           <strong>Supply:</strong> Deposit DUSDC → receive PLP shares. First supplier gets 1:1,
           later suppliers proportional to vault value.
@@ -1643,7 +1827,7 @@ function VaultPanel({ walletAddress, vaultData }: { walletAddress: string; vault
           <strong>Withdraw:</strong> Burn PLP → receive DUSDC. Subject to available liquidity after
           max payout coverage.
         </p>
-      </div>
+      </CollapsibleNotes>
     </div>
   )
 }
