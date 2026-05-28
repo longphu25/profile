@@ -61,6 +61,12 @@
 - [ ] Alert when SVI stale > 5s
 - [ ] Auto-pause trading when feed lag > 30s
 
+### B8: Pyth Price Feed Integration
+- [ ] Add Pyth BTC/USD feed comparison in Arb tab (feed ID: `0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43`)
+- [ ] Show Predict oracle vs Pyth deviation → detect stale oracle
+- [ ] Use `SuiPythClient` from `@mysten/deepbook-v3` for on-chain price updates
+- [ ] Multi-asset feeds (ETH, SOL) for future oracle expansion
+
 ---
 
 ## API Reference (for implementation)
