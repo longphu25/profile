@@ -234,7 +234,7 @@ function PredictInner() {
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto p-4">
-        <div className="mx-auto max-w-[1440px] grid grid-cols-[1fr_280px] gap-4">
+        <div className="mx-auto max-w-[1440px] grid grid-cols-[1fr_320px] gap-4">
           {/* Left: Plugins */}
           <div className="flex flex-col gap-4">
             {/* Predict plugin (main) */}
@@ -262,8 +262,18 @@ function PredictInner() {
                 </div>
               )
             })()}
+          </div>
 
-            {/* Swap plugin (below predict) */}
+          {/* Right: Account Info + Swap */}
+          <div className="flex flex-col gap-3">
+            <AccountPanel
+              address={account?.address ?? null}
+              isConnected={connection.isConnected}
+              network={network}
+              onConnect={() => setShowWallets(true)}
+            />
+
+            {/* Swap plugin */}
             {(() => {
               const p = PLUGINS.find((x) => x.id === 'swap')!
               return (
@@ -295,14 +305,6 @@ function PredictInner() {
               )
             })()}
           </div>
-
-          {/* Right: Account Info */}
-          <AccountPanel
-            address={account?.address ?? null}
-            isConnected={connection.isConnected}
-            network={network}
-            onConnect={() => setShowWallets(true)}
-          />
         </div>
       </main>
 
