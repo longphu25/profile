@@ -14,6 +14,7 @@ import { MarginLoopTab } from './components/MarginLoopTab'
 import { PortfolioTab } from './components/PortfolioTab'
 import { LendingTab } from './components/LendingTab'
 import { SpotTab } from './components/SpotTab'
+import { KeeperTab } from './components/KeeperTab'
 import { CollapsibleNotes } from './components/shared'
 import { useTour } from './hooks/useTour'
 import { useEventStream } from './hooks/useEventStream'
@@ -115,6 +116,7 @@ function PredictContent() {
     | 'portfolio'
     | 'lending'
     | 'spot'
+    | 'keeper'
   >('market')
   const [oracles, setOracles] = useState<any[]>([])
   const [selectedOracle, setSelectedOracle] = useState<string | null>(null)
@@ -697,6 +699,7 @@ function PredictContent() {
             'vault',
             'lending',
             'spot',
+            'keeper',
           ] as const
         ).map((t) => (
           <button
@@ -726,7 +729,9 @@ function PredictContent() {
                                 ? '◈ Vault'
                                 : t === 'lending'
                                   ? '⊕ Lending'
-                                  : '⬡ Spot'}
+                                  : t === 'spot'
+                                    ? '⬡ Spot'
+                                    : '⚙ Keeper'}
           </button>
         ))}
         <span
@@ -809,6 +814,14 @@ function PredictContent() {
           isConnected={isConnected}
           sharedHost={sharedHost}
           network="testnet"
+        />
+      )}
+      {tab === 'keeper' && (
+        <KeeperTab
+          oracles={oracles}
+          walletAddress={walletAddress}
+          isConnected={isConnected}
+          sharedHost={sharedHost}
         />
       )}
     </div>
