@@ -19,6 +19,8 @@ import {
   DUSDC_TYPE,
 } from '../types'
 import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
+import { CollapsibleNotes, StepTree } from './shared'
+import type { TreeStep } from './shared'
 
 interface Props {
   oracleState: any
@@ -26,14 +28,6 @@ interface Props {
   walletAddress: string | null
   isConnected: boolean
   selectedOracle: string | null
-}
-
-type ExecutionStep = {
-  protocol: string
-  action: string
-  status: 'pending' | 'executing' | 'done' | 'error' | 'simulated'
-  txDigest?: string
-  error?: string
 }
 
 export function MarginLoopTab({
@@ -53,7 +47,7 @@ export function MarginLoopTab({
 
   // Execution state
   const [executing, setExecuting] = useState(false)
-  const [execSteps, setExecSteps] = useState<ExecutionStep[]>([])
+  const [execSteps, setExecSteps] = useState<TreeStep[]>([])
   const [execDone, setExecDone] = useState(false)
 
   const spotRaw = oracleState?.latest_price?.spot || 0
@@ -87,7 +81,7 @@ export function MarginLoopTab({
     const width = (Number(rangeWidth) || 8) / 100
     const capitalPerRange = borrowAmount / nRanges
 
-    const steps: ExecutionStep[] = [
+    const steps: TreeStep[] = [
       {
         protocol: 'iron_bank',
         action: `Deposit ${collateralNum} DUSDC → USDsui shares`,
@@ -115,10 +109,10 @@ export function MarginLoopTab({
 
     setExecSteps([...steps])
 
-    // Step 1: iron_bank (simulated — not available on testnet)
+    // Step 1: iron_bank (simulated)
     steps[0].status = 'executing'
     setExecSteps([...steps])
-    await new Promise((r) => setTimeout(r, 1500)) // simulate network delay
+    await new Promise((r) => setTimeout(r, 1500))
     steps[0].status = 'simulated'
     steps[0].txDigest = '(simulated — iron_bank on mainnet only)'
     setExecSteps([...steps])
@@ -131,12 +125,10 @@ export function MarginLoopTab({
     steps[1].txDigest = '(simulated — deepbook_margin on mainnet only)'
     setExecSteps([...steps])
 
-    // Steps 3+: predict mint_range (REAL on-chain transactions)
-    // First, create a PredictManager (separate TX — it's a shared object)
+    // Step 3: Create PredictManager (separate TX — need object ID for PTB)
     let managerObjectId: string | null = null
 
-    // Insert a "create manager" step before ranges
-    const createMgrStep: ExecutionStep = {
+    const createMgrStep: TreeStep = {
       protocol: 'predict',
       action: 'Create PredictManager (shared object)',
       status: 'executing',
@@ -152,11 +144,7 @@ export function MarginLoopTab({
       steps[2].status = 'done'
       steps[2].txDigest = mgrResult.digest
 
-      // Extract manager ID from transaction effects (created objects)
-      // The manager is the shared object created in this TX
-      // We need to query it from the server after a short delay
       await new Promise((r) => setTimeout(r, 2000))
-      // Query managers for our address
       try {
         const mgrsRes = await fetch(`${PREDICT_SERVER}/managers`)
         const mgrs = await mgrsRes.json()
@@ -166,7 +154,6 @@ export function MarginLoopTab({
         /* fallback below */
       }
 
-      // Fallback: parse from digest events
       if (!managerObjectId) {
         steps[2].error = 'Manager created but ID not found. Try again.'
         steps[2].status = 'error'
@@ -183,18 +170,21 @@ export function MarginLoopTab({
     }
     setExecSteps([...steps])
 
-    // Now deposit DUSDC into manager, then mint ranges
-    // Step: Deposit total capital into manager (one TX before minting)
-    const depositStep: ExecutionStep = {
+    // Step 4: Single PTB — deposit + all mint_range calls in one atomic transaction
+    const ptbStep: TreeStep = {
       protocol: 'predict',
-      action: `Deposit ${borrowAmount.toFixed(0)} DUSDC into PredictManager`,
+      action: `PTB: Deposit ${borrowAmount.toFixed(0)} DUSDC + Mint ${nRanges} ranges (atomic)`,
       status: 'executing',
     }
-    steps.splice(3, 0, depositStep)
+    steps.splice(3, 0, ptbStep)
+    // Mark all remaining range steps as part of the PTB
+    for (let i = 4; i < steps.length; i++) {
+      steps[i].status = 'executing'
+    }
     setExecSteps([...steps])
 
     try {
-      // Find user's DUSDC coins
+      // Fetch DUSDC coins
       const coinsRes = await fetch('https://fullnode.testnet.sui.io:443', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -218,63 +208,40 @@ export function MarginLoopTab({
         return
       }
 
-      const totalDepositRaw = Math.floor(borrowAmount * 10 ** DUSDC_DECIMALS)
-      const txDep = new Transaction()
-      txDep.setSender(walletAddress)
+      // Build single PTB: merge coins → split → deposit → mint_range × N
+      const tx = new Transaction()
+      tx.setSender(walletAddress)
 
-      // Merge coins if needed
+      const totalDepositRaw = Math.floor(borrowAmount * 10 ** DUSDC_DECIMALS)
       const primaryCoin = dusdc_coins[0].coinObjectId
       if (dusdc_coins.length > 1) {
-        txDep.mergeCoins(
-          txDep.object(primaryCoin),
-          dusdc_coins.slice(1).map((c) => txDep.object(c.coinObjectId)),
+        tx.mergeCoins(
+          tx.object(primaryCoin),
+          dusdc_coins.slice(1).map((c) => tx.object(c.coinObjectId)),
         )
       }
 
-      // Split exact amount and deposit
-      const [depositCoin] = txDep.splitCoins(txDep.object(primaryCoin), [
-        txDep.pure.u64(totalDepositRaw),
-      ])
-      txDep.moveCall({
+      // Split exact deposit amount
+      const [depositCoin] = tx.splitCoins(tx.object(primaryCoin), [tx.pure.u64(totalDepositRaw)])
+
+      // Command: Deposit into PredictManager
+      tx.moveCall({
         target: `${PREDICT_PACKAGE}::predict_manager::deposit`,
         typeArguments: [DUSDC_TYPE],
-        arguments: [txDep.object(managerObjectId!), depositCoin],
+        arguments: [tx.object(managerObjectId!), depositCoin],
       })
 
-      const depResult = await sharedHost.signAndExecuteTransaction(txDep)
-      steps[3].status = 'done'
-      steps[3].txDigest = depResult.digest
-      setExecSteps([...steps])
-      await new Promise((r) => setTimeout(r, 1500))
-    } catch (e) {
-      steps[3].status = 'error'
-      steps[3].error = e instanceof Error ? e.message : String(e)
-      setExecSteps([...steps])
-      setExecuting(false)
-      return
-    }
-
-    // Now mint ranges (manager has funds)
-    for (let i = 4; i < steps.length; i++) {
-      steps[i].status = 'executing'
-      setExecSteps([...steps])
-
-      try {
-        const rangeIdx = i - 4
-        const center = spot + (rangeIdx - (nRanges - 1) / 2) * ((halfWidth * 2) / nRanges)
+      // Commands: mint_range × N (all chained in same PTB)
+      const expiry = oracleState?.oracle?.expiry || 0
+      for (let i = 0; i < nRanges; i++) {
+        const center = spot + (i - (nRanges - 1) / 2) * ((halfWidth * 2) / nRanges)
         const lower = Math.floor(center - halfWidth / nRanges)
         const upper = Math.ceil(center + halfWidth / nRanges)
-
         const lowerRaw = Math.floor(lower * STRIKE_SCALE)
         const upperRaw = Math.floor(upper * STRIKE_SCALE)
         const amountRaw = Math.floor(capitalPerRange * 10 ** DUSDC_DECIMALS)
-        const expiry = oracleState?.oracle?.expiry || 0
 
-        const tx = new Transaction()
-        tx.setSender(walletAddress)
-
-        // Construct RangeKey
-        const rangeKey = tx.moveCall({
+        const [rangeKey] = tx.moveCall({
           target: `${PREDICT_PACKAGE}::range_key::new`,
           arguments: [
             tx.pure.id(selectedOracle),
@@ -284,7 +251,6 @@ export function MarginLoopTab({
           ],
         })
 
-        // mint_range<DUSDC>(Predict, PredictManager, OracleSVI, RangeKey, amount, Clock)
         tx.moveCall({
           target: `${PREDICT_PACKAGE}::predict::mint_range`,
           typeArguments: [DUSDC_TYPE],
@@ -292,62 +258,52 @@ export function MarginLoopTab({
             tx.object(PREDICT_ID),
             tx.object(managerObjectId!),
             tx.object(selectedOracle),
-            rangeKey[0],
+            rangeKey,
             tx.pure.u64(amountRaw),
-            tx.object('0x6'),
+            tx.object.clock(),
           ],
         })
+      }
 
-        const result = await sharedHost.signAndExecuteTransaction(tx)
+      // Execute single atomic PTB
+      const ptbResult = await sharedHost.signAndExecuteTransaction(tx)
+      steps[3].status = 'done'
+      steps[3].txDigest = ptbResult.digest
+      // Mark all range steps as done
+      for (let i = 4; i < steps.length; i++) {
         steps[i].status = 'done'
-        steps[i].txDigest = result.digest
-      } catch (e) {
+        steps[i].txDigest = ptbResult.digest
+      }
+      setExecSteps([...steps])
+    } catch (e) {
+      steps[3].status = 'error'
+      steps[3].error = e instanceof Error ? e.message : String(e)
+      for (let i = 4; i < steps.length; i++) {
         steps[i].status = 'error'
-        steps[i].error = e instanceof Error ? e.message : String(e)
       }
       setExecSteps([...steps])
     }
 
     setExecuting(false)
     setExecDone(true)
-  }, [sharedHost, walletAddress, selectedOracle, spot, collateral, ltv, numRanges, rangeWidth])
+  }, [
+    sharedHost,
+    walletAddress,
+    selectedOracle,
+    spot,
+    collateral,
+    ltv,
+    numRanges,
+    rangeWidth,
+    oracleState,
+  ])
 
   return (
     <div className="sui-predict__grid">
-      {/* Description */}
+      {/* Config — TOP */}
       <div className="sui-predict__card sui-predict__card--wide">
         <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">Three-Protocol Margin Loop</h3>
-        </div>
-        <div className="sui-predict__info-text">
-          <h4>Strategy</h4>
-          <p>Stack three Sui DeFi protocols in a single composable flow:</p>
-          <ol>
-            <li>
-              <strong>iron_bank</strong>: Deposit USDC → receive USDsui share token (earn yield)
-            </li>
-            <li>
-              <strong>deepbook_margin</strong>: Collateralize USDsui → borrow dUSDC (leverage)
-            </li>
-            <li>
-              <strong>predict</strong>: Deploy dUSDC into range positions (earn prediction payouts)
-            </li>
-          </ol>
-          <p className="sui-predict__formula">
-            PTB = [iron_bank::deposit, margin::borrow, predict::mint_range × N]
-          </p>
-          <h4>Demo Mode</h4>
-          <p>
-            Steps 1-2 are <b>simulated</b> (iron_bank + margin are mainnet-only). Step 3 executes{' '}
-            <b>real on-chain</b> predict::mint_range transactions on testnet.
-          </p>
-        </div>
-      </div>
-
-      {/* Config */}
-      <div className="sui-predict__card sui-predict__card--wide">
-        <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">Configuration</h3>
+          <h3 className="sui-predict__card-title">Margin Loop Configuration</h3>
           {spot > 0 && (
             <span className="sui-predict__stat-value--mono">Spot: ${spot.toFixed(0)}</span>
           )}
@@ -428,11 +384,8 @@ export function MarginLoopTab({
         </div>
       </div>
 
-      {/* Execute button */}
+      {/* Execute — immediately after config */}
       <div className="sui-predict__card sui-predict__card--wide">
-        <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">Execute Loop</h3>
-        </div>
         {!isConnected ? (
           <div className="sui-predict__empty">
             <p>Connect wallet to execute the margin loop</p>
@@ -460,56 +413,12 @@ export function MarginLoopTab({
                   ? '↻ Execute Again'
                   : '▶ Execute Full Loop (Demo)'}
             </button>
-            <p style={{ fontSize: '10px', color: '#64748b', marginTop: '6px' }}>
-              Steps 1-2 simulated. Step 3 sends real transactions to your wallet for signing.
-            </p>
           </div>
         )}
       </div>
 
-      {/* Execution progress */}
-      {execSteps.length > 0 && (
-        <div className="sui-predict__card sui-predict__card--wide">
-          <div className="sui-predict__card-header">
-            <h3 className="sui-predict__card-title">Execution Progress</h3>
-            <span
-              className={`sui-predict__badge ${execDone ? 'sui-predict__badge--green' : executing ? 'sui-predict__badge--yellow' : 'sui-predict__badge--gray'}`}
-            >
-              {execDone ? 'COMPLETE' : executing ? 'RUNNING' : 'READY'}
-            </span>
-          </div>
-          <div className="sui-predict__exec-steps">
-            {execSteps.map((s, i) => (
-              <div key={i} className={`sui-predict__exec-step sui-predict__exec-step--${s.status}`}>
-                <div className="sui-predict__exec-step-header">
-                  <span className="sui-predict__exec-step-num">{i + 1}</span>
-                  <span className="sui-predict__exec-step-protocol">{s.protocol}</span>
-                  <span
-                    className={`sui-predict__exec-step-status sui-predict__exec-step-status--${s.status}`}
-                  >
-                    {s.status === 'pending'
-                      ? '○'
-                      : s.status === 'executing'
-                        ? '◌'
-                        : s.status === 'done'
-                          ? '●'
-                          : s.status === 'simulated'
-                            ? '◐'
-                            : '✕'}
-                  </span>
-                </div>
-                <div className="sui-predict__exec-step-action">{s.action}</div>
-                {s.txDigest && (
-                  <div className="sui-predict__exec-step-tx">
-                    {s.status === 'simulated' ? s.txDigest : `TX: ${s.txDigest.slice(0, 20)}…`}
-                  </div>
-                )}
-                {s.error && <div className="sui-predict__exec-step-error">{s.error}</div>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Step Tree — execution progress */}
+      <StepTree steps={execSteps} title="Execution Flow" />
 
       {/* Simulation results */}
       {result && (
@@ -592,6 +501,31 @@ export function MarginLoopTab({
           </div>
         </>
       )}
+
+      {/* Notes — BOTTOM, collapsible */}
+      <CollapsibleNotes title="How it works">
+        <h4>Strategy</h4>
+        <p>Stack three Sui DeFi protocols in a single composable flow:</p>
+        <ol>
+          <li>
+            <strong>iron_bank</strong>: Deposit USDC → receive USDsui share token (earn yield)
+          </li>
+          <li>
+            <strong>deepbook_margin</strong>: Collateralize USDsui → borrow dUSDC (leverage)
+          </li>
+          <li>
+            <strong>predict</strong>: Deploy dUSDC into range positions (earn prediction payouts)
+          </li>
+        </ol>
+        <p className="sui-predict__formula">
+          PTB = [iron_bank::deposit, margin::borrow, predict::mint_range × N]
+        </p>
+        <h4>Demo Mode</h4>
+        <p>
+          Steps 1-2 are <b>simulated</b> (iron_bank + margin are mainnet-only). Step 3 executes{' '}
+          <b>real on-chain</b> predict::mint_range transactions on testnet.
+        </p>
+      </CollapsibleNotes>
     </div>
   )
 }

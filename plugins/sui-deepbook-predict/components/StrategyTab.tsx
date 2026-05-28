@@ -6,6 +6,7 @@
 import { useState, useMemo } from 'react'
 import { simulateRangeLadder } from '../strategies'
 import { PRICE_SCALE } from '../types'
+import { CollapsibleNotes } from './shared'
 
 interface Props {
   oracleState: any
@@ -37,36 +38,10 @@ export function StrategyTab({ oracleState, oracles, selectedOracle }: Props) {
 
   return (
     <div className="sui-predict__grid">
-      {/* Description */}
+      {/* Config — TOP */}
       <div className="sui-predict__card sui-predict__card--wide">
         <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">Range-Ladder Vault Strategy</h3>
-        </div>
-        <div className="sui-predict__info-text">
-          <h4>How it works</h4>
-          <p>
-            Automatically mints N vertical range positions evenly distributed around the current
-            spot price. Each rung covers an equal price band with equal capital allocation.
-          </p>
-          <h4>Strategy Logic</h4>
-          <p className="sui-predict__formula">ladder_range = [spot − width/2, spot + width/2]</p>
-          <p className="sui-predict__formula">rung_width = total_width / num_rungs</p>
-          <p className="sui-predict__formula">capital_per_rung = total_capital / num_rungs</p>
-          <h4>PnL Model</h4>
-          <p>
-            If settlement lands in a rung → that rung pays out. All other rungs expire worthless.
-            Expected PnL depends on the probability distribution of settlement prices.
-          </p>
-          <p className="sui-predict__formula">
-            PnL = Σ(payout_i × P(settlement ∈ rung_i)) − total_capital
-          </p>
-        </div>
-      </div>
-
-      {/* Config */}
-      <div className="sui-predict__card sui-predict__card--wide">
-        <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">Configuration</h3>
+          <h3 className="sui-predict__card-title">Range-Ladder Configuration</h3>
           {spot > 0 && (
             <span className="sui-predict__stat-value--mono">Spot: ${spot.toFixed(0)}</span>
           )}
@@ -199,6 +174,26 @@ export function StrategyTab({ oracleState, oracles, selectedOracle }: Props) {
           </div>
         </>
       )}
+
+      {/* Notes — BOTTOM, collapsible */}
+      <CollapsibleNotes title="How it works">
+        <h4>Strategy Logic</h4>
+        <p>
+          Automatically mints N vertical range positions evenly distributed around the current spot
+          price. Each rung covers an equal price band with equal capital allocation.
+        </p>
+        <p className="sui-predict__formula">ladder_range = [spot − width/2, spot + width/2]</p>
+        <p className="sui-predict__formula">rung_width = total_width / num_rungs</p>
+        <p className="sui-predict__formula">capital_per_rung = total_capital / num_rungs</p>
+        <h4>PnL Model</h4>
+        <p>
+          If settlement lands in a rung → that rung pays out. All other rungs expire worthless.
+          Expected PnL depends on the probability distribution of settlement prices.
+        </p>
+        <p className="sui-predict__formula">
+          PnL = Σ(payout_i × P(settlement ∈ rung_i)) − total_capital
+        </p>
+      </CollapsibleNotes>
     </div>
   )
 }

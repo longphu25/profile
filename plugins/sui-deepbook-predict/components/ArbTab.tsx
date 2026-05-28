@@ -9,6 +9,7 @@ import { computeSVISurface } from '../strategies'
 import { fetchJSON, fetchExternalBTCPrice } from '../sdk'
 import { PRICE_SCALE } from '../types'
 import type { VolSpreadResult } from '../strategies/volArb'
+import { CollapsibleNotes } from './shared'
 
 interface Props {
   oracleState: any
@@ -27,19 +28,14 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
 
   const refresh = useCallback(async () => {
     setLoading(true)
-
-    // Fetch external prices
     const ext = await fetchExternalBTCPrice()
     setExternalPrices(ext)
-
-    // Fetch price history for realized vol
     if (selectedOracle) {
       const priceData = await fetchJSON<any[]>(`/oracles/${selectedOracle}/prices`)
       if (priceData && Array.isArray(priceData)) {
         setHistoricalPrices(priceData.slice(-60).map((p: any) => p.spot / PRICE_SCALE))
       }
     }
-
     setLoading(false)
   }, [selectedOracle])
 
@@ -47,10 +43,8 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
     refresh()
   }, [refresh])
 
-  // Compute spread when data changes
   useEffect(() => {
     if (!oracleState?.latest_svi || !oracleState?.latest_price || !activeOracle) return
-
     const surface = computeSVISurface(
       oracleState.latest_svi,
       oracleState.latest_price.forward,
@@ -58,7 +52,6 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
       activeOracle.min_strike,
       activeOracle.tick_size,
     )
-
     const result = computeVolSpread(
       surface,
       externalPrices,
@@ -74,10 +67,10 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
 
   return (
     <div className="sui-predict__grid">
-      {/* Description */}
+      {/* Config — TOP */}
       <div className="sui-predict__card sui-predict__card--wide">
         <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">Vol-Arb: Predict ↔ External</h3>
+          <h3 className="sui-predict__card-title">Vol-Arb Configuration</h3>
           <button
             className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
             onClick={refresh}
@@ -85,30 +78,6 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
           >
             {loading ? '⟳' : '↻'} Refresh
           </button>
-        </div>
-        <div className="sui-predict__info-text">
-          <h4>Strategy</h4>
-          <p>
-            Back-solves Predict's implied vol from <code>OracleSVI</code>, compares against external
-            BTC prices and realized volatility. Trades the spread when it exceeds threshold.
-          </p>
-          <h4>Signal Logic</h4>
-          <p className="sui-predict__formula">spread = Predict_ATM_IV − External_IV</p>
-          <p className="sui-predict__formula">if |spread| &gt; threshold → trade signal</p>
-          <p className="sui-predict__formula">Kelly fraction f* = edge / σ_predict</p>
-          <h4>Hooks</h4>
-          <ul>
-            <li>Handle stale SVI updates gracefully (flag if lag &gt; 5s)</li>
-            <li>Size by Kelly fraction for optimal bankroll growth</li>
-            <li>Kill switch on feeder lag</li>
-          </ul>
-        </div>
-      </div>
-
-      {/* Config */}
-      <div className="sui-predict__card sui-predict__card--wide">
-        <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">Configuration</h3>
         </div>
         <div
           className="sui-predict__form"
@@ -130,8 +99,8 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: '#22c55e',
-                fontWeight: 600,
+                color: '#80ffd5',
+                fontWeight: 650,
               }}
             >
               ${predictSpot}
@@ -140,32 +109,7 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
         </div>
       </div>
 
-      {/* External prices */}
-      <div className="sui-predict__card sui-predict__card--wide">
-        <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">External BTC Prices</h3>
-        </div>
-        {externalPrices.length === 0 ? (
-          <div className="sui-predict__empty">Fetching external prices…</div>
-        ) : (
-          <div className="sui-predict__stats">
-            {externalPrices.map((p, i) => (
-              <div key={i} className="sui-predict__stat">
-                <span className="sui-predict__stat-label">{p.source}</span>
-                <span className="sui-predict__stat-value">${p.price.toLocaleString()}</span>
-              </div>
-            ))}
-            <div className="sui-predict__stat">
-              <span className="sui-predict__stat-label">Predict Oracle</span>
-              <span className="sui-predict__stat-value sui-predict__stat-value--green">
-                ${predictSpot}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Spread result */}
+      {/* Spread result — main interactive data */}
       {spreadResult && (
         <div className="sui-predict__card sui-predict__card--wide">
           <div className="sui-predict__card-header">
@@ -207,7 +151,6 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
             </div>
           </div>
 
-          {/* Per-source breakdown */}
           {spreadResult.externalVols.length > 0 && (
             <div className="sui-predict__table" style={{ marginTop: '12px' }}>
               <div className="sui-predict__table-header sui-predict__table-header--4col">
@@ -239,6 +182,31 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
           )}
         </div>
       )}
+
+      {/* External prices */}
+      <div className="sui-predict__card sui-predict__card--wide">
+        <div className="sui-predict__card-header">
+          <h3 className="sui-predict__card-title">External BTC Prices</h3>
+        </div>
+        {externalPrices.length === 0 ? (
+          <div className="sui-predict__empty">Fetching external prices…</div>
+        ) : (
+          <div className="sui-predict__stats">
+            {externalPrices.map((p, i) => (
+              <div key={i} className="sui-predict__stat">
+                <span className="sui-predict__stat-label">{p.source}</span>
+                <span className="sui-predict__stat-value">${p.price.toLocaleString()}</span>
+              </div>
+            ))}
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Predict Oracle</span>
+              <span className="sui-predict__stat-value sui-predict__stat-value--green">
+                ${predictSpot}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Oracle health */}
       <div className="sui-predict__card sui-predict__card--wide">
@@ -299,6 +267,25 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
           <div className="sui-predict__empty">No oracle data</div>
         )}
       </div>
+
+      {/* Notes — BOTTOM, collapsible */}
+      <CollapsibleNotes title="Strategy Documentation">
+        <h4>Strategy</h4>
+        <p>
+          Back-solves Predict's implied vol from <code>OracleSVI</code>, compares against external
+          BTC prices and realized volatility. Trades the spread when it exceeds threshold.
+        </p>
+        <h4>Signal Logic</h4>
+        <p className="sui-predict__formula">spread = Predict_ATM_IV − External_IV</p>
+        <p className="sui-predict__formula">if |spread| &gt; threshold → trade signal</p>
+        <p className="sui-predict__formula">Kelly fraction f* = edge / σ_predict</p>
+        <h4>Hooks</h4>
+        <ul>
+          <li>Handle stale SVI updates gracefully (flag if lag &gt; 5s)</li>
+          <li>Size by Kelly fraction for optimal bankroll growth</li>
+          <li>Kill switch on feeder lag</li>
+        </ul>
+      </CollapsibleNotes>
     </div>
   )
 }

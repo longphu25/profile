@@ -6,6 +6,7 @@
 import { useState, useMemo } from 'react'
 import { simulatePLPHedge } from '../strategies'
 import { PRICE_SCALE } from '../types'
+import { CollapsibleNotes } from './shared'
 
 interface Props {
   oracleState: any
@@ -42,44 +43,10 @@ export function PLPHedgeTab({ oracleState, vaultData }: Props) {
 
   return (
     <div className="sui-predict__grid">
-      {/* Description */}
+      {/* Config — TOP */}
       <div className="sui-predict__card sui-predict__card--wide">
         <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">PLP + Hedge Vault</h3>
-        </div>
-        <div className="sui-predict__info-text">
-          <h4>Strategy</h4>
-          <p>
-            Supply DUSDC into <code>predict::supply</code> to earn PLP returns. Simultaneously buy
-            OTM DOWN binaries via <code>predict::mint</code> to cap left-tail drawdown.
-          </p>
-          <p className="sui-predict__formula">Product = PLP yield − crash insurance cost</p>
-          <h4>How it works</h4>
-          <ol>
-            <li>Allocate X% to PLP supply (earn vault yield)</li>
-            <li>Allocate (100−X)% to OTM DOWN binaries (insurance)</li>
-            <li>If BTC crashes below strike → hedges pay out, offsetting PLP loss</li>
-            <li>If BTC stays flat/up → PLP earns yield, hedges expire worthless</li>
-          </ol>
-          <h4>Dynamic Hedge Ratio</h4>
-          <p className="sui-predict__formula">
-            hedge_ratio = base_ratio × (1 + utilization_adjustment)
-          </p>
-          <p>
-            When vault utilization &gt; 50%, increase hedge allocation by 20%. When &gt; 75%,
-            increase by 40%.
-          </p>
-          <h4>Net APY</h4>
-          <p className="sui-predict__formula">
-            Net APY = PLP_APY − (hedge_cost / capital) × (365 / expiry_days)
-          </p>
-        </div>
-      </div>
-
-      {/* Config */}
-      <div className="sui-predict__card sui-predict__card--wide">
-        <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">Configuration</h3>
+          <h3 className="sui-predict__card-title">PLP + Hedge Configuration</h3>
           {spot > 0 && (
             <span className="sui-predict__stat-value--mono">
               Spot: ${spot.toFixed(0)} | Util: {(utilization * 100).toFixed(2)}%
@@ -249,6 +216,35 @@ export function PLPHedgeTab({ oracleState, vaultData }: Props) {
           </div>
         </>
       )}
+
+      {/* Notes — BOTTOM, collapsible */}
+      <CollapsibleNotes title="Strategy Documentation">
+        <h4>Strategy</h4>
+        <p>
+          Supply DUSDC into <code>predict::supply</code> to earn PLP returns. Simultaneously buy OTM
+          DOWN binaries via <code>predict::mint</code> to cap left-tail drawdown.
+        </p>
+        <p className="sui-predict__formula">Product = PLP yield − crash insurance cost</p>
+        <h4>How it works</h4>
+        <ol>
+          <li>Allocate X% to PLP supply (earn vault yield)</li>
+          <li>Allocate (100−X)% to OTM DOWN binaries (insurance)</li>
+          <li>If BTC crashes below strike → hedges pay out, offsetting PLP loss</li>
+          <li>If BTC stays flat/up → PLP earns yield, hedges expire worthless</li>
+        </ol>
+        <h4>Dynamic Hedge Ratio</h4>
+        <p className="sui-predict__formula">
+          hedge_ratio = base_ratio × (1 + utilization_adjustment)
+        </p>
+        <p>
+          When vault utilization &gt; 50%, increase hedge allocation by 20%. When &gt; 75%, increase
+          by 40%.
+        </p>
+        <h4>Net APY</h4>
+        <p className="sui-predict__formula">
+          Net APY = PLP_APY − (hedge_cost / capital) × (365 / expiry_days)
+        </p>
+      </CollapsibleNotes>
     </div>
   )
 }
