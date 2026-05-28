@@ -13,6 +13,7 @@ import { PLPHedgeTab } from './components/PLPHedgeTab'
 import { MarginLoopTab } from './components/MarginLoopTab'
 import { PortfolioTab } from './components/PortfolioTab'
 import { LendingTab } from './components/LendingTab'
+import { SpotTab } from './components/SpotTab'
 import { CollapsibleNotes } from './components/shared'
 import { useTour } from './hooks/useTour'
 import { useEventStream } from './hooks/useEventStream'
@@ -113,6 +114,7 @@ function PredictContent() {
     | 'loop'
     | 'portfolio'
     | 'lending'
+    | 'spot'
   >('market')
   const [oracles, setOracles] = useState<any[]>([])
   const [selectedOracle, setSelectedOracle] = useState<string | null>(null)
@@ -416,9 +418,71 @@ function PredictContent() {
     const expiry = oracleState?.oracle?.expiry
     const svi = oracleState?.latest_svi
     const lastUpdate = oracleState?.latest_price?.onchain_timestamp
+    const oracleLag = lastUpdate ? (Date.now() - lastUpdate) / 1000 : 999
+    const killSwitch = oracleLag > 30
 
     return (
       <div className="sui-predict__grid">
+        {/* Kill Switch Warning */}
+        {killSwitch && (
+          <div
+            className="sui-predict__error"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <span style={{ fontSize: '16px' }}>⚠</span>
+            <span>
+              Oracle feed stale ({oracleLag.toFixed(0)}s). Trading disabled — prices may be
+              outdated.
+            </span>
+          </div>
+        )}
+
+        {/* Oracle Health */}
+        <div className="sui-predict__card sui-predict__card--wide">
+          <div className="sui-predict__card-header">
+            <h3 className="sui-predict__card-title">Oracle Health</h3>
+            <span
+              className={`sui-predict__badge ${oracleLag < 5 ? 'sui-predict__badge--green' : oracleLag < 30 ? 'sui-predict__badge--yellow' : 'sui-predict__badge--red'}`}
+            >
+              {oracleLag < 5 ? 'HEALTHY' : oracleLag < 30 ? 'DELAYED' : 'STALE'}
+            </span>
+          </div>
+          <div className="sui-predict__stats">
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Price Lag</span>
+              <span
+                className={`sui-predict__stat-value ${oracleLag > 5 ? 'sui-predict__stat-value--red' : 'sui-predict__stat-value--green'}`}
+              >
+                {oracleLag.toFixed(1)}s
+              </span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">SVI Age</span>
+              <span
+                className={`sui-predict__stat-value ${svi && (Date.now() - svi.onchain_timestamp) / 1000 > 10 ? 'sui-predict__stat-value--red' : 'sui-predict__stat-value--green'}`}
+              >
+                {svi ? `${((Date.now() - svi.onchain_timestamp) / 1000).toFixed(1)}s` : '—'}
+              </span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Feed</span>
+              <span
+                className={`sui-predict__stat-value ${wsConnected ? 'sui-predict__stat-value--green' : ''}`}
+              >
+                {wsConnected ? 'WebSocket' : 'Polling'}
+              </span>
+            </div>
+            <div className="sui-predict__stat">
+              <span className="sui-predict__stat-label">Kill Switch</span>
+              <span
+                className={`sui-predict__badge ${killSwitch ? 'sui-predict__badge--red' : 'sui-predict__badge--green'}`}
+              >
+                {killSwitch ? 'TRIGGERED' : 'OK'}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* BTC Price Context */}
         <div className="sui-predict__card sui-predict__card--wide">
           <div className="sui-predict__card-header">
@@ -539,6 +603,7 @@ function PredictContent() {
               oracles={oracles}
               selectedOracle={selectedOracle}
               walletAddress={walletAddress!}
+              disabled={killSwitch}
             />
           </>
         )}
@@ -631,6 +696,7 @@ function PredictContent() {
             'arb',
             'vault',
             'lending',
+            'spot',
           ] as const
         ).map((t) => (
           <button
@@ -658,7 +724,9 @@ function PredictContent() {
                               ? '⇄ Arb'
                               : t === 'vault'
                                 ? '◈ Vault'
-                                : '⊕ Lending'}
+                                : t === 'lending'
+                                  ? '⊕ Lending'
+                                  : '⬡ Spot'}
           </button>
         ))}
         <span
@@ -729,6 +797,14 @@ function PredictContent() {
       {tab === 'vault' && renderVault()}
       {tab === 'lending' && (
         <LendingTab
+          walletAddress={walletAddress}
+          isConnected={isConnected}
+          sharedHost={sharedHost}
+          network="testnet"
+        />
+      )}
+      {tab === 'spot' && (
+        <SpotTab
           walletAddress={walletAddress}
           isConnected={isConnected}
           sharedHost={sharedHost}
@@ -1271,11 +1347,13 @@ function TradePanel({
   oracles: _oracles,
   selectedOracle,
   walletAddress,
+  disabled,
 }: {
   oracleState: any
   oracles: any[]
   selectedOracle: string | null
   walletAddress: string
+  disabled?: boolean
 }) {
   const [mode, setMode] = useState<'binary' | 'range'>('binary')
   const [action, setAction] = useState<'mint' | 'redeem'>('mint')
@@ -1575,11 +1653,13 @@ function TradePanel({
           <button
             className="sui-predict__btn sui-predict__btn--full"
             onClick={handleSubmit}
-            disabled={submitting || !amount || !selectedOracle}
+            disabled={submitting || !amount || !selectedOracle || disabled}
           >
-            {submitting
-              ? 'Submitting…'
-              : `${action === 'mint' ? 'Mint' : 'Redeem'} ${mode === 'binary' ? 'Position' : 'Range'}`}
+            {disabled
+              ? '⚠ Oracle Stale — Trading Disabled'
+              : submitting
+                ? 'Submitting…'
+                : `${action === 'mint' ? 'Mint' : 'Redeem'} ${mode === 'binary' ? 'Position' : 'Range'}`}
           </button>
         </div>
 
