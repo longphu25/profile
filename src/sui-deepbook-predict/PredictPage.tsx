@@ -237,12 +237,21 @@ function PredictInner() {
         </div>
       )}
 
-      {/* Content */}
-      <main className="flex-1 overflow-y-auto p-4">
-        <div className="mx-auto max-w-[1440px] grid grid-cols-[1fr_320px] gap-4">
-          {/* Left: Plugins */}
-          <div className="flex flex-col gap-4">
-            {/* Predict plugin (main) */}
+      {/* Content — 3-column trading layout */}
+      <main className="flex-1 overflow-hidden">
+        <div className="h-full mx-auto max-w-[1600px] grid grid-cols-[240px_1fr_320px] gap-0 divide-x divide-[#1e293b]">
+          {/* Left sidebar: Account Info (compact, sticky) */}
+          <aside className="overflow-y-auto p-3">
+            <AccountPanel
+              address={account?.address ?? null}
+              isConnected={connection.isConnected}
+              network={network}
+              onConnect={() => setShowWallets(true)}
+            />
+          </aside>
+
+          {/* Center: Predict plugin (main content, scrollable) */}
+          <section className="overflow-y-auto p-4">
             {(() => {
               const p = PLUGINS.find((x) => x.id === 'predict')!
               return (
@@ -267,27 +276,30 @@ function PredictInner() {
                 </div>
               )
             })()}
-          </div>
+          </section>
 
-          {/* Right: Account Info + Swap */}
-          <div className="flex flex-col gap-3">
-            <AccountPanel
-              address={account?.address ?? null}
-              isConnected={connection.isConnected}
-              network={network}
-              onConnect={() => setShowWallets(true)}
-            />
-
-            {/* Swap plugin */}
+          {/* Right sidebar: Swap plugin */}
+          <aside className="overflow-y-auto p-3">
             {(() => {
               const p = PLUGINS.find((x) => x.id === 'swap')!
               return (
-                <div className="rounded-xl border border-[#1e293b] bg-[#0f172a] p-3">
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide">
-                      DeepBook Swap
-                    </span>
-                    <span className="text-[10px] text-[#475569]">DEEP/SUI, SUI/USDC, ...</span>
+                <div>
+                  <div className="mb-3 flex items-center gap-2 px-1">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="h-4 w-4 text-[#22c55e]"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+                      />
+                    </svg>
+                    <span className="text-xs font-semibold text-[#f8fafc]">Swap</span>
+                    <span className="text-[10px] text-[#475569]">DeepBook v3</span>
                   </div>
                   {errors[p.id] && (
                     <div className="mb-2 rounded border border-red-900 bg-red-950 px-2 py-1 text-[10px] text-red-400">
@@ -302,21 +314,16 @@ function PredictInner() {
                       })()}
                     </ShadowContainer>
                   ) : !errors[p.id] ? (
-                    <div className="text-center text-[#64748b] py-6 text-[10px]">
+                    <div className="text-center text-[#64748b] py-8 text-[10px]">
                       Loading {p.label}…
                     </div>
                   ) : null}
                 </div>
               )
             })()}
-          </div>
+          </aside>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-[#1e293b] px-4 py-2 text-center text-[10px] text-[#475569]">
-        DeepBook Predict — Testnet Integration · Data from predict-server.testnet.mystenlabs.com
-      </footer>
     </div>
   )
 }
