@@ -53,6 +53,13 @@ const PLUGINS: PluginEntry[] = [
     src: pluginPath('sui-deepbook-predict'),
     styleUrl: '/plugins/sui-deepbook-predict/style.css',
   },
+  {
+    id: 'swap',
+    name: 'SuiSwap',
+    label: 'Swap',
+    src: pluginPath('sui-swap'),
+    styleUrl: '/plugins/sui-swap/style.css',
+  },
 ]
 
 // --- Inner page (has access to DAppKit hooks) ---
@@ -228,27 +235,65 @@ function PredictInner() {
       {/* Content */}
       <main className="flex-1 overflow-y-auto p-4">
         <div className="mx-auto max-w-[1440px] grid grid-cols-[1fr_280px] gap-4">
-          {/* Left: Plugin */}
-          <div>
-            {PLUGINS.map((p) => (
-              <div key={p.id}>
-                {errors[p.id] && (
-                  <div className="mb-3 rounded-lg border border-red-900 bg-red-950 px-3 py-2 text-xs text-red-400">
-                    {errors[p.id]}
+          {/* Left: Plugins */}
+          <div className="flex flex-col gap-4">
+            {/* Predict plugin (main) */}
+            {(() => {
+              const p = PLUGINS.find((x) => x.id === 'predict')!
+              return (
+                <div>
+                  {errors[p.id] && (
+                    <div className="mb-3 rounded-lg border border-red-900 bg-red-950 px-3 py-2 text-xs text-red-400">
+                      {errors[p.id]}
+                    </div>
+                  )}
+                  {loaded.has(p.id) ? (
+                    <ShadowContainer styleUrls={[p.styleUrl]}>
+                      {(() => {
+                        const C = suiHostAPI.getComponent(p.name)
+                        return C ? <C /> : null
+                      })()}
+                    </ShadowContainer>
+                  ) : !errors[p.id] ? (
+                    <div className="text-center text-[#64748b] py-12 text-xs">
+                      Loading {p.label}…
+                    </div>
+                  ) : null}
+                </div>
+              )
+            })()}
+
+            {/* Swap plugin (below predict) */}
+            {(() => {
+              const p = PLUGINS.find((x) => x.id === 'swap')!
+              return (
+                <div className="rounded-xl border border-[#1e293b] bg-[#0f172a] p-3">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide">
+                      DeepBook Swap
+                    </span>
+                    <span className="text-[10px] text-[#475569]">DEEP/SUI, SUI/USDC, ...</span>
                   </div>
-                )}
-                {loaded.has(p.id) ? (
-                  <ShadowContainer styleUrls={[p.styleUrl]}>
-                    {(() => {
-                      const C = suiHostAPI.getComponent(p.name)
-                      return C ? <C /> : null
-                    })()}
-                  </ShadowContainer>
-                ) : !errors[p.id] ? (
-                  <div className="text-center text-[#64748b] py-12 text-xs">Loading {p.label}…</div>
-                ) : null}
-              </div>
-            ))}
+                  {errors[p.id] && (
+                    <div className="mb-2 rounded border border-red-900 bg-red-950 px-2 py-1 text-[10px] text-red-400">
+                      {errors[p.id]}
+                    </div>
+                  )}
+                  {loaded.has(p.id) ? (
+                    <ShadowContainer styleUrls={[p.styleUrl]}>
+                      {(() => {
+                        const C = suiHostAPI.getComponent(p.name)
+                        return C ? <C /> : null
+                      })()}
+                    </ShadowContainer>
+                  ) : !errors[p.id] ? (
+                    <div className="text-center text-[#64748b] py-6 text-[10px]">
+                      Loading {p.label}…
+                    </div>
+                  ) : null}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Right: Account Info */}
