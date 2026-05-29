@@ -18,7 +18,7 @@ import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { suiHostAPI, registerActions, updateSuiContext } from '../sui-dashboard/sui-host'
 import { ShadowContainer } from '../plugins/ShadowContainer'
 
-// ── DAppKit ────────────────────────────────────────────────────────────────────
+import { MissionControl } from './MissionControl'
 
 const GRPC_URLS: Record<string, string> = {
   mainnet: 'https://fullnode.mainnet.sui.io:443',
@@ -420,7 +420,18 @@ function DeepBookInner() {
           {/* Plugin workspace */}
           <div className="flex-1 min-w-0">
             {activeGroup === 'home' ? (
-              <MissionControl onSelectPlugin={selectPlugin} />
+              <MissionControl
+                commander={{
+                  isConnected: connection.isConnected,
+                  address: account?.address ?? null,
+                  claimableCount: 0,
+                  oracleHealth: null,
+                  hasOpenPositions: false,
+                  btcSpot: null,
+                }}
+                onSelectPlugin={selectPlugin}
+                onConnect={() => setShowWallets(true)}
+              />
             ) : activePluginDef ? (
               <div
                 className="rounded-2xl overflow-hidden"
@@ -447,81 +458,6 @@ function DeepBookInner() {
           </div>
         </div>
       </main>
-    </div>
-  )
-}
-
-// ── Mission Control (Home) ─────────────────────────────────────────────────────
-
-function MissionControl({ onSelectPlugin }: { onSelectPlugin: (id: string) => void }) {
-  const QUICK_ACTIONS = [
-    {
-      id: 'predict',
-      label: 'Predict Market',
-      desc: 'Trade BTC binary & range options',
-      group: 'predict',
-    },
-    { id: 'swap', label: 'Swap Tokens', desc: 'DeepBook V3 spot swap', group: 'trade' },
-    {
-      id: 'portfolio',
-      label: 'View Portfolio',
-      desc: 'Positions, PnL, settlements',
-      group: 'portfolio',
-    },
-    {
-      id: 'hedging-bot',
-      label: 'Run Hedging Bot',
-      desc: 'Automated delta-neutral strategy',
-      group: 'bots',
-    },
-    {
-      id: 'analysis',
-      label: 'Market Analysis',
-      desc: 'Pool stats, price feeds, depth',
-      group: 'advanced',
-    },
-  ]
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1
-          className="text-2xl font-bold mb-1"
-          style={{ color: 'var(--color-text)', fontFamily: 'var(--font-satoshi)' }}
-        >
-          DeepBook Suite
-        </h1>
-        <p className="text-sm" style={{ color: 'var(--color-muted)' }}>
-          Trade, predict, analyze, and automate on DeepBook V3
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {QUICK_ACTIONS.map((a) => (
-          <button
-            key={a.id}
-            onClick={() => onSelectPlugin(a.id)}
-            className="flex flex-col gap-1 p-4 rounded-xl text-left cursor-pointer transition-all"
-            style={{
-              background: 'rgba(8,24,25,0.82)',
-              border: '1px solid var(--color-line)',
-            }}
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(128,255,213,0.3)'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--color-line)'
-            }}
-          >
-            <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-              {a.label}
-            </span>
-            <span className="text-xs" style={{ color: 'var(--color-muted)' }}>
-              {a.desc}
-            </span>
-          </button>
-        ))}
-      </div>
     </div>
   )
 }
