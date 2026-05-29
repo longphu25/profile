@@ -1,5 +1,214 @@
 /* SUI DeepBook Predict Plugin — TaskForm Design System */
 
+/* ── Action Hub ─────────────────────────────────────────────────────────────── */
+
+.action-hub {
+  background: rgba(8, 24, 25, 0.82);
+  border: 1px solid rgba(190, 255, 234, 0.16);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-hub__strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.action-hub__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.action-hub__stat--network {
+  margin-left: auto;
+}
+
+.action-hub__label {
+  font-size: 10px;
+  color: #9fb9b1;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.action-hub__value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #effff8;
+}
+
+.action-hub__value--price {
+  font-size: 18px;
+  color: #80ffd5;
+  font-variant-numeric: tabular-nums;
+}
+
+.action-hub__value--badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.action-hub__badge--testnet {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(111, 188, 240, 0.15);
+  color: #6fbcf0;
+  border: 1px solid rgba(111, 188, 240, 0.3);
+  font-weight: 600;
+}
+
+.action-hub__rec {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #9fb9b1;
+  padding: 8px 12px;
+  background: rgba(190, 255, 234, 0.04);
+  border-radius: 6px;
+  border-left: 2px solid rgba(128, 255, 213, 0.4);
+}
+
+.action-hub__rec-icon {
+  color: #80ffd5;
+  font-size: 10px;
+}
+
+.action-hub__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action-hub__cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.15s;
+  min-width: 140px;
+}
+
+.action-hub__cta--primary {
+  background: linear-gradient(135deg, #28d8c1, #80ffd5);
+  color: #071011;
+}
+
+.action-hub__cta--primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.action-hub__cta--secondary {
+  background: rgba(190, 255, 234, 0.08);
+  color: #effff8;
+  border: 1px solid rgba(190, 255, 234, 0.16);
+}
+
+.action-hub__cta--secondary:hover {
+  background: rgba(190, 255, 234, 0.14);
+}
+
+.action-hub__cta--accent {
+  background: rgba(255, 196, 107, 0.15);
+  color: #ffc46b;
+  border: 1px solid rgba(255, 196, 107, 0.3);
+}
+
+.action-hub__cta--accent:hover {
+  background: rgba(255, 196, 107, 0.22);
+}
+
+.action-hub__cta--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.action-hub__cta-tag {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* ── Tab groups ─────────────────────────────────────────────────────────────── */
+
+.sui-predict__tab-group {
+  display: flex;
+  gap: 2px;
+  padding: 0 4px;
+  border-right: 1px solid rgba(190, 255, 234, 0.1);
+  margin-right: 4px;
+}
+
+.sui-predict__tab-group:last-child {
+  border-right: none;
+}
+
+.sui-predict__tab-more {
+  background: transparent;
+  border: none;
+  color: #9fb9b1;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.sui-predict__tab-more:hover {
+  color: #effff8;
+  background: rgba(190, 255, 234, 0.06);
+}
+
+.sui-predict__tab-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: rgba(8, 24, 25, 0.96);
+  border: 1px solid rgba(190, 255, 234, 0.16);
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 100;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sui-predict__tab-dropdown button {
+  background: transparent;
+  border: none;
+  color: #9fb9b1;
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.sui-predict__tab-dropdown button:hover,
+.sui-predict__tab-dropdown button.active {
+  background: rgba(190, 255, 234, 0.08);
+  color: #effff8;
+}
+
 .sui-predict {
   font-family: 'Satoshi', 'Avenir Next', Avenir, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #effff8;
