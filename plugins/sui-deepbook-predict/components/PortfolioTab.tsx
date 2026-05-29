@@ -65,6 +65,7 @@ function computeFairValue(
   const sigma = svi.sigma / 1e6
   const F = forward / PRICE_SCALE
   const K = strike / STRIKE_SCALE
+  if (K <= 0 || F <= 0) return 0
   const T = Math.max((expiry - Date.now()) / (365.25 * 24 * 3600 * 1000), 1 / 365)
 
   const k = Math.log(K / F)
@@ -85,9 +86,11 @@ function computeRangeFairValue(
   lower: number,
   higher: number,
 ): number {
+  if (lower <= 0 || higher <= 0 || lower >= higher) return 0
   const pLower = computeFairValue(svi, forward, expiry, lower, 0)
   const pHigher = computeFairValue(svi, forward, expiry, higher, 0)
-  return pLower - pHigher
+  const result = pLower - pHigher
+  return Number.isFinite(result) ? result : 0
 }
 
 export function PortfolioTab({
