@@ -1658,8 +1658,26 @@ function TradePanel({
             <>
               <div className="sui-predict__field">
                 <label className="sui-predict__field-label">
-                  Strike Price (USD) — min $50,000, tick $1
+                  Strike Price — Spot: ${spotPrice}
                 </label>
+                {/* Quick strike buttons relative to spot */}
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                  {[-2000, -1000, -500, 0, 500, 1000, 2000].map((offset) => {
+                    const val = Number(spotPrice) + offset
+                    if (val < 50000) return null
+                    const label = offset === 0 ? 'ATM' : `${offset > 0 ? '+' : ''}$${offset}`
+                    return (
+                      <button
+                        key={offset}
+                        className={`sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm ${strike === String(val) ? 'sui-predict__toggle-btn--active' : ''}`}
+                        onClick={() => setStrike(String(val))}
+                        style={{ fontSize: '10px', padding: '4px 8px' }}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
                 <input
                   className="sui-predict__input"
                   type="number"
@@ -1669,6 +1687,22 @@ function TradePanel({
                   step="1"
                   min="50000"
                 />
+                {strike && spotPrice && (
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      color: '#9fb9b1',
+                      marginTop: '4px',
+                      display: 'block',
+                    }}
+                  >
+                    {Number(strike) > Number(spotPrice)
+                      ? `+$${(Number(strike) - Number(spotPrice)).toLocaleString()} above spot (OTM call)`
+                      : Number(strike) < Number(spotPrice)
+                        ? `-$${(Number(spotPrice) - Number(strike)).toLocaleString()} below spot (OTM put)`
+                        : 'At-the-money'}
+                  </span>
+                )}
               </div>
               <div className="sui-predict__field">
                 <label className="sui-predict__field-label">Direction</label>
@@ -1677,19 +1711,38 @@ function TradePanel({
                     className={`sui-predict__toggle-btn ${isUp ? 'sui-predict__toggle-btn--green' : ''}`}
                     onClick={() => setIsUp(true)}
                   >
-                    ▲ UP
+                    ▲ UP — wins if BTC &gt; ${strike || spotPrice}
                   </button>
                   <button
                     className={`sui-predict__toggle-btn ${!isUp ? 'sui-predict__toggle-btn--red' : ''}`}
                     onClick={() => setIsUp(false)}
                   >
-                    ▼ DOWN
+                    ▼ DOWN — wins if BTC &lt; ${strike || spotPrice}
                   </button>
                 </div>
               </div>
             </>
           ) : (
             <>
+              <div className="sui-predict__field">
+                <label className="sui-predict__field-label">Range around spot (${spotPrice})</label>
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                  {[500, 1000, 2000, 5000].map((width) => (
+                    <button
+                      key={width}
+                      className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
+                      onClick={() => {
+                        const s = Number(spotPrice)
+                        setLowerStrike(String(Math.max(50000, s - width)))
+                        setUpperStrike(String(s + width))
+                      }}
+                      style={{ fontSize: '10px', padding: '4px 8px' }}
+                    >
+                      ±${width.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="sui-predict__field">
                 <label className="sui-predict__field-label">Lower Strike (USD)</label>
                 <input
