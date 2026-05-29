@@ -16,6 +16,7 @@ import { LendingTab } from './components/LendingTab'
 import { SpotTab } from './components/SpotTab'
 import { KeeperTab } from './components/KeeperTab'
 import { CollapsibleNotes } from './components/shared'
+import { ActionHub } from './components/ActionHub'
 import { useTour } from './hooks/useTour'
 import { useEventStream } from './hooks/useEventStream'
 import { setOracleHookHost } from './hooks/useOracleData'
@@ -138,7 +139,7 @@ function PredictContent() {
   const [isConnected, setIsConnected] = useState(false)
   const [managerId, setManagerId] = useState<string | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const { startTour } = useTour()
+  const { startTour: _startTour } = useTour()
 
   // ── Live event stream (replaces 20s polling with real-time) ────────────────
   const { connected: wsConnected, lag: wsLag } = useEventStream({
@@ -756,59 +757,99 @@ function PredictContent() {
     </div>
   )
 
+  // ── Intent routing (Action Hub CTAs) ──────────────────────────────────────
+  const handleIntent = (intent: string) => {
+    if (intent === 'trade') setTab('trade')
+    else if (intent === 'analyze') setTab('surface')
+    else if (intent === 'earn') setTab('vault')
+    else if (intent === 'claim') setTab('portfolio')
+  }
+
+  const handleConnect = () => sharedHost?.requestConnect?.()
+
+  // Oracle health for ActionHub
+  const oracleHealth = (() => {
+    const ts = oracleState?.latest_price?.onchain_timestamp
+    if (!ts) return null
+    const lag = (Date.now() - ts) / 1000
+    if (lag < 10) return 'HEALTHY' as const
+    if (lag < 30) return 'DELAYED' as const
+    return 'STALE' as const
+  })()
+
+  // Primary tabs always visible; advanced tabs in "More" dropdown
+  const PRIMARY_TABS = ['market', 'portfolio', 'trade', 'vault'] as const
+  const ADVANCED_TABS = [
+    { id: 'surface', label: '◊ Surface' },
+    { id: 'risk', label: '⬡ Risk' },
+    { id: 'strategy', label: '⬢ Strategy' },
+    { id: 'plphedge', label: '⛨ PLP+Hedge' },
+    { id: 'loop', label: '∞ Loop' },
+    { id: 'arb', label: '⇄ Arb' },
+    { id: 'lending', label: '⊕ Lending' },
+    { id: 'spot', label: '⬡ Spot' },
+    { id: 'keeper', label: '⚙ Keeper' },
+  ] as const
+  const PRIMARY_LABELS: Record<string, string> = {
+    market: '◉ Market',
+    portfolio: '◫ Portfolio',
+    trade: '◇ Trade',
+    vault: '◈ Vault',
+  }
+  const [showMore, setShowMore] = useState(false)
+  const isAdvanced = ADVANCED_TABS.some((t) => t.id === tab)
+
   // ── Main render ────────────────────────────────────────────────────────────
   return (
     <div className="sui-predict">
+      <ActionHub
+        spot={oracleState?.latest_price?.spot ?? null}
+        forward={oracleState?.latest_price?.forward ?? null}
+        oracleExpiry={oracles.find((o) => o.oracle_id === selectedOracle)?.expiry ?? null}
+        oracleHealth={oracleHealth}
+        isConnected={isConnected}
+        dusdcBalance={null}
+        claimableCount={0}
+        onIntent={handleIntent}
+        onConnect={handleConnect}
+      />
       <div className="sui-predict__tabs">
-        {(
-          [
-            'market',
-            'portfolio',
-            'trade',
-            'surface',
-            'risk',
-            'strategy',
-            'plphedge',
-            'loop',
-            'arb',
-            'vault',
-            'lending',
-            'spot',
-            'keeper',
-          ] as const
-        ).map((t) => (
+        {PRIMARY_TABS.map((t) => (
           <button
             key={t}
             className={`sui-predict__tab ${tab === t ? 'sui-predict__tab--active' : ''}`}
-            onClick={() => setTab(t)}
+            onClick={() => {
+              setTab(t)
+              setShowMore(false)
+            }}
           >
-            {t === 'market'
-              ? '◉ Market'
-              : t === 'portfolio'
-                ? '◫ Portfolio'
-                : t === 'trade'
-                  ? '◇ Trade'
-                  : t === 'surface'
-                    ? '◊ Surface'
-                    : t === 'risk'
-                      ? '⬡ Risk'
-                      : t === 'strategy'
-                        ? '⬢ Strategy'
-                        : t === 'plphedge'
-                          ? '⛨ PLP+Hedge'
-                          : t === 'loop'
-                            ? '∞ Loop'
-                            : t === 'arb'
-                              ? '⇄ Arb'
-                              : t === 'vault'
-                                ? '◈ Vault'
-                                : t === 'lending'
-                                  ? '⊕ Lending'
-                                  : t === 'spot'
-                                    ? '⬡ Spot'
-                                    : '⚙ Keeper'}
+            {PRIMARY_LABELS[t]}
           </button>
         ))}
+        <div style={{ position: 'relative' }}>
+          <button
+            className={`sui-predict__tab-more ${isAdvanced ? 'sui-predict__tab--active' : ''}`}
+            onClick={() => setShowMore((v) => !v)}
+          >
+            {isAdvanced ? ADVANCED_TABS.find((t) => t.id === tab)?.label : 'More ▾'}
+          </button>
+          {showMore && (
+            <div className="sui-predict__tab-dropdown">
+              {ADVANCED_TABS.map((t) => (
+                <button
+                  key={t.id}
+                  className={tab === t.id ? 'active' : ''}
+                  onClick={() => {
+                    setTab(t.id as any)
+                    setShowMore(false)
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <span
           className={`sui-predict__badge ${wsConnected ? 'sui-predict__badge--green' : 'sui-predict__badge--yellow'}`}
           style={{ marginLeft: 'auto', fontSize: '9px' }}
@@ -822,25 +863,6 @@ function PredictContent() {
           disabled={loading}
         >
           {loading ? '⟳' : '↻'}
-        </button>
-        <button
-          className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm sui-predict__btn--guide"
-          onClick={() => {
-            const tourMap: Record<string, Parameters<typeof startTour>[0]> = {
-              market: 'overview',
-              surface: 'surface',
-              risk: 'overview',
-              strategy: 'overview',
-              plphedge: 'plpHedge',
-              loop: 'marginLoop',
-              arb: 'overview',
-              trade: 'trade',
-              vault: 'overview',
-            }
-            startTour(tourMap[tab] || 'overview')
-          }}
-        >
-          ? Guide
         </button>
       </div>
       {error && <div className="sui-predict__error">{error}</div>}
