@@ -17,6 +17,7 @@ import { SpotTab } from './components/SpotTab'
 import { KeeperTab } from './components/KeeperTab'
 import { CollapsibleNotes } from './components/shared'
 import { ActionHub } from './components/ActionHub'
+import { GuidedTrade } from './components/GuidedTrade'
 import { useTour } from './hooks/useTour'
 import { useEventStream } from './hooks/useEventStream'
 import { setOracleHookHost } from './hooks/useOracleData'
@@ -758,8 +759,10 @@ function PredictContent() {
   )
 
   // ── Intent routing (Action Hub CTAs) ──────────────────────────────────────
+  const [showGuidedTrade, setShowGuidedTrade] = useState(false)
+
   const handleIntent = (intent: string) => {
-    if (intent === 'trade') setTab('trade')
+    if (intent === 'trade') setShowGuidedTrade(true)
     else if (intent === 'analyze') setTab('surface')
     else if (intent === 'earn') setTab('vault')
     else if (intent === 'claim') setTab('portfolio')
@@ -866,8 +869,19 @@ function PredictContent() {
         </button>
       </div>
       {error && <div className="sui-predict__error">{error}</div>}
-      {tab === 'market' && renderMarket()}
-      {tab === 'portfolio' && (
+      {showGuidedTrade && (
+        <GuidedTrade
+          sharedHost={sharedHost}
+          walletAddress={walletAddress}
+          isConnected={isConnected}
+          onClose={() => {
+            setShowGuidedTrade(false)
+            setTab('portfolio')
+          }}
+        />
+      )}
+      {!showGuidedTrade && tab === 'market' && renderMarket()}
+      {!showGuidedTrade && tab === 'portfolio' && (
         <PortfolioTab
           oracleState={oracleState}
           oracles={oracles}
@@ -877,16 +891,20 @@ function PredictContent() {
           managerId={managerId}
         />
       )}
-      {tab === 'surface' && <SurfaceStudio oracleId={selectedOracle} oracles={oracles} />}
-      {tab === 'risk' && <PLPRiskDashboard />}
-      {tab === 'strategy' && (
+      {!showGuidedTrade && tab === 'surface' && (
+        <SurfaceStudio oracleId={selectedOracle} oracles={oracles} />
+      )}
+      {!showGuidedTrade && tab === 'risk' && <PLPRiskDashboard />}
+      {!showGuidedTrade && tab === 'strategy' && (
         <StrategyTab oracleState={oracleState} oracles={oracles} selectedOracle={selectedOracle} />
       )}
-      {tab === 'arb' && (
+      {!showGuidedTrade && tab === 'arb' && (
         <ArbTab oracleState={oracleState} oracles={oracles} selectedOracle={selectedOracle} />
       )}
-      {tab === 'plphedge' && <PLPHedgeTab oracleState={oracleState} vaultData={vaultData} />}
-      {tab === 'loop' && (
+      {!showGuidedTrade && tab === 'plphedge' && (
+        <PLPHedgeTab oracleState={oracleState} vaultData={vaultData} />
+      )}
+      {!showGuidedTrade && tab === 'loop' && (
         <MarginLoopTab
           oracleState={oracleState}
           sharedHost={sharedHost}
@@ -895,9 +913,9 @@ function PredictContent() {
           selectedOracle={selectedOracle}
         />
       )}
-      {tab === 'trade' && renderTrade()}
-      {tab === 'vault' && renderVault()}
-      {tab === 'lending' && (
+      {!showGuidedTrade && tab === 'trade' && renderTrade()}
+      {!showGuidedTrade && tab === 'vault' && renderVault()}
+      {!showGuidedTrade && tab === 'lending' && (
         <LendingTab
           walletAddress={walletAddress}
           isConnected={isConnected}
@@ -905,7 +923,7 @@ function PredictContent() {
           network="testnet"
         />
       )}
-      {tab === 'spot' && (
+      {!showGuidedTrade && tab === 'spot' && (
         <SpotTab
           walletAddress={walletAddress}
           isConnected={isConnected}
@@ -913,7 +931,7 @@ function PredictContent() {
           network="testnet"
         />
       )}
-      {tab === 'keeper' && (
+      {!showGuidedTrade && tab === 'keeper' && (
         <KeeperTab
           oracles={oracles}
           walletAddress={walletAddress}
