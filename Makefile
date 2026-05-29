@@ -4,8 +4,15 @@
 dev: ## Start dev server
 	bun run dev
 
-build: ## Type-check then production build
+build: ## Type-check then production build (includes WASM)
 	bun run build
+
+wasm: ## Build all Rust WASM crates
+	@for dir in plugins/*/wasm; do \
+		[ -f "$$dir/Cargo.toml" ] || continue; \
+		echo "[wasm] Building $$(basename $$(dirname $$dir))..."; \
+		(cd "$$dir" && wasm-pack build --target web --release --out-dir ../pkg); \
+	done
 
 preview: ## Preview production build
 	bun run preview
