@@ -336,10 +336,18 @@ function PredictContent() {
       </div>
       <div className="sui-predict__card sui-predict__card--wide">
         <div className="sui-predict__card-header">
-          <h3 className="sui-predict__card-title">Oracles ({oracles.length})</h3>
+          <h3 className="sui-predict__card-title">
+            Oracles ({oracles.filter((o) => o.status === 'active').length} active)
+          </h3>
+          <button
+            className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
+            onClick={() => setShowAllOracles((v) => !v)}
+          >
+            {showAllOracles ? 'Active only' : `Show all (${oracles.length})`}
+          </button>
         </div>
         <div className="sui-predict__oracle-list">
-          {oracles.map((o) => (
+          {(showAllOracles ? oracles : oracles.filter((o) => o.status === 'active')).map((o) => (
             <div
               key={o.oracle_id}
               className={`sui-predict__oracle-row ${selectedOracle === o.oracle_id ? 'sui-predict__oracle-row--active' : ''}`}
@@ -800,6 +808,7 @@ function PredictContent() {
     vault: '◈ Vault',
   }
   const [showMore, setShowMore] = useState(false)
+  const [showAllOracles, setShowAllOracles] = useState(false)
   const isAdvanced = ADVANCED_TABS.some((t) => t.id === tab)
 
   // ── Main render ────────────────────────────────────────────────────────────
