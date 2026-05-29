@@ -18,6 +18,14 @@ import { KeeperTab } from './components/KeeperTab'
 import { CollapsibleNotes } from './components/shared'
 import { useTour } from './hooks/useTour'
 import { useEventStream } from './hooks/useEventStream'
+import { setOracleHookHost } from './hooks/useOracleData'
+import {
+  initOracleService,
+  destroyOracleService,
+  updatePrice,
+  updateSVI,
+  markSettled,
+} from './oracleService'
 import './style.css'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -136,6 +144,7 @@ function PredictContent() {
   const { connected: wsConnected, lag: wsLag } = useEventStream({
     network: 'testnet',
     onPriceUpdate: (oracleId, spot, forward) => {
+      updatePrice(oracleId, spot, forward)
       if (oracleId === selectedOracle) {
         setOracleState((prev: any) =>
           prev
@@ -154,6 +163,7 @@ function PredictContent() {
       }
     },
     onSVIUpdate: (oracleId, svi) => {
+      updateSVI(oracleId, svi)
       if (oracleId === selectedOracle) {
         setOracleState((prev: any) =>
           prev
@@ -166,6 +176,7 @@ function PredictContent() {
       }
     },
     onSettled: (oracleId) => {
+      markSettled(oracleId)
       setOracles((prev) =>
         prev.map((o) => (o.oracle_id === oracleId ? { ...o, status: 'settled' } : o)),
       )
@@ -2111,7 +2122,11 @@ const SuiDeepBookPredictPlugin: Plugin = {
   styleUrls: ['/plugins/sui-deepbook-predict/style.css'],
 
   init(host: HostAPI) {
-    if (isSuiHostAPI(host)) sharedHost = host
+    if (isSuiHostAPI(host)) {
+      sharedHost = host
+      initOracleService(host)
+      setOracleHookHost(host)
+    }
     host.registerComponent('SuiDeepBookPredict', PredictContent)
     host.log('SuiDeepBookPredict initialized')
   },
@@ -2120,6 +2135,7 @@ const SuiDeepBookPredictPlugin: Plugin = {
     console.log('[SuiDeepBookPredict] mounted')
   },
   unmount() {
+    destroyOracleService()
     sharedHost = null
     console.log('[SuiDeepBookPredict] unmounted')
   },
