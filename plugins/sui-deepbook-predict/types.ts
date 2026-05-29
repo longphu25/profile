@@ -9,7 +9,24 @@ export const PRICE_SCALE = 1e9
 export const STRIKE_SCALE = 1e9
 export const DUSDC_DECIMALS = 6
 
-export type TabId = 'market' | 'surface' | 'risk' | 'trade' | 'vault' | 'strategy' | 'arb'
+export type TabId =
+  | 'market'
+  | 'surface'
+  | 'risk'
+  | 'trade'
+  | 'vault'
+  | 'strategy'
+  | 'arb'
+  | 'plphedge'
+  | 'loop'
+  | 'portfolio'
+  | 'lending'
+  | 'spot'
+  | 'keeper'
+
+export type UserIntent = 'trade' | 'analyze' | 'earn' | 'claim'
+export type GuidedTradeStep = 'market' | 'prediction' | 'amount' | 'preview' | 'submit'
+export type FeatureStatus = 'live' | 'simulated' | 'experimental' | 'requires-wallet'
 
 export interface OracleEntry {
   oracle_id: string
