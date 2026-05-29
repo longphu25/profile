@@ -601,10 +601,10 @@ export function PortfolioTab({
                   <div className="sui-predict__table">
                     <div className="sui-predict__table-header sui-predict__table-header--6col">
                       <span>Type</span>
+                      <span>Oracle</span>
                       <span>Strike</span>
                       <span>Qty</span>
-                      <span>Entry</span>
-                      <span>Mark</span>
+                      <span>Entry/Mark</span>
                       <span>uPnL</span>
                     </div>
                     {mgrPositions.map((p: any, i: number) => {
@@ -625,10 +625,32 @@ export function PortfolioTab({
                           className="sui-predict__table-row sui-predict__table-row--6col"
                         >
                           <span>Binary</span>
+                          <span>
+                            <button
+                              onClick={() => copyAddr(p.oracle_id)}
+                              style={{
+                                fontSize: '9px',
+                                fontFamily: 'var(--font-ui-mono)',
+                                color:
+                                  copied === p.oracle_id
+                                    ? 'var(--color-mint)'
+                                    : 'var(--color-muted)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: 0,
+                              }}
+                              title={p.oracle_id}
+                            >
+                              {p.oracle_id?.slice(0, 6)}…{p.oracle_id?.slice(-4)}{' '}
+                              {copied === p.oracle_id ? '✓' : '⧉'}
+                            </button>
+                          </span>
                           <span>{strikeLabel}</span>
                           <span>${qty.toFixed(0)}</span>
-                          <span>{entry}</span>
-                          <span>{mark}</span>
+                          <span>
+                            {entry}/{mark}
+                          </span>
                           <span
                             className={
                               upnl >= 0 ? 'sui-predict__text--green' : 'sui-predict__text--red'
@@ -648,9 +670,29 @@ export function PortfolioTab({
                           className="sui-predict__table-row sui-predict__table-row--6col"
                         >
                           <span>Range</span>
+                          <span>
+                            <button
+                              onClick={() => copyAddr(r.oracle_id)}
+                              style={{
+                                fontSize: '9px',
+                                fontFamily: 'var(--font-ui-mono)',
+                                color:
+                                  copied === r.oracle_id
+                                    ? 'var(--color-mint)'
+                                    : 'var(--color-muted)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: 0,
+                              }}
+                              title={r.oracle_id}
+                            >
+                              {r.oracle_id?.slice(0, 6)}…{r.oracle_id?.slice(-4)}{' '}
+                              {copied === r.oracle_id ? '✓' : '⧉'}
+                            </button>
+                          </span>
                           <span>{strikeLabel}</span>
                           <span>${qty.toFixed(0)}</span>
-                          <span>—</span>
                           <span>—</span>
                           <span>—</span>
                         </div>
