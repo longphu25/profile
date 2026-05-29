@@ -485,6 +485,65 @@ function PredictContent() {
           </div>
         </div>
 
+        {/* Active Oracles — selectable for trading */}
+        <div className="sui-predict__card sui-predict__card--wide">
+          <div className="sui-predict__card-header">
+            <h3 className="sui-predict__card-title">Active Oracles</h3>
+            <span className="sui-predict__stat-value--mono" style={{ fontSize: '10px' }}>
+              Now: {Date.now()}
+            </span>
+          </div>
+          <div className="sui-predict__oracle-list" style={{ maxHeight: '160px' }}>
+            {oracles.filter((o) => o.status === 'active' && o.expiry > Date.now()).length === 0 ? (
+              <div className="sui-predict__empty">No active oracles</div>
+            ) : (
+              oracles
+                .filter((o) => o.status === 'active' && o.expiry > Date.now())
+                .sort((a, b) => a.expiry - b.expiry)
+                .map((o) => {
+                  const minsLeft = Math.floor((o.expiry - Date.now()) / 60000)
+                  const timeStr =
+                    minsLeft < 60
+                      ? `${minsLeft}m`
+                      : `${Math.floor(minsLeft / 60)}h ${minsLeft % 60}m`
+                  return (
+                    <div
+                      key={o.oracle_id}
+                      className={`sui-predict__oracle-row ${selectedOracle === o.oracle_id ? 'sui-predict__oracle-row--active' : ''}`}
+                      onClick={() => setSelectedOracle(o.oracle_id)}
+                    >
+                      <div className="sui-predict__oracle-info">
+                        <span className="sui-predict__oracle-name">{o.underlying_asset}</span>
+                        <span
+                          className="sui-predict__oracle-expiry"
+                          style={{ fontFamily: 'var(--font-ui-mono)', fontSize: '10px' }}
+                        >
+                          {o.oracle_id.slice(0, 10)}…{o.oracle_id.slice(-6)}
+                        </span>
+                      </div>
+                      <div className="sui-predict__oracle-meta">
+                        <span className="sui-predict__oracle-strike">
+                          exp{' '}
+                          {new Date(o.expiry).toLocaleString([], {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                        <span
+                          className={`sui-predict__badge ${minsLeft < 30 ? 'sui-predict__badge--red' : 'sui-predict__badge--green'}`}
+                        >
+                          {timeStr}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })
+            )}
+          </div>
+        </div>
+
         {/* BTC Price Context */}
         <div className="sui-predict__card sui-predict__card--wide">
           <div className="sui-predict__card-header">
