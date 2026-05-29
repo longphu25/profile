@@ -144,3 +144,49 @@ P(range) = N(d₂(lower)) − N(d₂(higher))
 - [ ] Allow redeeming settled positions for ANY manager (not just own)
 - [ ] Input field for manager_id → scan settled positions → batch redeem
 - [ ] Useful as a "keeper" service for the protocol
+
+---
+
+## WASM Optimization (Future — CPU-bound features)
+
+Current plugin is I/O bound (network + wallet). WASM only helps when adding CPU-intensive features:
+
+### WASM-1: Monte Carlo Pricing Engine
+- [ ] 10,000+ path simulation for option pricing
+- [ ] Variance reduction (antithetic, control variate)
+- [ ] Real-time Greeks (delta, gamma, vega, theta)
+- [ ] Rust implementation → wasm-pack → import as module
+
+### WASM-2: Vol Surface Fitting (Least-Squares)
+- [ ] Fit SVI params from market prices (inverse problem)
+- [ ] Levenberg-Marquardt optimizer in Rust
+- [ ] Real-time recalibration on each price tick
+
+### WASM-3: Backtesting Engine
+- [ ] Replay historical oracle data (prices + SVI)
+- [ ] Simulate strategy PnL over past expiries
+- [ ] Sharpe ratio, max drawdown, win rate calculations
+- [ ] Process 1000s of data points per frame
+
+### WASM-4: BCS Bulk Serialization
+- [ ] Batch serialize/deserialize PTB inputs
+- [ ] Useful when building 100+ commands in one PTB
+- [ ] Rust `bcs` crate → WASM for browser
+
+### WASM-5: Orderbook Matching Simulation
+- [ ] Simulate market impact for large orders
+- [ ] Full orderbook reconstruction from events
+- [ ] L3 data processing (individual order events)
+
+### Implementation Plan
+```
+1. Write Rust lib with #[wasm_bindgen] exports
+2. Compile: wasm-pack build --target web
+3. Load in plugin: const wasm = await import('./pkg/predict_engine.js')
+4. Use Web Workers for heavy computation (non-blocking UI)
+```
+
+### When to trigger WASM migration
+- Single computation takes > 16ms (blocks UI frame)
+- User-facing latency from CPU work > 100ms
+- Feature requires iterative algorithms (optimization, simulation)
