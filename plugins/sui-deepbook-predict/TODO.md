@@ -1,27 +1,72 @@
 # DeepBook Predict Plugin — TODO
 
-## Priority: Trader Flow Completion
+## Completed ✅
 
-### P1: Portfolio & PnL Tracking
-- [ ] Fetch open positions via `GET /managers/:id/positions/summary`
-- [ ] Display positions table: type (binary/range), strike, expiry, quantity, cost basis
-- [ ] Fetch PnL history via `GET /managers/:id/pnl?range=ALL`
-- [ ] Show unrealized PnL per position (current spot vs strike)
-- [ ] Add "Portfolio" tab to main plugin navigation
+### P1: Portfolio & PnL Tracking ✅
+- [x] Fetch open positions via `GET /managers/:id/positions/summary`
+- [x] Display positions table with entry price, mark price, unrealized PnL
+- [x] Fetch PnL history via `GET /managers/:id/pnl?range=ALL`
+- [x] Account summary (trading_balance, account_value, realized/unrealized PnL)
+- [x] Range tracking via `/ranges/minted` - `/ranges/redeemed` events
 
-### P2: Claim Settled Positions
-- [ ] Detect settled oracles (status = "settled") with user positions
-- [ ] Show claimable positions with settlement price + payout amount
-- [ ] One-click "Claim" button → `predict::redeem` or `redeem_permissionless`
-- [ ] Batch claim: PTB with multiple redeems in one atomic TX
-- [ ] Auto-refresh portfolio after claim
+### P2: Claim Settled Positions ✅
+- [x] Detect settled oracles with user positions
+- [x] Show claimable positions with "Claim" button
+- [x] Batch claim: all redeems in one PTB
+- [x] Auto-refresh portfolio + balances after claim
 
-### P3: Fair Value Preview (Mint Cost Estimator)
-- [ ] Port Black-Scholes binary call formula from SVI params
-  - `d₂ = −k / √w − √w / 2` then `P = N(d₂)`
-- [ ] Show estimated fair value before mint (binary + range)
-- [ ] Display spread indicator: fair value vs expected on-chain cost
-- [ ] Warn when utilization-adjusted price is significantly above fair value
+### P3: Fair Value Preview ✅
+- [x] Black-Scholes binary call formula from SVI params
+- [x] Show estimated fair value in Portfolio tab
+- [x] Fair Value Calculator in Portfolio (input strike → see probability)
+- [x] PnL estimate in Trade tab (Win Prob, Est. Cost, If Win, If Lose)
+
+### B3: Lending / MarginPool Supply ✅
+- [x] Pool overview with APY, utilization, total supplied
+- [x] Supply via `mintSupplierCap` + `supplyToMarginPool` SDK
+- [x] Withdraw with percentage buttons
+
+### B4: Live Event Streaming ✅
+- [x] WebSocket subscription to `OraclePricesUpdated`, `OracleSVIUpdated`, `OracleSettled`
+- [x] Auto-reconnect, fallback to 60s polling
+- [x] Live feed indicator (● LIVE / ○ POLL)
+
+### B5: DeepBook Spot Trading ✅
+- [x] Market orders via `swapExactQuoteForBase` / `swapExactBaseForQuote`
+- [x] Live orderbook display (bids/asks, spread)
+- [x] Pool selector from DeepBook indexer
+
+### B7: Oracle Health Monitor ✅
+- [x] Price lag, SVI age, feed type display
+- [x] Kill switch: disable trading when lag > 30s
+- [x] Badge: HEALTHY / DELAYED / STALE
+
+### W3: Permissionless Redeem (Keeper) ✅
+- [x] Scan all managers for settled positions
+- [x] Batch `redeem_permissionless` in one PTB
+- [x] StepTree progress visualization
+
+### Architecture: Oracle Data Service ✅
+- [x] `oracleService.ts` — singleton data layer, publishes via `suiHostAPI.setSharedData('oracleData')`
+- [x] `useOracleData` hook — any plugin/component can consume without prop drilling
+- [x] WebSocket events route through service → all consumers auto-update
+
+### UX Improvements ✅
+- [x] Quick-select strike buttons (ATM, ±$500, ±$1000, ±$2000)
+- [x] Contextual labels ("OTM call", "At-the-money")
+- [x] Direction buttons show win condition
+- [x] Range quick-select (±$500, ±$1000, ±$2000, ±$5000)
+- [x] Vault balance display + 5%/10%/50%/Max buttons
+- [x] Active oracles list with local timezone + time remaining
+- [x] Balance auto-refresh after TX via `txRefresh` shared data
+- [x] Trailing zeros stripped from balance display
+
+### Bug Fixes ✅
+- [x] BUG-1: `market_key::new` → `market_key::up` / `market_key::down`
+- [x] BUG-2: Portfolio API flat array (not `{binaries[], ranges[]}`)
+- [x] PTB: single atomic TX for deposit+mint (was 2 separate TXs)
+- [x] `predict::supply` / `withdraw` return coins → must `transferObjects`
+- [x] `tx.object('0x6')` → `tx.object.clock()`
 
 ---
 
@@ -38,34 +83,20 @@
 - [ ] List positions near liquidation (risk ratio < 1.2)
 - [ ] "Liquidate" button → earn 2-5% reward
 
-### B3: Lending / MarginPool Supply
-- [ ] Supply USDC/SUI to MarginPool → earn interest
-- [ ] Show APY, utilization rate, supply cap
-- [ ] Withdraw + accrued interest
-
-### B4: Live Event Streaming
-- [ ] Subscribe to `OraclePricesUpdated`, `OracleSVIUpdated` events
-- [ ] Replace 20s polling with real-time feed
-- [ ] Latency indicator in UI
-
-### B5: DeepBook Spot Trading
-- [ ] Place limit/market orders on DeepBook CLOB
-- [ ] Compose: swap → deposit → mint range in 1 PTB
-
 ### B6: Three-Protocol Loop (Real, Mainnet)
 - [ ] `iron_bank::deposit` → `deepbook_margin::borrow` → `predict::mint_range`
 - [ ] Full atomic PTB when mainnet launches
-
-### B7: Oracle Health Monitor
-- [ ] Real-time lag display (on-chain timestamp vs now)
-- [ ] Alert when SVI stale > 5s
-- [ ] Auto-pause trading when feed lag > 30s
 
 ### B8: Pyth Price Feed Integration
 - [ ] Add Pyth BTC/USD feed comparison in Arb tab (feed ID: `0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43`)
 - [ ] Show Predict oracle vs Pyth deviation → detect stale oracle
 - [ ] Use `SuiPythClient` from `@mysten/deepbook-v3` for on-chain price updates
 - [ ] Multi-asset feeds (ETH, SOL) for future oracle expansion
+
+### B9: Plugin Code Splitting
+- [ ] Extract inline `SurfaceStudio`, `PLPRiskDashboard`, `TradePanel`, `VaultPanel` to files
+- [ ] Migrate all tabs to use `useOracleData` hook (remove prop drilling)
+- [ ] Consider splitting into sub-plugins: core (trade/portfolio/vault), analytics (surface/risk/strategy), defi (spot/lending/keeper)
 
 ---
 
@@ -110,40 +141,6 @@ P(UP) = N(d₂)
 P(DOWN) = 1 − N(d₂)
 P(range) = N(d₂(lower)) − N(d₂(higher))
 ```
-
----
-
-## Bugs to Fix (from predict-workshop comparison)
-
-### BUG-1: market_key construction uses wrong function ⚠️
-**Current:** `market_key::new(oracle_id, expiry, strike, direction_u8)`
-**Correct:** `market_key::up(oracle_id, expiry, strike)` or `market_key::down(oracle_id, expiry, strike)`
-**Impact:** All binary mint/redeem transactions may fail
-**Files:** plugin.tsx (TradePanel), PortfolioTab.tsx (claim)
-
-### BUG-2: Portfolio API response shape
-**Current:** Assumes `positions.binaries[]` and `positions.ranges[]`
-**Correct:** `/managers/:id/positions/summary` returns flat array with `is_up`, `open_quantity`, `average_entry_price`, `mark_price`, `unrealized_pnl`
-**Files:** PortfolioTab.tsx
-
----
-
-## Workshop-Inspired Improvements
-
-### W1: Enhanced Portfolio Summary
-- [ ] Use `/managers/:id/summary` for headline numbers (trading_balance, account_value, realized/unrealized PnL)
-- [ ] Show `awaiting_settlement_positions` count prominently
-- [ ] Display `average_entry_price` and `mark_price` per position
-
-### W2: Range Position Tracking via Events
-- [ ] Fetch `/ranges/minted?manager_id=X` and `/ranges/redeemed?manager_id=X`
-- [ ] Compute net open ranges (minted - redeemed) client-side
-- [ ] Show range positions alongside binary positions
-
-### W3: Permissionless Redeem for Others
-- [ ] Allow redeeming settled positions for ANY manager (not just own)
-- [ ] Input field for manager_id → scan settled positions → batch redeem
-- [ ] Useful as a "keeper" service for the protocol
 
 ---
 
