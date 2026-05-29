@@ -1775,6 +1775,72 @@ function TradePanel({
               onChange={(e) => setAmount(e.target.value)}
             />
           </div>
+          {/* PnL Estimate */}
+          {amount &&
+            Number(amount) > 0 &&
+            oracleState?.latest_svi &&
+            oracleState?.latest_price?.forward &&
+            strike &&
+            mode === 'binary' &&
+            (() => {
+              const sviData = oracleState.latest_svi
+              const a = sviData.a / 1e6,
+                b = sviData.b / 1e6
+              const rho = ((sviData.rho_negative ? -1 : 1) * sviData.rho) / 1e9
+              const m_val = ((sviData.m_negative ? -1 : 1) * sviData.m) / 1e6
+              const sigma = sviData.sigma / 1e6
+              const F = oracleState.latest_price.forward / PRICE_SCALE
+              const K = Number(strike)
+              const T = Math.max(
+                (oracleState.oracle?.expiry - Date.now()) / (365.25 * 24 * 3600 * 1000),
+                1 / 365,
+              )
+              const k = Math.log(K / F)
+              const diff = k - m_val
+              const w = a + b * (rho * diff + Math.sqrt(diff * diff + sigma * sigma))
+              if (w <= 0) return null
+              const sqrtW = Math.sqrt(w / T)
+              const d2 = -k / sqrtW - sqrtW / 2
+              // Normal CDF approximation
+              const x = Math.abs(d2) / Math.SQRT2
+              const t = 1.0 / (1.0 + 0.3275911 * x)
+              const y =
+                1.0 -
+                ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t +
+                  0.254829592) *
+                  t *
+                  Math.exp(-x * x)
+              const pUp = 0.5 * (1.0 + (d2 < 0 ? -1 : 1) * y)
+              const fairValue = isUp ? pUp : 1 - pUp
+              const qty = Number(amount)
+              const estCost = fairValue * qty
+              const maxWin = qty - estCost
+              const maxLoss = estCost
+              return (
+                <div className="sui-predict__stats" style={{ marginTop: '8px' }}>
+                  <div className="sui-predict__stat">
+                    <span className="sui-predict__stat-label">Win Prob</span>
+                    <span className="sui-predict__stat-value">{(fairValue * 100).toFixed(1)}%</span>
+                  </div>
+                  <div className="sui-predict__stat">
+                    <span className="sui-predict__stat-label">Est. Cost</span>
+                    <span className="sui-predict__stat-value">${estCost.toFixed(2)}</span>
+                  </div>
+                  <div className="sui-predict__stat">
+                    <span className="sui-predict__stat-label">If Win</span>
+                    <span className="sui-predict__stat-value sui-predict__stat-value--green">
+                      +${maxWin.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="sui-predict__stat">
+                    <span className="sui-predict__stat-label">If Lose</span>
+                    <span className="sui-predict__stat-value sui-predict__stat-value--red">
+                      -${maxLoss.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )
+            })()}
           <button
             className="sui-predict__btn sui-predict__btn--full"
             onClick={handleSubmit}
