@@ -549,13 +549,27 @@ export function PortfolioTab({
       <div className="sui-predict__card sui-predict__card--wide">
         <div className="sui-predict__card-header">
           <h3 className="sui-predict__card-title">Open Positions</h3>
-          <button
-            className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
-            onClick={fetchPortfolio}
-            disabled={loading}
-          >
-            {loading ? '⟳' : '↻'}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {spot > 0 && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--color-mint)',
+                  fontWeight: 600,
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                BTC ${(spot / PRICE_SCALE).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              </span>
+            )}
+            <button
+              className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
+              onClick={fetchPortfolio}
+              disabled={loading}
+            >
+              {loading ? '⟳' : '↻'}
+            </button>
+          </div>
         </div>
         {!positions || (positions.length === 0 && ranges.length === 0) ? (
           <div className="sui-predict__empty">No open positions</div>
