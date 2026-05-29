@@ -170,13 +170,13 @@ export function PortfolioTab({
     // Compute net open ranges from events
     const net = new Map<string, { row: any; qty: number }>()
     for (const m of allMinted) {
-      const k = `${m.oracle_id}|${m.expiry}|${m.lower_strike}|${m.higher_strike}`
+      const k = `${m.manager_id}|${m.oracle_id}|${m.expiry}|${m.lower_strike}|${m.higher_strike}`
       const cur = net.get(k)
       if (cur) cur.qty += Number(m.quantity)
       else net.set(k, { row: m, qty: Number(m.quantity) })
     }
     for (const r of allRedeemed) {
-      const k = `${r.oracle_id}|${r.expiry}|${r.lower_strike}|${r.higher_strike}`
+      const k = `${r.manager_id}|${r.oracle_id}|${r.expiry}|${r.lower_strike}|${r.higher_strike}`
       const cur = net.get(k)
       if (cur) cur.qty -= Number(r.quantity)
     }
@@ -185,7 +185,7 @@ export function PortfolioTab({
     )
     if (allPnlPoints.length) setPnlHistory(allPnlPoints)
     setLoading(false)
-  }, [allManagerIds.join(',')])
+  }, [managerIds, managerId])
 
   useEffect(() => {
     fetchPortfolio()
