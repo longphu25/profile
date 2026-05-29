@@ -107,8 +107,15 @@ export function PortfolioTab({
   const [claimingId, setClaimingId] = useState<string | null>(null)
   const [claimResult, setClaimResult] = useState<string | null>(null)
   const [claimError, setClaimError] = useState<string | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
 
   const allManagerIds = managerIds.length > 0 ? managerIds : managerId ? [managerId] : []
+
+  const copyAddr = (addr: string) => {
+    navigator.clipboard.writeText(addr)
+    setCopied(addr)
+    setTimeout(() => setCopied(null), 1500)
+  }
 
   const fetchPortfolio = useCallback(async () => {
     if (allManagerIds.length === 0) return
@@ -384,7 +391,44 @@ export function PortfolioTab({
         <div className="sui-predict__card sui-predict__card--wide">
           <div className="sui-predict__card-header">
             <h3 className="sui-predict__card-title">Account Summary</h3>
+            {allManagerIds.length > 0 && (
+              <span style={{ fontSize: '10px', color: 'var(--color-muted)' }}>
+                {allManagerIds.length} manager{allManagerIds.length > 1 ? 's' : ''}
+              </span>
+            )}
           </div>
+          {/* Manager addresses */}
+          {allManagerIds.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '6px',
+                marginBottom: '10px',
+                padding: '0 2px',
+              }}
+            >
+              {allManagerIds.map((mid) => (
+                <button
+                  key={mid}
+                  onClick={() => copyAddr(mid)}
+                  style={{
+                    fontSize: '10px',
+                    fontFamily: 'var(--font-ui-mono)',
+                    color: copied === mid ? 'var(--color-mint)' : 'var(--color-muted)',
+                    background: 'rgba(190,255,234,0.04)',
+                    border: '1px solid var(--color-line)',
+                    borderRadius: '4px',
+                    padding: '2px 8px',
+                    cursor: 'pointer',
+                  }}
+                  title={mid}
+                >
+                  {mid.slice(0, 8)}…{mid.slice(-6)} {copied === mid ? '✓' : '⧉'}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="sui-predict__stats">
             <div className="sui-predict__stat">
               <span className="sui-predict__stat-label">Account Value</span>
@@ -513,57 +557,159 @@ export function PortfolioTab({
         {!positions || (positions.length === 0 && ranges.length === 0) ? (
           <div className="sui-predict__empty">No open positions</div>
         ) : (
-          <div className="sui-predict__table">
-            <div className="sui-predict__table-header sui-predict__table-header--6col">
-              <span>Type</span>
-              <span>Strike</span>
-              <span>Qty</span>
-              <span>Entry</span>
-              <span>Mark</span>
-              <span>uPnL</span>
-            </div>
-            {/* Binary positions */}
-            {positions.map((p: any, i: number) => {
-              const qty = Number(p.open_quantity) / 10 ** DUSDC_DECIMALS
-              const entry = p.average_entry_price
-                ? (Number(p.average_entry_price) / PRICE_SCALE).toFixed(4)
-                : '—'
-              const mark = p.mark_price ? (Number(p.mark_price) / PRICE_SCALE).toFixed(4) : '—'
-              const upnl = p.unrealized_pnl ? Number(p.unrealized_pnl) / 10 ** DUSDC_DECIMALS : 0
-              const strikeLabel = `$${(Number(p.strike) / STRIKE_SCALE).toFixed(0)} ${p.is_up ? '▲' : '▼'}`
-
+          <>
+            {/* Group by manager */}
+            {allManagerIds.map((mid) => {
+              const mgrPositions = positions.filter((p: any) => p.manager_id === mid)
+              const mgrRanges = ranges.filter((r: any) => r.manager_id === mid)
+              if (mgrPositions.length === 0 && mgrRanges.length === 0) return null
               return (
-                <div key={`b${i}`} className="sui-predict__table-row sui-predict__table-row--6col">
-                  <span>Binary</span>
-                  <span>{strikeLabel}</span>
-                  <span>${qty.toFixed(0)}</span>
-                  <span>{entry}</span>
-                  <span>{mark}</span>
-                  <span
-                    className={upnl >= 0 ? 'sui-predict__text--green' : 'sui-predict__text--red'}
-                  >
-                    {upnl !== 0 ? `${upnl >= 0 ? '+' : ''}$${upnl.toFixed(2)}` : '—'}
-                  </span>
+                <div key={mid} style={{ marginBottom: '12px' }}>
+                  {allManagerIds.length > 1 && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        marginBottom: '8px',
+                        padding: '0 4px',
+                      }}
+                    >
+                      <span style={{ fontSize: '10px', color: 'var(--color-muted)' }}>
+                        Manager:
+                      </span>
+                      <button
+                        onClick={() => copyAddr(mid)}
+                        style={{
+                          fontSize: '10px',
+                          fontFamily: 'var(--font-ui-mono)',
+                          color: copied === mid ? 'var(--color-mint)' : 'var(--color-text)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                        title="Click to copy"
+                      >
+                        {mid.slice(0, 8)}…{mid.slice(-6)} {copied === mid ? '✓' : '⧉'}
+                      </button>
+                    </div>
+                  )}
+                  <div className="sui-predict__table">
+                    <div className="sui-predict__table-header sui-predict__table-header--6col">
+                      <span>Type</span>
+                      <span>Strike</span>
+                      <span>Qty</span>
+                      <span>Entry</span>
+                      <span>Mark</span>
+                      <span>uPnL</span>
+                    </div>
+                    {mgrPositions.map((p: any, i: number) => {
+                      const qty = Number(p.open_quantity) / 10 ** DUSDC_DECIMALS
+                      const entry = p.average_entry_price
+                        ? (Number(p.average_entry_price) / PRICE_SCALE).toFixed(4)
+                        : '—'
+                      const mark = p.mark_price
+                        ? (Number(p.mark_price) / PRICE_SCALE).toFixed(4)
+                        : '—'
+                      const upnl = p.unrealized_pnl
+                        ? Number(p.unrealized_pnl) / 10 ** DUSDC_DECIMALS
+                        : 0
+                      const strikeLabel = `$${(Number(p.strike) / STRIKE_SCALE).toFixed(0)} ${p.is_up ? '▲' : '▼'}`
+                      return (
+                        <div
+                          key={`b${i}`}
+                          className="sui-predict__table-row sui-predict__table-row--6col"
+                        >
+                          <span>Binary</span>
+                          <span>{strikeLabel}</span>
+                          <span>${qty.toFixed(0)}</span>
+                          <span>{entry}</span>
+                          <span>{mark}</span>
+                          <span
+                            className={
+                              upnl >= 0 ? 'sui-predict__text--green' : 'sui-predict__text--red'
+                            }
+                          >
+                            {upnl !== 0 ? `${upnl >= 0 ? '+' : ''}$${upnl.toFixed(2)}` : '—'}
+                          </span>
+                        </div>
+                      )
+                    })}
+                    {mgrRanges.map((r: any, i: number) => {
+                      const qty = Number(r.open_quantity) / 10 ** DUSDC_DECIMALS
+                      const strikeLabel = `$${(Number(r.lower_strike) / STRIKE_SCALE).toFixed(0)}–$${(Number(r.higher_strike) / STRIKE_SCALE).toFixed(0)}`
+                      return (
+                        <div
+                          key={`r${i}`}
+                          className="sui-predict__table-row sui-predict__table-row--6col"
+                        >
+                          <span>Range</span>
+                          <span>{strikeLabel}</span>
+                          <span>${qty.toFixed(0)}</span>
+                          <span>—</span>
+                          <span>—</span>
+                          <span>—</span>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )
             })}
-            {/* Range positions */}
-            {ranges.map((r: any, i: number) => {
-              const qty = Number(r.open_quantity) / 10 ** DUSDC_DECIMALS
-              const strikeLabel = `$${(Number(r.lower_strike) / STRIKE_SCALE).toFixed(0)}–$${(Number(r.higher_strike) / STRIKE_SCALE).toFixed(0)}`
-
+            {/* Positions without manager_id match (fallback) */}
+            {(() => {
+              const ungrouped = positions.filter((p: any) => !allManagerIds.includes(p.manager_id))
+              const ungroupedRanges = ranges.filter(
+                (r: any) => !allManagerIds.includes(r.manager_id),
+              )
+              if (ungrouped.length === 0 && ungroupedRanges.length === 0) return null
               return (
-                <div key={`r${i}`} className="sui-predict__table-row sui-predict__table-row--6col">
-                  <span>Range</span>
-                  <span>{strikeLabel}</span>
-                  <span>${qty.toFixed(0)}</span>
-                  <span>—</span>
-                  <span>—</span>
-                  <span>—</span>
+                <div className="sui-predict__table">
+                  <div className="sui-predict__table-header sui-predict__table-header--6col">
+                    <span>Type</span>
+                    <span>Strike</span>
+                    <span>Qty</span>
+                    <span>Entry</span>
+                    <span>Mark</span>
+                    <span>uPnL</span>
+                  </div>
+                  {ungrouped.map((p: any, i: number) => {
+                    const qty = Number(p.open_quantity) / 10 ** DUSDC_DECIMALS
+                    const entry = p.average_entry_price
+                      ? (Number(p.average_entry_price) / PRICE_SCALE).toFixed(4)
+                      : '—'
+                    const mark = p.mark_price
+                      ? (Number(p.mark_price) / PRICE_SCALE).toFixed(4)
+                      : '—'
+                    const upnl = p.unrealized_pnl
+                      ? Number(p.unrealized_pnl) / 10 ** DUSDC_DECIMALS
+                      : 0
+                    const strikeLabel = `$${(Number(p.strike) / STRIKE_SCALE).toFixed(0)} ${p.is_up ? '▲' : '▼'}`
+                    return (
+                      <div
+                        key={`ub${i}`}
+                        className="sui-predict__table-row sui-predict__table-row--6col"
+                      >
+                        <span>Binary</span>
+                        <span>{strikeLabel}</span>
+                        <span>${qty.toFixed(0)}</span>
+                        <span>{entry}</span>
+                        <span>{mark}</span>
+                        <span
+                          className={
+                            upnl >= 0 ? 'sui-predict__text--green' : 'sui-predict__text--red'
+                          }
+                        >
+                          {upnl !== 0 ? `${upnl >= 0 ? '+' : ''}$${upnl.toFixed(2)}` : '—'}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
               )
-            })}
-          </div>
+            })()}
+          </>
         )}
       </div>
 
