@@ -490,7 +490,12 @@ function PredictContent() {
           <div className="sui-predict__card-header">
             <h3 className="sui-predict__card-title">Active Oracles</h3>
             <span className="sui-predict__stat-value--mono" style={{ fontSize: '10px' }}>
-              Now: {Date.now()}
+              {new Date().toLocaleString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZoneName: 'short',
+              })}
             </span>
           </div>
           <div className="sui-predict__oracle-list" style={{ maxHeight: '160px' }}>
