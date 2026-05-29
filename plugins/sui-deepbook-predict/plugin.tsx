@@ -139,6 +139,7 @@ function PredictContent() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [managerId, setManagerId] = useState<string | null>(null)
+  const [managerIds, setManagerIds] = useState<string[]>([])
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const { startTour: _startTour } = useTour()
 
@@ -201,15 +202,21 @@ function PredictContent() {
   useEffect(() => {
     if (!walletAddress) {
       setManagerId(null)
+      setManagerIds([])
       return
     }
     fetch(`${PREDICT_SERVER}/managers`)
       .then((r) => r.json())
       .then((mgrs: any[]) => {
-        const mine = mgrs.find((m) => m.owner === walletAddress)
-        setManagerId(mine?.manager_id ?? null)
+        const mine = mgrs.filter((m) => m.owner === walletAddress)
+        const ids = mine.map((m) => m.manager_id)
+        setManagerIds(ids)
+        setManagerId(ids[0] ?? null)
       })
-      .catch(() => setManagerId(null))
+      .catch(() => {
+        setManagerId(null)
+        setManagerIds([])
+      })
   }, [walletAddress])
 
   // ── Data fetching ──────────────────────────────────────────────────────────
@@ -898,6 +905,7 @@ function PredictContent() {
           isConnected={isConnected}
           sharedHost={sharedHost}
           managerId={managerId}
+          managerIds={managerIds}
         />
       )}
       {!showGuidedTrade && tab === 'surface' && (

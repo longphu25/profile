@@ -24,6 +24,7 @@ interface Props {
   isConnected: boolean
   sharedHost: SuiHostAPI | null
   managerId: string | null
+  managerIds?: string[]
 }
 
 // ── Normal CDF approximation ────────────────────────────────────────────────
@@ -96,6 +97,7 @@ export function PortfolioTab({
   isConnected,
   sharedHost,
   managerId,
+  managerIds = [],
 }: Props) {
   const [positions, setPositions] = useState<any[]>([])
   const [ranges, setRanges] = useState<any[]>([])
@@ -106,39 +108,74 @@ export function PortfolioTab({
   const [claimResult, setClaimResult] = useState<string | null>(null)
   const [claimError, setClaimError] = useState<string | null>(null)
 
+  const allManagerIds = managerIds.length > 0 ? managerIds : managerId ? [managerId] : []
+
   const fetchPortfolio = useCallback(async () => {
-    if (!managerId) return
+    if (allManagerIds.length === 0) return
     setLoading(true)
-    const [summ, pos, minted, redeemed, pnl] = await Promise.all([
-      fetchJSON<any>(`/managers/${managerId}/summary`),
-      fetchJSON<any[]>(`/managers/${managerId}/positions/summary`),
-      fetchJSON<any[]>(`/ranges/minted?manager_id=${managerId}`),
-      fetchJSON<any[]>(`/ranges/redeemed?manager_id=${managerId}`),
-      fetchJSON<any>(`/managers/${managerId}/pnl?range=ALL`),
-    ])
-    if (summ) setSummary(summ)
-    if (pos && Array.isArray(pos)) setPositions(pos.filter((p: any) => Number(p.open_quantity) > 0))
-    // Compute net open ranges from events
-    if (minted || redeemed) {
-      const net = new Map<string, { row: any; qty: number }>()
-      for (const m of minted || []) {
-        const k = `${m.oracle_id}|${m.expiry}|${m.lower_strike}|${m.higher_strike}`
-        const cur = net.get(k)
-        if (cur) cur.qty += Number(m.quantity)
-        else net.set(k, { row: m, qty: Number(m.quantity) })
+
+    // Fetch from all managers in parallel
+    const results = await Promise.all(
+      allManagerIds.map(async (mid) => {
+        const [summ, pos, minted, redeemed, pnl] = await Promise.all([
+          fetchJSON<any>(`/managers/${mid}/summary`),
+          fetchJSON<any[]>(`/managers/${mid}/positions/summary`),
+          fetchJSON<any[]>(`/ranges/minted?manager_id=${mid}`),
+          fetchJSON<any[]>(`/ranges/redeemed?manager_id=${mid}`),
+          fetchJSON<any>(`/managers/${mid}/pnl?range=ALL`),
+        ])
+        return { summ, pos, minted, redeemed, pnl }
+      }),
+    )
+
+    // Merge results from all managers
+    let allPositions: any[] = []
+    let allMinted: any[] = []
+    let allRedeemed: any[] = []
+    let mergedSummary: any = null
+    let allPnlPoints: any[] = []
+
+    for (const r of results) {
+      if (r.summ && !mergedSummary) mergedSummary = r.summ
+      else if (r.summ && mergedSummary) {
+        mergedSummary.account_value =
+          (mergedSummary.account_value || 0) + (r.summ.account_value || 0)
+        mergedSummary.trading_balance =
+          (mergedSummary.trading_balance || 0) + (r.summ.trading_balance || 0)
+        mergedSummary.unrealized_pnl =
+          (mergedSummary.unrealized_pnl || 0) + (r.summ.unrealized_pnl || 0)
+        mergedSummary.realized_pnl = (mergedSummary.realized_pnl || 0) + (r.summ.realized_pnl || 0)
+        mergedSummary.open_positions =
+          (mergedSummary.open_positions || 0) + (r.summ.open_positions || 0)
       }
-      for (const r of redeemed || []) {
-        const k = `${r.oracle_id}|${r.expiry}|${r.lower_strike}|${r.higher_strike}`
-        const cur = net.get(k)
-        if (cur) cur.qty -= Number(r.quantity)
-      }
-      setRanges(
-        [...net.values()].filter((r) => r.qty > 0).map((r) => ({ ...r.row, open_quantity: r.qty })),
-      )
+      if (r.pos && Array.isArray(r.pos)) allPositions = allPositions.concat(r.pos)
+      if (r.minted) allMinted = allMinted.concat(r.minted)
+      if (r.redeemed) allRedeemed = allRedeemed.concat(r.redeemed)
+      if (r.pnl?.points) allPnlPoints = allPnlPoints.concat(r.pnl.points)
     }
-    if (pnl?.points) setPnlHistory(pnl.points)
+
+    if (mergedSummary) setSummary(mergedSummary)
+    setPositions(allPositions.filter((p: any) => Number(p.open_quantity) > 0))
+
+    // Compute net open ranges from events
+    const net = new Map<string, { row: any; qty: number }>()
+    for (const m of allMinted) {
+      const k = `${m.oracle_id}|${m.expiry}|${m.lower_strike}|${m.higher_strike}`
+      const cur = net.get(k)
+      if (cur) cur.qty += Number(m.quantity)
+      else net.set(k, { row: m, qty: Number(m.quantity) })
+    }
+    for (const r of allRedeemed) {
+      const k = `${r.oracle_id}|${r.expiry}|${r.lower_strike}|${r.higher_strike}`
+      const cur = net.get(k)
+      if (cur) cur.qty -= Number(r.quantity)
+    }
+    setRanges(
+      [...net.values()].filter((r) => r.qty > 0).map((r) => ({ ...r.row, open_quantity: r.qty })),
+    )
+    if (allPnlPoints.length) setPnlHistory(allPnlPoints)
     setLoading(false)
-  }, [managerId])
+  }, [allManagerIds.join(',')])
 
   useEffect(() => {
     fetchPortfolio()
