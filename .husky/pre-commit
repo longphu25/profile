@@ -1,3 +1,24 @@
+# Build WASM crates if Rust source changed
+for dir in plugins/*/wasm; do
+  [ -f "$dir/Cargo.toml" ] || continue
+  plugin=$(basename "$(dirname "$dir")")
+  # Check if any Rust source changed in this commit
+  if git diff --cached --name-only | grep -q "^plugins/$plugin/wasm/"; then
+    echo "[wasm] Building $plugin..."
+    (cd "$dir" && wasm-pack build --target web --release --out-dir ../pkg) || exit 1
+    # Copy .wasm to public/wasm/
+    wasm_name=$(echo "$plugin" | sed 's/-/_/g; s/sui_//')
+    wasm_file="plugins/$plugin/pkg/${wasm_name}_bg.wasm"
+    if [ -f "$wasm_file" ]; then
+      mkdir -p public/wasm
+      cp "$wasm_file" "public/wasm/$(echo "$plugin" | sed 's/^sui-//').wasm"
+    fi
+    # Stage built artifacts
+    git add "plugins/$plugin/pkg/" "public/wasm/" 2>/dev/null
+    echo "[wasm] ✓ $plugin built and staged"
+  fi
+done
+
 # Clean pycache before commit
 find . -type d -name __pycache__ -not -path './node_modules/*' -exec rm -rf {} + 2>/dev/null || true
 

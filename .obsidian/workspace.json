@@ -11,10 +11,17 @@
             "id": "bb4958212fba6026",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
-              "icon": "lucide-file",
-              "title": "New tab"
+              "type": "canvas",
+              "state": {
+                "file": "docs/project-technical-structure.canvas",
+                "viewState": {
+                  "x": 630,
+                  "y": 985,
+                  "zoom": -1.1013438604545163
+                }
+              },
+              "icon": "lucide-layout-dashboard",
+              "title": "project-technical-structure"
             }
           }
         ]
@@ -90,6 +97,7 @@
             "state": {
               "type": "backlink",
               "state": {
+                "file": "docs/project-technical-structure.canvas",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -99,7 +107,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks"
+              "title": "Backlinks for project-technical-structure"
             }
           },
           {
@@ -108,11 +116,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
+                "file": "docs/project-technical-structure.canvas",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links"
+              "title": "Outgoing links from project-technical-structure"
             }
           },
           {
@@ -150,12 +159,13 @@
             "state": {
               "type": "outline",
               "state": {
+                "file": "docs/project-technical-structure.canvas",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline"
+              "title": "Outline of project-technical-structure"
             }
           }
         ]
@@ -176,17 +186,8 @@
       "bases:Create new base": false
     }
   },
-  "active": "bb4958212fba6026",
+  "active": "6aaa3ea894ee49d8",
   "lastOpenFiles": [
-    "docs/seal/PLAN.md",
-    "docs/plugin-system-technical.canvas",
-    "docs/defi/navi/TECHNICAL.md",
-    "docs/defi/navi/MCP-REFERENCE.md",
-    "docs/defi/navi/ADVISOR.md",
-    "docs/architecture.canvas",
-    "docs/INDEX.md",
-    "docs/defi/navi",
-    "Untitled.canvas",
     "dist/app.html",
     "dist/assets/plugin-demo-BgLhwsIJ.css",
     "dist/assets/main-B2zFbLqS.css",
@@ -196,6 +197,26 @@
     "dist/assets/compiler-runtime-DKUlAs_x.js",
     "dist/assets/client-YIREZBu0.js",
     "dist/assets/analysis-C1eh9s6J.js",
+    "dist/assets/ShadowContainer-QaC9-hHS.js",
+    "dist/assets/plugins/sui-deepbook-orderbook.js",
+    "docs/plugin-system-technical.canvas",
+    "docs/architecture.canvas",
+    "docs/plugin-catalog.canvas",
+    "docs/INDEX.md",
+    "docs/project-technical-structure.canvas",
+    "docs/plugin-ideas.md",
+    "docs/project-overview.md",
+    "docs/plugin-catalog.md",
+    "docs/development-workflow.md",
+    "docs/runtime-entry-points.md",
+    "docs/repo-map.md",
+    "docs/wasm-native.md",
+    "docs/defi/navi/EXPANSION.md",
+    "docs/seal/PLAN.md",
+    "docs/defi/navi/TECHNICAL.md",
+    "docs/defi/navi/MCP-REFERENCE.md",
+    "docs/defi/navi/ADVISOR.md",
+    "Untitled.canvas",
     "docs/plugin-architecture.md"
   ]
 }

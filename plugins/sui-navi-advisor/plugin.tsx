@@ -17,6 +17,32 @@ import {
 import { RPC_URLS, type NetworkKey } from '../sui-seal-shared/config'
 import './style.css'
 
+// ─── Coin resolver (navi_get_coins returns raw { coinType, totalBalance }) ───
+const KNOWN_DECIMALS: Record<string, number> = {
+  SUI: 9, vSUI: 9, haSUI: 9, stSUI: 9, NAVX: 9, CETUS: 9, WAL: 9, HAEDAL: 9, IKA: 9,
+  wUSDC: 6, USDT: 6, USDC: 6, nUSDC: 6, suiUSDT: 6, NS: 6, DEEP: 6,
+  WETH: 8, LBTC: 8, BTC: 8,
+}
+function normalizeCoinType(ct: string): string { return ct.replace(/^0x0+/, '0x') }
+
+interface ResolvedCoin { symbol: string; balance: number; usdValue: number; coinType: string }
+
+function resolveCoinsWithPools(rawCoins: unknown[], pools: Pool[]): ResolvedCoin[] {
+  if (!Array.isArray(rawCoins)) return []
+  const poolMap = new Map(pools.map((p) => [normalizeCoinType(p.coinType), p]))
+  return rawCoins.map((rc) => {
+    const r = rc as Record<string, unknown>
+    const ct = normalizeCoinType(String(r.coinType ?? ''))
+    const pool = poolMap.get(ct)
+    const symbol = pool?.symbol ?? ct.split('::').pop() ?? '?'
+    const decimals = KNOWN_DECIMALS[symbol] ?? 9
+    const balance = Number(r.totalBalance ?? r.balance ?? 0) / (r.totalBalance ? 10 ** decimals : 1)
+    const price = pool?.price ?? 0
+    const usdValue = r.usdValue ? Number(r.usdValue) : balance * price
+    return { symbol, balance, usdValue, coinType: ct }
+  }).filter((c) => c.balance > 0)
+}
+
 let sharedHost: SuiHostAPI | null = null
 const WALLET_KEY = 'walletProfile'
 const MCP_URL = 'https://open-api.naviprotocol.io/api/mcp'
@@ -54,6 +80,10 @@ interface Strategy {
   actionLabel?: string
   /** For supply-borrow: which stablecoin to borrow */
   borrowSymbol?: string
+  /** Target token symbol for this strategy */
+  targetSymbol?: string
+  /** Wallet tokens that can be swapped to target (when wallet lacks target) */
+  swapOptions?: { symbol: string; usdValue: number }[]
 }
 
 async function mcpCall(tool: string, args: Record<string, unknown> = {}) {
@@ -126,9 +156,10 @@ function generateStrategies(budget: number, pools: Pool[], vaults: Vault[]): Str
       estApy: p.supplyApy,
       risk: 'Low',
       detail: `Supply APY: ${p.supplyApy.toFixed(2)}% | Est. yearly: $${earn.toFixed(2)} | No borrow risk`,
-      supplyCoinType: p.coinType ? `0x${p.coinType}` : undefined,
+      supplyCoinType: p.coinType || undefined,
       action: 'deposit',
       actionLabel: `Supply ${p.symbol} to NAVI`,
+      targetSymbol: p.symbol,
     })
   }
 
@@ -137,15 +168,19 @@ function generateStrategies(budget: number, pools: Pool[], vaults: Vault[]): Str
   if (topVault.length > 0) {
     const v = topVault[0]
     const earn = budget * (v.apy7d / 100)
+    // Extract target token from vault name: "WAL MASTER#1" → "WAL", "SUI MULTI" → "SUI"
+    const vaultToken = v.name.split(/\s/)[0].toUpperCase()
+    const knownToken = pools.some((p) => p.symbol === vaultToken) ? vaultToken : 'SUI'
     strategies.push({
       name: `Volo Vault: ${v.name}`,
-      steps: [`Deposit $${budget} into ${v.name} vault`],
+      steps: [`Deposit $${budget} ${knownToken} into ${v.name} vault`],
       estApy: v.apy7d,
       risk: v.riskLevel as Strategy['risk'],
       detail: `7d APY: ${v.apy7d.toFixed(2)}% | 30d APY: ${v.apy30d.toFixed(2)}% | Est. yearly: $${earn.toFixed(2)} | TVL: $${(v.totalStakedUsd / 1e6).toFixed(1)}M`,
       action: 'volo-stake',
       actionUrl: 'https://app.naviprotocol.io/earn',
-      actionLabel: `Stake SUI → vSUI (${v.name})`,
+      actionLabel: `Stake ${knownToken} → ${v.name}`,
+      targetSymbol: knownToken,
     })
   }
 
@@ -226,6 +261,9 @@ function NaviAdvisorContent() {
   const [error, setError] = useState<string | null>(null)
   const [executing, setExecuting] = useState<number | null>(null)
   const [txResult, setTxResult] = useState<string | null>(null)
+  const [swapSelections, setSwapSelections] = useState<Record<number, Set<string>>>({})
+  const [swapQuotes, setSwapQuotes] = useState<Record<string, { amountIn: number; amountOut: number; route: Record<string, unknown> }>>({})
+  const [swapLoading, setSwapLoading] = useState(false)
   const [walletAddr, setWalletAddr] = useState<string | null>(() => {
     const d = sharedHost?.getSharedData(WALLET_KEY) as { address: string } | null
     return d?.address ?? null
@@ -254,11 +292,12 @@ function NaviAdvisorContent() {
 
       // Portfolio-aware strategies (when wallet connected)
       if (walletAddr) {
-        const [health, coins, rewards] = await Promise.all([
+        const [health, rawCoins, rewards] = await Promise.all([
           getHealthFactor(walletAddr).catch(() => null),
           getCoins(walletAddr).catch(() => []),
           getAvailableRewards(walletAddr).catch(() => null),
         ])
+        const coins = resolveCoinsWithPools(rawCoins as unknown[], poolData)
 
         // Strategy: Claim unclaimed rewards
         if (rewards && typeof rewards === 'object') {
@@ -328,6 +367,31 @@ function NaviAdvisorContent() {
               action: 'deposit',
               actionLabel: `Supply ${coin.symbol} to NAVI`,
             })
+          }
+        }
+        // Enrich strategies with swap options when wallet lacks target token
+        const coinsBySymbol = new Map(
+          (Array.isArray(coins) ? coins : []).map((c) => [c.symbol, c]),
+        )
+        for (const strat of strats) {
+          if (!strat.targetSymbol || (strat.action !== 'deposit' && strat.action !== 'volo-stake')) continue
+          const held = coinsBySymbol.get(strat.targetSymbol)
+          // Show swap options if wallet has <50% of budget in target token
+          if (held && held.usdValue >= budget * 0.5) continue
+          // Wallet doesn't have this token — add swap options
+          const swappable = (Array.isArray(coins) ? coins : [])
+            .filter((c) => c.usdValue > 1 && c.symbol !== strat.targetSymbol)
+            .sort((a, b) => b.usdValue - a.usdValue)
+            .slice(0, 5)
+            .map((c) => ({ symbol: c.symbol, usdValue: c.usdValue }))
+          if (swappable.length > 0) {
+            strat.swapOptions = swappable
+            const heldAmt = held ? `$${held.usdValue.toFixed(0)}` : '$0'
+            strat.steps = [
+              `You have ${heldAmt} ${strat.targetSymbol} (need ~$${budget})`,
+              `Swap from wallet token → ${strat.targetSymbol}`,
+              `Supply ${strat.targetSymbol} to NAVI (${strat.estApy.toFixed(2)}% APY)`,
+            ]
           }
         }
       }
@@ -508,7 +572,7 @@ function NaviAdvisorContent() {
             jsonrpc: '2.0',
             id: 1,
             method: 'suix_getCoins',
-            params: [walletAddr, `0x${cfg.type}`, null, 50],
+            params: [walletAddr, cfg.type, null, 50],
           }),
         })
         const json = await res.json()
@@ -538,7 +602,7 @@ function NaviAdvisorContent() {
           tx.object(NAVI_INCENTIVE_V2),
           tx.object(NAVI_INCENTIVE_V3),
         ],
-        typeArguments: [`0x${cfg.type}`],
+        typeArguments: [cfg.type],
       })
 
       const result = await sharedHost.signAndExecuteTransaction(tx)
@@ -642,14 +706,14 @@ function NaviAdvisorContent() {
           tx.object(NAVI_INCENTIVE_V3),
           tx.object('0x05'),
         ],
-        typeArguments: [`0x${stableCfg.type}`],
+        typeArguments: [stableCfg.type],
       })
 
       // Convert balance to coin and transfer to user
       const [borrowedCoin] = tx.moveCall({
         target: '0x2::coin::from_balance',
         arguments: [borrowBalance],
-        typeArguments: [`0x${stableCfg.type}`],
+        typeArguments: [stableCfg.type],
       })
       tx.transferObjects([borrowedCoin], walletAddr)
 
@@ -662,6 +726,75 @@ function NaviAdvisorContent() {
     } finally {
       setExecuting(null)
     }
+  }
+
+  function toggleSwapToken(stratIdx: number, symbol: string) {
+    setSwapSelections((prev) => {
+      const set = new Set(prev[stratIdx] ?? [])
+      if (set.has(symbol)) set.delete(symbol)
+      else set.add(symbol)
+      return { ...prev, [stratIdx]: set }
+    })
+  }
+
+  async function fetchSwapQuotes(stratIdx: number) {
+    const s = strategies[stratIdx]
+    const toSymbol = s.targetSymbol
+    const selected = swapSelections[stratIdx]
+    if (!toSymbol || !selected?.size) return
+    setSwapLoading(true)
+    setSwapQuotes({})
+    try {
+      const entries = [...selected]
+      // Distribute budget proportionally by USD value of selected tokens
+      const opts = s.swapOptions ?? []
+      const selectedOpts = opts.filter((o) => selected.has(o.symbol))
+      const totalUsd = selectedOpts.reduce((s, o) => s + o.usdValue, 0)
+
+      const quotes = await Promise.all(
+        entries.map(async (fromSymbol) => {
+          const opt = selectedOpts.find((o) => o.symbol === fromSymbol)
+          // Each token contributes proportionally, capped at its wallet balance
+          const share = opt ? Math.min(opt.usdValue, budget * (opt.usdValue / totalUsd)) : budget / entries.length
+          const fromPool = pools.find((p) => p.symbol === fromSymbol)
+          const amount = fromPool?.price ? share / fromPool.price : 1
+          const q = await mcpCall('navi_get_swap_quote', { fromCoin: fromSymbol, toCoin: toSymbol, amount })
+          return { fromSymbol, quote: q as Record<string, unknown> }
+        }),
+      )
+      const qMap: typeof swapQuotes = {}
+      for (const { fromSymbol, quote } of quotes) {
+        if (!quote) continue
+        const routes = quote.routes as Record<string, unknown>[] | undefined
+        qMap[fromSymbol] = {
+          amountIn: Number(quote.amountIn ?? 0),
+          amountOut: Number(quote.amountOut ?? 0),
+          route: routes?.[0] ?? {},
+        }
+      }
+      setSwapQuotes(qMap)
+    } catch {
+      setError('Failed to get swap quotes')
+    } finally {
+      setSwapLoading(false)
+    }
+  }
+
+  // Swap via NAVI aggregator app, then user returns to deposit
+  async function executeMultiSwapAndDeposit(stratIdx: number) {
+    const s = strategies[stratIdx]
+    const selected = swapSelections[stratIdx]
+    if (!s.targetSymbol || !selected?.size) return
+    const fromSymbols = [...selected].join(', ')
+    window.open(`https://app.naviprotocol.io/swap`, '_blank')
+    setTxResult(`Opened NAVI Swap. Convert ${fromSymbols} → ${s.targetSymbol}, then re-analyze to supply directly.`)
+    setSwapSelections({})
+    setSwapQuotes({})
+  }
+
+  function fmtAmount(symbol: string, raw: number): string {
+    const dec = KNOWN_DECIMALS[symbol] ?? 9
+    return (raw / 10 ** dec).toFixed(dec > 6 ? 4 : 2)
   }
 
   const riskColor = (r: string) =>
@@ -718,7 +851,7 @@ function NaviAdvisorContent() {
                 ))}
               </div>
               <div className="sui-na__strategy-detail">{s.detail}</div>
-              {s.action === 'deposit' && walletAddr && (
+              {s.action === 'deposit' && walletAddr && !s.swapOptions && (
                 <button
                   className="sui-na__btn-exec"
                   onClick={() => executeSupply(i)}
@@ -727,7 +860,49 @@ function NaviAdvisorContent() {
                   {executing === i ? 'Executing…' : (s.actionLabel ?? 'Supply SUI')}
                 </button>
               )}
-              {s.action === 'volo-stake' && walletAddr && (
+              {s.action === 'deposit' && walletAddr && s.swapOptions && (
+                <div className="sui-na__swap-section">
+                  <div className="sui-na__swap-label">
+                    Not enough {s.targetSymbol} — select tokens to swap:
+                  </div>
+                  <div className="sui-na__swap-options">
+                    {s.swapOptions.map((opt) => (
+                      <button
+                        key={opt.symbol}
+                        className={`sui-na__swap-btn ${swapSelections[i]?.has(opt.symbol) ? 'sui-na__swap-btn--active' : ''}`}
+                        onClick={() => toggleSwapToken(i, opt.symbol)}
+                        disabled={executing !== null}
+                      >
+                        {opt.symbol} (${opt.usdValue.toFixed(0)})
+                      </button>
+                    ))}
+                  </div>
+                  {swapSelections[i]?.size > 0 && Object.keys(swapQuotes).length === 0 && (
+                    <button
+                      className="sui-na__btn-exec"
+                      onClick={() => fetchSwapQuotes(i)}
+                      disabled={swapLoading || executing !== null}
+                    >
+                      {swapLoading ? 'Getting quotes…' : `Get quotes (${swapSelections[i].size} token${swapSelections[i].size > 1 ? 's' : ''})`}
+                    </button>
+                  )}
+                  {Object.keys(swapQuotes).length > 0 && swapSelections[i]?.size > 0 && (
+                    <div className="sui-na__swap-summary">
+                      {Object.entries(swapQuotes).map(([sym, q]) => (
+                        <div key={sym} className="sui-na__swap-route">{sym}: {fmtAmount(sym, q.amountIn)} → {fmtAmount(s.targetSymbol ?? '', q.amountOut)} {s.targetSymbol}</div>
+                      ))}
+                      <button
+                        className="sui-na__btn-exec"
+                        onClick={() => executeMultiSwapAndDeposit(i)}
+                        disabled={executing !== null}
+                      >
+                        {executing === i ? 'Executing…' : `Swap ${[...swapSelections[i]].join(' + ')} → ${s.targetSymbol} & Supply (1 tx)`}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {s.action === 'volo-stake' && walletAddr && !s.swapOptions && (
                 <button
                   className="sui-na__btn-exec"
                   onClick={() => executeVoStake(i)}
@@ -735,6 +910,48 @@ function NaviAdvisorContent() {
                 >
                   {executing === i ? 'Executing…' : (s.actionLabel ?? 'Stake SUI → vSUI')}
                 </button>
+              )}
+              {s.action === 'volo-stake' && walletAddr && s.swapOptions && (
+                <div className="sui-na__swap-section">
+                  <div className="sui-na__swap-label">
+                    Not enough {s.targetSymbol} — select tokens to swap:
+                  </div>
+                  <div className="sui-na__swap-options">
+                    {s.swapOptions.map((opt) => (
+                      <button
+                        key={opt.symbol}
+                        className={`sui-na__swap-btn ${swapSelections[i]?.has(opt.symbol) ? 'sui-na__swap-btn--active' : ''}`}
+                        onClick={() => toggleSwapToken(i, opt.symbol)}
+                        disabled={executing !== null}
+                      >
+                        {opt.symbol} (${opt.usdValue.toFixed(0)})
+                      </button>
+                    ))}
+                  </div>
+                  {swapSelections[i]?.size > 0 && Object.keys(swapQuotes).length === 0 && (
+                    <button
+                      className="sui-na__btn-exec"
+                      onClick={() => fetchSwapQuotes(i)}
+                      disabled={swapLoading || executing !== null}
+                    >
+                      {swapLoading ? 'Getting quotes…' : `Get quotes (${swapSelections[i].size} token${swapSelections[i].size > 1 ? 's' : ''})`}
+                    </button>
+                  )}
+                  {Object.keys(swapQuotes).length > 0 && swapSelections[i]?.size > 0 && (
+                    <div className="sui-na__swap-summary">
+                      {Object.entries(swapQuotes).map(([sym, q]) => (
+                        <div key={sym} className="sui-na__swap-route">{sym}: {fmtAmount(sym, q.amountIn)} → {fmtAmount(s.targetSymbol ?? '', q.amountOut)} {s.targetSymbol}</div>
+                      ))}
+                      <button
+                        className="sui-na__btn-exec"
+                        onClick={() => executeMultiSwapAndDeposit(i)}
+                        disabled={executing !== null}
+                      >
+                        {executing === i ? 'Executing…' : `Swap ${[...swapSelections[i]].join(' + ')} → ${s.targetSymbol} & Stake (1 tx)`}
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
               {s.action === 'supply-borrow' && walletAddr && (
                 <button

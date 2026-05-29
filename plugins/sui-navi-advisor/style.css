@@ -52,5 +52,18 @@
 
 /* Footer */
 .sui-na__footer { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #1e1e22; font-size: 11px; }
+
+/* Swap section */
+.sui-na__swap-section { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #2a2a30; }
+.sui-na__swap-label { font-size: 11px; color: #f0b429; margin-bottom: 6px; }
+.sui-na__swap-options { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.sui-na__swap-btn { background: #111114; border: 1px solid #2a2a30; border-radius: 6px; color: #ccc; font-size: 11px; padding: 4px 10px; cursor: pointer; transition: all 0.15s; }
+.sui-na__swap-btn:hover { border-color: #4da2ff; color: #4da2ff; }
+.sui-na__swap-btn--active { background: #4da2ff15; border-color: #4da2ff; color: #4da2ff; font-weight: 600; }
+.sui-na__swap-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sui-na__swap-loading { font-size: 11px; color: #888; padding: 4px 0; }
+.sui-na__swap-quote { margin-top: 4px; }
+.sui-na__swap-route { font-size: 11px; color: #4da2ff; margin-bottom: 4px; font-weight: 600; }
+.sui-na__swap-summary { margin-top: 6px; padding-top: 6px; border-top: 1px solid #1e1e22; }
 .sui-na__badge { background: #4da2ff20; color: #4da2ff; border-radius: 4px; padding: 2px 8px; font-weight: 600; font-size: 10px; }
 .sui-na__disclaimer { color: #555; font-style: italic; }
