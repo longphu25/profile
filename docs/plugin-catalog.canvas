@@ -1,0 +1,43 @@
+{
+	"nodes":[
+		{"id":"title","type":"text","text":"# Plugin Catalog Board\nObsidian canvas for plugin discovery, grouping, and reading order","x":0,"y":0,"width":980,"height":80,"color":"6"},
+		{"id":"summary","type":"text","text":"## Snapshot\n- `36` directories under `plugins/`\n- `35` runnable plugins\n- `1` shared utility dir: `sui-seal-shared`\n- Main runtime: `sui-plugin.html` + `sui-plugin-wasm.html`\n- Reference note: [[plugin-catalog]]","x":0,"y":120,"width":320,"height":150,"color":"4"},
+		{"id":"reading","type":"text","text":"## Suggested Reading Order\n1. `hello-plugin`\n2. `hello-world-sui`\n3. `sui-wallet`\n4. `sui-wallet-profile`\n5. `sui-deepbook-hedging-bot`\n\nThen dive into domain notes from [[INDEX]]","x":360,"y":120,"width":280,"height":170,"color":"2"},
+		{"id":"runtime","type":"text","text":"## Runtime Mapping\n- Generic demo: `plugin-demo.html`\n- Shared wallet runtime: `sui-plugin.html`\n- WASM-heavy runtime: `sui-plugin-wasm.html`\n- Specialist page: `sui-deepbook-hedging-bot.html`\n\nSee [[runtime-entry-points]]","x":680,"y":120,"width":300,"height":150,"color":"5"},
+		{"id":"core","type":"text","text":"## Wallet & Core\nBase plugins used to understand runtime contracts","x":-20,"y":340,"width":220,"height":60,"color":"4"},
+		{"id":"core-plugins","type":"text","text":"- `hello-plugin`\n- `hello-world-sui`\n- `sui-wallet`\n- `sui-wallet-profile`\n- `sui-link`\n- `sui-dual-wallet`\n- `sui-create-wallet`","x":-20,"y":430,"width":220,"height":180,"color":"4"},
+		{"id":"core-tech","type":"text","text":"### Typical Tech\n- `@mysten/dapp-kit-react`\n- shared `SuiHostAPI`\n- wallet context + account switching\n- `@noble/*` in `sui-create-wallet`\n- Shadow DOM per plugin","x":220,"y":430,"width":240,"height":160,"color":"4"},
+		{"id":"deepbook","type":"text","text":"## DeepBook Trading\nLargest feature cluster in the repo","x":520,"y":340,"width":220,"height":60,"color":"5"},
+		{"id":"deepbook-plugins","type":"text","text":"- `sui-pool-explorer`\n- `sui-price-feed`\n- `sui-deepbook-orderbook`\n- `sui-swap`\n- `sui-deepbook-portfolio`\n- `sui-deepbook-history`\n- `sui-margin-manager`\n- `sui-hedging-monitor`\n- `sui-deepbook-hedging-bot`\n- `sui-deepbook-analysis`","x":520,"y":430,"width":240,"height":240,"color":"5"},
+		{"id":"deepbook-tech","type":"text","text":"### Technical Notes\n- indexer-driven data reads\n- trading + margin flows\n- largest single plugin: `sui-deepbook-hedging-bot`\n- extra doc: `plugins/sui-deepbook-hedging-bot/ARCHITECTURE.md`\n- notes: [[deepbook/README]], [[deepbook/plugins]], [[deepbook/api-reference]]","x":780,"y":430,"width":280,"height":180,"color":"5"},
+		{"id":"navi","type":"text","text":"## NAVI Protocol\nDeFi advisor + dashboard + analysis","x":-20,"y":700,"width":220,"height":60,"color":"3"},
+		{"id":"navi-plugins","type":"text","text":"- `sui-navi-dashboard`\n- `sui-navi-advisor`\n- `sui-navi-chatbot`\n- `sui-navi-analysis`","x":-20,"y":790,"width":220,"height":130,"color":"3"},
+		{"id":"navi-tech","type":"text","text":"### Technical Notes\n- NAVI MCP integration\n- protocol overview + execution flows\n- advisor strategies\n- Rust/WASM source inside `sui-navi-analysis/wasm/`\n- notes: [[defi/navi/TECHNICAL]], [[defi/navi/ADVISOR]], [[defi/navi/MCP-REFERENCE]]","x":220,"y":790,"width":260,"height":170,"color":"3"},
+		{"id":"seal","type":"text","text":"## Seal Encryption\nPrivacy/security plugin family","x":520,"y":700,"width":220,"height":60,"color":"1"},
+		{"id":"seal-plugins","type":"text","text":"- `sui-seal-encrypt`\n- `sui-seal-decrypt`\n- `sui-seal-vault`\n- `sui-seal-private`\n- `sui-seal-timelock`\n- `sui-seal-allowlist`\n- `sui-seal-walrus`\n- `sui-seal-voting`\n- `sui-seal-shared` ← utility dir","x":520,"y":790,"width":240,"height":220,"color":"1"},
+		{"id":"seal-tech","type":"text","text":"### Technical Notes\n- built around `@mysten/seal`\n- needs `signPersonalMessage()` in host API\n- `sui-seal-voting` includes Move source\n- `sui-seal-shared` is not a standalone plugin\n- notes: [[seal/TECHNICAL]], [[seal/VOTING]], [[seal/PLAN]]","x":780,"y":790,"width":280,"height":170,"color":"1"},
+		{"id":"walrus","type":"text","text":"## Walrus Storage\nStorage-oriented feature set","x":-20,"y":1020,"width":220,"height":60,"color":"2"},
+		{"id":"walrus-plugins","type":"text","text":"- `sui-walrus-upload`\n- `sui-walrus-viewer`\n- `sui-walrus-earn`\n- `sui-wal-swap` ← adjacent WAL flow","x":-20,"y":1110,"width":220,"height":140,"color":"2"},
+		{"id":"walrus-tech","type":"text","text":"### Technical Notes\n- upload/view storage flows\n- step-based UI in upload plugin\n- close links to Seal in encrypted storage use cases\n- notes: [[walrus/integration]], [[walrus/dev-notes]], [[walrus/viewer-roadmap]]","x":220,"y":1110,"width":260,"height":150,"color":"2"},
+		{"id":"other","type":"text","text":"## Other Sui Utilities","x":520,"y":1040,"width":220,"height":60,"color":"6"},
+		{"id":"other-plugins","type":"text","text":"- `sui-payment`\n- `sui-lending`\n\nThese are smaller compared with DeepBook/NAVI/Seal clusters but still use the same plugin model.","x":520,"y":1130,"width":240,"height":130,"color":"6"},
+		{"id":"crosscut","type":"text","text":"## Cross-Cutting Patterns\n- every plugin exports `name`, `version`, `init()`\n- plugin registers React component via host registry\n- `styleUrls` points to `/plugins/<name>/style.css`\n- production bundle path becomes `assets/plugins/<name>.js`\n- rendered via `ShadowContainer`\n- main framework notes: [[plugin-architecture]], [[project-overview]], [[development-workflow]]","x":780,"y":1110,"width":320,"height":190,"color":"6"}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"summary","fromSide":"right","toNode":"reading","toSide":"left","color":"4"},
+		{"id":"e2","fromNode":"reading","fromSide":"right","toNode":"runtime","toSide":"left","color":"5"},
+		{"id":"e3","fromNode":"core","fromSide":"bottom","toNode":"core-plugins","toSide":"top","color":"4"},
+		{"id":"e4","fromNode":"core-plugins","fromSide":"right","toNode":"core-tech","toSide":"left","color":"4"},
+		{"id":"e5","fromNode":"deepbook","fromSide":"bottom","toNode":"deepbook-plugins","toSide":"top","color":"5"},
+		{"id":"e6","fromNode":"deepbook-plugins","fromSide":"right","toNode":"deepbook-tech","toSide":"left","color":"5"},
+		{"id":"e7","fromNode":"navi","fromSide":"bottom","toNode":"navi-plugins","toSide":"top","color":"3"},
+		{"id":"e8","fromNode":"navi-plugins","fromSide":"right","toNode":"navi-tech","toSide":"left","color":"3"},
+		{"id":"e9","fromNode":"seal","fromSide":"bottom","toNode":"seal-plugins","toSide":"top","color":"1"},
+		{"id":"e10","fromNode":"seal-plugins","fromSide":"right","toNode":"seal-tech","toSide":"left","color":"1"},
+		{"id":"e11","fromNode":"walrus","fromSide":"bottom","toNode":"walrus-plugins","toSide":"top","color":"2"},
+		{"id":"e12","fromNode":"walrus-plugins","fromSide":"right","toNode":"walrus-tech","toSide":"left","color":"2"},
+		{"id":"e13","fromNode":"other","fromSide":"bottom","toNode":"other-plugins","toSide":"top","color":"6"},
+		{"id":"e14","fromNode":"other-plugins","fromSide":"right","toNode":"crosscut","toSide":"left","color":"6"},
+		{"id":"e15","fromNode":"runtime","fromSide":"bottom","toNode":"crosscut","toSide":"top","color":"5","label":"all plugin groups end here"}
+	]
+}

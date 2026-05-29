@@ -1,0 +1,66 @@
+{
+	"nodes":[
+		{"id":"title","type":"text","text":"# Project Technical Structure\nHigh-level map of entry points, runtimes, host APIs, plugin loading, and build output","x":0,"y":0,"width":1200,"height":80,"color":"6"},
+		{"id":"entries","type":"text","text":"## Entry Layer\nHTML pages served by Vite multi-entry build","x":0,"y":120,"width":1200,"height":50,"color":"4"},
+		{"id":"entry-index","type":"text","text":"### `index.html`\n- `src/main.tsx`\n- renders `Portfolio`\n- public landing page","x":0,"y":200,"width":220,"height":110,"color":"4"},
+		{"id":"entry-demo","type":"text","text":"### `plugin-demo.html`\n- `src/plugin-demo/main.tsx`\n- generic plugin host demo","x":260,"y":200,"width":220,"height":110,"color":"4"},
+		{"id":"entry-sui","type":"text","text":"### `sui-plugin.html`\n- `src/sui-dashboard/main.tsx`\n- shared Sui wallet runtime","x":520,"y":200,"width":220,"height":110,"color":"4"},
+		{"id":"entry-wasm","type":"text","text":"### `sui-plugin-wasm.html`\n- `src/sui-wasm/main.tsx`\n- WASM-focused Sui runtime","x":780,"y":200,"width":220,"height":110,"color":"4"},
+		{"id":"entry-bot","type":"text","text":"### `sui-deepbook-hedging-bot.html`\n- dedicated DeepBook bot page","x":1040,"y":200,"width":220,"height":110,"color":"4"},
+
+		{"id":"runtimes","type":"text","text":"## Runtime Layer","x":0,"y":380,"width":1200,"height":50,"color":"1"},
+		{"id":"portfolio-runtime","type":"text","text":"### Portfolio Runtime\n`src/Portfolio.tsx`\n- isolated from plugin system\n- design-system driven UI\n- no shared wallet host","x":0,"y":460,"width":240,"height":140,"color":"1"},
+		{"id":"generic-runtime","type":"text","text":"### Generic Plugin Runtime\n`src/plugins/*`\n- `types.ts`\n- `host.ts`\n- `loader.ts`\n- `ShadowContainer.tsx`\n- `PluginRenderer.tsx`\nSee [[plugin-architecture]]","x":280,"y":460,"width":260,"height":180,"color":"1"},
+		{"id":"sui-runtime","type":"text","text":"### Shared Sui Runtime\n`src/sui-dashboard/*`\n- `SuiDashboard.tsx`\n- `sui-host.ts`\n- `sui-loader.ts`\n- `sui-types.ts`\n- shared wallet/network/actions/data store","x":580,"y":460,"width":280,"height":180,"color":"1"},
+		{"id":"wasm-runtime","type":"text","text":"### WASM Runtime\n`src/sui-wasm/*`\n- `SuiWasmDashboard.tsx`\n- `wasm-loader.ts`\n- plugin metadata detection\n- same host model + WASM surface awareness","x":900,"y":460,"width":280,"height":180,"color":"1"},
+
+		{"id":"host-contracts","type":"text","text":"## Host Contracts","x":0,"y":700,"width":1200,"height":50,"color":"5"},
+		{"id":"base-host","type":"text","text":"### `HostAPI`\nFrom `src/plugins/types.ts`\n- `registerComponent()`\n- `getComponent()`\n- `log()`","x":220,"y":780,"width":220,"height":130,"color":"5"},
+		{"id":"sui-host","type":"text","text":"### `SuiHostAPI`\nExtends base host with:\n- `getSuiContext()`\n- `onSuiContextChange()`\n- `requestConnect()` / disconnect / network switch\n- `signAndExecuteTransaction()`\n- `signPersonalMessage()`\n- shared data store APIs","x":520,"y":780,"width":280,"height":210,"color":"5"},
+		{"id":"registry","type":"text","text":"### Component Registry\nModule-level singleton registry in host files\n- plugin calls `registerComponent(name, Component)`\n- dashboard later resolves by name\n- unload removes registered components","x":860,"y":780,"width":280,"height":150,"color":"5"},
+
+		{"id":"plugin-flow","type":"text","text":"## Plugin Flow","x":0,"y":1060,"width":1200,"height":50,"color":"2"},
+		{"id":"plugin-entry","type":"text","text":"### Plugin Source Shape\n`plugins/<name>/plugin.tsx`\nUsually contains:\n- React component(s)\n- exported plugin object\n- `name`, `version`, `styleUrls`\n- `init(host)`\n- optional `mount()` / `unmount()`","x":0,"y":1140,"width":240,"height":180,"color":"2"},
+		{"id":"dynamic-load","type":"text","text":"### Dynamic Loading\n- dev path: `/plugins/<name>/plugin.tsx`\n- prod path: `/assets/plugins/<name>.js`\n- loader adds cache-busting timestamp\n- validates `name` + `init`\n- calls `plugin.init(host)`","x":280,"y":1140,"width":240,"height":170,"color":"2"},
+		{"id":"shadow-render","type":"text","text":"### Render Isolation\n`ShadowContainer`\n- creates shadow root\n- injects plugin CSS links\n- mounts React portal into shadow DOM\n- prevents CSS leakage between plugins","x":560,"y":1140,"width":240,"height":160,"color":"2"},
+		{"id":"shared-wallet","type":"text","text":"### Shared Wallet Execution\nIn Sui runtime only:\n- plugin reads wallet/network from host\n- plugin requests sign/execute through host\n- host delegates to DAppKit + wallet extension","x":840,"y":1140,"width":260,"height":160,"color":"2"},
+
+		{"id":"domains","type":"text","text":"## Feature Domains","x":0,"y":1380,"width":1200,"height":50,"color":"3"},
+		{"id":"domain-core","type":"text","text":"### Wallet & Core\nExamples:\n- `sui-wallet`\n- `sui-wallet-profile`\n- `sui-create-wallet`\n- `sui-dual-wallet`","x":0,"y":1460,"width":220,"height":150,"color":"3"},
+		{"id":"domain-deepbook","type":"text","text":"### DeepBook\n10 trading-oriented plugins\nIncludes orderbook, swap, portfolio, bot, analysis\nSee [[deepbook/README]]","x":260,"y":1460,"width":220,"height":150,"color":"3"},
+		{"id":"domain-navi","type":"text","text":"### NAVI\n4 plugins around dashboard, advisor, chatbot, analysis\nSee [[defi/navi/TECHNICAL]]","x":520,"y":1460,"width":220,"height":150,"color":"3"},
+		{"id":"domain-seal","type":"text","text":"### Seal\n8 runnable plugins + shared utility dir\nRequires message-signing flow\nSee [[seal/TECHNICAL]]","x":780,"y":1460,"width":220,"height":150,"color":"3"},
+		{"id":"domain-walrus","type":"text","text":"### Walrus\nUpload, viewer, earn\nClose relation with storage flows and some Seal use cases\nSee [[walrus/integration]]","x":1040,"y":1460,"width":220,"height":160,"color":"3"},
+
+		{"id":"build","type":"text","text":"## Build Layer","x":0,"y":1700,"width":1200,"height":50,"color":"6"},
+		{"id":"vite","type":"text","text":"### `vite.config.ts`\n- multi-entry HTML + plugin bundles\n- plugin entries declared in `rollupOptions.input`\n- predictable plugin filenames via `entryFileNames()`\n- `@mysten/*` grouped into `vendor-mysten` chunk","x":0,"y":1780,"width":300,"height":180,"color":"6"},
+		{"id":"copy-assets","type":"text","text":"### `copyPluginAssets()`\nBuild-time copy step:\n- copies `plugins/<name>/style.css` to `dist/plugins/<name>/style.css`\n- copies `pkg/*.js|*.wasm|*.d.ts` if present\nThis keeps Shadow DOM stylesheet paths valid in production.","x":340,"y":1780,"width":320,"height":190,"color":"6"},
+		{"id":"dist-shape","type":"text","text":"### Production Output Shape\n- `dist/assets/plugins/<name>.js`\n- `dist/plugins/<name>/style.css`\n- optional `dist/plugins/<name>/pkg/*`\n- runtime path helper chooses dev vs prod URLs","x":700,"y":1780,"width":260,"height":170,"color":"6"},
+		{"id":"notes","type":"text","text":"## Notes & References\n- [[project-overview]]\n- [[repo-map]]\n- [[runtime-entry-points]]\n- [[development-workflow]]\n- [[plugin-system-technical.canvas]] existing deep dive\n- [[architecture.canvas]] earlier project snapshot","x":1000,"y":1780,"width":260,"height":180,"color":"6"}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"entry-index","fromSide":"bottom","toNode":"portfolio-runtime","toSide":"top","color":"4"},
+		{"id":"e2","fromNode":"entry-demo","fromSide":"bottom","toNode":"generic-runtime","toSide":"top","color":"4"},
+		{"id":"e3","fromNode":"entry-sui","fromSide":"bottom","toNode":"sui-runtime","toSide":"top","color":"4"},
+		{"id":"e4","fromNode":"entry-wasm","fromSide":"bottom","toNode":"wasm-runtime","toSide":"top","color":"4"},
+		{"id":"e5","fromNode":"entry-bot","fromSide":"left","toNode":"domain-deepbook","toSide":"right","color":"4","label":"specialized feature page"},
+		{"id":"e6","fromNode":"generic-runtime","fromSide":"bottom","toNode":"base-host","toSide":"top","color":"1"},
+		{"id":"e7","fromNode":"sui-runtime","fromSide":"bottom","toNode":"sui-host","toSide":"top","color":"1"},
+		{"id":"e8","fromNode":"wasm-runtime","fromSide":"left","toNode":"sui-host","toSide":"right","color":"1","label":"same host model"},
+		{"id":"e9","fromNode":"base-host","fromSide":"right","toNode":"sui-host","toSide":"left","color":"5","label":"extension"},
+		{"id":"e10","fromNode":"sui-host","fromSide":"right","toNode":"registry","toSide":"left","color":"5"},
+		{"id":"e11","fromNode":"plugin-entry","fromSide":"right","toNode":"dynamic-load","toSide":"left","color":"2"},
+		{"id":"e12","fromNode":"dynamic-load","fromSide":"right","toNode":"shadow-render","toSide":"left","color":"2"},
+		{"id":"e13","fromNode":"shadow-render","fromSide":"right","toNode":"shared-wallet","toSide":"left","color":"2"},
+		{"id":"e14","fromNode":"registry","fromSide":"bottom","toNode":"dynamic-load","toSide":"top","color":"5","label":"plugin registers components into host"},
+		{"id":"e15","fromNode":"shared-wallet","fromSide":"bottom","toNode":"domain-core","toSide":"top","color":"3"},
+		{"id":"e16","fromNode":"shared-wallet","fromSide":"bottom","toNode":"domain-deepbook","toSide":"top","color":"3"},
+		{"id":"e17","fromNode":"shared-wallet","fromSide":"bottom","toNode":"domain-navi","toSide":"top","color":"3"},
+		{"id":"e18","fromNode":"shared-wallet","fromSide":"bottom","toNode":"domain-seal","toSide":"top","color":"3"},
+		{"id":"e19","fromNode":"shared-wallet","fromSide":"bottom","toNode":"domain-walrus","toSide":"top","color":"3"},
+		{"id":"e20","fromNode":"plugin-entry","fromSide":"bottom","toNode":"vite","toSide":"top","color":"6","label":"must be registered for build"},
+		{"id":"e21","fromNode":"vite","fromSide":"right","toNode":"copy-assets","toSide":"left","color":"6"},
+		{"id":"e22","fromNode":"copy-assets","fromSide":"right","toNode":"dist-shape","toSide":"left","color":"6"},
+		{"id":"e23","fromNode":"dist-shape","fromSide":"right","toNode":"notes","toSide":"left","color":"6"}
+	]
+}
