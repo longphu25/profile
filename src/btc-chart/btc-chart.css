@@ -1,0 +1,119 @@
+@import 'tailwindcss';
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap');
+}
+
+:root {
+  --color-ink: #071011;
+  --color-ink-2: #0d1c1d;
+  --color-panel: rgba(8, 24, 25, 0.82);
+  --color-panel-strong: rgba(12, 34, 35, 0.94);
+  --color-line: rgba(190, 255, 234, 0.16);
+  --color-line-strong: rgba(190, 255, 234, 0.34);
+  --color-text: #effff8;
+  --color-muted: #9fb9b1;
+  --color-mint: #80ffd5;
+  --color-teal: #28d8c1;
+  --color-amber: #ffc46b;
+  --color-sui: #6fbcf0;
+
+  --font-satoshi:
+    'Satoshi', 'Avenir Next', Avenir, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  --font-ui-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100dvh;
+  width: 100%;
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-satoshi);
+  overflow: hidden;
+}
+
+#root {
+  display: block;
+  height: 100dvh;
+  width: 100%;
+}
+
+/* Page wrapper hosting the plugin Shadow DOM container.
+   ShadowContainer renders a <div> with no inline size — we cascade height down
+   so the chart can compute its pixel layout from a real viewport, otherwise
+   the status bar gets pushed out of the visible area. */
+.btc-page {
+  height: 100dvh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.btc-page > div {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+/* Loading + error states */
+.btc-page--loading,
+.btc-page--error {
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--color-muted);
+  font-family: var(--font-ui-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.btc-page--error {
+  color: #ff7a85;
+  flex-direction: column;
+}
+.btc-page__err {
+  color: var(--color-muted);
+  font-size: 11px;
+  max-width: 480px;
+  text-align: center;
+}
+.btc-page__spinner {
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--color-line);
+  border-top-color: var(--color-mint);
+  border-radius: 50%;
+  animation: btc-page-spin 0.8s linear infinite;
+}
+@keyframes btc-page-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(190, 255, 234, 0.12);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(190, 255, 234, 0.24);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btc-page__spinner {
+    animation: none;
+  }
+}
