@@ -1,114 +1,183 @@
-# DeepBook Static Page and Plugin Split Plan
+# DeepBook Static App & Plugin Split Plan
+
+## Status
+
+| Item | Status |
+|------|--------|
+| `deepbook.html` | ✅ Done |
+| `src/deepbook/main.tsx` | ✅ Done |
+| `src/deepbook/DeepBookSuite.tsx` | ✅ Done — grouped nav, lazy-load, wallet context |
+| `src/deepbook/MissionControl.tsx` | ✅ Done — recommended actions, daily quests |
+| `vite.config.ts` updated | ✅ Done |
+| ActionHub in `sui-deepbook-predict` | ✅ Done — status strip, 3 primary CTAs |
+| Primary/More tab grouping in Predict | ✅ Done — 4 primary + More dropdown |
 
 ## Summary
 
-Do not continue creating one static HTML file for every small plugin. For DeepBook, create one main product page:
+Không nên tiếp tục tạo một static HTML riêng cho từng plugin nhỏ. Với DeepBook, nên tạo một static page tổng:
 
 - HTML: `deepbook.html`
 - React entry: `src/deepbook/main.tsx`
 - Root app: `src/deepbook/DeepBookSuite.tsx`
-- Runtime: reuse `SuiHostAPI`, `ShadowContainer`, `loadSuiPlugin`, wallet/shared context like `sui-plugin.html`
+- Runtime: dùng lại `SuiHostAPI`, `ShadowContainer`, `loadSuiPlugin`, wallet/shared context giống `sui-plugin.html`
 
-Goal: turn existing DeepBook plugins into a DeepBook Suite with navigation, action hub, wallet context, recommended actions, and lazy-loaded plugins.
+Mục tiêu: biến các plugin DeepBook hiện có thành một **DeepBook Suite** có navigation, action hub, wallet context, recommended actions, và load plugin theo nhu cầu.
 
-Keep dedicated deep links:
+Các page chuyên biệt hiện có vẫn giữ làm deep link:
 
-- `sui-deepbook-predict.html`: Predict-specific demo/submission.
-- `sui-deepbook-hedging-bot.html`: large bot experience.
-- `sui-plugin.html`: generic Sui plugin dashboard.
-- `sui-plugin-wasm.html`: technical/WASM/plugin catalog.
+- `sui-deepbook-predict.html`: dành cho Predict demo/submission riêng
+- `sui-deepbook-hedging-bot.html`: dành cho bot lớn, cần không gian riêng
+- `sui-plugin.html`: giữ làm generic Sui plugin dashboard
+- `sui-plugin-wasm.html`: giữ làm dashboard kỹ thuật/WASM/plugin catalog
 
 ## Plugin Split
 
-### DeepBook Core Apps
+Chia plugin theo **user workflow**, không chia quá nhỏ theo từng widget.
 
-- `sui-deepbook-home`:
-  - new app/module
-  - Mission Control: wallet summary, market status, recommended next action, quests, quick launch
-- `sui-swap`:
-  - keep existing plugin
-  - group: `Trade`
-- `sui-deepbook-orderbook`:
-  - keep existing plugin
-  - group: `Trade` and `Market Radar`
-- `sui-deepbook-portfolio`:
-  - keep existing plugin
-  - group: `Portfolio`
-- `sui-deepbook-predict`:
-  - keep existing plugin
-  - group: `Predict`
+### 1. DeepBook Core Apps
 
-### Market and Analytics Apps
+Nhóm plugin dùng thường xuyên, nên hiện ở navigation chính:
+
+- `sui-deepbook-home`
+  - New plugin/app module.
+  - Mission Control: wallet summary, market status, recommended next action, quests, quick launch.
+
+- `sui-swap`
+  - Giữ plugin hiện tại.
+  - Vào nhóm `Trade`.
+
+- `sui-deepbook-orderbook`
+  - Giữ plugin hiện tại.
+  - Dùng trong `Trade` và `Market Radar`.
+
+- `sui-deepbook-portfolio`
+  - Giữ plugin hiện tại.
+  - Vào nhóm `Portfolio`.
+
+- `sui-deepbook-predict`
+  - Giữ plugin lớn hiện tại.
+  - Vào nhóm `Predict`.
+
+### 2. Market & Analytics Apps
+
+Nhóm plugin giúp user tìm cơ hội:
 
 - `sui-pool-explorer`
-- `sui-price-feed`
-- `sui-deepbook-history`
-- `sui-deepbook-analysis`
-- Planned: `sui-deepbook-market-radar`
-  - aggregates pool explorer + price feed + analysis
-  - tags: `High Volume`, `Wide Spread`, `Trending`, `Watch`
+  - Pool discovery, volume, spread, active/frozen state.
 
-### Risk and Margin Apps
+- `sui-price-feed`
+  - Price cards, OHLCV, sparkline.
+
+- `sui-deepbook-history`
+  - Trades, fee breakdown, recent activity.
+
+- `sui-deepbook-analysis`
+  - Trend, indicators, market radar.
+
+- New planned module: `sui-deepbook-market-radar`
+  - Aggregates pool explorer + price feed + analysis into one actionable screen.
+  - Shows tags like `High Volume`, `Wide Spread`, `Trending`, `Watch`.
+
+### 3. Risk & Margin Apps
+
+Nhóm plugin cho power users:
 
 - `sui-margin-manager`
-- Planned: `sui-deepbook-risk-center`
-  - aggregates portfolio + margin + open orders
-  - promotes warnings before trade CTAs
-  - statuses: `Safe`, `Caution`, `At Risk`
+  - Margin positions, collateral, risk ratio.
 
-### Bot and Automation Apps
+- New planned module: `sui-deepbook-risk-center`
+  - Aggregates portfolio + margin + open orders.
+  - Promotes warnings before trade CTAs.
+  - Shows `Safe`, `Caution`, `At Risk`.
+
+### 4. Bot & Automation Apps
+
+Nhóm plugin tăng tương tác lặp lại:
 
 - `sui-hedging-monitor`
+  - Monitor external bot instance.
+
 - `sui-deepbook-hedging-bot`
-- Planned: `sui-deepbook-bot-arena`
-  - bot sessions, cycles, streaks, missions, runtime health
-  - links into hedging bot page for full control
+  - Client-side bot.
 
-### Gamification Apps
+- New planned module: `sui-deepbook-bot-arena`
+  - Bot sessions, cycles, streaks, missions, runtime health.
+  - Links into hedging bot page for full control.
 
-- Planned: `sui-deepbook-quest-board`
-- Planned: `sui-deepbook-achievement-profile`
-- Planned: `sui-deepbook-leaderboard`
+### 5. Gamification Apps
 
-### Predict Strategy Apps
+Nhóm mới để tăng retention:
 
-Keep in `sui-deepbook-predict`:
+- New planned module: `sui-deepbook-quest-board`
+  - Daily/weekly tasks: swap, review orderbook, inspect risk, run bot, review Predict signal.
 
-- trading
-- portfolio
-- vault
-- surface
-- keeper
-- basic strategy tabs
+- New planned module: `sui-deepbook-achievement-profile`
+  - Streaks, completed missions, badges, trading milestones.
 
-Planned modules:
+- New planned module: `sui-deepbook-leaderboard`
+  - Local/session/indexer-derived v1 leaderboards:
+    - volume
+    - consistency
+    - bot cycles
+    - risk-adjusted PnL
+    - Predict signal discipline
 
-- `sui-deepbook-trend-predict`
-  - MA/ROC/no-trade logic
-  - maps signal to Predict oracle, expiry, direction, strike
-  - always displays risk warning and not-guaranteed copy
-- `sui-deepbook-predict-backtest`
-  - fetch/import candles
-  - backtest MA/ROC rules
-  - show winrate, expectancy, drawdown, no-trade frequency
+### 6. Predict Strategy Apps
+
+Để tránh `sui-deepbook-predict` phình quá lớn, tách phần chiến lược nâng cao thành app/module riêng khi cần:
+
+- Keep in `sui-deepbook-predict`:
+  - trading
+  - portfolio
+  - vault
+  - surface
+  - keeper
+  - basic strategy tabs
+
+- New planned module: `sui-deepbook-trend-predict`
+  - Trend/momentum signal lab.
+  - MA/ROC/no-trade logic.
+  - Maps signal to Predict oracle, expiry, direction, strike.
+  - Always displays risk warning and "not guaranteed" copy.
+
+- New planned module: `sui-deepbook-predict-backtest`
+  - Import/fetch candles.
+  - Backtest MA/ROC rules.
+  - Show winrate, expectancy, drawdown, no-trade frequency.
 
 ## Static HTML Design
 
-Recommended page:
+### Recommended Page
+
+Use one new static page:
 
 ```text
 deepbook.html
 ```
 
-Layout:
+It should be the main product page for all DeepBook apps.
+
+Reasoning:
+
+- Short and user-facing.
+- Not tied to Sui implementation detail.
+- Easier to submit/share than `sui-plugin.html`.
+- Keeps `sui-deepbook-predict.html` available for Predict-specific demo.
+
+### Page Layout
+
+`deepbook.html` should load a custom DeepBook Suite shell, not the generic dashboard.
+
+Top-level layout:
 
 - Sticky top bar:
-  - DeepBook title
+  - DeepBook brand/title
   - network selector
   - wallet connect/account
   - global live status
+
 - First viewport:
-  - `DeepBook Mission Control`
+  - DeepBook Mission Control
   - recommended next action
   - primary CTAs:
     - `Trade Now`
@@ -116,29 +185,102 @@ Layout:
     - `Manage Risk`
     - `Run Bot`
     - `Earn Points`
+
 - Main workspace:
-  - grouped navigation
+  - left navigation or compact top segmented nav
   - active app panel
   - plugin rendered inside `ShadowContainer`
-- Desktop side rail:
+
+- Right/secondary rail on desktop:
   - wallet summary
   - quests
   - alerts
   - recent actions
+
 - Mobile:
   - action cards first
-  - compact navigation
+  - bottom or horizontal navigation
   - no dense 13-tab row
 
-## Navigation Groups
+### Navigation Groups
 
-- `Home`: Mission Control
-- `Trade`: Swap, Orderbook, Market Radar
-- `Predict`: Predict Command Center, Trend Predict, Backtest
-- `Portfolio`: Portfolio, History, Risk Center
-- `Bots`: Hedging Monitor, Hedging Bot, Bot Arena
-- `Rewards`: Quest Board, Achievements, Leaderboard
-- `Advanced`: Pool Explorer, Price Feed, Margin Manager, Analysis
+Use groups instead of raw plugin list:
+
+- `Home`
+  - Mission Control
+
+- `Trade`
+  - Swap
+  - Orderbook
+  - Market Radar
+
+- `Predict`
+  - Predict Command Center
+  - Trend Predict
+  - Backtest
+
+- `Portfolio`
+  - Portfolio
+  - History
+  - Risk Center
+
+- `Bots`
+  - Hedging Monitor
+  - Hedging Bot
+  - Bot Arena
+
+- `Rewards`
+  - Quest Board
+  - Achievements
+  - Leaderboard
+
+- `Advanced`
+  - Pool Explorer
+  - Price Feed
+  - Margin Manager
+  - Analysis
+
+## Public Interfaces / Types
+
+No on-chain changes required.
+
+Add internal app-shell types when implementing:
+
+```ts
+type DeepBookAppGroup =
+  | 'home'
+  | 'trade'
+  | 'predict'
+  | 'portfolio'
+  | 'bots'
+  | 'rewards'
+  | 'advanced'
+
+type DeepBookAppIntent =
+  | 'trade-now'
+  | 'predict-trend'
+  | 'manage-risk'
+  | 'run-bot'
+  | 'earn-points'
+  | 'analyze-market'
+
+type DeepBookAppStatus =
+  | 'live'
+  | 'simulated'
+  | 'experimental'
+  | 'requires-wallet'
+  | 'coming-soon'
+```
+
+Suggested shell components:
+
+- `DeepBookSuite`
+- `DeepBookTopBar`
+- `DeepBookMissionControl`
+- `DeepBookAppNav`
+- `DeepBookPluginWorkspace`
+- `RecommendedActionPanel`
+- `QuestRail`
 
 ## Implementation Defaults
 
@@ -146,18 +288,49 @@ Layout:
 - Reuse plugin path pattern:
   - dev: `plugins/<name>/plugin.tsx`
   - production: `assets/plugins/<name>.js`
-- Load only Home/Mission Control initially.
+- Load only the Home/Mission Control app initially.
 - Lazy-load other DeepBook plugins when the user opens a group/app.
 - Keep existing plugin folders intact.
 - Do not merge all DeepBook logic into one giant plugin.
 - Add `deepbook.html` to `vite.config.ts` inputs when implementing.
+- Add any new plugin entry to `vite.config.ts` only when the plugin is actually created.
 
 ## Test Plan
 
-- Open `deepbook.html` without wallet: Mission Control loads, connect wallet is primary CTA.
-- Connect wallet: wallet state is shared across plugins.
-- Trade group: Swap and Orderbook load without losing wallet context.
-- Predict group: Predict plugin can request wallet signing through host.
-- Bots group: hedging monitor/bot entry is discoverable without cluttering Home.
-- Existing standalone pages still work.
+Manual scenarios:
+
+- Open `deepbook.html` with no wallet:
+  - Mission Control loads.
+  - Primary CTA is connect wallet.
+  - Apps requiring wallet are marked clearly.
+
+- Connect wallet:
+  - Wallet state is shared across loaded plugins.
+  - Recommended actions update.
+
+- Open Trade group:
+  - Swap and Orderbook load without losing wallet context.
+
+- Open Predict group:
+  - Predict plugin loads and can request wallet signing through host.
+
+- Open Bots group:
+  - Hedging monitor/bot entry is discoverable without cluttering Home.
+
+- Mobile/narrow viewport:
+  - App groups remain usable.
+  - No long 13-tab row.
+
+- Regression:
+  - Existing standalone pages still work.
+  - Existing `sui-plugin.html` and `sui-plugin-wasm.html` behavior remains unchanged.
+  - `bun run build` passes.
+
+## Assumptions
+
+- The best new static page name is `deepbook.html`.
+- The main goal is a DeepBook product suite, not another generic plugin demo.
+- Existing plugins should be reused and grouped, not rewritten.
+- Large apps like Predict and Hedging Bot can keep dedicated static pages as deep links.
+- The first implementation should prioritize navigation, Mission Control, and lazy-loading existing plugins before building new gamification modules.
 

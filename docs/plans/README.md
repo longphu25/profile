@@ -12,6 +12,7 @@ This folder collects the planning material discussed for the DeepBook / Predict 
 | [04-deepbook-static-plugin-split.md](04-deepbook-static-plugin-split.md) | Recommended static HTML page and plugin split strategy. |
 | [05-commander-taskos.md](05-commander-taskos.md) | Commander / TaskOS product model for mission-based interaction. |
 | [06-work-breakdown.md](06-work-breakdown.md) | Work packages, priorities, and implementation sequencing. |
+| [07-hashi-suilink-later.md](07-hashi-suilink-later.md) | Later-stage Hashi + SuiLink BTC credit onboarding plan. |
 
 ## Recommended Build Order
 
@@ -21,4 +22,4 @@ This folder collects the planning material discussed for the DeepBook / Predict 
 4. Add gamified quests and local achievements.
 5. Add Trend Predict signal lab and backtest workflow.
 6. Expand into Commander TaskOS command routing.
-
+7. Add Hashi + SuiLink BTC credit onboarding after the DeepBook shell is stable.
