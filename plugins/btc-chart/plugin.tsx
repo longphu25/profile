@@ -601,6 +601,9 @@ function BtcChartView() {
   const lastPriceRef = useRef<number | null>(null)
   // Latest computed indicator snapshot — read from inside the WS handler.
   const sidebarRef = useRef<SidebarState>(INITIAL_SIDEBAR)
+  // Minimal-mode flag — kept as a ref so render callbacks pick it up
+  // without going through the closure capture of `minimal`.
+  const minimalRef = useRef<boolean>(cfgInit.minimal)
 
   const [interval, setInterval_] = useState<Interval>(cfgInit.interval as Interval)
   const [vis, setVis] = useState<VisFlags>(visRef.current)
@@ -608,6 +611,7 @@ function BtcChartView() {
   const [alerts, setAlerts] = useState<AlertRule[]>(alertsRef.current)
   const [sound, setSound] = useState(cfgInit.sound)
   const [notifAllowed, setNotifAllowed] = useState(cfgInit.notifications)
+  const [minimal, setMinimal] = useState<boolean>(cfgInit.minimal)
   const [firedToast, setFiredToast] = useState<string | null>(null)
   const [importErr, setImportErr] = useState<string | null>(null)
 
@@ -641,6 +645,14 @@ function BtcChartView() {
   useEffect(() => {
     sidebarRef.current = sidebar
   }, [sidebar])
+  useEffect(() => {
+    minimalRef.current = minimal
+    // Redraw chart + overlays after CSS reflow finishes.
+    requestAnimationFrame(() => {
+      if (candlesRef.current.length) renderData(candlesRef.current)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minimal])
 
   // Persist on any config-affecting change.
   const persist = useCallback(
@@ -653,9 +665,10 @@ function BtcChartView() {
         alerts,
         sound,
         notifications: notifAllowed,
+        minimal,
       })
     },
-    [interval, vis, alerts, sound, notifAllowed],
+    [interval, vis, alerts, sound, notifAllowed, minimal],
   )
   useEffect(() => {
     persist(undefined)
@@ -708,6 +721,8 @@ function BtcChartView() {
         refs.candleSeries,
         v.of ? of_.overlay : [],
         true,
+        minimalRef.current ? 0 : 64,
+        minimalRef.current,
       )
     }
 
@@ -740,13 +755,10 @@ function BtcChartView() {
     }
 
     if (vpCanvasRef.current && mainElRef.current) {
-      const info = drawVP(
-        vpCanvasRef.current,
-        mainElRef.current,
-        data.slice(-LIMIT),
-        v.vp,
-        vpOptsRef.current,
-      )
+      const info = drawVP(vpCanvasRef.current, mainElRef.current, data.slice(-LIMIT), v.vp, {
+        ...vpOptsRef.current,
+        width: minimalRef.current ? 140 : 220,
+      })
       setSidebar((s) => ({
         ...s,
         vp: { poc: info.poc, vah: info.vah, val: info.val, pos: info.pos },
@@ -1030,6 +1042,8 @@ function BtcChartView() {
           candleSeries,
           visRef.current.of ? ofOverlayRef.current : [],
           true,
+          minimalRef.current ? 0 : 64,
+          minimalRef.current,
         )
       }
     })
@@ -1084,6 +1098,8 @@ function BtcChartView() {
           candleSeries,
           visRef.current.of ? ofOverlayRef.current : [],
           true,
+          minimalRef.current ? 0 : 64,
+          minimalRef.current,
         )
       }
     }
@@ -1467,8 +1483,9 @@ function BtcChartView() {
       alerts,
       sound,
       notifications: notifAllowed,
+      minimal,
     })
-  }, [interval, vis, alerts, sound, notifAllowed])
+  }, [interval, vis, alerts, sound, notifAllowed, minimal])
 
   const importNow = useCallback(
     async (file: File) => {
@@ -1480,6 +1497,7 @@ function BtcChartView() {
         alertsRef.current = cfg.alerts
         setSound(cfg.sound)
         setNotifAllowed(cfg.notifications)
+        setMinimal(cfg.minimal)
         if (cfg.interval !== interval) setInterval_(cfg.interval as Interval)
         // restore zoom if present
         if (cfg.zoom && chartRefs.current?.mainChart) {
@@ -1512,14 +1530,30 @@ function BtcChartView() {
   ]
 
   return (
-    <div className="btc-chart" ref={rootRef}>
+    <div className={`btc-chart${minimal ? ' is-minimal' : ''}`} ref={rootRef}>
+      {minimal && (
+        <>
+          <div className="btc-chart__minimal-title">
+            <span className="btc-chart__minimal-pair">BTC/USDT</span>
+            <span className="btc-chart__minimal-iv">— {interval}</span>
+          </div>
+          <button
+            type="button"
+            className="btc-chart__minimal-exit"
+            onClick={() => setMinimal(false)}
+            title="Exit minimal mode"
+            aria-label="Exit minimal mode"
+          >
+            Pro
+          </button>
+        </>
+      )}{' '}
       {loading && (
         <div className="btc-chart__loading">
           <div className="btc-chart__spinner" />
           <span className="btc-chart__loading-text">{loadingText}</span>
         </div>
       )}
-
       {firedToast && (
         <div className="btc-chart__toast" role="status">
           <span className="btc-chart__toast-tag">ALERT</span>
@@ -1534,7 +1568,6 @@ function BtcChartView() {
           </button>
         </div>
       )}
-
       {importErr && (
         <div className="btc-chart__toast btc-chart__toast--err" role="alert">
           <span className="btc-chart__toast-tag">IMPORT</span>
@@ -1544,7 +1577,6 @@ function BtcChartView() {
           </button>
         </div>
       )}
-
       {/* Header */}
       <div className="btc-chart__header">
         <span className="btc-chart__pair">
@@ -1588,7 +1620,6 @@ function BtcChartView() {
           Live
         </div>
       </div>
-
       {/* Toolbar */}
       <div className="btc-chart__toolbar">
         <span className="btc-chart__tb-label">Indicators</span>
@@ -1652,8 +1683,15 @@ function BtcChartView() {
             }}
           />
         </label>
+        <button
+          type="button"
+          className={`btc-chart__ind-btn${minimal ? ' is-on' : ''}`}
+          onClick={() => setMinimal((m) => !m)}
+          title="Minimal mode — chart only, hide chrome"
+        >
+          {minimal ? 'Pro' : 'Min'}
+        </button>
       </div>
-
       {/* Body */}
       <div className="btc-chart__body">
         <div className="btc-chart__col">
@@ -1887,7 +1925,6 @@ function BtcChartView() {
           </div>
         </div>
       </div>
-
       {/* Status */}
       <div className="btc-chart__status">
         <span

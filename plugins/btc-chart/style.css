@@ -869,3 +869,97 @@
 .btc-chart__alert-del:hover {
   color: var(--dn);
 }
+
+/* ── Minimal mode ─────────────────────────────────────────────────────
+   Goal: chart-only canvas with VP on the right, hide every chrome.
+   The user can flip back via the floating "Pro" pill (top-right). */
+.btc-chart.is-minimal .btc-chart__header,
+.btc-chart.is-minimal .btc-chart__toolbar,
+.btc-chart.is-minimal .btc-chart__sidebar,
+.btc-chart.is-minimal .btc-chart__rsi,
+.btc-chart.is-minimal .btc-chart__vol,
+.btc-chart.is-minimal .btc-chart__status,
+.btc-chart.is-minimal .btc-chart__legend {
+  display: none !important;
+}
+
+/* Body becomes a single flow with the chart filling the viewport. */
+.btc-chart.is-minimal .btc-chart__body {
+  flex: 1 1 auto;
+}
+
+/* In minimal mode the "col" hosts the chart on the left and the VP on
+   the right (instead of stacking RSI/Vol panes vertically). */
+.btc-chart.is-minimal .btc-chart__col {
+  display: flex;
+  flex-direction: row;
+}
+.btc-chart.is-minimal .btc-chart__main {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* VP canvas: stop overlaying candles; sit in its own column on the right. */
+.btc-chart.is-minimal .btc-chart__vp-canvas {
+  position: static;
+  flex: 0 0 auto;
+  width: 140px;
+  height: auto;
+  opacity: 1;
+}
+
+/* Order-flow overlay still anchors to the main pane via its absolute position
+   inside the relatively-positioned col. Nothing to override in minimal mode. */
+
+/* Floating title (top-left, like the reference design) */
+.btc-chart__minimal-title {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 12;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.btc-chart__minimal-iv {
+  color: var(--muted-2);
+  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Floating exit button (top-right) */
+.btc-chart__minimal-exit {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 12;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--mint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  backdrop-filter: blur(8px);
+}
+.btc-chart__minimal-exit:hover {
+  background: rgba(128, 255, 213, 0.08);
+  border-color: var(--mint);
+}
