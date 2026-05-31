@@ -1,8 +1,6 @@
 # Features
 
-## 1. Multi-timeframe candlestick chart
-
-| Field | Value |
+## 1. Multi-timeframe candlestick chart| Field | Value |
 |-------|------|
 | Symbol | `BTCUSDT` (Binance Spot) |
 | Intervals | `1m / 5m / 15m / 1h / 4h / 1d` |
@@ -122,3 +120,26 @@ Chi tiết: [`storage.md`](storage.md).
 - **WS status** trong status bar: `Live / Idle / Closed / Error / Demo`.
 
 Khi network fetch fail, plugin tự fallback dữ liệu mock (200 candles random walk quanh $65k) để UI không vỡ.
+
+
+## 10. Minimal mode
+
+Toolbar nút **"Min"** (đổi thành "Pro" khi đang minimal) flips toàn bộ chrome:
+
+- Ẩn header, toolbar, sidebar, RSI pane, Volume pane, status bar, legend.
+- `__col` chuyển từ `flex-direction: column` (3 panes stacked) sang `flex-direction: row` (chart + VP cạnh nhau).
+- VP canvas dời từ overlay (`position: absolute; right: 64px; width: 220px`) sang in-flow (`position: static; flex: 0 0 140px`) — không còn đè giá nữa.
+- OF overlay vẽ ở simple mode: chỉ triangles (▲/▼) màu mint/coral cạnh wick, không pill, không leader line, không ratio text. Giảm noise tối đa.
+- Title nhỏ `BTC/USDT — 1d` floating top-left.
+- Floating pill "Pro" top-right để thoát.
+
+Persist trong `ChartConfig.minimal: boolean`. State preserved giữa các phiên.
+
+```ts
+// Toolbar toggle
+<button onClick={() => setMinimal((m) => !m)}>
+  {minimal ? 'Pro' : 'Min'}
+</button>
+```
+
+Khi flip, plugin gọi `requestAnimationFrame(() => renderData(candlesRef.current))` để chart redraw sau khi CSS reflow xong (chart libs cần `applyOptions({ width, height })` lại).
