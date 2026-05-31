@@ -1,0 +1,43 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "lint": true,
+  "deadCode": false,
+  "verbose": false,
+  "failOn": "none",
+  "respectInlineDisables": true,
+  "adoptExistingLintConfig": true,
+  "ignore": {
+    "files": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      ".cache/**",
+      "public/**",
+      ".kiro/**",
+      ".agents/**",
+      ".main-agent/**",
+      "docs/**",
+      "**/*.d.ts",
+      "**/*.test.{ts,tsx,js,jsx}",
+      "**/*.spec.{ts,tsx,js,jsx}",
+      "plugins/*/pkg/**",
+      "workers/**",
+      "contracts/**",
+      "scripts/**"
+    ],
+    "rules": [
+      "react-hooks-js/todo",
+      "react-doctor/react-compiler-no-manual-memoization",
+      "react-hooks-js/static-components",
+      "react-hooks-js/preserve-manual-memoization",
+      "react-doctor/jsx-no-undef"
+    ],
+    "tags": []
+  },
+  "rules": {
+    "react-hooks-js/set-state-in-effect": "warn",
+    "react-hooks-js/purity": "warn",
+    "react-hooks-js/immutability": "warn"
+  }
+}

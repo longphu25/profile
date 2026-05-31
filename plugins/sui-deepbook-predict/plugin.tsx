@@ -966,14 +966,17 @@ function SurfaceStudio({ oracleId, oracles }: { oracleId: string | null; oracles
   const [sviHistory, setSviHistory] = useState<any[]>([])
   const [sliderIdx, setSliderIdx] = useState(0)
   const [loading, setLoading] = useState(false)
-  const [selOracle, setSelOracle] = useState(oracleId)
+  const [selOracle, setSelOracle] = useState<string | null>(oracleId)
   const [latestPrice, setLatestPrice] = useState<any>(null)
+  const [prevOracleId, setPrevOracleId] = useState<string | null>(oracleId)
+
+  // Adopt prop change without effect (React-recommended pattern)
+  if (oracleId !== prevOracleId) {
+    setPrevOracleId(oracleId)
+    if (oracleId && !selOracle) setSelOracle(oracleId)
+  }
 
   const activeOracle = oracles.find((o) => o.oracle_id === selOracle)
-
-  useEffect(() => {
-    if (oracleId && !selOracle) setSelOracle(oracleId)
-  }, [oracleId])
 
   useEffect(() => {
     if (!selOracle) return
