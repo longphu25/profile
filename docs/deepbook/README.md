@@ -16,6 +16,7 @@ All documentation for DeepBook v3 integrations in this project.
 | [api-reference.md](api-reference.md) | DeepBook Indexer REST API + SDK + Sui RPC reference |
 | [balance-manager.md](balance-manager.md) | Balance Manager — what it is, SDK API, common errors, token recycling |
 | [trading-strategies.md](trading-strategies.md) | Strategy comparison, lessons learned, cost analysis, pool selection |
+| [btc/](btc/README.md) | **BTC Chart Pro** — standalone trading dashboard, alerts, snapshot, VP heatmap |
 
 ---
 
