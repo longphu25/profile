@@ -69,6 +69,7 @@ export default defineConfig({
       'deepbook.html',
       'polymarket-dashboard.html',
       'marketplace.html',
+      'btc-chart.html',
     ],
   },
   server: {
@@ -119,6 +120,7 @@ export default defineConfig({
         'sui-deepbook-predict': resolve(__dirname, 'sui-deepbook-predict.html'),
         deepbook: resolve(__dirname, 'deepbook.html'),
         'polymarket-dashboard': resolve(__dirname, 'polymarket-dashboard.html'),
+        'btc-chart': resolve(__dirname, 'btc-chart.html'),
         // Build plugins as separate entry points
         'plugins/hello-plugin': resolve(__dirname, 'plugins/hello-plugin/plugin.tsx'),
         'plugins/hello-world-sui': resolve(__dirname, 'plugins/hello-world-sui/plugin.tsx'),
@@ -184,6 +186,7 @@ export default defineConfig({
         'plugins/polymarket-detail': resolve(__dirname, 'plugins/polymarket-detail/plugin.tsx'),
         'plugins/polymarket-wallet': resolve(__dirname, 'plugins/polymarket-wallet/plugin.tsx'),
         'plugins/polymarket': resolve(__dirname, 'plugins/polymarket/plugin.tsx'),
+        'plugins/btc-chart': resolve(__dirname, 'plugins/btc-chart/plugin.tsx'),
       },
       external: ['gsap', 'motion'],
       preserveEntrySignatures: 'exports-only',
