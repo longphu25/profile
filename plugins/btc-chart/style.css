@@ -479,6 +479,25 @@
   color: var(--muted);
   font-size: 9.5px;
 }
+.btc-chart__of-note {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--surface-3);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.btc-chart__of-note b {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+}
+.btc-chart__of-note-sub {
+  color: var(--muted);
+}
 
 /* Fear & Greed */
 .btc-chart__fng {

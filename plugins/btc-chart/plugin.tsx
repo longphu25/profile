@@ -108,57 +108,40 @@ const tsNow = (): string => new Date().toLocaleTimeString('vi-VN')
 
 // ── Indicators ─────────────────────────────────────────────────────────────
 
-function calcATR(data: Candle[], period = 14): (number | null)[] {
-  const out = new Array<number | null>(data.length).fill(null)
-  let trSum = 0
-  for (let i = 1; i < data.length; i++) {
-    const tr = Math.max(
-      data[i].high - data[i].low,
-      Math.abs(data[i].high - data[i - 1].close),
-      Math.abs(data[i].low - data[i - 1].close),
-    )
-    trSum += tr
-    if (i > period) {
-      const prev = data[i - period + 1],
-        pp = data[i - period]
-      trSum -= Math.max(
-        prev.high - prev.low,
-        Math.abs(prev.high - pp.close),
-        Math.abs(prev.low - pp.close),
-      )
-    }
-    if (i >= period) out[i] = trSum / period
-  }
-  return out
+// LuxAlgo Nadaraya-Watson Envelope uses a Gaussian weighting kernel.
+function gaussKernel(dist: number, h: number): number {
+  return Math.exp(-(dist * dist) / (2 * h * h))
 }
 
-function rqKernel(dist: number, h = 8, alpha = 8): number {
-  return Math.pow(1 + (dist * dist) / (2 * alpha * h * h), -alpha)
-}
+// LuxAlgo Nadaraya-Watson Envelope (default repainting / symmetric mode):
+//  - for every bar, weight ALL bars in the window by a Gaussian of their
+//    distance |i-j| (uses future bars too, hence repaints as candles arrive)
+//  - envelope width = mean absolute deviation of price from the line × mult,
+//    applied as a constant width to every bar.
+function calcNWE(data: Candle[], h = 8, mult = 3): NWE {
+  const n = data.length
+  const mid = new Array<number | null>(n).fill(null)
+  const upper = new Array<number | null>(n).fill(null)
+  const lower = new Array<number | null>(n).fill(null)
+  if (!n) return { mid, upper, lower }
 
-function calcNWE(data: Candle[], lookback = 100, h = 8, alpha = 8, mult = 2.5): NWE {
-  const mid = new Array<number | null>(data.length).fill(null)
-  const upper = new Array<number | null>(data.length).fill(null)
-  const lower = new Array<number | null>(data.length).fill(null)
-  const atr = calcATR(data, 14)
-
-  for (let i = 0; i < data.length; i++) {
-    const start = Math.max(0, i - lookback + 1)
+  for (let i = 0; i < n; i++) {
     let num = 0,
       den = 0
-    for (let j = start; j <= i; j++) {
-      const w = rqKernel(i - j, h, alpha)
+    for (let j = 0; j < n; j++) {
+      const w = gaussKernel(i - j, h)
       num += data[j].close * w
       den += w
     }
-    if (!den) continue
-    const m = num / den
-    mid[i] = m
-    const dev = atr[i] != null ? (atr[i] as number) * mult : null
-    if (dev != null) {
-      upper[i] = m + dev
-      lower[i] = m - dev
-    }
+    mid[i] = num / den
+  }
+
+  let sumAbs = 0
+  for (let i = 0; i < n; i++) sumAbs += Math.abs(data[i].close - (mid[i] as number))
+  const dev = (sumAbs / n) * mult
+  for (let i = 0; i < n; i++) {
+    upper[i] = (mid[i] as number) + dev
+    lower[i] = (mid[i] as number) - dev
   }
   return { mid, upper, lower }
 }
@@ -263,22 +246,26 @@ function buildOrderFlow(
     if (bullBreak && volSpike) {
       overlay.push({
         time: c.time,
-        type: 'buy',
-        ratio: volRatio,
-        nweUpper: upI,
-        nweLower: loI,
-      })
-      log.unshift({ type: 'buy', price: fmtP(c.close), ratio: volRatio, time: timeStr })
-    }
-    if (bearBreak && volSpike) {
-      overlay.push({
-        time: c.time,
         type: 'sell',
         ratio: volRatio,
         nweUpper: upI,
         nweLower: loI,
+        high: c.high,
+        low: c.low,
       })
       log.unshift({ type: 'sell', price: fmtP(c.close), ratio: volRatio, time: timeStr })
+    }
+    if (bearBreak && volSpike) {
+      overlay.push({
+        time: c.time,
+        type: 'buy',
+        ratio: volRatio,
+        nweUpper: upI,
+        nweLower: loI,
+        high: c.high,
+        low: c.low,
+      })
+      log.unshift({ type: 'buy', price: fmtP(c.close), ratio: volRatio, time: timeStr })
     }
   }
   return { overlay, log: log.slice(0, 6) }
@@ -675,7 +662,7 @@ function BtcChartView() {
     if (!data.length || !refs) return
 
     const v = visRef.current
-    const nwe = calcNWE(data, 100, 8, 8, 2.5)
+    const nwe = calcNWE(data, 8, 3)
     const sma50 = calcSMA(data, 50)
     const sma200 = calcSMA(data, 200)
     const rsi = calcRSI(data, 14)
@@ -1791,6 +1778,19 @@ function BtcChartView() {
                 </div>
               ))
             )}
+            <div className="btc-chart__of-note">
+              <div>
+                <b className="dn">SELL</b> — giá phá lên trên dải trên NWE kèm volume spike (quá
+                mua, kỳ vọng đảo chiều xuống).
+              </div>
+              <div>
+                <b className="up">BUY</b> — giá phá xuống dưới dải dưới NWE kèm volume spike (quá
+                bán, kỳ vọng đảo chiều lên).
+              </div>
+              <div className="btc-chart__of-note-sub">
+                ×N = bội số volume so với SMA20 (chỉ tính khi ≥ 1.5×).
+              </div>
+            </div>
           </div>
 
           {/* Volume Profile */}

@@ -9,10 +9,14 @@ export interface OFOverlaySignal {
   time: number // unix seconds (matches candle time)
   type: 'buy' | 'sell'
   ratio: string // formatted volume ratio, e.g. '2.5'
-  /** NWE upper band value — Y anchor for sell signals (drawn on the NWE line). */
+  /** NWE upper band value — Y anchor for sell signals (pill rides the line). */
   nweUpper: number
-  /** NWE lower band value — Y anchor for buy signals (drawn on the NWE line). */
+  /** NWE lower band value — Y anchor for buy signals (pill rides the line). */
   nweLower: number
+  /** Candle high — dotted leader-line target for sell signals (points at wick). */
+  high: number
+  /** Candle low — dotted leader-line target for buy signals. */
+  low: number
 }
 
 interface ChartLike {
@@ -32,9 +36,8 @@ const BUY_LINE = 'rgba(52,216,164,0.45)'
 
 const PILL_H = 18
 const FONT = '600 10.5px ui-monospace, SFMono-Regular, Menlo, monospace'
-/** Vertical band centers measured from top / bottom of pane. */
-const TOP_BAND_Y = 16
-const BOT_BAND_INSET = 16
+/** Vertical gap between the NWE line and the pill center (pill rides the band). */
+const PILL_GAP = 14
 
 /** Minimum horizontal gap between two pills in the same band before stacking. */
 const STACK_GAP = 6
@@ -87,6 +90,7 @@ export function drawOrderFlow(
     pillX: number
     pillW: number
     wickY: number
+    tipY: number
   }
   const placed: Placed[] = []
 
@@ -103,13 +107,19 @@ export function drawOrderFlow(
     const wickY = series.priceToCoordinate(anchorPrice)
     if (wickY == null) continue
 
+    // Leader-line target: the candle wick that broke the band (high for sell,
+    // low for buy) so the dotted line points straight at the triggering candle.
+    const tipY = series.priceToCoordinate(s.type === 'sell' ? s.high : s.low) ?? wickY
+
     const text = `×${s.ratio}`
     const pillW = Math.ceil(ctx.measureText(text).width) + 14
     const pillX = x - pillW / 2
 
-    // Find a row in the appropriate band that doesn't collide with existing pills.
-    const bandStart = s.type === 'sell' ? TOP_BAND_Y : H - BOT_BAND_INSET
-    const direction = s.type === 'sell' ? 1 : -1 // sell stacks down, buy stacks up
+    // Anchor each pill on the NWE line at this signal's price: SELL sits just
+    // above the upper band, BUY just below the lower band. Collisions push the
+    // pill further away from the line so it keeps following the envelope.
+    const bandStart = s.type === 'sell' ? wickY - PILL_GAP : wickY + PILL_GAP
+    const direction = s.type === 'sell' ? -1 : 1 // sell stacks up, buy stacks down
     const stack = s.type === 'sell' ? topRows : botRows
 
     let row = 0
@@ -135,22 +145,30 @@ export function drawOrderFlow(
       } // give up after 5 rows; collision tolerated
     }
 
-    placed.push({ ...s, x, y, pillX, pillW, wickY })
+    // Keep the pill inside the pane even when the NWE line is near an edge.
+    y = Math.max(PILL_H / 2 + 2, Math.min(H - PILL_H / 2 - 2, y))
+
+    placed.push({ ...s, x, y, pillX, pillW, wickY, tipY })
   }
 
   // Second pass: draw leader lines first (so pills sit on top).
+  // Line runs from the pill edge facing the candle to the wick tip + a small
+  // dot at the tip so the link to the triggering candle is easy to read.
   ctx.lineWidth = 1
-  ctx.setLineDash([2, 3])
   for (const p of placed) {
     ctx.strokeStyle = p.type === 'sell' ? SELL_LINE : BUY_LINE
+    ctx.fillStyle = ctx.strokeStyle
+    const fromY = p.tipY < p.y ? p.y - PILL_H / 2 : p.y + PILL_H / 2
+    ctx.setLineDash([2, 3])
     ctx.beginPath()
-    const fromY = p.type === 'sell' ? p.y + PILL_H / 2 : p.y - PILL_H / 2
-    const toY = p.type === 'sell' ? p.wickY - 3 : p.wickY + 3
     ctx.moveTo(p.x, fromY)
-    ctx.lineTo(p.x, toY)
+    ctx.lineTo(p.x, p.tipY)
     ctx.stroke()
+    ctx.setLineDash([])
+    ctx.beginPath()
+    ctx.arc(p.x, p.tipY, 1.8, 0, Math.PI * 2)
+    ctx.fill()
   }
-  ctx.setLineDash([])
 
   // Third pass: draw pills + arrows + text.
   for (const p of placed) {
