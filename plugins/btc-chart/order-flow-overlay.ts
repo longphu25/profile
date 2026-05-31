@@ -9,8 +9,10 @@ export interface OFOverlaySignal {
   time: number // unix seconds (matches candle time)
   type: 'buy' | 'sell'
   ratio: string // formatted volume ratio, e.g. '2.5'
-  high: number // candle high (anchor for leader line on sell)
-  low: number // candle low  (anchor for leader line on buy)
+  /** NWE upper band value — Y anchor for sell signals (drawn on the NWE line). */
+  nweUpper: number
+  /** NWE lower band value — Y anchor for buy signals (drawn on the NWE line). */
+  nweLower: number
 }
 
 interface ChartLike {
@@ -61,13 +63,14 @@ export function drawOrderFlow(
   ctx.clearRect(0, 0, W, H)
   if (!visible || signals.length === 0) return
 
-  // ── Simple mode: just triangles next to wicks, no pills, no leader lines.
+  // ── Simple mode: just triangles on the NWE band, no pills, no leader lines.
   if (simple) {
     for (const s of signals) {
       const x = chart.timeScale().timeToCoordinate(s.time)
       if (x == null) continue
       if (x < 8 || x > W - rightOffset - 8) continue
-      const wickY = series.priceToCoordinate(s.type === 'sell' ? s.high : s.low)
+      const anchorPrice = s.type === 'sell' ? s.nweUpper : s.nweLower
+      const wickY = series.priceToCoordinate(anchorPrice)
       if (wickY == null) continue
       drawTriangle(ctx, x, s.type === 'sell' ? wickY - 6 : wickY + 6, s.type)
     }
@@ -96,7 +99,8 @@ export function drawOrderFlow(
     if (x == null) continue
     if (x < 8 || x > W - rightOffset - 8) continue
 
-    const wickY = series.priceToCoordinate(s.type === 'sell' ? s.high : s.low)
+    const anchorPrice = s.type === 'sell' ? s.nweUpper : s.nweLower
+    const wickY = series.priceToCoordinate(anchorPrice)
     if (wickY == null) continue
 
     const text = `×${s.ratio}`

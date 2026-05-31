@@ -265,8 +265,8 @@ function buildOrderFlow(
         time: c.time,
         type: 'buy',
         ratio: volRatio,
-        high: c.high,
-        low: c.low,
+        nweUpper: upI,
+        nweLower: loI,
       })
       log.unshift({ type: 'buy', price: fmtP(c.close), ratio: volRatio, time: timeStr })
     }
@@ -275,8 +275,8 @@ function buildOrderFlow(
         time: c.time,
         type: 'sell',
         ratio: volRatio,
-        high: c.high,
-        low: c.low,
+        nweUpper: upI,
+        nweLower: loI,
       })
       log.unshift({ type: 'sell', price: fmtP(c.close), ratio: volRatio, time: timeStr })
     }
@@ -601,9 +601,6 @@ function BtcChartView() {
   const lastPriceRef = useRef<number | null>(null)
   // Latest computed indicator snapshot — read from inside the WS handler.
   const sidebarRef = useRef<SidebarState>(INITIAL_SIDEBAR)
-  // Minimal-mode flag — kept as a ref so render callbacks pick it up
-  // without going through the closure capture of `minimal`.
-  const minimalRef = useRef<boolean>(cfgInit.minimal)
 
   const [interval, setInterval_] = useState<Interval>(cfgInit.interval as Interval)
   const [vis, setVis] = useState<VisFlags>(visRef.current)
@@ -611,7 +608,6 @@ function BtcChartView() {
   const [alerts, setAlerts] = useState<AlertRule[]>(alertsRef.current)
   const [sound, setSound] = useState(cfgInit.sound)
   const [notifAllowed, setNotifAllowed] = useState(cfgInit.notifications)
-  const [minimal, setMinimal] = useState<boolean>(cfgInit.minimal)
   const [firedToast, setFiredToast] = useState<string | null>(null)
   const [importErr, setImportErr] = useState<string | null>(null)
 
@@ -645,25 +641,6 @@ function BtcChartView() {
   useEffect(() => {
     sidebarRef.current = sidebar
   }, [sidebar])
-  useEffect(() => {
-    minimalRef.current = minimal
-    // Toggle series title labels (lightweight-charts renders them inside the canvas).
-    const refs = chartRefs.current
-    if (refs) {
-      const title = (t: string) => (minimal ? '' : t)
-      const lv = !minimal // lastValueVisible
-      refs.nweMidS.applyOptions({ title: title('NWE'), lastValueVisible: lv })
-      refs.nweUpS.applyOptions({ title: title('NWE+'), lastValueVisible: lv })
-      refs.nweLowS.applyOptions({ title: title('NWE-'), lastValueVisible: lv })
-      refs.ma50S.applyOptions({ title: title('MA50'), lastValueVisible: lv })
-      refs.ma200S.applyOptions({ title: title('MA200'), lastValueVisible: lv })
-    }
-    // Redraw chart + overlays after CSS reflow finishes.
-    requestAnimationFrame(() => {
-      if (candlesRef.current.length) renderData(candlesRef.current)
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [minimal])
 
   // Persist on any config-affecting change.
   const persist = useCallback(
@@ -676,10 +653,10 @@ function BtcChartView() {
         alerts,
         sound,
         notifications: notifAllowed,
-        minimal,
+        minimal: false,
       })
     },
-    [interval, vis, alerts, sound, notifAllowed, minimal],
+    [interval, vis, alerts, sound, notifAllowed],
   )
   useEffect(() => {
     persist(undefined)
@@ -732,8 +709,6 @@ function BtcChartView() {
         refs.candleSeries,
         v.of ? of_.overlay : [],
         true,
-        minimalRef.current ? 0 : 64,
-        minimalRef.current,
       )
     }
 
@@ -768,7 +743,7 @@ function BtcChartView() {
     if (vpCanvasRef.current && mainElRef.current) {
       const info = drawVP(vpCanvasRef.current, mainElRef.current, data.slice(-LIMIT), v.vp, {
         ...vpOptsRef.current,
-        width: minimalRef.current ? 140 : 220,
+        width: 220,
       })
       setSidebar((s) => ({
         ...s,
@@ -1053,8 +1028,6 @@ function BtcChartView() {
           candleSeries,
           visRef.current.of ? ofOverlayRef.current : [],
           true,
-          minimalRef.current ? 0 : 64,
-          minimalRef.current,
         )
       }
     })
@@ -1109,8 +1082,6 @@ function BtcChartView() {
           candleSeries,
           visRef.current.of ? ofOverlayRef.current : [],
           true,
-          minimalRef.current ? 0 : 64,
-          minimalRef.current,
         )
       }
     }
@@ -1494,9 +1465,9 @@ function BtcChartView() {
       alerts,
       sound,
       notifications: notifAllowed,
-      minimal,
+      minimal: false,
     })
-  }, [interval, vis, alerts, sound, notifAllowed, minimal])
+  }, [interval, vis, alerts, sound, notifAllowed])
 
   const importNow = useCallback(
     async (file: File) => {
@@ -1508,7 +1479,6 @@ function BtcChartView() {
         alertsRef.current = cfg.alerts
         setSound(cfg.sound)
         setNotifAllowed(cfg.notifications)
-        setMinimal(cfg.minimal)
         if (cfg.interval !== interval) setInterval_(cfg.interval as Interval)
         // restore zoom if present
         if (cfg.zoom && chartRefs.current?.mainChart) {
@@ -1541,24 +1511,7 @@ function BtcChartView() {
   ]
 
   return (
-    <div className={`btc-chart${minimal ? ' is-minimal' : ''}`} ref={rootRef}>
-      {minimal && (
-        <>
-          <div className="btc-chart__minimal-title">
-            <span className="btc-chart__minimal-pair">BTC/USDT</span>
-            <span className="btc-chart__minimal-iv">— {interval}</span>
-          </div>
-          <button
-            type="button"
-            className="btc-chart__minimal-exit"
-            onClick={() => setMinimal(false)}
-            title="Exit minimal mode"
-            aria-label="Exit minimal mode"
-          >
-            Pro
-          </button>
-        </>
-      )}{' '}
+    <div className="btc-chart" ref={rootRef}>
       {loading && (
         <div className="btc-chart__loading">
           <div className="btc-chart__spinner" />
@@ -1694,14 +1647,6 @@ function BtcChartView() {
             }}
           />
         </label>
-        <button
-          type="button"
-          className={`btc-chart__ind-btn${minimal ? ' is-on' : ''}`}
-          onClick={() => setMinimal((m) => !m)}
-          title="Minimal mode — chart only, hide chrome"
-        >
-          {minimal ? 'Pro' : 'Min'}
-        </button>
       </div>
       {/* Body */}
       <div className="btc-chart__body">
