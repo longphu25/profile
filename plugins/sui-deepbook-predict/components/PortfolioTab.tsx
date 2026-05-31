@@ -366,7 +366,7 @@ export function PortfolioTab({
         <div className="sui-predict__card sui-predict__card--wide">
           <div className="sui-predict__empty">
             <p>Connect wallet to view portfolio</p>
-            <button className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
+            <button type="button" className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
               Connect Wallet
             </button>
           </div>
@@ -412,7 +412,7 @@ export function PortfolioTab({
               }}
             >
               {allManagerIds.map((mid) => (
-                <button
+                <button type="button"
                   key={mid}
                   onClick={() => copyAddr(mid)}
                   style={{
@@ -482,7 +482,7 @@ export function PortfolioTab({
             <h3 className="sui-predict__card-title">
               Claimable Positions ({settledPositions.length})
             </h3>
-            <button
+            <button type="button"
               className="sui-predict__btn sui-predict__btn--sm"
               onClick={handleClaimAll}
               disabled={claimingId === 'all'}
@@ -509,7 +509,7 @@ export function PortfolioTab({
                   <span>{strike}</span>
                   <span>{(p.quantity / 10 ** DUSDC_DECIMALS).toFixed(2)}</span>
                   <span>
-                    <button
+                    <button type="button"
                       className="sui-predict__btn sui-predict__btn--sm"
                       onClick={() => handleClaim(p)}
                       disabled={claimingId === key}
@@ -562,7 +562,7 @@ export function PortfolioTab({
                 BTC ${(spot / PRICE_SCALE).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </span>
             )}
-            <button
+            <button type="button"
               className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
               onClick={fetchPortfolio}
               disabled={loading}
@@ -595,7 +595,7 @@ export function PortfolioTab({
                       <span style={{ fontSize: '10px', color: 'var(--color-muted)' }}>
                         Manager:
                       </span>
-                      <button
+                      <button type="button"
                         onClick={() => copyAddr(mid)}
                         style={{
                           fontSize: '10px',
@@ -640,7 +640,7 @@ export function PortfolioTab({
                         >
                           <span>Binary</span>
                           <span>
-                            <button
+                            <button type="button"
                               onClick={() => copyAddr(p.oracle_id)}
                               style={{
                                 fontSize: '9px',
@@ -685,7 +685,7 @@ export function PortfolioTab({
                         >
                           <span>Range</span>
                           <span>
-                            <button
+                            <button type="button"
                               onClick={() => copyAddr(r.oracle_id)}
                               style={{
                                 fontSize: '9px',
@@ -864,13 +864,13 @@ function FairValueCalculator({
         />
       </div>
       <div className="sui-predict__toggle" style={{ marginBottom: '0' }}>
-        <button
+        <button type="button"
           className={`sui-predict__toggle-btn ${direction === 0 ? 'sui-predict__toggle-btn--green' : ''}`}
           onClick={() => setDirection(0)}
         >
           UP
         </button>
-        <button
+        <button type="button"
           className={`sui-predict__toggle-btn ${direction === 1 ? 'sui-predict__toggle-btn--red' : ''}`}
           onClick={() => setDirection(1)}
         >

@@ -307,7 +307,7 @@ function DeepBookInner() {
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-0.5">
             {NAV_GROUPS.map((g) => (
-              <button
+              <button type="button"
                 key={g.id}
                 onClick={() => handleGroupClick(g.id)}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer"
@@ -328,7 +328,7 @@ function DeepBookInner() {
           {/* Wallet */}
           <div className="flex items-center gap-2">
             {connection.isConnected && account ? (
-              <button
+              <button type="button"
                 onClick={() => dAppKitInstance.disconnectWallet()}
                 className="rounded-full px-3 py-1.5 text-[11px] font-medium cursor-pointer"
                 style={{
@@ -340,7 +340,7 @@ function DeepBookInner() {
                 {fmtAddr(account.address)}
               </button>
             ) : (
-              <button
+              <button type="button"
                 onClick={() => setShowWallets(true)}
                 className="rounded-full px-4 py-1.5 text-[11px] font-semibold cursor-pointer"
                 style={{ background: 'var(--color-mint)', color: 'var(--color-ink)' }}
@@ -374,7 +374,7 @@ function DeepBookInner() {
             ) : (
               <div className="flex flex-col gap-2">
                 {wallets.map((w) => (
-                  <button
+                  <button type="button"
                     key={w.name}
                     onClick={async () => {
                       await dAppKitInstance.connectWallet({ wallet: w })
@@ -410,7 +410,7 @@ function DeepBookInner() {
                 {NAV_GROUPS.find((g) => g.id === activeGroup)?.label}
               </p>
               {groupPlugins(activeGroup).map((p) => (
-                <button
+                <button type="button"
                   key={p.id}
                   onClick={() => selectPlugin(p.id)}
                   className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium cursor-pointer text-left"
@@ -505,7 +505,7 @@ function DeepBookInner() {
                   </p>
                 </div>
               ) : (
-                <button
+                <button type="button"
                   onClick={() => setShowWallets(true)}
                   className="w-full py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
                   style={{ background: 'var(--color-mint)', color: 'var(--color-ink)' }}
@@ -543,7 +543,7 @@ function DeepBookInner() {
                   }}
                 />
               </div>
-              <button
+              <button type="button"
                 onClick={() => setActiveGroup('rewards')}
                 className="text-[10px] cursor-pointer transition-all"
                 style={{ color: 'var(--color-teal)' }}
@@ -569,7 +569,7 @@ function DeepBookInner() {
                   { label: 'Portfolio', id: 'portfolio' },
                   { label: 'Swap', id: 'swap' },
                 ].map((l) => (
-                  <button
+                  <button type="button"
                     key={l.id}
                     onClick={() => selectPlugin(l.id)}
                     className="text-left text-xs py-1 cursor-pointer transition-all"
@@ -596,7 +596,7 @@ function DeepBookInner() {
         }}
       >
         {NAV_GROUPS.slice(0, 6).map((g) => (
-          <button
+          <button type="button"
             key={g.id}
             onClick={() => handleGroupClick(g.id)}
             className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg cursor-pointer transition-all"

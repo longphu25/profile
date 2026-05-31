@@ -18,7 +18,11 @@ export function CollapsibleNotes({ title = 'Documentation', children }: Collapsi
 
   return (
     <div className="sui-predict__card sui-predict__card--wide sui-predict__notes">
-      <button className="sui-predict__notes-toggle" onClick={() => setOpen(!open)} type="button">
+      <button
+        type="button"
+        className="sui-predict__notes-toggle"
+        onClick={() => setOpen(!open)}
+      >
         <svg
           viewBox="0 0 24 24"
           fill="none"

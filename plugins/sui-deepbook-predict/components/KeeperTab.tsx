@@ -157,7 +157,7 @@ export function KeeperTab({ oracles, walletAddress, isConnected, sharedHost }: P
         {!isConnected ? (
           <div className="sui-predict__empty">
             <p>Connect wallet to run keeper</p>
-            <button className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
+            <button type="button" className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
               Connect Wallet
             </button>
           </div>
@@ -168,7 +168,7 @@ export function KeeperTab({ oracles, walletAddress, isConnected, sharedHost }: P
               <span>Anyone can call redeem_permissionless</span>
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <button
+              <button type="button"
                 className="sui-predict__btn sui-predict__btn--ghost"
                 onClick={scanPositions}
                 disabled={loading}
@@ -176,7 +176,7 @@ export function KeeperTab({ oracles, walletAddress, isConnected, sharedHost }: P
                 {loading ? '⟳ Scanning…' : '↻ Scan Positions'}
               </button>
               {settledPositions.length > 0 && (
-                <button className="sui-predict__btn" onClick={redeemAll} disabled={executing}>
+                <button type="button" className="sui-predict__btn" onClick={redeemAll} disabled={executing}>
                   {executing
                     ? 'Redeeming…'
                     : `Redeem All (${settledPositions.length} positions, 1 PTB)`}

@@ -214,7 +214,7 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
             <p className="guided-trade__desc">Select an active BTC oracle</p>
             <div className="guided-trade__options">
               {oracles.map((o) => (
-                <button
+                <button type="button"
                   key={o.oracle_id}
                   className={`guided-trade__option ${selectedOracle?.oracle_id === o.oracle_id ? 'guided-trade__option--selected' : ''}`}
                   onClick={() => setSelectedOracle(o)}
@@ -235,13 +235,13 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
             <h3 className="guided-trade__title">Choose Prediction</h3>
             <p className="guided-trade__desc">What do you think BTC will do?</p>
             <div className="guided-trade__directions">
-              <button
+              <button type="button"
                 className={`guided-trade__dir ${direction === 'up' ? 'guided-trade__dir--up' : ''}`}
                 onClick={() => setDirection('up')}
               >
                 BTC Up ↑
               </button>
-              <button
+              <button type="button"
                 className={`guided-trade__dir ${direction === 'down' ? 'guided-trade__dir--down' : ''}`}
                 onClick={() => setDirection('down')}
               >
@@ -251,7 +251,7 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
             <p className="guided-trade__sublabel">Strike Price</p>
             <div className="guided-trade__presets">
               {strikePresets.map((p) => (
-                <button
+                <button type="button"
                   key={p.label}
                   className={`guided-trade__preset ${strike === p.value ? 'guided-trade__preset--active' : ''}`}
                   onClick={() => setStrike(p.value)}
@@ -281,7 +281,7 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
             </div>
             <div className="guided-trade__presets">
               {amountPresets.map((a) => (
-                <button
+                <button type="button"
                   key={a}
                   className={`guided-trade__preset ${amount === a ? 'guided-trade__preset--active' : ''}`}
                   onClick={() => setAmount(a)}
@@ -339,7 +339,7 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
             <div className="guided-trade__success-icon">✓</div>
             <h3 className="guided-trade__title">Position Minted!</h3>
             <p className="guided-trade__desc">TX: {result.digest.slice(0, 12)}…</p>
-            <button className="guided-trade__btn guided-trade__btn--primary" onClick={onClose}>
+            <button type="button" className="guided-trade__btn guided-trade__btn--primary" onClick={onClose}>
               View Portfolio
             </button>
           </div>
@@ -350,13 +350,13 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
       {step !== 'submit' && (
         <div className="guided-trade__nav">
           {stepIdx > 0 && (
-            <button className="guided-trade__btn guided-trade__btn--ghost" onClick={prev}>
+            <button type="button" className="guided-trade__btn guided-trade__btn--ghost" onClick={prev}>
               ← Back
             </button>
           )}
           <div style={{ flex: 1 }} />
           {step === 'preview' ? (
-            <button
+            <button type="button"
               className="guided-trade__btn guided-trade__btn--primary"
               onClick={handleSubmit}
               disabled={submitting || !isConnected}
@@ -364,7 +364,7 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
               {submitting ? 'Signing…' : 'Mint Position'}
             </button>
           ) : (
-            <button
+            <button type="button"
               className="guided-trade__btn guided-trade__btn--primary"
               onClick={next}
               disabled={!canNext}

@@ -183,7 +183,7 @@ export function LendingTab({ walletAddress, isConnected, sharedHost, network }: 
       <div className="sui-predict__card sui-predict__card--wide">
         <div className="sui-predict__card-header">
           <h3 className="sui-predict__card-title">Margin Pools</h3>
-          <button
+          <button type="button"
             className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
             onClick={fetchPools}
             disabled={loading}
@@ -218,7 +218,7 @@ export function LendingTab({ walletAddress, isConnected, sharedHost, network }: 
                   {p.total_supplied.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
                 <span>
-                  <button
+                  <button type="button"
                     className="sui-predict__btn sui-predict__btn--sm"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -249,13 +249,13 @@ export function LendingTab({ walletAddress, isConnected, sharedHost, network }: 
 
           <div className="sui-predict__toggle-row">
             <div className="sui-predict__toggle">
-              <button
+              <button type="button"
                 className={`sui-predict__toggle-btn ${action === 'supply' ? 'sui-predict__toggle-btn--active' : ''}`}
                 onClick={() => setAction('supply')}
               >
                 Supply
               </button>
-              <button
+              <button type="button"
                 className={`sui-predict__toggle-btn ${action === 'withdraw' ? 'sui-predict__toggle-btn--active' : ''}`}
                 onClick={() => setAction('withdraw')}
               >
@@ -267,7 +267,7 @@ export function LendingTab({ walletAddress, isConnected, sharedHost, network }: 
           {!isConnected ? (
             <div className="sui-predict__empty">
               <p>Connect wallet to supply/withdraw</p>
-              <button className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
+              <button type="button" className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
                 Connect Wallet
               </button>
             </div>
@@ -294,7 +294,7 @@ export function LendingTab({ walletAddress, isConnected, sharedHost, network }: 
                 {action === 'withdraw' && balance > 0 && (
                   <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
                     {[25, 50, 75, 100].map((pct) => (
-                      <button
+                      <button type="button"
                         key={pct}
                         className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
                         onClick={() =>
@@ -323,7 +323,7 @@ export function LendingTab({ walletAddress, isConnected, sharedHost, network }: 
                 </div>
               )}
 
-              <button
+              <button type="button"
                 className="sui-predict__btn sui-predict__btn--full"
                 onClick={handleSubmit}
                 disabled={submitting || !amount || Number(amount) <= 0}

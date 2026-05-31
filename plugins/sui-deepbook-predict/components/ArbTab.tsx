@@ -71,7 +71,7 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
       <div className="sui-predict__card sui-predict__card--wide">
         <div className="sui-predict__card-header">
           <h3 className="sui-predict__card-title">Vol-Arb Configuration</h3>
-          <button
+          <button type="button"
             className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
             onClick={refresh}
             disabled={loading}

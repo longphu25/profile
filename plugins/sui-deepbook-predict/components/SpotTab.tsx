@@ -199,13 +199,13 @@ export function SpotTab({ walletAddress, isConnected, sharedHost, network }: Pro
         {/* Side + Type toggles */}
         <div className="sui-predict__toggle-row">
           <div className="sui-predict__toggle">
-            <button
+            <button type="button"
               className={`sui-predict__toggle-btn ${side === 'buy' ? 'sui-predict__toggle-btn--green' : ''}`}
               onClick={() => setSide('buy')}
             >
               Buy
             </button>
-            <button
+            <button type="button"
               className={`sui-predict__toggle-btn ${side === 'sell' ? 'sui-predict__toggle-btn--red' : ''}`}
               onClick={() => setSide('sell')}
             >
@@ -213,13 +213,13 @@ export function SpotTab({ walletAddress, isConnected, sharedHost, network }: Pro
             </button>
           </div>
           <div className="sui-predict__toggle">
-            <button
+            <button type="button"
               className={`sui-predict__toggle-btn ${orderType === 'market' ? 'sui-predict__toggle-btn--active' : ''}`}
               onClick={() => setOrderType('market')}
             >
               Market
             </button>
-            <button
+            <button type="button"
               className={`sui-predict__toggle-btn ${orderType === 'limit' ? 'sui-predict__toggle-btn--active' : ''}`}
               onClick={() => setOrderType('limit')}
             >
@@ -231,7 +231,7 @@ export function SpotTab({ walletAddress, isConnected, sharedHost, network }: Pro
         {!isConnected ? (
           <div className="sui-predict__empty">
             <p>Connect wallet to trade</p>
-            <button className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
+            <button type="button" className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
               Connect Wallet
             </button>
           </div>
@@ -278,7 +278,7 @@ export function SpotTab({ walletAddress, isConnected, sharedHost, network }: Pro
               </div>
             )}
 
-            <button
+            <button type="button"
               className="sui-predict__btn sui-predict__btn--full"
               onClick={handleSubmit}
               disabled={submitting || !quantity || (orderType === 'limit' && !price)}

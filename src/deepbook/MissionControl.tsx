@@ -202,7 +202,7 @@ export function MissionControl({ commander, onSelectPlugin, onConnect }: Props) 
                   {r.desc}
                 </p>
               </div>
-              <button
+              <button type="button"
                 onClick={() => (r.pluginId ? onSelectPlugin(r.pluginId) : onConnect())}
                 className="ml-4 shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all"
                 style={{
@@ -228,7 +228,7 @@ export function MissionControl({ commander, onSelectPlugin, onConnect }: Props) 
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {QUICK_ACTIONS.map((a) => (
-            <button
+            <button type="button"
               key={a.id}
               onClick={() => onSelectPlugin(a.id)}
               className="flex flex-col gap-1 p-3 rounded-xl text-left cursor-pointer transition-all"
@@ -292,7 +292,7 @@ export function MissionControl({ commander, onSelectPlugin, onConnect }: Props) 
                   opacity: quests[q.id] ? 0.7 : 1,
                 }}
               >
-                <button
+                <button type="button"
                   onClick={() => completeQuest(q.id)}
                   className="shrink-0 h-4 w-4 rounded flex items-center justify-center cursor-pointer transition-all"
                   style={{

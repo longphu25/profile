@@ -389,7 +389,7 @@ export function MarginLoopTab({
         {!isConnected ? (
           <div className="sui-predict__empty">
             <p>Connect wallet to execute the margin loop</p>
-            <button className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
+            <button type="button" className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
               Connect Wallet
             </button>
           </div>
@@ -402,7 +402,7 @@ export function MarginLoopTab({
               <span>Oracle: {oracleState?.oracle?.underlying_asset || '—'}</span>
               <span>Network: Testnet</span>
             </div>
-            <button
+            <button type="button"
               className="sui-predict__btn sui-predict__btn--full"
               onClick={executeLoop}
               disabled={executing || !selectedOracle}

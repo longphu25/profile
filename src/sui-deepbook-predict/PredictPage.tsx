@@ -194,7 +194,7 @@ function PredictInner() {
             </span>
 
             {connection.isConnected && account ? (
-              <button
+              <button type="button"
                 onClick={() => dAppKitInstance.disconnectWallet()}
                 className="rounded-full px-4 py-1.5 text-[11px] font-medium transition-all cursor-pointer"
                 style={{
@@ -207,7 +207,7 @@ function PredictInner() {
                 {account.address.slice(0, 6)}…{account.address.slice(-4)}
               </button>
             ) : (
-              <button
+              <button type="button"
                 onClick={() => setShowWallets(true)}
                 className="rounded-full px-4 py-1.5 text-[11px] font-bold transition-all cursor-pointer hover:shadow-[0_0_20px_rgba(128,255,213,0.2)]"
                 style={{
@@ -251,7 +251,7 @@ function PredictInner() {
             ) : (
               <div className="flex flex-col gap-2">
                 {wallets.map((w) => (
-                  <button
+                  <button type="button"
                     key={w.name}
                     onClick={() => handleConnect(w)}
                     className="flex items-center gap-3 rounded-lg px-4 py-3 text-left text-xs transition-all cursor-pointer"
@@ -270,7 +270,7 @@ function PredictInner() {
                 ))}
               </div>
             )}
-            <button
+            <button type="button"
               onClick={() => setShowWallets(false)}
               className="mt-4 w-full rounded-lg py-2 text-xs transition-colors cursor-pointer"
               style={{
@@ -502,7 +502,7 @@ function AccountPanel({
           <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>
             Connect wallet to view balances and trade.
           </p>
-          <button
+          <button type="button"
             onClick={onConnect}
             className="w-full rounded-lg py-2 text-xs font-bold transition-all cursor-pointer hover:shadow-[0_0_16px_rgba(128,255,213,0.15)]"
             style={{
@@ -574,7 +574,7 @@ function AccountPanel({
           >
             Balances
           </h3>
-          <button
+          <button type="button"
             onClick={fetchBalances}
             className="text-[10px] cursor-pointer transition-colors"
             style={{ color: 'var(--color-muted)' }}

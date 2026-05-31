@@ -117,12 +117,12 @@ export function ActionHub({
       {/* Primary CTAs */}
       <div className="action-hub__ctas">
         {!isConnected ? (
-          <button className="action-hub__cta action-hub__cta--primary" onClick={onConnect}>
+          <button type="button" className="action-hub__cta action-hub__cta--primary" onClick={onConnect}>
             Connect Wallet
           </button>
         ) : (
           <>
-            <button
+            <button type="button"
               className={`action-hub__cta action-hub__cta--primary ${isStale ? 'action-hub__cta--disabled' : ''}`}
               onClick={() => !isStale && onIntent('trade')}
               disabled={isStale}
@@ -131,14 +131,14 @@ export function ActionHub({
               <span>Start Guided Trade</span>
               <span className="action-hub__cta-tag">{statusLabel['live']}</span>
             </button>
-            <button
+            <button type="button"
               className="action-hub__cta action-hub__cta--secondary"
               onClick={() => onIntent('analyze')}
             >
               <span>Analyze Market</span>
               <span className="action-hub__cta-tag">{statusLabel['live']}</span>
             </button>
-            <button
+            <button type="button"
               className="action-hub__cta action-hub__cta--secondary"
               onClick={() => onIntent('earn')}
             >
@@ -146,7 +146,7 @@ export function ActionHub({
               <span className="action-hub__cta-tag">{statusLabel['live']}</span>
             </button>
             {claimableCount > 0 && (
-              <button
+              <button type="button"
                 className="action-hub__cta action-hub__cta--accent"
                 onClick={() => onIntent('claim')}
               >

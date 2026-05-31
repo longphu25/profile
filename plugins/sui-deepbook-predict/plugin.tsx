@@ -110,6 +110,62 @@ function checkButterflyViolations(surface: { strike: number; iv: number }[]) {
   return violations
 }
 
+// ── Helpers (module scope — pure, no closure deps) ────────────────────────────
+
+const fmtPrice = (raw: number | null | undefined) =>
+  raw == null
+    ? '—'
+    : `$${(raw / PRICE_SCALE).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+const fmtAddr = (a: string) => (a ? `${a.slice(0, 8)}…${a.slice(-6)}` : '—')
+
+const fmtDate = (ms: number | null | undefined) =>
+  !ms
+    ? '—'
+    : new Date(ms).toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+
+const timeLeft = (ms: number) => {
+  const d = ms - Date.now()
+  if (d <= 0) return 'Expired'
+  const m = Math.floor(d / 60000)
+  return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`
+}
+
+const statusBadge = (s: string) =>
+  s === 'active'
+    ? 'sui-predict__badge--green'
+    : s === 'settled'
+      ? 'sui-predict__badge--red'
+      : 'sui-predict__badge--yellow'
+
+// ── Tab navigation config (module-scope, static) ──────────────────────────────
+
+const PRIMARY_TABS = ['market', 'portfolio', 'trade', 'vault'] as const
+
+const ADVANCED_TABS = [
+  { id: 'surface', label: '◊ Surface' },
+  { id: 'risk', label: '⬡ Risk' },
+  { id: 'strategy', label: '⬢ Strategy' },
+  { id: 'plphedge', label: '⛨ PLP+Hedge' },
+  { id: 'loop', label: '∞ Loop' },
+  { id: 'arb', label: '⇄ Arb' },
+  { id: 'lending', label: '⊕ Lending' },
+  { id: 'spot', label: '⬡ Spot' },
+  { id: 'keeper', label: '⚙ Keeper' },
+] as const
+
+const PRIMARY_LABELS: Record<string, string> = {
+  market: '◉ Market',
+  portfolio: '◫ Portfolio',
+  trade: '◇ Trade',
+  vault: '◈ Vault',
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 function PredictContent() {
@@ -277,32 +333,7 @@ function PredictContent() {
   }, [selectedOracle, fetchOracleState, fetchPrices])
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  const fmtPrice = (raw: number | null | undefined) =>
-    raw == null
-      ? '—'
-      : `$${(raw / PRICE_SCALE).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-  const fmtAddr = (a: string) => (a ? `${a.slice(0, 8)}…${a.slice(-6)}` : '—')
-  const fmtDate = (ms: number | null | undefined) =>
-    !ms
-      ? '—'
-      : new Date(ms).toLocaleString([], {
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
-  const timeLeft = (ms: number) => {
-    const d = ms - Date.now()
-    if (d <= 0) return 'Expired'
-    const m = Math.floor(d / 60000)
-    return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`
-  }
-  const statusBadge = (s: string) =>
-    s === 'active'
-      ? 'sui-predict__badge--green'
-      : s === 'settled'
-        ? 'sui-predict__badge--red'
-        : 'sui-predict__badge--yellow'
+  // (moved to module scope above)
 
   // ── Market Tab ─────────────────────────────────────────────────────────────
   const renderMarket = () => (
@@ -346,7 +377,7 @@ function PredictContent() {
           <h3 className="sui-predict__card-title">
             Oracles ({oracles.filter((o) => o.status === 'active').length} active)
           </h3>
-          <button
+          <button type="button"
             className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
             onClick={() => setShowAllOracles((v) => !v)}
           >
@@ -677,7 +708,7 @@ function PredictContent() {
           <div className="sui-predict__card sui-predict__card--wide">
             <div className="sui-predict__empty">
               <p>Connect wallet to mint/redeem positions</p>
-              <button className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
+              <button type="button" className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
                 Connect Wallet
               </button>
             </div>
@@ -762,7 +793,7 @@ function PredictContent() {
         <div className="sui-predict__card sui-predict__card--wide">
           <div className="sui-predict__empty">
             <p>Connect wallet to supply/withdraw liquidity</p>
-            <button className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
+            <button type="button" className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
               Connect Wallet
             </button>
           </div>
@@ -795,25 +826,7 @@ function PredictContent() {
     return 'STALE' as const
   })()
 
-  // Primary tabs always visible; advanced tabs in "More" dropdown
-  const PRIMARY_TABS = ['market', 'portfolio', 'trade', 'vault'] as const
-  const ADVANCED_TABS = [
-    { id: 'surface', label: '◊ Surface' },
-    { id: 'risk', label: '⬡ Risk' },
-    { id: 'strategy', label: '⬢ Strategy' },
-    { id: 'plphedge', label: '⛨ PLP+Hedge' },
-    { id: 'loop', label: '∞ Loop' },
-    { id: 'arb', label: '⇄ Arb' },
-    { id: 'lending', label: '⊕ Lending' },
-    { id: 'spot', label: '⬡ Spot' },
-    { id: 'keeper', label: '⚙ Keeper' },
-  ] as const
-  const PRIMARY_LABELS: Record<string, string> = {
-    market: '◉ Market',
-    portfolio: '◫ Portfolio',
-    trade: '◇ Trade',
-    vault: '◈ Vault',
-  }
+  // Primary/advanced tabs config moved to module scope
   const [showMore, setShowMore] = useState(false)
   const [showAllOracles, setShowAllOracles] = useState(false)
   const isAdvanced = ADVANCED_TABS.some((t) => t.id === tab)
@@ -834,7 +847,7 @@ function PredictContent() {
       />
       <div className="sui-predict__tabs">
         {PRIMARY_TABS.map((t) => (
-          <button
+          <button type="button"
             key={t}
             className={`sui-predict__tab ${tab === t ? 'sui-predict__tab--active' : ''}`}
             onClick={() => {
@@ -846,7 +859,7 @@ function PredictContent() {
           </button>
         ))}
         <div style={{ position: 'relative' }}>
-          <button
+          <button type="button"
             className={`sui-predict__tab-more ${isAdvanced ? 'sui-predict__tab--active' : ''}`}
             onClick={() => setShowMore((v) => !v)}
           >
@@ -855,7 +868,7 @@ function PredictContent() {
           {showMore && (
             <div className="sui-predict__tab-dropdown">
               {ADVANCED_TABS.map((t) => (
-                <button
+                <button type="button"
                   key={t.id}
                   className={tab === t.id ? 'active' : ''}
                   onClick={() => {
@@ -876,7 +889,7 @@ function PredictContent() {
         >
           {wsConnected ? '● LIVE' : '○ POLL'}
         </span>
-        <button
+        <button type="button"
           className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
           onClick={refreshAll}
           disabled={loading}
@@ -1677,13 +1690,13 @@ function TradePanel({
         {/* Mode + Action toggles */}
         <div className="sui-predict__toggle-row">
           <div className="sui-predict__toggle">
-            <button
+            <button type="button"
               className={`sui-predict__toggle-btn ${mode === 'binary' ? 'sui-predict__toggle-btn--active' : ''}`}
               onClick={() => setMode('binary')}
             >
               Binary
             </button>
-            <button
+            <button type="button"
               className={`sui-predict__toggle-btn ${mode === 'range' ? 'sui-predict__toggle-btn--active' : ''}`}
               onClick={() => setMode('range')}
             >
@@ -1691,13 +1704,13 @@ function TradePanel({
             </button>
           </div>
           <div className="sui-predict__toggle">
-            <button
+            <button type="button"
               className={`sui-predict__toggle-btn ${action === 'mint' ? 'sui-predict__toggle-btn--active' : ''}`}
               onClick={() => setAction('mint')}
             >
               Mint
             </button>
-            <button
+            <button type="button"
               className={`sui-predict__toggle-btn ${action === 'redeem' ? 'sui-predict__toggle-btn--active' : ''}`}
               onClick={() => setAction('redeem')}
             >
@@ -1738,7 +1751,7 @@ function TradePanel({
                     if (val < 50000) return null
                     const label = offset === 0 ? 'ATM' : `${offset > 0 ? '+' : ''}$${offset}`
                     return (
-                      <button
+                      <button type="button"
                         key={offset}
                         className={`sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm ${strike === String(val) ? 'sui-predict__toggle-btn--active' : ''}`}
                         onClick={() => setStrike(String(val))}
@@ -1778,13 +1791,13 @@ function TradePanel({
               <div className="sui-predict__field">
                 <label className="sui-predict__field-label">Direction</label>
                 <div className="sui-predict__toggle">
-                  <button
+                  <button type="button"
                     className={`sui-predict__toggle-btn ${isUp ? 'sui-predict__toggle-btn--green' : ''}`}
                     onClick={() => setIsUp(true)}
                   >
                     ▲ UP — wins if BTC &gt; ${strike || spotPrice}
                   </button>
-                  <button
+                  <button type="button"
                     className={`sui-predict__toggle-btn ${!isUp ? 'sui-predict__toggle-btn--red' : ''}`}
                     onClick={() => setIsUp(false)}
                   >
@@ -1799,7 +1812,7 @@ function TradePanel({
                 <label className="sui-predict__field-label">Range around spot (${spotPrice})</label>
                 <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
                   {[500, 1000, 2000, 5000].map((width) => (
-                    <button
+                    <button type="button"
                       key={width}
                       className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
                       onClick={() => {
@@ -1912,7 +1925,7 @@ function TradePanel({
                 </div>
               )
             })()}
-          <button
+          <button type="button"
             className="sui-predict__btn sui-predict__btn--full"
             onClick={handleSubmit}
             disabled={submitting || !amount || !selectedOracle || disabled}
@@ -2096,13 +2109,13 @@ function VaultPanel({ walletAddress, vaultData }: { walletAddress: string; vault
       </div>
       <div className="sui-predict__toggle-row">
         <div className="sui-predict__toggle">
-          <button
+          <button type="button"
             className={`sui-predict__toggle-btn ${action === 'supply' ? 'sui-predict__toggle-btn--active' : ''}`}
             onClick={() => setAction('supply')}
           >
             Supply
           </button>
-          <button
+          <button type="button"
             className={`sui-predict__toggle-btn ${action === 'withdraw' ? 'sui-predict__toggle-btn--active' : ''}`}
             onClick={() => setAction('withdraw')}
           >
@@ -2129,7 +2142,7 @@ function VaultPanel({ walletAddress, vaultData }: { walletAddress: string; vault
           />
           <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
             {[5, 10, 50, 100].map((pct) => (
-              <button
+              <button type="button"
                 key={pct}
                 className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
                 onClick={() => setAmount(parseFloat(((balance * pct) / 100).toFixed(4)).toString())}
@@ -2146,7 +2159,7 @@ function VaultPanel({ walletAddress, vaultData }: { walletAddress: string; vault
             <span>Share price: {vaultData.plp_share_price?.toFixed(6)}</span>
           </div>
         )}
-        <button
+        <button type="button"
           className="sui-predict__btn sui-predict__btn--full"
           onClick={handleSubmit}
           disabled={submitting || !amount}
