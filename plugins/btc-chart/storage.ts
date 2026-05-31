@@ -33,6 +33,8 @@ export interface ChartConfig {
   alerts: AlertRule[]
   sound: SoundConfig
   notifications: boolean
+  /** Minimal mode = chart-only canvas with side VP, hide all chrome. */
+  minimal: boolean
 }
 
 export const DEFAULT_CONFIG: ChartConfig = {
@@ -43,6 +45,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
   alerts: [],
   sound: { enabled: true, volume: 0.4 },
   notifications: false,
+  minimal: false,
 }
 
 /** Read full config from localStorage, with safe fallback. */
