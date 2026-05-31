@@ -1,0 +1,871 @@
+/* BTC Chart Plugin — Pro trading view (NWE + Volume Profile + Order Flow)
+   Scoped via Shadow DOM. Aligned with TaskForm design tokens. */
+
+:host {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+
+  --bg: #071011;
+  --bg-2: #0a191a;
+  --surface: rgba(8, 24, 25, 0.92);
+  --surface-2: rgba(12, 34, 35, 0.96);
+  --surface-3: rgba(190, 255, 234, 0.04);
+
+  --border: rgba(190, 255, 234, 0.1);
+  --border-strong: rgba(190, 255, 234, 0.22);
+
+  --text: #effff8;
+  --text-2: #cfe9df;
+  --muted: #6f8a83;
+  --muted-2: #9fb9b1;
+
+  --mint: #80ffd5;
+  --teal: #28d8c1;
+  --amber: #ffc46b;
+  --sui: #6fbcf0;
+
+  /* Chart palette — locked. Mint/teal for "up", red for "down",
+     amber/sui for accents. Avoid mixing yellow + orange + green + cyan. */
+  --up: #34d8a4;
+  --dn: #ff7a85;
+  --neu: #6fbcf0;
+  --hi: #ffc46b;
+
+  --font-sans: 'Satoshi', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.btc-chart {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  overflow: hidden;
+}
+
+/* ── HEADER ────────────────────────────────────────────────────────── */
+.btc-chart__header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  min-height: 44px;
+}
+.btc-chart__pair {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--text);
+}
+.btc-chart__pair small {
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 11px;
+  margin-left: 6px;
+  letter-spacing: 0.04em;
+}
+.btc-chart__intervals {
+  display: flex;
+  gap: 1px;
+  background: var(--surface-3);
+  border-radius: 6px;
+  padding: 2px;
+}
+.btc-chart__iv-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted-2);
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.btc-chart__iv-btn:hover {
+  color: var(--text);
+}
+.btc-chart__iv-btn.is-active {
+  background: rgba(128, 255, 213, 0.14);
+  color: var(--mint);
+  font-weight: 600;
+}
+.btc-chart__price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.btc-chart__price-cur {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
+}
+.btc-chart__price-chg {
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+.btc-chart__ohlcv {
+  display: flex;
+  gap: 14px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.btc-chart__ohlcv span span {
+  color: var(--text-2);
+  margin-left: 3px;
+}
+.btc-chart__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted-2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.btc-chart__live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 8px rgba(128, 255, 213, 0.7);
+  animation: btc-pulse 2.4s ease-in-out infinite;
+}
+@keyframes btc-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.25);
+  }
+}
+
+.up {
+  color: var(--up);
+}
+.dn {
+  color: var(--dn);
+}
+.neu {
+  color: var(--neu);
+}
+
+/* ── TOOLBAR ───────────────────────────────────────────────────────── */
+.btc-chart__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  min-height: 36px;
+}
+.btc-chart__tb-label {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  margin-right: 8px;
+}
+.btc-chart__ind-btn {
+  padding: 4px 9px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.btc-chart__ind-btn:hover {
+  color: var(--text);
+}
+.btc-chart__ind-btn.is-on {
+  background: var(--surface-3);
+  color: var(--text);
+  box-shadow: inset 0 -1.5px 0 0 var(--mint);
+}
+.btc-chart__sep {
+  color: var(--border-strong);
+  margin: 0 4px;
+  font-size: 11px;
+}
+
+/* ── BODY ──────────────────────────────────────────────────────────── */
+.btc-chart__body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+.btc-chart__col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+}
+.btc-chart__main {
+  flex: 7 1 0;
+  width: 100%;
+  min-height: 0;
+  position: relative;
+}
+.btc-chart__rsi {
+  flex: 1.5 1 0;
+  width: 100%;
+  min-height: 0;
+  border-top: 1px solid var(--border);
+}
+.btc-chart__vol {
+  flex: 1.5 1 0;
+  width: 100%;
+  min-height: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Volume profile overlay — kept narrow + offset from price ladder */
+/* Volume profile overlay — kept narrow + offset from price ladder */
+.btc-chart__vp-canvas {
+  position: absolute;
+  top: 0;
+  right: 64px;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0.92;
+  mix-blend-mode: normal;
+}
+
+/* Order flow overlay — full main-pane width, sits in top/bottom gutters
+   so SELL/BUY pills don't overlap candles. */
+.btc-chart__of-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Floating legend */
+.btc-chart__legend {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  z-index: 10;
+  pointer-events: none;
+  font-size: 10.5px;
+  color: var(--muted-2);
+  line-height: 1.85;
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.btc-chart__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── SIDEBAR ───────────────────────────────────────────────────────── */
+.btc-chart__sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.btc-chart__panel {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.btc-chart__panel:last-child {
+  border-bottom: none;
+}
+.btc-chart__panel-title {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+  font-family: var(--font-mono);
+}
+
+/* ── ML signal — single block, no duplicate label ─────────────────── */
+.btc-chart__ml {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 12px 14px;
+  background: rgba(190, 255, 234, 0.04);
+  transition:
+    background 0.3s,
+    border-color 0.3s;
+}
+.btc-chart__ml.is-buy {
+  background: linear-gradient(180deg, rgba(52, 216, 164, 0.12), rgba(52, 216, 164, 0.02));
+  border-color: rgba(52, 216, 164, 0.4);
+}
+.btc-chart__ml.is-sell {
+  background: linear-gradient(180deg, rgba(255, 122, 133, 0.12), rgba(255, 122, 133, 0.02));
+  border-color: rgba(255, 122, 133, 0.4);
+}
+.btc-chart__ml-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.btc-chart__ml-label {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  font-family: var(--font-sans);
+}
+.btc-chart__ml-pct {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--muted-2);
+}
+.btc-chart__ml-bar-wrap {
+  background: rgba(190, 255, 234, 0.08);
+  border-radius: 999px;
+  height: 4px;
+  overflow: hidden;
+}
+.btc-chart__ml-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition:
+    width 0.5s,
+    background 0.5s;
+}
+.btc-chart__ml-foot {
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+/* Feature grid */
+.btc-chart__features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.btc-chart__feat {
+  background: var(--surface-3);
+  border-radius: 4px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.btc-chart__feat-name {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+.btc-chart__feat-val {
+  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: -0.01em;
+}
+
+/* Rows */
+.btc-chart__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+.btc-chart__row:last-child {
+  margin-bottom: 0;
+}
+.btc-chart__row-label {
+  color: var(--muted-2);
+}
+.btc-chart__row-val {
+  font-weight: 500;
+  font-family: var(--font-mono);
+  color: var(--text-2);
+}
+
+/* Order flow */
+.btc-chart__of-empty {
+  color: var(--muted);
+  font-size: 11px;
+}
+.btc-chart__of-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  font-size: 10.5px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  font-family: var(--font-mono);
+}
+.btc-chart__of-item:last-child {
+  margin-bottom: 0;
+}
+.btc-chart__of-tag {
+  font-weight: 700;
+  font-size: 9.5px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.06em;
+}
+.btc-chart__of-tag.is-buy {
+  background: rgba(52, 216, 164, 0.15);
+  color: var(--up);
+}
+.btc-chart__of-tag.is-sell {
+  background: rgba(255, 122, 133, 0.15);
+  color: var(--dn);
+}
+.btc-chart__of-text {
+  flex: 1;
+  color: var(--text-2);
+}
+.btc-chart__of-time {
+  color: var(--muted);
+  font-size: 9.5px;
+}
+
+/* Fear & Greed */
+.btc-chart__fng {
+  text-align: center;
+}
+.btc-chart__fng-val {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+.btc-chart__fng-label {
+  font-size: 11px;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.btc-chart__fng-bar {
+  height: 4px;
+  border-radius: 999px;
+  margin-top: 12px;
+  background: linear-gradient(90deg, #ff7a85, #ffc46b, #ffe680, #34d8a4, #80ffd5);
+  position: relative;
+}
+.btc-chart__fng-ptr {
+  position: absolute;
+  top: -3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--bg);
+  transform: translateX(-50%);
+  transition: left 0.5s;
+}
+
+/* Funding */
+.btc-chart__fund-val {
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  padding: 4px 0;
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
+}
+.btc-chart__fund-sub {
+  color: var(--muted);
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+.btc-chart__fund-rules {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--border);
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.85;
+  font-family: var(--font-mono);
+}
+.btc-chart__fund-rules > div {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Status bar */
+.btc-chart__status {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 5px 14px;
+  font-size: 10px;
+  color: var(--muted);
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  min-height: 26px;
+}
+.btc-chart__status-live {
+  color: var(--mint);
+}
+.btc-chart__status-tag {
+  margin-left: auto;
+  color: var(--muted-2);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 9px;
+}
+
+/* Loading */
+.btc-chart__loading {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 16, 17, 0.92);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  flex-direction: column;
+  gap: 14px;
+}
+.btc-chart__spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--mint);
+  border-radius: 50%;
+  animation: btc-spin 0.8s linear infinite;
+}
+@keyframes btc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.btc-chart__loading-text {
+  color: var(--muted-2);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+/* Scrollbar */
+.btc-chart__sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+.btc-chart__sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.btc-chart__sidebar::-webkit-scrollbar-thumb {
+  background: rgba(190, 255, 234, 0.1);
+  border-radius: 2px;
+}
+.btc-chart__sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(190, 255, 234, 0.2);
+}
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 980px) {
+  .btc-chart__sidebar {
+    width: 230px;
+  }
+  .btc-chart__ohlcv {
+    display: none;
+  }
+}
+@media (max-width: 768px) {
+  .btc-chart__body {
+    flex-direction: column;
+  }
+  .btc-chart__sidebar {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    max-height: 45vh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btc-chart__live-dot,
+  .btc-chart__spinner {
+    animation: none;
+  }
+}
+
+/* ── Toolbar extras ────────────────────────────────────────────────── */
+.btc-chart__tb-spacer {
+  flex: 1 1 auto;
+  min-width: 8px;
+}
+.btc-chart__file {
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+.btc-chart__file input[type='file'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+
+/* ── Toast ─────────────────────────────────────────────────────────── */
+.btc-chart__toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 150;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid rgba(128, 255, 213, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  font-size: 11.5px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  animation: btc-toast-in 220ms ease-out;
+}
+.btc-chart__toast--err {
+  border-color: rgba(255, 122, 133, 0.5);
+}
+.btc-chart__toast-tag {
+  font-weight: 700;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(128, 255, 213, 0.12);
+  color: var(--mint);
+}
+.btc-chart__toast--err .btc-chart__toast-tag {
+  background: rgba(255, 122, 133, 0.14);
+  color: var(--dn);
+}
+.btc-chart__toast-x {
+  background: transparent;
+  border: none;
+  color: var(--muted-2);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.btc-chart__toast-x:hover {
+  color: var(--text);
+}
+@keyframes btc-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* ── Alerts panel ──────────────────────────────────────────────────── */
+.btc-chart__alert-form {
+  display: grid;
+  grid-template-columns: 1fr 70px auto;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.btc-chart__alert-kind,
+.btc-chart__alert-input {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font: inherit;
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  padding: 5px 6px;
+  border-radius: 4px;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.btc-chart__alert-kind:focus,
+.btc-chart__alert-input:focus {
+  border-color: var(--mint);
+  background: rgba(128, 255, 213, 0.06);
+}
+.btc-chart__alert-kind {
+  appearance: none;
+  background-image: linear-gradient(
+    45deg,
+    transparent 50%,
+    rgba(190, 255, 234, 0.5) 50%,
+    rgba(190, 255, 234, 0.5) 60%,
+    transparent 60%
+  );
+  background-position: right 6px center;
+  background-size: 8px 8px;
+  background-repeat: no-repeat;
+  padding-right: 18px;
+  cursor: pointer;
+}
+.btc-chart__alert-add {
+  background: rgba(128, 255, 213, 0.14);
+  color: var(--mint);
+  border: 1px solid rgba(128, 255, 213, 0.4);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btc-chart__alert-add:hover {
+  background: rgba(128, 255, 213, 0.22);
+}
+
+.btc-chart__alert-hint {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  margin-bottom: 8px;
+  letter-spacing: 0.04em;
+}
+.btc-chart__alert-hint span {
+  color: var(--text-2);
+}
+
+.btc-chart__alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.btc-chart__alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--surface-3);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  border-left: 2px solid transparent;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.btc-chart__alert.is-off {
+  opacity: 0.55;
+}
+.btc-chart__alert.is-fired {
+  border-left-color: var(--mint);
+  background: rgba(128, 255, 213, 0.08);
+}
+.btc-chart__alert-toggle {
+  background: transparent;
+  border: none;
+  color: var(--muted-2);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0;
+  width: 14px;
+}
+.btc-chart__alert.is-fired .btc-chart__alert-toggle,
+.btc-chart__alert-toggle:hover {
+  color: var(--mint);
+}
+.btc-chart__alert-text {
+  flex: 1;
+  color: var(--text-2);
+}
+.btc-chart__alert-mini {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted-2);
+  border-radius: 3px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+}
+.btc-chart__alert-mini:hover {
+  color: var(--text);
+  border-color: var(--mint);
+}
+.btc-chart__alert-del {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.btc-chart__alert-del:hover {
+  color: var(--dn);
+}
