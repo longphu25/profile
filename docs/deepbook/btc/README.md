@@ -10,6 +10,7 @@ Dữ liệu thị trường lấy từ **Binance Spot REST + WebSocket** (free, 
 
 | File | Nội dung |
 |------|---------|
+| [SESSION-CONTEXT.md](SESSION-CONTEXT.md) | **Start here** — trạng thái, file map, decisions, bugs, backlog |
 | [overview.md](overview.md) | Tổng quan kiến trúc, file layout, render flow, data flow |
 | [features.md](features.md) | 9 tính năng chính: chart, indicators, alerts, sound, snapshot, persist… |
 | [alerts.md](alerts.md) | Alert engine — 6 loại, evaluation logic, sound, browser notification |
