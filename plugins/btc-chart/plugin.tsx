@@ -647,6 +647,17 @@ function BtcChartView() {
   }, [sidebar])
   useEffect(() => {
     minimalRef.current = minimal
+    // Toggle series title labels (lightweight-charts renders them inside the canvas).
+    const refs = chartRefs.current
+    if (refs) {
+      const title = (t: string) => (minimal ? '' : t)
+      const lv = !minimal // lastValueVisible
+      refs.nweMidS.applyOptions({ title: title('NWE'), lastValueVisible: lv })
+      refs.nweUpS.applyOptions({ title: title('NWE+'), lastValueVisible: lv })
+      refs.nweLowS.applyOptions({ title: title('NWE-'), lastValueVisible: lv })
+      refs.ma50S.applyOptions({ title: title('MA50'), lastValueVisible: lv })
+      refs.ma200S.applyOptions({ title: title('MA200'), lastValueVisible: lv })
+    }
     // Redraw chart + overlays after CSS reflow finishes.
     requestAnimationFrame(() => {
       if (candlesRef.current.length) renderData(candlesRef.current)
@@ -1696,11 +1707,11 @@ function BtcChartView() {
       <div className="btc-chart__body">
         <div className="btc-chart__col">
           <div className="btc-chart__legend" ref={legendRef} />
-          <canvas className="btc-chart__vp-canvas" ref={vpCanvasRef} />
           <canvas className="btc-chart__of-canvas" ref={ofCanvasRef} />
           <div className="btc-chart__main" ref={mainElRef} />
           <div className="btc-chart__rsi" ref={rsiElRef} />
           <div className="btc-chart__vol" ref={volElRef} />
+          <canvas className="btc-chart__vp-canvas" ref={vpCanvasRef} />
         </div>
 
         {/* Sidebar */}

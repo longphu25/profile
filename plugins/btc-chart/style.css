@@ -895,22 +895,22 @@
   flex-direction: row;
 }
 .btc-chart.is-minimal .btc-chart__main {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
   min-width: 0;
+  height: 100%;
 }
 
 /* VP canvas: stop overlaying candles; sit in its own column on the right. */
 .btc-chart.is-minimal .btc-chart__vp-canvas {
   position: static;
-  flex: 0 0 auto;
+  flex: 0 0 140px;
   width: 140px;
-  height: auto;
+  height: 100%;
   opacity: 1;
 }
 
-/* Order-flow overlay still anchors to the main pane via its absolute position
-   inside the relatively-positioned col. Nothing to override in minimal mode. */
+/* OF overlay anchors to the main pane (absolute inside the col). */
 
 /* Floating title (top-left, like the reference design) */
 .btc-chart__minimal-title {
