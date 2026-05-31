@@ -45,6 +45,7 @@ export function drawOrderFlow(
   signals: OFOverlaySignal[],
   visible: boolean,
   rightOffset = 64,
+  simple = false,
 ): void {
   const W = mainEl.clientWidth
   const H = mainEl.clientHeight
@@ -59,6 +60,19 @@ export function drawOrderFlow(
   const ctx = canvas.getContext('2d')!
   ctx.clearRect(0, 0, W, H)
   if (!visible || signals.length === 0) return
+
+  // ── Simple mode: just triangles next to wicks, no pills, no leader lines.
+  if (simple) {
+    for (const s of signals) {
+      const x = chart.timeScale().timeToCoordinate(s.time)
+      if (x == null) continue
+      if (x < 8 || x > W - rightOffset - 8) continue
+      const wickY = series.priceToCoordinate(s.type === 'sell' ? s.high : s.low)
+      if (wickY == null) continue
+      drawTriangle(ctx, x, s.type === 'sell' ? wickY - 6 : wickY + 6, s.type)
+    }
+    return
+  }
 
   ctx.font = FONT
   ctx.textBaseline = 'middle'
@@ -176,4 +190,23 @@ function roundRect(
   ctx.lineTo(x, y + rr)
   ctx.quadraticCurveTo(x, y, x + rr, y)
   ctx.closePath()
+}
+
+function drawTriangle(ctx: CanvasRenderingContext2D, cx: number, cy: number, type: 'buy' | 'sell') {
+  const r = 5
+  ctx.fillStyle = type === 'sell' ? SELL_FILL : BUY_FILL
+  ctx.beginPath()
+  if (type === 'sell') {
+    // Down-pointing triangle above wick
+    ctx.moveTo(cx, cy + r)
+    ctx.lineTo(cx - r, cy - r)
+    ctx.lineTo(cx + r, cy - r)
+  } else {
+    // Up-pointing triangle below wick
+    ctx.moveTo(cx, cy - r)
+    ctx.lineTo(cx - r, cy + r)
+    ctx.lineTo(cx + r, cy + r)
+  }
+  ctx.closePath()
+  ctx.fill()
 }
