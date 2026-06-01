@@ -476,10 +476,43 @@
 }
 
 .predict-chart__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: #80ffd5;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 10px;
   white-space: nowrap;
+}
+
+.predict-chart__status {
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+.predict-chart__status.is-live {
+  background: rgba(128, 255, 213, 0.16);
+  color: #80ffd5;
+}
+.predict-chart__status.is-stale {
+  background: rgba(255, 214, 102, 0.16);
+  color: #ffd666;
+}
+.predict-chart__status.is-down {
+  background: rgba(239, 68, 68, 0.16);
+  color: #ff9b9b;
+}
+
+.predict-chart__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9fb9b1;
+  font-size: 12px;
+  pointer-events: none;
 }
 
 .predict-chart__frame {

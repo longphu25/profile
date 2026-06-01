@@ -76,6 +76,12 @@ export function PredictPositionChart({
   const [height, setHeight] = useState(280)
   const [drag, setDrag] = useState<DragRange | null>(null)
   const [plotVersion, setPlotVersion] = useState(0)
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15_000)
+    return () => clearInterval(id)
+  }, [])
 
   const spot = spotRaw / PRICE_SCALE
   const seriesData = useMemo(() => {
@@ -97,6 +103,11 @@ export function PredictPositionChart({
       }))
       .filter((row) => row.value > 0)
   }, [prices, spotRaw])
+
+  const lastTickMs = prices.length > 0 ? readTimestamp(prices[prices.length - 1], 0) : 0
+  const feedAgeSec = lastTickMs ? Math.max(0, Math.floor((now - lastTickMs) / 1000)) : null
+  const feedStale = feedAgeSec != null && feedAgeSec > 90
+  const noFeed = seriesData.length === 0
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -272,9 +283,20 @@ export function PredictPositionChart({
           </p>
         </div>
         <div className="predict-chart__meta">
-          {overlaysLoading
-            ? 'Loading positions'
-            : `${overlays.length} open overlay${overlays.length === 1 ? '' : 's'}`}
+          <span
+            className={`predict-chart__status ${noFeed ? 'is-down' : feedStale ? 'is-stale' : 'is-live'}`}
+          >
+            {noFeed ? 'No feed' : feedStale ? `Stale ${feedAgeSec}s` : 'Live'}
+          </span>
+          <span>
+            {overlaysError
+              ? 'Positions unavailable'
+              : overlaysLoading
+                ? 'Loading positions'
+                : overlays.length === 0
+                  ? 'No open positions'
+                  : `${overlays.length} open overlay${overlays.length === 1 ? '' : 's'}`}
+          </span>
         </div>
       </div>
       <div
@@ -284,6 +306,7 @@ export function PredictPositionChart({
         onPointerUp={handlePointerUp}
       >
         <div ref={containerRef} className="predict-chart__canvas" />
+        {noFeed && <div className="predict-chart__empty">Waiting for price data…</div>}
         <div className="predict-chart__overlay" data-version={plotVersion}>
           {selectedLines.map((line) => {
             const y = priceToY(line.price)
