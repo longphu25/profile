@@ -138,7 +138,10 @@ export function PortfolioTab({
       sharedHost.setSharedData('txRefresh', Date.now())
       fetchPortfolio()
     } catch (e) {
-      setClaimError(e instanceof Error ? e.message : String(e))
+      const msg = e instanceof Error ? e.message : String(e)
+      setClaimError(
+        msg.includes('decrease_position') ? 'Position already claimed. Refresh to update.' : msg,
+      )
     }
     setClaimingId(null)
   }
@@ -208,7 +211,12 @@ export function PortfolioTab({
       sharedHost.setSharedData('txRefresh', Date.now())
       fetchPortfolio()
     } catch (e) {
-      setClaimError(e instanceof Error ? e.message : String(e))
+      const msg = e instanceof Error ? e.message : String(e)
+      setClaimError(
+        msg.includes('decrease_position')
+          ? 'Some positions already claimed. Refresh to update.'
+          : msg,
+      )
     }
     setClaimingId(null)
   }
