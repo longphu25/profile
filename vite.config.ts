@@ -70,6 +70,7 @@ export default defineConfig({
       'polymarket-dashboard.html',
       'marketplace.html',
       'btc-chart.html',
+      'deepbook-predict.html',
     ],
   },
   server: {
@@ -121,6 +122,7 @@ export default defineConfig({
         deepbook: resolve(__dirname, 'deepbook.html'),
         'polymarket-dashboard': resolve(__dirname, 'polymarket-dashboard.html'),
         'btc-chart': resolve(__dirname, 'btc-chart.html'),
+        'deepbook-predict': resolve(__dirname, 'deepbook-predict.html'),
         // Build plugins as separate entry points
         'plugins/hello-plugin': resolve(__dirname, 'plugins/hello-plugin/plugin.tsx'),
         'plugins/hello-world-sui': resolve(__dirname, 'plugins/hello-world-sui/plugin.tsx'),

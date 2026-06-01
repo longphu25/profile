@@ -107,3 +107,7 @@ export interface PositionOverlay {
   lowerStrike?: number
   upperStrike?: number
 }
+
+export type ChartTradeDraft =
+  | { mode: 'binary'; oracleId: string; strike: number; isUp: boolean; spot: number }
+  | { mode: 'range'; oracleId: string; lowerStrike: number; upperStrike: number; spot: number }

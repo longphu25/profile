@@ -9,7 +9,7 @@ import {
   type UTCTimestamp,
 } from 'lightweight-charts'
 import { PRICE_SCALE, STRIKE_SCALE } from '../../domain/constants'
-import type { PositionOverlay } from '../../domain/types'
+import type { ChartTradeDraft, PositionOverlay } from '../../domain/types'
 
 type ChartMode = 'binary' | 'range'
 
@@ -33,6 +33,9 @@ interface Props {
   overlaysError?: string | null
   onBinarySelect: (strike: number, isUp: boolean) => void
   onRangeSelect: (lowerStrike: number, upperStrike: number) => void
+  /** Optional: emit a full draft for popup-based trading (includes oracleId + spot). */
+  oracleId?: string | null
+  onDraft?: (draft: ChartTradeDraft) => void
 }
 
 interface DragRange {
@@ -69,6 +72,8 @@ export function PredictPositionChart({
   overlaysError,
   onBinarySelect,
   onRangeSelect,
+  oracleId,
+  onDraft,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -174,7 +179,11 @@ export function PredictPositionChart({
       const strike = roundStrike(price)
       // Direction needs a valid spot; skip selection if the oracle spot is missing.
       if (mode === 'binary' && spot) {
-        onBinarySelect(strike, strike >= spot)
+        const isUp = strike >= spot
+        onBinarySelect(strike, isUp)
+        if (oracleId && onDraft) {
+          onDraft({ mode: 'binary', oracleId, strike, isUp, spot })
+        }
       }
     }
 
@@ -230,7 +239,12 @@ export function PredictPositionChart({
     event.currentTarget.releasePointerCapture(event.pointerId)
     const lower = Math.min(drag.start, drag.end)
     const upper = Math.max(drag.start, drag.end)
-    if (upper > lower) onRangeSelect(lower, upper)
+    if (upper > lower) {
+      onRangeSelect(lower, upper)
+      if (oracleId && onDraft && spot) {
+        onDraft({ mode: 'range', oracleId, lowerStrike: lower, upperStrike: upper, spot })
+      }
+    }
     setDrag(null)
   }
 

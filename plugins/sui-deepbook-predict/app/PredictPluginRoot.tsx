@@ -18,10 +18,17 @@ import { GuidedTrade } from '../components/GuidedTrade'
 import { SurfaceStudio } from '../components/SurfaceStudio'
 import { PLPRiskDashboard } from '../components/PLPRiskDashboard'
 import { VaultPanel } from '../components/VaultPanel'
+import { ChartTradePopup } from '../components/ChartTradePopup'
 import { usePositionOverlays } from '../application/usePositionOverlays'
 import { useTour } from '../hooks/useTour'
 import { useEventStream } from '../hooks/useEventStream'
-import { PREDICT_ID, PREDICT_PACKAGE, PRICE_SCALE, type TabId } from '../domain'
+import {
+  PREDICT_ID,
+  PREDICT_PACKAGE,
+  PRICE_SCALE,
+  type TabId,
+  type ChartTradeDraft,
+} from '../domain'
 import { getManagersByOwner } from '../data/managerRepository'
 import {
   getOraclePrices,
@@ -878,6 +885,7 @@ function TradePanel({
   const [submitting, setSubmitting] = useState(false)
   const [managerId, setManagerId] = useState<string | null>(null)
   const [overlayRefreshKey, setOverlayRefreshKey] = useState(0)
+  const [draft, setDraft] = useState<ChartTradeDraft | null>(null)
 
   const spotPrice = oracleState?.latest_price?.spot
     ? (oracleState.latest_price.spot / PRICE_SCALE).toFixed(0)
@@ -1020,6 +1028,8 @@ function TradePanel({
           overlays={overlays}
           overlaysLoading={overlaysLoading}
           overlaysError={overlaysError}
+          oracleId={selectedOracle}
+          onDraft={setDraft}
           onBinarySelect={(nextStrike, nextIsUp) => {
             setMode('binary')
             setStrike(String(nextStrike))
@@ -1029,6 +1039,48 @@ function TradePanel({
             setMode('range')
             setLowerStrike(String(nextLower))
             setUpperStrike(String(nextUpper))
+          }}
+        />
+
+        <ChartTradePopup
+          draft={draft}
+          oracleState={oracleState}
+          isConnected={!!walletAddress}
+          onCancel={() => setDraft(null)}
+          onConfirm={async (amount) => {
+            if (!sharedHost || !selectedOracle) return
+            let mgr = managerId
+            if (!mgr) {
+              const txMgr = buildCreateManager(walletAddress)
+              await sharedHost.signAndExecuteTransaction(txMgr)
+              await new Promise((r) => setTimeout(r, 2500))
+              const mine = (await getManagersByOwner(walletAddress)).at(0)
+              if (mine) {
+                mgr = mine.manager_id
+                setManagerId(mgr)
+              }
+              if (!mgr) throw new Error('Manager not found after creation.')
+            }
+            const tx = await buildTradeTx({
+              walletAddress,
+              managerId: mgr,
+              oracleId: selectedOracle,
+              expiry: oracleState?.oracle?.expiry || 0,
+              minStrike: oracleState?.oracle?.min_strike || 50000000000000,
+              tickSize: oracleState?.oracle?.tick_size || 1000000000,
+              action: 'mint',
+              mode: draft!.mode,
+              amount: Number(amount),
+              strike: draft!.mode === 'binary' ? draft!.strike : undefined,
+              isUp: draft!.mode === 'binary' ? draft!.isUp : undefined,
+              lowerStrike: draft!.mode === 'range' ? draft!.lowerStrike : undefined,
+              upperStrike: draft!.mode === 'range' ? draft!.upperStrike : undefined,
+            })
+            const result = await sharedHost.signAndExecuteTransaction(tx)
+            sharedHost.setSharedData('txRefresh', Date.now())
+            setOverlayRefreshKey((k) => k + 1)
+            setDraft(null)
+            setTxDigest(result.digest)
           }}
         />
 
