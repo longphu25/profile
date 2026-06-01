@@ -76,12 +76,6 @@ export function PredictPositionChart({
   const [height, setHeight] = useState(280)
   const [drag, setDrag] = useState<DragRange | null>(null)
   const [plotVersion, setPlotVersion] = useState(0)
-  const [now, setNow] = useState(() => Date.now())
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 15_000)
-    return () => clearInterval(id)
-  }, [])
 
   const spot = spotRaw / PRICE_SCALE
   const seriesData = useMemo(() => {
@@ -102,12 +96,9 @@ export function PredictPositionChart({
         value: Number(row.spot || row.forward || 0) / PRICE_SCALE,
       }))
       .filter((row) => row.value > 0)
+      .sort((a, b) => a.time - b.time)
+      .filter((row, i, arr) => i === 0 || row.time > arr[i - 1].time)
   }, [prices, spotRaw])
-
-  const lastTickMs = prices.length > 0 ? readTimestamp(prices[prices.length - 1], 0) : 0
-  const feedAgeSec = lastTickMs ? Math.max(0, Math.floor((now - lastTickMs) / 1000)) : null
-  const feedStale = feedAgeSec != null && feedAgeSec > 90
-  const noFeed = seriesData.length === 0
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -154,13 +145,8 @@ export function PredictPositionChart({
     const observer = new ResizeObserver(resize)
     observer.observe(containerRef.current)
 
-    // Keep overlay lines aligned with the price scale while the user pans/zooms.
-    const bump = () => setPlotVersion((value) => value + 1)
-    chart.timeScale().subscribeVisibleLogicalRangeChange(bump)
-
     return () => {
       observer.disconnect()
-      chart.timeScale().unsubscribeVisibleLogicalRangeChange(bump)
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
@@ -195,6 +181,21 @@ export function PredictPositionChart({
     chart.subscribeClick(handleClick)
     return () => chart.unsubscribeClick(handleClick)
   }, [mode, onBinarySelect, spot])
+
+  // Re-render overlays when the user pans/zooms so Y positions stay correct.
+  useEffect(() => {
+    const chart = chartRef.current
+    if (!chart) return
+    const bump = () => setPlotVersion((v) => v + 1)
+    chart.timeScale().subscribeVisibleLogicalRangeChange(bump)
+    return () => {
+      try {
+        chart.timeScale().unsubscribeVisibleLogicalRangeChange(bump)
+      } catch {
+        /* chart already removed */
+      }
+    }
+  }, [seriesData]) // re-subscribe after data changes (chart is ready)
 
   const priceToY = (price: number | null | undefined) => {
     if (!price || !seriesRef.current) return null
@@ -283,20 +284,9 @@ export function PredictPositionChart({
           </p>
         </div>
         <div className="predict-chart__meta">
-          <span
-            className={`predict-chart__status ${noFeed ? 'is-down' : feedStale ? 'is-stale' : 'is-live'}`}
-          >
-            {noFeed ? 'No feed' : feedStale ? `Stale ${feedAgeSec}s` : 'Live'}
-          </span>
-          <span>
-            {overlaysError
-              ? 'Positions unavailable'
-              : overlaysLoading
-                ? 'Loading positions'
-                : overlays.length === 0
-                  ? 'No open positions'
-                  : `${overlays.length} open overlay${overlays.length === 1 ? '' : 's'}`}
-          </span>
+          {overlaysLoading
+            ? 'Loading positions'
+            : `${overlays.length} open overlay${overlays.length === 1 ? '' : 's'}`}
         </div>
       </div>
       <div
@@ -306,7 +296,6 @@ export function PredictPositionChart({
         onPointerUp={handlePointerUp}
       >
         <div ref={containerRef} className="predict-chart__canvas" />
-        {noFeed && <div className="predict-chart__empty">Waiting for price data…</div>}
         <div className="predict-chart__overlay" data-version={plotVersion}>
           {selectedLines.map((line) => {
             const y = priceToY(line.price)

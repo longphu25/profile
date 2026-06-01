@@ -3,6 +3,7 @@
 import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Transaction } from '@mysten/sui/transactions'
+import { buildCreateManager, buildTradeTx } from '../application/tradeActions'
 import { StrategyTab } from '../components/StrategyTab'
 import { ArbTab } from '../components/ArbTab'
 import { PLPHedgeTab } from '../components/PLPHedgeTab'
@@ -28,7 +29,6 @@ import {
   computeSVISurface,
   type TabId,
 } from '../domain'
-import { snapStrikeRaw, usdToStrikeRaw } from '../domain/strike'
 import { getManagersByOwner } from '../data/managerRepository'
 import {
   getOraclePrices,
@@ -1434,9 +1434,7 @@ function TradePanel({
       // Ensure user has a PredictManager
       let mgr = managerId
       if (!mgr) {
-        const txMgr = new Transaction()
-        txMgr.setSender(walletAddress)
-        txMgr.moveCall({ target: `${PREDICT_PACKAGE}::predict::create_manager` })
+        const txMgr = buildCreateManager(walletAddress)
         await sharedHost.signAndExecuteTransaction(txMgr)
         await new Promise((r) => setTimeout(r, 2500))
 
@@ -1457,105 +1455,21 @@ function TradePanel({
         }
       }
 
-      const amountRaw = Math.floor(Number(amount) * 10 ** DUSDC_DECIMALS)
-      const expiry = oracleState?.oracle?.expiry || 0
-      const minStrike = oracleState?.oracle?.min_strike || 50000000000000
-      const tickSize = oracleState?.oracle?.tick_size || 1000000000
-      const snapStrike = (usd: number) => {
-        return snapStrikeRaw(usdToStrikeRaw(usd), tickSize, minStrike)
-      }
-
-      // Single PTB: deposit (if mint) + mint/redeem — all in one atomic transaction
-      const tx = new Transaction()
-      tx.setSender(walletAddress)
-
-      if (action === 'mint') {
-        // Fetch DUSDC coins for deposit
-        const coinsRes = await fetch('https://fullnode.testnet.sui.io:443', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'suix_getCoins',
-            params: [walletAddress, DUSDC_TYPE, null, 50],
-          }),
-        })
-        const coinsData = (await coinsRes.json()) as {
-          result?: { data: { coinObjectId: string; balance: string }[] }
-        }
-        const dusdc_coins = coinsData.result?.data || []
-        if (dusdc_coins.length === 0) {
-          setTxError('No DUSDC coins found in wallet. Request tokens from the faucet.')
-          setSubmitting(false)
-          return
-        }
-
-        // Merge + split coins
-        const primaryCoin = dusdc_coins[0].coinObjectId
-        if (dusdc_coins.length > 1) {
-          tx.mergeCoins(
-            tx.object(primaryCoin),
-            dusdc_coins.slice(1).map((c) => tx.object(c.coinObjectId)),
-          )
-        }
-        const [depositCoin] = tx.splitCoins(tx.object(primaryCoin), [tx.pure.u64(amountRaw)])
-
-        // Command 1: Deposit into PredictManager
-        tx.moveCall({
-          target: `${PREDICT_PACKAGE}::predict_manager::deposit`,
-          typeArguments: [DUSDC_TYPE],
-          arguments: [tx.object(mgr), depositCoin],
-        })
-      }
-
-      // Command 2: Mint or Redeem (chained in same PTB)
-      if (mode === 'binary') {
-        const strikeRaw = snapStrike(Number(strike))
-        const keyFn = isUp ? 'up' : 'down'
-        const [marketKey] = tx.moveCall({
-          target: `${PREDICT_PACKAGE}::market_key::${keyFn}`,
-          arguments: [tx.pure.id(selectedOracle), tx.pure.u64(expiry), tx.pure.u64(strikeRaw)],
-        })
-
-        tx.moveCall({
-          target: `${PREDICT_PACKAGE}::predict::${action === 'mint' ? 'mint' : 'redeem'}`,
-          typeArguments: [DUSDC_TYPE],
-          arguments: [
-            tx.object(PREDICT_ID),
-            tx.object(mgr),
-            tx.object(selectedOracle),
-            marketKey,
-            tx.pure.u64(amountRaw),
-            tx.object.clock(),
-          ],
-        })
-      } else {
-        const lowerRaw = snapStrike(Number(lowerStrike))
-        const upperRaw = snapStrike(Number(upperStrike))
-        const [rangeKey] = tx.moveCall({
-          target: `${PREDICT_PACKAGE}::range_key::new`,
-          arguments: [
-            tx.pure.id(selectedOracle),
-            tx.pure.u64(expiry),
-            tx.pure.u64(lowerRaw),
-            tx.pure.u64(upperRaw),
-          ],
-        })
-
-        tx.moveCall({
-          target: `${PREDICT_PACKAGE}::predict::${action === 'mint' ? 'mint_range' : 'redeem_range'}`,
-          typeArguments: [DUSDC_TYPE],
-          arguments: [
-            tx.object(PREDICT_ID),
-            tx.object(mgr),
-            tx.object(selectedOracle),
-            rangeKey,
-            tx.pure.u64(amountRaw),
-            tx.object.clock(),
-          ],
-        })
-      }
+      const tx = await buildTradeTx({
+        walletAddress,
+        managerId: mgr,
+        oracleId: selectedOracle,
+        expiry: oracleState?.oracle?.expiry || 0,
+        minStrike: oracleState?.oracle?.min_strike || 50000000000000,
+        tickSize: oracleState?.oracle?.tick_size || 1000000000,
+        action,
+        mode,
+        amount: Number(amount),
+        strike: Number(strike),
+        isUp,
+        lowerStrike: Number(lowerStrike),
+        upperStrike: Number(upperStrike),
+      })
 
       const result = await sharedHost.signAndExecuteTransaction(tx)
       setTxDigest(result.digest)
