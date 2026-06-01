@@ -263,6 +263,35 @@ interface PositionOverlay {
 - Wallet disconnected users can plan positions but cannot execute.
 - Desktop/mobile layouts avoid chart/form overlap.
 
+## Backlog (Prioritized)
+
+### P0 — Blocks demo or causes bugs
+
+- [ ] 1. Visual QA chart (PredictPositionChart + PredictPluginRoot chart integration)
+- [ ] 11. Chart degraded/stale data states
+- [ ] 18. Regression checklist
+
+### P1 — Improves code quality and enables next steps
+
+- [ ] 2. Tách TradePanel ra khỏi PredictPluginRoot
+- [ ] 3. Tách Vault tab ra khỏi PredictPluginRoot
+- [ ] 4. Tách SurfaceStudio khỏi PredictPluginRoot
+- [ ] 5. Tách PLPRiskDashboard khỏi PredictPluginRoot
+- [x] 6. Nâng usePositionOverlays lên repository/service
+- [ ] 7. Test usePositionOverlays
+- [x] 8. Test domain/positions.ts và domain/strike.ts
+- [ ] 12. Tách transaction builders khỏi UI handlers
+- [ ] 13. TradePanel controlled state + action service
+
+### P2 — Nice-to-have polish
+
+- [ ] 9. Chuẩn hóa render-time Date.now()
+- [ ] 10. Portfolio tab overlay read-only
+- [ ] 16. Clean architecture layers (composition/application/presentation)
+- [ ] 17. Click-to-select + drag-to-sculpt in Portfolio + Guided Trade
+- [ ] 19. Commit rhythm docs
+- [x] 20. Convert to backlog in plan 11
+
 ## Assumptions
 
 - `deepbook.html` remains the primary suite entry.
