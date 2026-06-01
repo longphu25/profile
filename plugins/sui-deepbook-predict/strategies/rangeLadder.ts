@@ -89,7 +89,6 @@ export function simulateRangeLadder(config: RangeLadderConfig): RangeLadderResul
 
   // Simulate scenarios
   const scenarios: { settlement: number; pnl: number }[] = []
-  const scenarioRange = spot * 0.3 // ±30%
   for (let pct = -30; pct <= 30; pct += 2) {
     const settlement = spot * (1 + pct / 100)
     let pnl = -config.capital // Start with total cost

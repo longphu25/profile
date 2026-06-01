@@ -8,26 +8,27 @@
 
 import { useCallback, useRef } from 'react'
 import Shepherd from 'shepherd.js'
+import type { StepOptions, StepOptionsAttachTo, Tour } from 'shepherd.js'
 import 'shepherd.js/dist/css/shepherd.css'
 
 type TourName = 'overview' | 'plpHedge' | 'marginLoop' | 'surface' | 'trade'
 
 const BUTTON_NEXT = {
   text: 'Next →',
-  action: function (this: Shepherd.Tour) {
+  action: function (this: Tour) {
     this.next()
   },
 }
 const BUTTON_BACK = {
   text: '← Back',
-  action: function (this: Shepherd.Tour) {
+  action: function (this: Tour) {
     this.back()
   },
   secondary: true,
 }
 const BUTTON_DONE = {
   text: 'Done ✓',
-  action: function (this: Shepherd.Tour) {
+  action: function (this: Tour) {
     this.complete()
   },
 }
@@ -64,14 +65,11 @@ function findElement(selector: string): HTMLElement | null | undefined {
 }
 
 /** Helper to create attachTo with shadow DOM support */
-function attachTo(
-  selector: string,
-  on: Shepherd.Step.StepOptionsAttachTo['on'] = 'bottom',
-): Shepherd.Step.StepOptionsAttachTo {
+function attachTo(selector: string, on: StepOptionsAttachTo['on'] = 'bottom'): StepOptionsAttachTo {
   return { element: () => findElement(selector), on }
 }
 
-function createTour(): Shepherd.Tour {
+function createTour(): Tour {
   return new Shepherd.Tour({
     useModalOverlay: true,
     defaultStepOptions: {
@@ -85,7 +83,7 @@ function createTour(): Shepherd.Tour {
 }
 
 /** Add progress indicator to each step */
-function withProgress(steps: Shepherd.Step.StepOptions[]): Shepherd.Step.StepOptions[] {
+function withProgress(steps: StepOptions[]): StepOptions[] {
   return steps.map((step, idx) => ({
     ...step,
     when: {
@@ -106,7 +104,7 @@ function withProgress(steps: Shepherd.Step.StepOptions[]): Shepherd.Step.StepOpt
   }))
 }
 
-function getOverviewSteps(): Shepherd.Step.StepOptions[] {
+function getOverviewSteps(): StepOptions[] {
   return withProgress([
     {
       id: 'welcome',
@@ -145,7 +143,7 @@ function getOverviewSteps(): Shepherd.Step.StepOptions[] {
   ])
 }
 
-function getPLPHedgeSteps(): Shepherd.Step.StepOptions[] {
+function getPLPHedgeSteps(): StepOptions[] {
   return withProgress([
     {
       id: 'plp-intro',
@@ -196,7 +194,7 @@ function getPLPHedgeSteps(): Shepherd.Step.StepOptions[] {
   ])
 }
 
-function getMarginLoopSteps(): Shepherd.Step.StepOptions[] {
+function getMarginLoopSteps(): StepOptions[] {
   return withProgress([
     {
       id: 'loop-intro',
@@ -241,7 +239,7 @@ function getMarginLoopSteps(): Shepherd.Step.StepOptions[] {
   ])
 }
 
-function getSurfaceSteps(): Shepherd.Step.StepOptions[] {
+function getSurfaceSteps(): StepOptions[] {
   return withProgress([
     {
       id: 'surface-intro',
@@ -287,7 +285,7 @@ function getSurfaceSteps(): Shepherd.Step.StepOptions[] {
   ])
 }
 
-function getTradeSteps(): Shepherd.Step.StepOptions[] {
+function getTradeSteps(): StepOptions[] {
   return withProgress([
     {
       id: 'trade-intro',
@@ -320,7 +318,7 @@ function getTradeSteps(): Shepherd.Step.StepOptions[] {
 }
 
 export function useTour() {
-  const tourRef = useRef<Shepherd.Tour | null>(null)
+  const tourRef = useRef<Tour | null>(null)
 
   const startTour = useCallback((name: TourName) => {
     if (tourRef.current) tourRef.current.cancel()
@@ -328,7 +326,7 @@ export function useTour() {
     const tour = createTour()
     tourRef.current = tour
 
-    let steps: Shepherd.Step.StepOptions[]
+    let steps: StepOptions[]
     switch (name) {
       case 'overview':
         steps = getOverviewSteps()
