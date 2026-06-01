@@ -13,7 +13,7 @@ import './style.css'
 import { secp256k1 } from '@noble/curves/secp256k1.js'
 import { blake2b } from '@noble/hashes/blake2.js'
 import { generateMnemonic, validateMnemonic, mnemonicToSeedSync } from '@scure/bip39'
-import { wordlist } from '@scure/bip39/wordlists/english'
+import { wordlist } from '@scure/bip39/wordlists/english.js'
 import { HDKey } from '@scure/bip32'
 
 // --- Constants ---
@@ -49,7 +49,6 @@ function deriveSuiAddress(compressedPubKey: Uint8Array): string {
 
 /** Generate a random Secp256k1 wallet (no mnemonic) */
 function generateRandomWallet(): WalletData {
-   
   const utils = secp256k1.utils as Record<string, unknown>
   const secretKey =
     typeof utils.randomPrivateKey === 'function'

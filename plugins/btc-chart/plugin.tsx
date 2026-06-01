@@ -1421,9 +1421,6 @@ function BtcChartView() {
       return next
     })
   }, [])
-  const setVolume = useCallback((vol: number) => {
-    setSound((s) => ({ ...s, volume: vol }))
-  }, [])
   const requestNotif = useCallback(async () => {
     const result = await ensureNotificationPermission()
     setNotifAllowed(result === 'granted')
