@@ -88,25 +88,36 @@ export function KeeperTab({ oracles, walletAddress, isConnected, sharedHost }: P
     scanPositions()
   }, [scanPositions])
 
-  // Batch redeem all found positions in one PTB
+  // Redeem settled positions one-by-one so a single stale entry doesn't abort the batch.
   const redeemAll = async () => {
     if (!sharedHost || !walletAddress || settledPositions.length === 0) return
     setExecuting(true)
     setTxError(null)
     setTxDigest(null)
 
-    const steps: TreeStep[] = settledPositions.map((p) => ({
+    const fresh = settledPositions.filter((p) => Number(p.open_quantity) > 0)
+    if (fresh.length === 0) {
+      setTxError('All positions already claimed (server data was stale).')
+      setExecuting(false)
+      return
+    }
+
+    const steps: TreeStep[] = fresh.map((p) => ({
       protocol: 'predict',
       action: `Redeem ${p.is_up ? 'UP' : 'DOWN'} $${(p.strike / Number(STRIKE_SCALE)).toFixed(0)} — mgr ${p.manager_id.slice(0, 8)}…`,
       status: 'pending' as const,
     }))
     setExecSteps(steps)
 
-    try {
-      const tx = new Transaction()
-      tx.setSender(walletAddress)
+    let lastDigest: string | null = null
+    let errors = 0
 
-      for (const pos of settledPositions) {
+    for (let i = 0; i < fresh.length; i++) {
+      const pos = fresh[i]
+      try {
+        const tx = new Transaction()
+        tx.setSender(walletAddress)
+
         const keyFn = pos.is_up ? 'up' : 'down'
         const [marketKey] = tx.moveCall({
           target: `${PREDICT_PACKAGE}::market_key::${keyFn}`,
@@ -125,21 +136,25 @@ export function KeeperTab({ oracles, walletAddress, isConnected, sharedHost }: P
             tx.object.clock(),
           ],
         })
-      }
 
-      // Execute single atomic PTB
-      const result = await sharedHost.signAndExecuteTransaction(tx)
-      setTxDigest(result.digest)
-      for (const s of steps) s.status = 'done'
-      setExecSteps([...steps])
-      sharedHost.setSharedData('txRefresh', Date.now())
-      // Refresh
-      setSettledPositions([])
-    } catch (e) {
-      setTxError(e instanceof Error ? e.message : String(e))
-      for (const s of steps) s.status = 'error'
+        const result = await sharedHost.signAndExecuteTransaction(tx)
+        lastDigest = result.digest
+        steps[i].status = 'done'
+      } catch {
+        steps[i].status = 'error'
+        errors++
+      }
       setExecSteps([...steps])
     }
+
+    if (lastDigest) {
+      setTxDigest(lastDigest)
+      sharedHost.setSharedData('txRefresh', Date.now())
+    }
+    if (errors > 0) {
+      setTxError(`${errors}/${fresh.length} positions failed (likely already claimed).`)
+    }
+    setSettledPositions([])
     setExecuting(false)
   }
 
