@@ -1502,13 +1502,11 @@ function BtcChartView() {
   ]
 
   return (
-    <div className="btc-chart" ref={rootRef}>
-      {loading && (
-        <div className="btc-chart__loading">
-          <div className="btc-chart__spinner" />
-          <span className="btc-chart__loading-text">{loadingText}</span>
-        </div>
-      )}
+    <div className={`btc-chart${loading ? '' : ' is-ready'}`} ref={rootRef}>
+      <div className={`btc-chart__loading${loading ? '' : ' is-done'}`} aria-hidden={!loading}>
+        <div className="btc-chart__spinner" />
+        <span className="btc-chart__loading-text">{loadingText}</span>
+      </div>
       {firedToast && (
         <div className="btc-chart__toast" role="status">
           <span className="btc-chart__toast-tag">ALERT</span>

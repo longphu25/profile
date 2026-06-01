@@ -605,6 +605,15 @@
   z-index: 200;
   flex-direction: column;
   gap: 14px;
+  transition: opacity 0.45s ease;
+}
+.btc-chart__loading.is-done {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    opacity 0.45s ease,
+    visibility 0s linear 0.45s;
 }
 .btc-chart__spinner {
   width: 28px;
@@ -624,6 +633,38 @@
   font-size: 12px;
   font-family: var(--font-mono);
   letter-spacing: 0.04em;
+}
+
+/* Interface reveal — staggered fade/slide once data is ready */
+@keyframes btc-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.btc-chart.is-ready .btc-chart__header {
+  animation: btc-reveal 0.5s ease both;
+}
+.btc-chart.is-ready .btc-chart__toolbar {
+  animation: btc-reveal 0.5s ease 0.08s both;
+}
+.btc-chart.is-ready .btc-chart__body {
+  animation: btc-reveal 0.55s ease 0.16s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btc-chart__loading,
+  .btc-chart__loading.is-done {
+    transition: none;
+  }
+  .btc-chart.is-ready .btc-chart__header,
+  .btc-chart.is-ready .btc-chart__toolbar,
+  .btc-chart.is-ready .btc-chart__body {
+    animation: none;
+  }
 }
 
 /* Scrollbar */
