@@ -143,8 +143,13 @@ export function PredictPositionChart({
     const observer = new ResizeObserver(resize)
     observer.observe(containerRef.current)
 
+    // Keep overlay lines aligned with the price scale while the user pans/zooms.
+    const bump = () => setPlotVersion((value) => value + 1)
+    chart.timeScale().subscribeVisibleLogicalRangeChange(bump)
+
     return () => {
       observer.disconnect()
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(bump)
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
@@ -170,8 +175,9 @@ export function PredictPositionChart({
       const price = series.coordinateToPrice(param.point.y)
       if (!price) return
       const strike = roundStrike(price)
-      if (mode === 'binary') {
-        onBinarySelect(strike, spot ? strike >= spot : true)
+      // Direction needs a valid spot; skip selection if the oracle spot is missing.
+      if (mode === 'binary' && spot) {
+        onBinarySelect(strike, strike >= spot)
       }
     }
 
