@@ -1,4 +1,4 @@
-// BTC Chart Plugin — Pro view: NWE + Volume Profile + Order Flow + ML Signal
+// BTC Chart Plugin — Pro view: Midnight Hunter band + Volume Profile + signals + ML
 // Adapted from btc-chart-pro-v3.html for the profile plugin host (Shadow DOM scoped)
 //
 // External dependency: `lightweight-charts` global, loaded via CDN <script> tag
@@ -108,40 +108,51 @@ const tsNow = (): string => new Date().toLocaleTimeString('vi-VN')
 
 // ── Indicators ─────────────────────────────────────────────────────────────
 
-// LuxAlgo Nadaraya-Watson Envelope uses a Gaussian weighting kernel.
-function gaussKernel(dist: number, h: number): number {
-  return Math.exp(-(dist * dist) / (2 * h * h))
-}
-
-// LuxAlgo Nadaraya-Watson Envelope (default repainting / symmetric mode):
-//  - for every bar, weight ALL bars in the window by a Gaussian of their
-//    distance |i-j| (uses future bars too, hence repaints as candles arrive)
-//  - envelope width = mean absolute deviation of price from the line × mult,
-//    applied as a constant width to every bar.
-function calcNWE(data: Candle[], h = 8, mult = 3): NWE {
+// X48 Midnight Hunter band: a centered Triangular Moving Average (TMA) of the
+// weighted price (H+L+2C)/4, offset by an ATR multiple to form the 3 bands.
+// The window is centered, so the most recent `halfLen` bars repaint as new
+// candles close — this matches the original indicator's "handicapped bands".
+function calcMHBand(data: Candle[], halfLen = 56, atrPeriod = 110, atrMult = 2.5): NWE {
   const n = data.length
   const mid = new Array<number | null>(n).fill(null)
   const upper = new Array<number | null>(n).fill(null)
   const lower = new Array<number | null>(n).fill(null)
-  if (!n) return { mid, upper, lower }
+  const wp = data.map((c) => (c.high + c.low + 2 * c.close) / 4)
 
-  for (let i = 0; i < n; i++) {
-    let num = 0,
-      den = 0
-    for (let j = 0; j < n; j++) {
-      const w = gaussKernel(i - j, h)
-      num += data[j].close * w
-      den += w
+  for (let t = 0; t < n; t++) {
+    // Triangular weights: peak (halfLen+1) at center, descending on both sides.
+    let sum = (halfLen + 1) * wp[t]
+    let sumw = halfLen + 1
+    let k = halfLen
+    for (let j = 1; j <= halfLen; j++) {
+      if (t - j >= 0) {
+        sum += k * wp[t - j]
+        sumw += k
+      }
+      if (t + j < n) {
+        sum += k * wp[t + j]
+        sumw += k
+      }
+      k--
     }
-    mid[i] = num / den
-  }
+    const m = sum / sumw
+    mid[t] = m
 
-  let sumAbs = 0
-  for (let i = 0; i < n; i++) sumAbs += Math.abs(data[i].close - (mid[i] as number))
-  const dev = (sumAbs / n) * mult
-  for (let i = 0; i < n; i++) {
-    upper[i] = (mid[i] as number) + dev
-    lower[i] = (mid[i] as number) - dev
+    // ATR-like range averaged over atrPeriod bars, offset ~10 bars back (per source).
+    let range = 0,
+      cnt = 0
+    for (let j = 0; j < atrPeriod; j++) {
+      const a = t - j - 10,
+        b = t - j - 11
+      if (b < 0) break
+      range += Math.max(data[a].high, data[b].close) - Math.min(data[a].low, data[b].close)
+      cnt++
+    }
+    if (cnt > 0) {
+      const dev = (range / cnt) * atrMult
+      upper[t] = m + dev
+      lower[t] = m - dev
+    }
   }
   return { mid, upper, lower }
 }
@@ -227,46 +238,38 @@ function buildOrderFlow(
   const overlay: OFOverlaySignal[] = []
   const log: OrderFlowSignal[] = []
   for (let i = 1; i < data.length; i++) {
-    const upI = nwe.upper[i],
-      loI = nwe.lower[i],
-      vs = volSma[i]
-    if (upI == null || loI == null || vs == null) continue
-    const c = data[i]
-    const bullBreak = c.close > upI && c.close > c.open
-    const bearBreak = c.close < loI && c.close < c.open
-    const volSpike = c.volume > vs * 1.5
-    const volRatio = (c.volume / vs).toFixed(1)
+    const up = nwe.upper[i],
+      lo = nwe.lower[i],
+      upPrev = nwe.upper[i - 1],
+      loPrev = nwe.lower[i - 1]
+    if (up == null || lo == null || upPrev == null || loPrev == null) continue
+    const c = data[i],
+      p = data[i - 1]
+    // X48 Midnight Hunter rebound: previous bar pokes outside the band, then the
+    // current bar reverses — sell after an upper-band rejection, buy after lower.
+    const sell = p.high > upPrev && p.close > p.open && c.close < c.open
+    const buy = p.low < loPrev && p.close < p.open && c.close > c.open
+    if (!sell && !buy) continue
+
+    const vs = volSma[i]
+    const volRatio = vs ? (c.volume / vs).toFixed(1) : '—'
     const timeStr = new Date(c.time * 1000).toLocaleDateString('vi-VN', {
       month: 'numeric',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     })
-
-    if (bullBreak && volSpike) {
-      overlay.push({
-        time: c.time,
-        type: 'sell',
-        ratio: volRatio,
-        nweUpper: upI,
-        nweLower: loI,
-        high: c.high,
-        low: c.low,
-      })
-      log.unshift({ type: 'sell', price: fmtP(c.close), ratio: volRatio, time: timeStr })
-    }
-    if (bearBreak && volSpike) {
-      overlay.push({
-        time: c.time,
-        type: 'buy',
-        ratio: volRatio,
-        nweUpper: upI,
-        nweLower: loI,
-        high: c.high,
-        low: c.low,
-      })
-      log.unshift({ type: 'buy', price: fmtP(c.close), ratio: volRatio, time: timeStr })
-    }
+    const type = sell ? 'sell' : 'buy'
+    overlay.push({
+      time: c.time,
+      type,
+      ratio: volRatio,
+      nweUpper: up,
+      nweLower: lo,
+      high: c.high,
+      low: c.low,
+    })
+    log.unshift({ type, price: fmtP(c.close), ratio: volRatio, time: timeStr })
   }
   return { overlay, log: log.slice(0, 6) }
 }
@@ -662,7 +665,7 @@ function BtcChartView() {
     if (!data.length || !refs) return
 
     const v = visRef.current
-    const nwe = calcNWE(data, 8, 3)
+    const nwe = calcMHBand(data)
     const sma50 = calcSMA(data, 50)
     const sma200 = calcSMA(data, 200)
     const rsi = calcRSI(data, 14)
@@ -816,11 +819,12 @@ function BtcChartView() {
     let sigNwe = { text: '—', cls: '' }
     if (i > 0 && nwe.upper[i - 1] != null && nwe.lower[i - 1] != null) {
       const prev = data[i - 1]
-      if (prev.close <= (nwe.lower[i - 1] as number) && c.close > (nwe.lower[i] as number))
-        sigNwe = { text: '▲ Cross Up', cls: 'up' }
-      else if (prev.close >= (nwe.upper[i - 1] as number) && c.close < (nwe.upper[i] as number))
-        sigNwe = { text: '▼ Cross Down', cls: 'dn' }
-      else sigNwe = { text: '—', cls: '' }
+      const sell =
+        prev.high > (nwe.upper[i - 1] as number) && prev.close > prev.open && c.close < c.open
+      const buy =
+        prev.low < (nwe.lower[i - 1] as number) && prev.close < prev.open && c.close > c.open
+      if (buy) sigNwe = { text: '▲ Buy Rebound', cls: 'up' }
+      else if (sell) sigNwe = { text: '▼ Sell Rebound', cls: 'dn' }
     }
 
     setSidebar((s) => ({
@@ -926,7 +930,7 @@ function BtcChartView() {
       priceLineVisible: false,
       lastValueVisible: false,
       crosshairMarkerVisible: false,
-      title: 'NWE+',
+      title: 'MH+',
     })
     const nweMidS = mainChart.addLineSeries({
       color: 'rgba(111,188,240,0.7)',
@@ -935,7 +939,7 @@ function BtcChartView() {
       priceLineVisible: false,
       lastValueVisible: false,
       crosshairMarkerVisible: false,
-      title: 'NWE',
+      title: 'MH',
     })
     const nweLowS = mainChart.addLineSeries({
       color: 'rgba(52,216,164,0.6)',
@@ -944,7 +948,7 @@ function BtcChartView() {
       priceLineVisible: false,
       lastValueVisible: false,
       crosshairMarkerVisible: false,
-      title: 'NWE-',
+      title: 'MH-',
     })
     const ma50S = mainChart.addLineSeries({
       color: CHART.ma50,
@@ -1488,7 +1492,7 @@ function BtcChartView() {
   }, [firedToast])
 
   const indButtons: { key: keyof VisFlags; label: string; sep?: boolean }[] = [
-    { key: 'nwe', label: 'NWE' },
+    { key: 'nwe', label: 'MH Band' },
     { key: 'ma50', label: 'MA50' },
     { key: 'ma200', label: 'MA200' },
     { key: 'of', label: 'Order Flow' },
@@ -1671,7 +1675,7 @@ function BtcChartView() {
                   }}
                 />
               </div>
-              <div className="btc-chart__ml-foot">Confidence · NWE + MA + RSI + MACD</div>
+              <div className="btc-chart__ml-foot">Confidence · MH Band + MA + RSI + MACD</div>
             </div>
           </div>
 
@@ -1686,9 +1690,9 @@ function BtcChartView() {
             currentRsi={sidebar.rsiNow}
           />
 
-          {/* NWE */}
+          {/* MH Band */}
           <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Nadaraya-Watson</div>
+            <div className="btc-chart__panel-title">Midnight Hunter Band</div>
             <div className="btc-chart__row">
               <span className="btc-chart__row-label">Upper</span>
               <span className="btc-chart__row-val dn">{sidebar.nweUpper}</span>
@@ -1713,7 +1717,7 @@ function BtcChartView() {
           <div className="btc-chart__panel">
             <div className="btc-chart__panel-title">Technicals</div>
             <div className="btc-chart__row">
-              <span className="btc-chart__row-label">NWE Cross</span>
+              <span className="btc-chart__row-label">MH Signal</span>
               <span className={`btc-chart__row-val ${sidebar.sigNwe.cls}`}>
                 {sidebar.sigNwe.text}
               </span>
@@ -1762,9 +1766,9 @@ function BtcChartView() {
 
           {/* Order Flow */}
           <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Order flow</div>
+            <div className="btc-chart__panel-title">Midnight Hunter signals</div>
             {sidebar.ofLog.length === 0 ? (
-              <span className="btc-chart__of-empty">Chưa có tín hiệu spike</span>
+              <span className="btc-chart__of-empty">Chưa có tín hiệu rebound</span>
             ) : (
               sidebar.ofLog.map((s, idx) => (
                 <div key={idx} className="btc-chart__of-item">
@@ -1780,15 +1784,15 @@ function BtcChartView() {
             )}
             <div className="btc-chart__of-note">
               <div>
-                <b className="dn">SELL</b> — giá phá lên trên dải trên NWE kèm volume spike (quá
-                mua, kỳ vọng đảo chiều xuống).
+                <b className="dn">SELL ▼</b> — nến trước chọc lên trên dải trên (Upper Band) rồi nến
+                hiện tại đảo chiều giảm.
               </div>
               <div>
-                <b className="up">BUY</b> — giá phá xuống dưới dải dưới NWE kèm volume spike (quá
-                bán, kỳ vọng đảo chiều lên).
+                <b className="up">BUY ▲</b> — nến trước chọc xuống dưới dải dưới (Lower Band) rồi
+                nến hiện tại đảo chiều tăng.
               </div>
               <div className="btc-chart__of-note-sub">
-                ×N = bội số volume so với SMA20 (chỉ tính khi ≥ 1.5×).
+                ×N = bội số volume so với SMA20 (tham khảo, không phải điều kiện tín hiệu).
               </div>
             </div>
           </div>
@@ -1903,8 +1907,8 @@ function BtcChartView() {
 }
 
 const FEATURE_LABEL: Record<string, string> = {
-  NWE_pos: 'NWE Pos',
-  'Price>NWE_mid': 'P>NWE',
+  NWE_pos: 'Band Pos',
+  'Price>NWE_mid': 'P>Mid',
   'Price>MA50': 'P>MA50',
   'Price>MA200': 'P>MA200',
   'MA50>MA200': 'MA50/200',
