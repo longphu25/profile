@@ -6,7 +6,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { computeVolSpread } from '../strategies'
 import { computeSVISurface } from '../strategies'
-import { fetchJSON, fetchExternalBTCPrice } from '../sdk'
+import { fetchExternalBTCPrice } from '../sdk'
+import { getOraclePrices } from '../data/predictRepository'
 import { PRICE_SCALE } from '../types'
 import type { VolSpreadResult } from '../strategies/volArb'
 import { CollapsibleNotes } from './shared'
@@ -31,9 +32,9 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
     const ext = await fetchExternalBTCPrice()
     setExternalPrices(ext)
     if (selectedOracle) {
-      const priceData = await fetchJSON<any[]>(`/oracles/${selectedOracle}/prices`)
-      if (priceData && Array.isArray(priceData)) {
-        setHistoricalPrices(priceData.slice(-60).map((p: any) => p.spot / PRICE_SCALE))
+      const priceData = await getOraclePrices(selectedOracle, 60)
+      if (priceData.length > 0) {
+        setHistoricalPrices(priceData.map((p: any) => p.spot / PRICE_SCALE))
       }
     }
     setLoading(false)
@@ -71,7 +72,8 @@ export function ArbTab({ oracleState, oracles, selectedOracle }: Props) {
       <div className="sui-predict__card sui-predict__card--wide">
         <div className="sui-predict__card-header">
           <h3 className="sui-predict__card-title">Vol-Arb Configuration</h3>
-          <button type="button"
+          <button
+            type="button"
             className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
             onClick={refresh}
             disabled={loading}

@@ -13,11 +13,11 @@ import {
   PRICE_SCALE,
   PREDICT_PACKAGE,
   PREDICT_ID,
-  PREDICT_SERVER,
   STRIKE_SCALE,
   DUSDC_DECIMALS,
   DUSDC_TYPE,
 } from '../types'
+import { getManagersByOwner } from '../data/managerRepository'
 import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
 import { CollapsibleNotes, StepTree } from './shared'
 import type { TreeStep } from './shared'
@@ -146,9 +146,7 @@ export function MarginLoopTab({
 
       await new Promise((r) => setTimeout(r, 2000))
       try {
-        const mgrsRes = await fetch(`${PREDICT_SERVER}/managers`)
-        const mgrs = await mgrsRes.json()
-        const myMgr = (mgrs as any[]).find((m: any) => m.owner === walletAddress)
+        const myMgr = (await getManagersByOwner(walletAddress)).at(0)
         if (myMgr) managerObjectId = myMgr.manager_id
       } catch {
         /* fallback below */
@@ -389,7 +387,11 @@ export function MarginLoopTab({
         {!isConnected ? (
           <div className="sui-predict__empty">
             <p>Connect wallet to execute the margin loop</p>
-            <button type="button" className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
+            <button
+              type="button"
+              className="sui-predict__btn"
+              onClick={() => sharedHost?.requestConnect()}
+            >
               Connect Wallet
             </button>
           </div>
@@ -402,7 +404,8 @@ export function MarginLoopTab({
               <span>Oracle: {oracleState?.oracle?.underlying_asset || '—'}</span>
               <span>Network: Testnet</span>
             </div>
-            <button type="button"
+            <button
+              type="button"
               className="sui-predict__btn sui-predict__btn--full"
               onClick={executeLoop}
               disabled={executing || !selectedOracle}

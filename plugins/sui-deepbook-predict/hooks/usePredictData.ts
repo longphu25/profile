@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { fetchJSON } from '../sdk'
-import { PREDICT_ID } from '../types'
+import {
+  getOraclePrices,
+  getOracles,
+  getOracleState,
+  getServerStatus,
+  getVaultSummary,
+} from '../data/predictRepository'
 
 export function usePredictData() {
   const [oracles, setOracles] = useState<any[]>([])
@@ -14,13 +19,12 @@ export function usePredictData() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const checkServer = useCallback(async () => {
-    const data = await fetchJSON<{ status: string }>('/status')
-    setServerStatus(data ? 'online' : 'offline')
+    setServerStatus(await getServerStatus())
   }, [])
 
   const fetchOracles = useCallback(async () => {
-    const data = await fetchJSON<any[]>(`/predicts/${PREDICT_ID}/oracles`)
-    if (data && Array.isArray(data)) {
+    const data = await getOracles()
+    if (data.length > 0) {
       setOracles(data)
       if (!selectedOracle && data.length > 0) setSelectedOracle(data[0].oracle_id)
     }
@@ -28,19 +32,19 @@ export function usePredictData() {
 
   const fetchOracleState = useCallback(async () => {
     if (!selectedOracle) return
-    const data = await fetchJSON<any>(`/oracles/${selectedOracle}/state`)
+    const data = await getOracleState(selectedOracle)
     if (data) setOracleState(data)
   }, [selectedOracle])
 
   const fetchVault = useCallback(async () => {
-    const data = await fetchJSON<any>(`/predicts/${PREDICT_ID}/vault/summary`)
+    const data = await getVaultSummary()
     if (data) setVaultData(data)
   }, [])
 
   const fetchPrices = useCallback(async () => {
     if (!selectedOracle) return
-    const data = await fetchJSON<any[]>(`/oracles/${selectedOracle}/prices`)
-    if (data && Array.isArray(data)) setPrices(data.slice(-50))
+    const data = await getOraclePrices(selectedOracle)
+    if (data.length > 0) setPrices(data)
   }, [selectedOracle])
 
   const refreshAll = useCallback(async () => {

@@ -5,8 +5,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Transaction } from '@mysten/sui/transactions'
-import { fetchJSON } from '../sdk'
 import { PREDICT_PACKAGE, PREDICT_ID, DUSDC_TYPE, DUSDC_DECIMALS, STRIKE_SCALE } from '../types'
+import { getManagerPositions, getManagers } from '../data/managerRepository'
 import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
 import { CollapsibleNotes, StepTree } from './shared'
 import type { TreeStep } from './shared'
@@ -47,8 +47,8 @@ export function KeeperTab({ oracles, walletAddress, isConnected, sharedHost }: P
 
     try {
       // Get all managers
-      const managers = await fetchJSON<any[]>('/managers')
-      if (!managers) {
+      const managers = await getManagers()
+      if (managers.length === 0) {
         setLoading(false)
         return
       }
@@ -56,8 +56,8 @@ export function KeeperTab({ oracles, walletAddress, isConnected, sharedHost }: P
       // For each manager, check positions on settled oracles
       for (const mgr of managers.slice(0, 20)) {
         // limit to 20 for performance
-        const positions = await fetchJSON<any[]>(`/managers/${mgr.manager_id}/positions/summary`)
-        if (!positions || !Array.isArray(positions)) continue
+        const positions = await getManagerPositions(mgr.manager_id)
+        if (positions.length === 0) continue
 
         for (const pos of positions) {
           if (Number(pos.open_quantity) <= 0) continue
@@ -66,11 +66,11 @@ export function KeeperTab({ oracles, walletAddress, isConnected, sharedHost }: P
             found.push({
               manager_id: mgr.manager_id,
               owner: mgr.owner,
-              oracle_id: pos.oracle_id,
-              underlying_asset: pos.underlying_asset || 'BTC',
+              oracle_id: String(pos.oracle_id || ''),
+              underlying_asset: String(pos.underlying_asset || 'BTC'),
               expiry: Number(pos.expiry),
               strike: Number(pos.strike),
-              is_up: pos.is_up,
+              is_up: Boolean(pos.is_up),
               open_quantity: Number(pos.open_quantity),
             })
           }
@@ -157,7 +157,11 @@ export function KeeperTab({ oracles, walletAddress, isConnected, sharedHost }: P
         {!isConnected ? (
           <div className="sui-predict__empty">
             <p>Connect wallet to run keeper</p>
-            <button type="button" className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
+            <button
+              type="button"
+              className="sui-predict__btn"
+              onClick={() => sharedHost?.requestConnect()}
+            >
               Connect Wallet
             </button>
           </div>
@@ -168,7 +172,8 @@ export function KeeperTab({ oracles, walletAddress, isConnected, sharedHost }: P
               <span>Anyone can call redeem_permissionless</span>
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <button type="button"
+              <button
+                type="button"
                 className="sui-predict__btn sui-predict__btn--ghost"
                 onClick={scanPositions}
                 disabled={loading}
@@ -176,7 +181,12 @@ export function KeeperTab({ oracles, walletAddress, isConnected, sharedHost }: P
                 {loading ? '⟳ Scanning…' : '↻ Scan Positions'}
               </button>
               {settledPositions.length > 0 && (
-                <button type="button" className="sui-predict__btn" onClick={redeemAll} disabled={executing}>
+                <button
+                  type="button"
+                  className="sui-predict__btn"
+                  onClick={redeemAll}
+                  disabled={executing}
+                >
                   {executing
                     ? 'Redeeming…'
                     : `Redeem All (${settledPositions.length} positions, 1 PTB)`}

@@ -5,16 +5,17 @@
  */
 
 import { useState, useEffect } from 'react'
+import {
+  DUSDC_DECIMALS,
+  DUSDC_TYPE,
+  PREDICT_ID,
+  PREDICT_PACKAGE,
+  PRICE_SCALE,
+  STRIKE_SCALE,
+} from '../domain'
+import { getManagersByOwner } from '../data/managerRepository'
+import { getOracleState, getOracles } from '../data/predictRepository'
 import type { GuidedTradeStep } from '../types'
-
-const PREDICT_SERVER = 'https://predict-server.testnet.mystenlabs.com'
-const PREDICT_ID = '0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a38028a'
-const PREDICT_PACKAGE = '0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138'
-const DUSDC_TYPE =
-  '0xe95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC'
-const PRICE_SCALE = 1e9
-const STRIKE_SCALE = 1e9
-const DUSDC_DECIMALS = 6
 
 interface Props {
   sharedHost: any
@@ -56,9 +57,8 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
 
   // Fetch active oracles
   useEffect(() => {
-    fetch(`${PREDICT_SERVER}/predicts/${PREDICT_ID}/oracles`)
-      .then((r) => r.json())
-      .then((data: OracleOption[]) => {
+    getOracles(PREDICT_ID)
+      .then((data) => {
         const active = data.filter((o) => o.status === 'active' && o.expiry > Date.now())
         setOracles(active)
         if (active.length > 0) {
@@ -71,8 +71,7 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
   // Fetch spot when oracle selected
   useEffect(() => {
     if (!selectedOracle) return
-    fetch(`${PREDICT_SERVER}/oracles/${selectedOracle.oracle_id}/state`)
-      .then((r) => r.json())
+    getOracleState(selectedOracle.oracle_id)
       .then((data: any) => {
         const s = data?.latest_price?.spot || 0
         setSpot(s)
@@ -155,9 +154,7 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
       })
 
       // Fetch manager
-      const mgrsRes = await fetch(`${PREDICT_SERVER}/managers`)
-      const mgrs = await mgrsRes.json()
-      const mine = mgrs.find((m: any) => m.owner === walletAddress)
+      const mine = (await getManagersByOwner(walletAddress)).at(0)
       if (!mine) throw new Error('No manager found. Deposit DUSDC first.')
 
       // mint
@@ -214,7 +211,8 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
             <p className="guided-trade__desc">Select an active BTC oracle</p>
             <div className="guided-trade__options">
               {oracles.map((o) => (
-                <button type="button"
+                <button
+                  type="button"
                   key={o.oracle_id}
                   className={`guided-trade__option ${selectedOracle?.oracle_id === o.oracle_id ? 'guided-trade__option--selected' : ''}`}
                   onClick={() => setSelectedOracle(o)}
@@ -235,13 +233,15 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
             <h3 className="guided-trade__title">Choose Prediction</h3>
             <p className="guided-trade__desc">What do you think BTC will do?</p>
             <div className="guided-trade__directions">
-              <button type="button"
+              <button
+                type="button"
                 className={`guided-trade__dir ${direction === 'up' ? 'guided-trade__dir--up' : ''}`}
                 onClick={() => setDirection('up')}
               >
                 BTC Up ↑
               </button>
-              <button type="button"
+              <button
+                type="button"
                 className={`guided-trade__dir ${direction === 'down' ? 'guided-trade__dir--down' : ''}`}
                 onClick={() => setDirection('down')}
               >
@@ -251,7 +251,8 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
             <p className="guided-trade__sublabel">Strike Price</p>
             <div className="guided-trade__presets">
               {strikePresets.map((p) => (
-                <button type="button"
+                <button
+                  type="button"
                   key={p.label}
                   className={`guided-trade__preset ${strike === p.value ? 'guided-trade__preset--active' : ''}`}
                   onClick={() => setStrike(p.value)}
@@ -281,7 +282,8 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
             </div>
             <div className="guided-trade__presets">
               {amountPresets.map((a) => (
-                <button type="button"
+                <button
+                  type="button"
                   key={a}
                   className={`guided-trade__preset ${amount === a ? 'guided-trade__preset--active' : ''}`}
                   onClick={() => setAmount(a)}
@@ -339,7 +341,11 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
             <div className="guided-trade__success-icon">✓</div>
             <h3 className="guided-trade__title">Position Minted!</h3>
             <p className="guided-trade__desc">TX: {result.digest.slice(0, 12)}…</p>
-            <button type="button" className="guided-trade__btn guided-trade__btn--primary" onClick={onClose}>
+            <button
+              type="button"
+              className="guided-trade__btn guided-trade__btn--primary"
+              onClick={onClose}
+            >
               View Portfolio
             </button>
           </div>
@@ -350,13 +356,18 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
       {step !== 'submit' && (
         <div className="guided-trade__nav">
           {stepIdx > 0 && (
-            <button type="button" className="guided-trade__btn guided-trade__btn--ghost" onClick={prev}>
+            <button
+              type="button"
+              className="guided-trade__btn guided-trade__btn--ghost"
+              onClick={prev}
+            >
               ← Back
             </button>
           )}
           <div style={{ flex: 1 }} />
           {step === 'preview' ? (
-            <button type="button"
+            <button
+              type="button"
               className="guided-trade__btn guided-trade__btn--primary"
               onClick={handleSubmit}
               disabled={submitting || !isConnected}
@@ -364,7 +375,8 @@ export function GuidedTrade({ sharedHost, walletAddress, isConnected, onClose }:
               {submitting ? 'Signing…' : 'Mint Position'}
             </button>
           ) : (
-            <button type="button"
+            <button
+              type="button"
               className="guided-trade__btn guided-trade__btn--primary"
               onClick={next}
               disabled={!canNext}

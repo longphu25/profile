@@ -1,17 +1,9 @@
 // ── SDK / API helpers ────────────────────────────────────────────────────────────
 
-import { PREDICT_SERVER } from './types'
+import { fetchPredictJSON } from './data/predictRepository'
 
 /** Fetch JSON from the Predict server. Returns null on error. */
-export async function fetchJSON<T>(path: string): Promise<T | null> {
-  try {
-    const res = await fetch(`${PREDICT_SERVER}${path}`)
-    if (!res.ok) return null
-    return await res.json()
-  } catch {
-    return null
-  }
-}
+export const fetchJSON = fetchPredictJSON
 
 /** Fetch BTC price from external sources for cross-venue comparison */
 export async function fetchExternalBTCPrice(): Promise<{ source: string; price: number }[]> {

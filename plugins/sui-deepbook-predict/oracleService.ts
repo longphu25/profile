@@ -7,7 +7,13 @@
  * This eliminates prop drilling and duplication across tabs/plugins.
  */
 
-import { PREDICT_SERVER, PREDICT_ID } from './types'
+import {
+  getOraclePrices,
+  getOracles,
+  getOracleState,
+  getServerStatus,
+  getVaultSummary,
+} from './data/predictRepository'
 
 export interface OracleData {
   oracles: any[]
@@ -33,16 +39,6 @@ let currentData: OracleData = { ...DEFAULT_DATA }
 let hostRef: any = null
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
-async function fetchJSON<T>(path: string): Promise<T | null> {
-  try {
-    const res = await fetch(`${PREDICT_SERVER}${path}`)
-    if (!res.ok) return null
-    return await res.json()
-  } catch {
-    return null
-  }
-}
-
 function publish() {
   if (hostRef) {
     hostRef.setSharedData('oracleData', { ...currentData })
@@ -50,8 +46,8 @@ function publish() {
 }
 
 async function refreshOracles() {
-  const data = await fetchJSON<any[]>(`/predicts/${PREDICT_ID}/oracles`)
-  if (data && Array.isArray(data)) {
+  const data = await getOracles()
+  if (data.length > 0) {
     currentData.oracles = data
     if (!currentData.selectedOracle && data.length > 0) {
       const active = data.filter((o) => o.status === 'active' && o.expiry > Date.now())
@@ -62,24 +58,23 @@ async function refreshOracles() {
 
 async function refreshOracleState() {
   if (!currentData.selectedOracle) return
-  const data = await fetchJSON<any>(`/oracles/${currentData.selectedOracle}/state`)
+  const data = await getOracleState(currentData.selectedOracle)
   if (data) currentData.oracleState = data
 }
 
 async function refreshVault() {
-  const data = await fetchJSON<any>(`/predicts/${PREDICT_ID}/vault/summary`)
+  const data = await getVaultSummary()
   if (data) currentData.vaultData = data
 }
 
 async function refreshPrices() {
   if (!currentData.selectedOracle) return
-  const data = await fetchJSON<any[]>(`/oracles/${currentData.selectedOracle}/prices`)
-  if (data && Array.isArray(data)) currentData.prices = data.slice(-50)
+  const data = await getOraclePrices(currentData.selectedOracle)
+  if (data.length > 0) currentData.prices = data
 }
 
 async function refreshAll() {
-  const status = await fetchJSON<{ status: string }>('/status')
-  currentData.serverStatus = status ? 'online' : 'offline'
+  currentData.serverStatus = await getServerStatus()
   await Promise.all([refreshOracles(), refreshVault()])
   await Promise.all([refreshOracleState(), refreshPrices()])
   currentData.lastUpdate = Date.now()

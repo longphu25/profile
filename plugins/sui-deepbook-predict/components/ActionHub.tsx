@@ -5,8 +5,7 @@
  */
 
 import type { FeatureStatus, UserIntent } from '../types'
-
-const PRICE_SCALE = 1e9
+import { PRICE_SCALE } from '../domain'
 
 interface Props {
   spot: number | null
@@ -117,12 +116,17 @@ export function ActionHub({
       {/* Primary CTAs */}
       <div className="action-hub__ctas">
         {!isConnected ? (
-          <button type="button" className="action-hub__cta action-hub__cta--primary" onClick={onConnect}>
+          <button
+            type="button"
+            className="action-hub__cta action-hub__cta--primary"
+            onClick={onConnect}
+          >
             Connect Wallet
           </button>
         ) : (
           <>
-            <button type="button"
+            <button
+              type="button"
               className={`action-hub__cta action-hub__cta--primary ${isStale ? 'action-hub__cta--disabled' : ''}`}
               onClick={() => !isStale && onIntent('trade')}
               disabled={isStale}
@@ -131,14 +135,16 @@ export function ActionHub({
               <span>Start Guided Trade</span>
               <span className="action-hub__cta-tag">{statusLabel['live']}</span>
             </button>
-            <button type="button"
+            <button
+              type="button"
               className="action-hub__cta action-hub__cta--secondary"
               onClick={() => onIntent('analyze')}
             >
               <span>Analyze Market</span>
               <span className="action-hub__cta-tag">{statusLabel['live']}</span>
             </button>
-            <button type="button"
+            <button
+              type="button"
               className="action-hub__cta action-hub__cta--secondary"
               onClick={() => onIntent('earn')}
             >
@@ -146,7 +152,8 @@ export function ActionHub({
               <span className="action-hub__cta-tag">{statusLabel['live']}</span>
             </button>
             {claimableCount > 0 && (
-              <button type="button"
+              <button
+                type="button"
                 className="action-hub__cta action-hub__cta--accent"
                 onClick={() => onIntent('claim')}
               >

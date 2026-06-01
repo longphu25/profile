@@ -5,7 +5,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Transaction } from '@mysten/sui/transactions'
-import { fetchJSON } from '../sdk'
 import {
   PREDICT_PACKAGE,
   PREDICT_ID,
@@ -14,6 +13,8 @@ import {
   PRICE_SCALE,
   STRIKE_SCALE,
 } from '../types'
+import { computeFairValue, computeRangeFairValue } from '../domain/svi'
+import { getPortfolioSnapshot } from '../data/managerRepository'
 import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
 import { CollapsibleNotes } from './shared'
 
@@ -25,72 +26,6 @@ interface Props {
   sharedHost: SuiHostAPI | null
   managerId: string | null
   managerIds?: string[]
-}
-
-// ── Normal CDF approximation ────────────────────────────────────────────────
-function normalCDF(x: number): number {
-  const a1 = 0.254829592,
-    a2 = -0.284496736,
-    a3 = 1.421413741
-  const a4 = -1.453152027,
-    a5 = 1.061405429,
-    p = 0.3275911
-  const sign = x < 0 ? -1 : 1
-  x = Math.abs(x) / Math.SQRT2
-  const t = 1.0 / (1.0 + p * x)
-  const y = 1.0 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x)
-  return 0.5 * (1.0 + sign * y)
-}
-
-// ── Fair value from SVI ─────────────────────────────────────────────────────
-function computeFairValue(
-  svi: {
-    a: number
-    b: number
-    rho: number
-    rho_negative: boolean
-    m: number
-    m_negative: boolean
-    sigma: number
-  },
-  forward: number,
-  expiry: number,
-  strike: number,
-  direction: number, // 0=up, 1=down
-): number {
-  const a = svi.a / 1e6,
-    b = svi.b / 1e6
-  const rho = ((svi.rho_negative ? -1 : 1) * svi.rho) / 1e9
-  const m_val = ((svi.m_negative ? -1 : 1) * svi.m) / 1e6
-  const sigma = svi.sigma / 1e6
-  const F = forward / PRICE_SCALE
-  const K = strike / STRIKE_SCALE
-  if (K <= 0 || F <= 0) return 0
-  const T = Math.max((expiry - Date.now()) / (365.25 * 24 * 3600 * 1000), 1 / 365)
-
-  const k = Math.log(K / F)
-  const diff = k - m_val
-  const w = a + b * (rho * diff + Math.sqrt(diff * diff + sigma * sigma))
-  if (w <= 0) return 0
-
-  const sqrtW = Math.sqrt(w / T)
-  const d2 = -k / sqrtW - sqrtW / 2
-  const pUp = normalCDF(d2)
-  return direction === 0 ? pUp : 1 - pUp
-}
-
-function computeRangeFairValue(
-  svi: any,
-  forward: number,
-  expiry: number,
-  lower: number,
-  higher: number,
-): number {
-  if (lower <= 0 || higher <= 0 || lower >= higher) return 0
-  const pLower = computeFairValue(svi, forward, expiry, lower, 0)
-  const pHigher = computeFairValue(svi, forward, expiry, higher, 0)
-  const result = pLower - pHigher
-  return Number.isFinite(result) ? result : 0
 }
 
 export function PortfolioTab({
@@ -124,66 +59,11 @@ export function PortfolioTab({
     if (allManagerIds.length === 0) return
     setLoading(true)
 
-    // Fetch from all managers in parallel
-    const results = await Promise.all(
-      allManagerIds.map(async (mid) => {
-        const [summ, pos, minted, redeemed, pnl] = await Promise.all([
-          fetchJSON<any>(`/managers/${mid}/summary`),
-          fetchJSON<any[]>(`/managers/${mid}/positions/summary`),
-          fetchJSON<any[]>(`/ranges/minted?manager_id=${mid}`),
-          fetchJSON<any[]>(`/ranges/redeemed?manager_id=${mid}`),
-          fetchJSON<any>(`/managers/${mid}/pnl?range=ALL`),
-        ])
-        return { summ, pos, minted, redeemed, pnl }
-      }),
-    )
-
-    // Merge results from all managers
-    let allPositions: any[] = []
-    let allMinted: any[] = []
-    let allRedeemed: any[] = []
-    let mergedSummary: any = null
-    let allPnlPoints: any[] = []
-
-    for (const r of results) {
-      if (r.summ && !mergedSummary) mergedSummary = r.summ
-      else if (r.summ && mergedSummary) {
-        mergedSummary.account_value =
-          (mergedSummary.account_value || 0) + (r.summ.account_value || 0)
-        mergedSummary.trading_balance =
-          (mergedSummary.trading_balance || 0) + (r.summ.trading_balance || 0)
-        mergedSummary.unrealized_pnl =
-          (mergedSummary.unrealized_pnl || 0) + (r.summ.unrealized_pnl || 0)
-        mergedSummary.realized_pnl = (mergedSummary.realized_pnl || 0) + (r.summ.realized_pnl || 0)
-        mergedSummary.open_positions =
-          (mergedSummary.open_positions || 0) + (r.summ.open_positions || 0)
-      }
-      if (r.pos && Array.isArray(r.pos)) allPositions = allPositions.concat(r.pos)
-      if (r.minted) allMinted = allMinted.concat(r.minted)
-      if (r.redeemed) allRedeemed = allRedeemed.concat(r.redeemed)
-      if (r.pnl?.points) allPnlPoints = allPnlPoints.concat(r.pnl.points)
-    }
-
-    if (mergedSummary) setSummary(mergedSummary)
-    setPositions(allPositions.filter((p: any) => Number(p.open_quantity) > 0))
-
-    // Compute net open ranges from events
-    const net = new Map<string, { row: any; qty: number }>()
-    for (const m of allMinted) {
-      const k = `${m.manager_id}|${m.oracle_id}|${m.expiry}|${m.lower_strike}|${m.higher_strike}`
-      const cur = net.get(k)
-      if (cur) cur.qty += Number(m.quantity)
-      else net.set(k, { row: m, qty: Number(m.quantity) })
-    }
-    for (const r of allRedeemed) {
-      const k = `${r.manager_id}|${r.oracle_id}|${r.expiry}|${r.lower_strike}|${r.higher_strike}`
-      const cur = net.get(k)
-      if (cur) cur.qty -= Number(r.quantity)
-    }
-    setRanges(
-      [...net.values()].filter((r) => r.qty > 0).map((r) => ({ ...r.row, open_quantity: r.qty })),
-    )
-    if (allPnlPoints.length) setPnlHistory(allPnlPoints)
+    const snapshot = await getPortfolioSnapshot(allManagerIds)
+    if (snapshot.summary) setSummary(snapshot.summary)
+    setPositions(snapshot.positions)
+    setRanges(snapshot.ranges)
+    if (snapshot.pnlPoints.length) setPnlHistory(snapshot.pnlPoints)
     setLoading(false)
   }, [managerIds, managerId])
 
@@ -366,7 +246,11 @@ export function PortfolioTab({
         <div className="sui-predict__card sui-predict__card--wide">
           <div className="sui-predict__empty">
             <p>Connect wallet to view portfolio</p>
-            <button type="button" className="sui-predict__btn" onClick={() => sharedHost?.requestConnect()}>
+            <button
+              type="button"
+              className="sui-predict__btn"
+              onClick={() => sharedHost?.requestConnect()}
+            >
               Connect Wallet
             </button>
           </div>
@@ -412,7 +296,8 @@ export function PortfolioTab({
               }}
             >
               {allManagerIds.map((mid) => (
-                <button type="button"
+                <button
+                  type="button"
                   key={mid}
                   onClick={() => copyAddr(mid)}
                   style={{
@@ -482,7 +367,8 @@ export function PortfolioTab({
             <h3 className="sui-predict__card-title">
               Claimable Positions ({settledPositions.length})
             </h3>
-            <button type="button"
+            <button
+              type="button"
               className="sui-predict__btn sui-predict__btn--sm"
               onClick={handleClaimAll}
               disabled={claimingId === 'all'}
@@ -509,7 +395,8 @@ export function PortfolioTab({
                   <span>{strike}</span>
                   <span>{(p.quantity / 10 ** DUSDC_DECIMALS).toFixed(2)}</span>
                   <span>
-                    <button type="button"
+                    <button
+                      type="button"
                       className="sui-predict__btn sui-predict__btn--sm"
                       onClick={() => handleClaim(p)}
                       disabled={claimingId === key}
@@ -562,7 +449,8 @@ export function PortfolioTab({
                 BTC ${(spot / PRICE_SCALE).toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </span>
             )}
-            <button type="button"
+            <button
+              type="button"
               className="sui-predict__btn sui-predict__btn--ghost sui-predict__btn--sm"
               onClick={fetchPortfolio}
               disabled={loading}
@@ -595,7 +483,8 @@ export function PortfolioTab({
                       <span style={{ fontSize: '10px', color: 'var(--color-muted)' }}>
                         Manager:
                       </span>
-                      <button type="button"
+                      <button
+                        type="button"
                         onClick={() => copyAddr(mid)}
                         style={{
                           fontSize: '10px',
@@ -640,7 +529,8 @@ export function PortfolioTab({
                         >
                           <span>Binary</span>
                           <span>
-                            <button type="button"
+                            <button
+                              type="button"
                               onClick={() => copyAddr(p.oracle_id)}
                               style={{
                                 fontSize: '9px',
@@ -685,7 +575,8 @@ export function PortfolioTab({
                         >
                           <span>Range</span>
                           <span>
-                            <button type="button"
+                            <button
+                              type="button"
                               onClick={() => copyAddr(r.oracle_id)}
                               style={{
                                 fontSize: '9px',
@@ -864,13 +755,15 @@ function FairValueCalculator({
         />
       </div>
       <div className="sui-predict__toggle" style={{ marginBottom: '0' }}>
-        <button type="button"
+        <button
+          type="button"
           className={`sui-predict__toggle-btn ${direction === 0 ? 'sui-predict__toggle-btn--green' : ''}`}
           onClick={() => setDirection(0)}
         >
           UP
         </button>
-        <button type="button"
+        <button
+          type="button"
           className={`sui-predict__toggle-btn ${direction === 1 ? 'sui-predict__toggle-btn--red' : ''}`}
           onClick={() => setDirection(1)}
         >
