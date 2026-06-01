@@ -58,3 +58,14 @@ export function toBinaryOverlays(positions: RangeLike[] = []): PositionOverlay[]
     isUp: Boolean(row.is_up),
   }))
 }
+
+/** Merge binary + (already netted) range positions into overlays for one oracle. */
+export function mergeOverlays(
+  snapshot: { positions?: RangeLike[]; ranges?: RangeLike[] },
+  oracleId: string | null,
+): PositionOverlay[] {
+  if (!oracleId) return []
+  return [...toBinaryOverlays(snapshot.positions), ...toRangeOverlays(snapshot.ranges)].filter(
+    (overlay) => overlay.oracleId === oracleId && overlay.quantity > 0,
+  )
+}
