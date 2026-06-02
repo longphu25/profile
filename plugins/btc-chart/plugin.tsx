@@ -1397,6 +1397,15 @@ function BtcChartView() {
           quoteVol = +t.turnover24h
           const prev = +t.prevPrice24h
           ch = prev ? ((p - prev) / prev) * 100 : 0
+          // Funding rate from Bybit ticker
+          if (t.fundingRate) {
+            const rate = +t.fundingRate * 100
+            setFunding({
+              val: (rate >= 0 ? '+' : '') + rate.toFixed(4) + '%',
+              sub: rate > 0.1 ? 'Long heavy' : rate < 0 ? 'Short heavy' : 'Balanced',
+              cls: rate > 0.05 ? 'dn' : rate < 0 ? 'up' : '',
+            })
+          }
         } else {
           const t = await (
             await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`)
@@ -1970,19 +1979,19 @@ function BtcChartView() {
           <div className="btc-chart__panel">
             <div className="btc-chart__panel-title">Funding rate</div>
             <div className={`btc-chart__fund-val ${funding.cls}`}>{funding.val}</div>
-            <div className="btc-chart__fund-sub">{funding.sub}</div>
+            <div className={`btc-chart__fund-sentiment ${funding.cls}`}>{funding.sub}</div>
             <div className="btc-chart__fund-rules">
               <div>
                 <span>&gt; 0.10%</span>
-                <span className="dn">Long heavy</span>
+                <span className="dn">Long heavy (bearish signal)</span>
               </div>
               <div>
                 <span>0 – 0.05%</span>
-                <span className="up">Balanced</span>
+                <span>Balanced</span>
               </div>
               <div>
                 <span>&lt; 0%</span>
-                <span className="neu">Short heavy</span>
+                <span className="up">Short heavy (bullish signal)</span>
               </div>
             </div>
           </div>
