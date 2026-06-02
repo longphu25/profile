@@ -1,0 +1,15 @@
+{
+  "name": "zk-merkle-wasm",
+  "type": "module",
+  "version": "0.2.0",
+  "files": [
+    "zk_merkle_wasm_bg.wasm",
+    "zk_merkle_wasm.js",
+    "zk_merkle_wasm.d.ts"
+  ],
+  "main": "zk_merkle_wasm.js",
+  "types": "zk_merkle_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

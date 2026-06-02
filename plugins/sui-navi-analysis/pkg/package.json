@@ -1,0 +1,15 @@
+{
+  "name": "navi-analysis-wasm",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "navi_analysis_wasm_bg.wasm",
+    "navi_analysis_wasm.js",
+    "navi_analysis_wasm.d.ts"
+  ],
+  "main": "navi_analysis_wasm.js",
+  "types": "navi_analysis_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

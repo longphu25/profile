@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-wasm",
+  "type": "module",
+  "description": "WASM module for Polymarket CLOB: EIP-712 signing, HMAC-SHA256 auth, order building",
+  "version": "1.0.0",
+  "files": [
+    "polymarket_wasm_bg.wasm",
+    "polymarket_wasm.js",
+    "polymarket_wasm.d.ts"
+  ],
+  "main": "polymarket_wasm.js",
+  "types": "polymarket_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
