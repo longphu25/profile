@@ -640,7 +640,12 @@ function BtcChartView() {
   const [price, setPrice] = useState({ cur: '—', chg: '+0.00%', up: true })
   const [ohlcv, setOhlcv] = useState({ o: '—', h: '—', l: '—', c: '—', v: '—' })
   const [stats, setStats] = useState({ high: '—', low: '—', vol: '—', chg: '—', up: true })
-  const [funding, setFunding] = useState({ val: '—', sub: 'Binance Futures Perp', cls: '' })
+  const [funding, setFunding] = useState({
+    val: '—',
+    sub: 'Balanced',
+    cls: '',
+    breakdown: [] as { name: string; rate: number }[],
+  })
   const [fng, setFng] = useState({ val: '—', label: 'Loading…', color: '#9fb9b1', pct: 50 })
   const [sidebar, setSidebar] = useState<SidebarState>(INITIAL_SIDEBAR)
 
@@ -1409,15 +1414,6 @@ function BtcChartView() {
           quoteVol = +t.turnover24h
           const prev = +t.prevPrice24h
           ch = prev ? ((p - prev) / prev) * 100 : 0
-          // Funding rate from Bybit ticker
-          if (t.fundingRate) {
-            const rate = +t.fundingRate * 100
-            setFunding({
-              val: (rate >= 0 ? '+' : '') + rate.toFixed(4) + '%',
-              sub: rate > 0.1 ? 'Long heavy' : rate < 0 ? 'Short heavy' : 'Balanced',
-              cls: rate > 0.05 ? 'dn' : rate < 0 ? 'up' : '',
-            })
-          }
         } else {
           const t = await (
             await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`)
@@ -1451,21 +1447,51 @@ function BtcChartView() {
       }
     }
     const fetchFunding = async () => {
-      if (symbolInfoRef.current.exchange === 'bybit') return // already in ticker
+      const sym = symbol
+      const results: { name: string; rate: number }[] = []
+      // Binance USDM futures
       try {
         const d = await (
-          await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`)
+          await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${sym}`)
         ).json()
-        if (stopped) return
-        const rate = +d.lastFundingRate * 100
-        setFunding({
-          val: (rate >= 0 ? '+' : '') + rate.toFixed(4) + '%',
-          sub: rate > 0.1 ? 'Long heavy' : rate < 0 ? 'Short heavy' : 'Balanced',
-          cls: rate > 0.05 ? 'dn' : rate < 0 ? 'up' : '',
-        })
+        if (d.lastFundingRate) results.push({ name: 'Binance', rate: +d.lastFundingRate * 100 })
       } catch {
-        setFunding((f) => ({ ...f, val: 'N/A' }))
+        /* noop */
       }
+      // OKX swap
+      try {
+        const d = await (
+          await fetch(
+            `https://www.okx.com/api/v5/public/funding-rate?instId=${sym.replace('USDT', '')}-USDT-SWAP`,
+          )
+        ).json()
+        if (d.data?.[0]?.fundingRate)
+          results.push({ name: 'OKX', rate: +d.data[0].fundingRate * 100 })
+      } catch {
+        /* noop */
+      }
+      // Bybit linear (always available for LAB)
+      try {
+        const cat =
+          'bybitCategory' in symbolInfoRef.current ? symbolInfoRef.current.bybitCategory : 'linear'
+        const d = await (
+          await fetch(
+            `https://api.bybit.com/v5/market/funding/history?category=${cat}&symbol=${sym}&limit=1`,
+          )
+        ).json()
+        if (d.result?.list?.[0]?.fundingRate)
+          results.push({ name: 'Bybit', rate: +d.result.list[0].fundingRate * 100 })
+      } catch {
+        /* noop */
+      }
+      if (stopped || results.length === 0) return
+      const avg = results.reduce((s, r) => s + r.rate, 0) / results.length
+      setFunding({
+        val: (avg >= 0 ? '+' : '') + avg.toFixed(4) + '%',
+        sub: avg > 0.1 ? 'Long heavy' : avg < 0 ? 'Short heavy' : 'Balanced',
+        cls: avg > 0.05 ? 'dn' : avg < 0 ? 'up' : '',
+        breakdown: results,
+      })
     }
     const fetchFng = async () => {
       try {
@@ -1989,9 +2015,21 @@ function BtcChartView() {
 
           {/* Funding */}
           <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Funding rate</div>
+            <div className="btc-chart__panel-title">Funding rate (avg)</div>
             <div className={`btc-chart__fund-val ${funding.cls}`}>{funding.val}</div>
             <div className={`btc-chart__fund-sentiment ${funding.cls}`}>{funding.sub}</div>
+            {funding.breakdown.length > 0 && (
+              <div className="btc-chart__fund-breakdown">
+                {funding.breakdown.map((b) => (
+                  <div key={b.name} className="btc-chart__fund-row">
+                    <span>{b.name}</span>
+                    <span className={b.rate < 0 ? 'up' : b.rate > 0.05 ? 'dn' : ''}>
+                      {(b.rate >= 0 ? '+' : '') + b.rate.toFixed(4) + '%'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="btc-chart__fund-rules">
               <div>
                 <span>&gt; 0.10%</span>
