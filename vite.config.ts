@@ -114,6 +114,7 @@ export default defineConfig({
   },
   build: {
     modulePreload: false,
+    chunkSizeWarningLimit: 1500,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
@@ -196,6 +197,9 @@ export default defineConfig({
         'plugins/btc-chart': resolve(__dirname, 'plugins/btc-chart/plugin.tsx'),
       },
       external: ['gsap', 'motion'],
+      checks: {
+        pluginTimings: false,
+      },
       preserveEntrySignatures: 'exports-only',
       output: {
         globals: {
