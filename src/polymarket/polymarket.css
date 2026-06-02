@@ -1,0 +1,24 @@
+/* Polymarket Dashboard — minimal shell styles */
+@import 'tailwindcss';
+
+body {
+  background: #0a0a0c;
+  color: #e6edf3;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  margin: 0;
+}
+
+a:hover {
+  color: #ccc;
+  border-color: #555 !important;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
