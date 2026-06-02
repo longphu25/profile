@@ -706,6 +706,15 @@ function drawBoxFlipOverlay(
   }
 
   const timeScale = chart.timeScale()
+  const visibleRange = timeScale.getVisibleLogicalRange?.()
+  const visibleFrom =
+    visibleRange && Number.isFinite(visibleRange.from)
+      ? Math.max(0, Math.floor(visibleRange.from) - 8)
+      : 0
+  const visibleTo =
+    visibleRange && Number.isFinite(visibleRange.to)
+      ? Math.min(candles.length - 1, Math.ceil(visibleRange.to) + 8)
+      : candles.length - 1
   const toX = (idx: number) => {
     const candle = candles[Math.max(0, Math.min(candles.length - 1, idx))]
     const x = timeScale.timeToCoordinate(candle.time)
@@ -716,7 +725,15 @@ function drawBoxFlipOverlay(
     return typeof y === 'number' ? y : null
   }
 
-  for (const box of boxFlip.boxes) {
+  const visibleBoxes = boxFlip.boxes
+    .filter((box) => {
+      const end = box.endIndex ?? candles.length - 1
+      return end >= visibleFrom && box.startIndex <= visibleTo
+    })
+    .slice(-8)
+
+  for (let idx = 0; idx < visibleBoxes.length; idx++) {
+    const box = visibleBoxes[idx]
     const x1 = toX(box.startIndex)
     const x2 = toX(box.endIndex ?? candles.length - 1)
     const yHigh = toY(box.high)
@@ -729,21 +746,46 @@ function drawBoxFlipOverlay(
     const h = Math.max(2, Math.abs(yLow - yHigh))
     const isBull = box.dir === 'B'
     const isBear = box.dir === 'S'
+    const isLatest = idx === visibleBoxes.length - 1
 
     ctx.fillStyle = isBull
-      ? 'rgba(34,197,94,0.055)'
+      ? 'rgba(34,197,94,0.035)'
       : isBear
-        ? 'rgba(249,115,22,0.055)'
-        : 'rgba(148,163,184,0.045)'
+        ? 'rgba(249,115,22,0.035)'
+        : 'rgba(148,163,184,0.026)'
     ctx.strokeStyle = isBull
-      ? 'rgba(34,197,94,0.34)'
+      ? isLatest
+        ? 'rgba(34,197,94,0.58)'
+        : 'rgba(34,197,94,0.26)'
       : isBear
-        ? 'rgba(249,115,22,0.34)'
-        : 'rgba(148,163,184,0.20)'
-    ctx.lineWidth = 1
-    ctx.setLineDash([5, 4])
+        ? isLatest
+          ? 'rgba(249,115,22,0.58)'
+          : 'rgba(249,115,22,0.26)'
+        : isLatest
+          ? 'rgba(148,163,184,0.42)'
+          : 'rgba(148,163,184,0.16)'
+    ctx.lineWidth = isLatest ? 1.5 : 1
+    ctx.setLineDash(isLatest ? [] : [5, 4])
     ctx.fillRect(x, y, w, h)
     ctx.strokeRect(x, y, w, h)
+
+    if (isLatest || box.dir) {
+      const tag = box.dir ?? 'BOX'
+      const tagColor = isBull ? '#22c55e' : isBear ? '#f97316' : '#94a3b8'
+      ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace'
+      ctx.textBaseline = 'top'
+      const label = `${tag} ${fmtP(box.low)}-${fmtP(box.high)}`
+      const tw = ctx.measureText(label).width + 10
+      const labelX = Math.max(6, Math.min(x + 4, rect.width - tw - 6))
+      const labelY = Math.max(6, y + 4)
+      ctx.fillStyle = 'rgba(7,16,17,0.78)'
+      ctx.fillRect(labelX, labelY, tw, 18)
+      ctx.strokeStyle = tagColor
+      ctx.setLineDash([])
+      ctx.strokeRect(labelX, labelY, tw, 18)
+      ctx.fillStyle = tagColor
+      ctx.fillText(label, labelX + 5, labelY + 4)
+    }
   }
 
   ctx.setLineDash([])
