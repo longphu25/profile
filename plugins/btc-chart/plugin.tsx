@@ -748,26 +748,51 @@ function drawBoxFlipOverlay(
     const isBear = box.dir === 'S'
     const isLatest = idx === visibleBoxes.length - 1
 
-    ctx.fillStyle = isBull
-      ? 'rgba(34,197,94,0.035)'
-      : isBear
-        ? 'rgba(249,115,22,0.035)'
-        : 'rgba(148,163,184,0.026)'
+    ctx.fillStyle = isLatest
+      ? isBull
+        ? 'rgba(34,197,94,0.105)'
+        : isBear
+          ? 'rgba(249,115,22,0.105)'
+          : 'rgba(148,163,184,0.095)'
+      : isBull
+        ? 'rgba(34,197,94,0.026)'
+        : isBear
+          ? 'rgba(249,115,22,0.026)'
+          : 'rgba(148,163,184,0.018)'
     ctx.strokeStyle = isBull
       ? isLatest
-        ? 'rgba(34,197,94,0.58)'
+        ? 'rgba(34,197,94,0.86)'
         : 'rgba(34,197,94,0.26)'
       : isBear
         ? isLatest
-          ? 'rgba(249,115,22,0.58)'
+          ? 'rgba(249,115,22,0.86)'
           : 'rgba(249,115,22,0.26)'
         : isLatest
-          ? 'rgba(148,163,184,0.42)'
+          ? 'rgba(203,213,225,0.76)'
           : 'rgba(148,163,184,0.16)'
-    ctx.lineWidth = isLatest ? 1.5 : 1
+    ctx.lineWidth = isLatest ? 2.5 : 1
     ctx.setLineDash(isLatest ? [] : [5, 4])
     ctx.fillRect(x, y, w, h)
     ctx.strokeRect(x, y, w, h)
+
+    if (isLatest) {
+      const guideColor = isBull
+        ? 'rgba(34,197,94,0.72)'
+        : isBear
+          ? 'rgba(249,115,22,0.72)'
+          : 'rgba(203,213,225,0.58)'
+      ctx.save()
+      ctx.strokeStyle = guideColor
+      ctx.lineWidth = 1.25
+      ctx.setLineDash([])
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+      ctx.lineTo(Math.min(rect.width, x + w + 120), y)
+      ctx.moveTo(x, y + h)
+      ctx.lineTo(Math.min(rect.width, x + w + 120), y + h)
+      ctx.stroke()
+      ctx.restore()
+    }
 
     if (isLatest || box.dir) {
       const tag = box.dir ?? 'BOX'
