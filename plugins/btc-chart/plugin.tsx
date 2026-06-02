@@ -14,6 +14,7 @@ import {
   exportConfig,
   importConfigFromFile,
   type ChartConfig,
+  type VisFlags,
 } from './storage'
 import {
   AlertSound,
@@ -28,6 +29,7 @@ import {
 } from './alerts'
 import { drawVolumeProfile as drawVP } from './volume-profile'
 import { drawOrderFlow, type OFOverlaySignal } from './order-flow-overlay'
+import { computeSMC, type SMCResult } from './smc'
 import { downloadChartSnapshot } from './snapshot'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -416,16 +418,6 @@ interface ChartRefs {
   cleanup: () => void
 }
 
-interface VisFlags {
-  nwe: boolean
-  ma50: boolean
-  ma200: boolean
-  of: boolean
-  vp: boolean
-  rsi: boolean
-  vol: boolean
-}
-
 interface SidebarState {
   nweUpper: string
   nweMid: string
@@ -601,6 +593,88 @@ function formatPriceShort(n: number) {
   return n >= 10000 ? n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : n.toFixed(2)
 }
 
+function drawSMCOverlay(
+  canvas: HTMLCanvasElement,
+  container: HTMLElement,
+  chart: any,
+  series: any,
+  smc: SMCResult,
+  show: boolean,
+) {
+  const dpr = window.devicePixelRatio || 1
+  const w = container.clientWidth
+  const h = container.clientHeight
+  canvas.width = w * dpr
+  canvas.height = h * dpr
+  canvas.style.width = w + 'px'
+  canvas.style.height = h + 'px'
+  const ctx = canvas.getContext('2d')!
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  if (!show) return
+
+  ctx.scale(dpr, dpr)
+  const ts = chart.timeScale()
+
+  const toX = (time: number) => {
+    const coord = ts.timeToCoordinate(time)
+    return coord ?? -1
+  }
+  const toY = (price: number) => {
+    const coord = series.priceToCoordinate(price)
+    return coord ?? -1
+  }
+
+  // FVG boxes
+  for (const fvg of smc.fvgs) {
+    const x = toX(fvg.time)
+    const y1 = toY(fvg.top)
+    const y2 = toY(fvg.bottom)
+    if (x < 0 || y1 < 0 || y2 < 0) continue
+    ctx.fillStyle = fvg.bias === 'bull' ? 'rgba(0,255,104,0.08)' : 'rgba(255,0,8,0.08)'
+    ctx.strokeStyle = fvg.bias === 'bull' ? 'rgba(0,255,104,0.3)' : 'rgba(255,0,8,0.3)'
+    ctx.lineWidth = 1
+    const boxW = Math.max(w - x, 60)
+    ctx.fillRect(x, Math.min(y1, y2), boxW, Math.abs(y2 - y1))
+    ctx.strokeRect(x, Math.min(y1, y2), boxW, Math.abs(y2 - y1))
+  }
+
+  // Order blocks
+  for (const ob of smc.orderBlocks) {
+    const x = toX(ob.startTime)
+    const y1 = toY(ob.high)
+    const y2 = toY(ob.low)
+    if (x < 0 || y1 < 0 || y2 < 0) continue
+    ctx.fillStyle = ob.bias === 'bull' ? 'rgba(49,121,245,0.12)' : 'rgba(247,124,128,0.12)'
+    ctx.strokeStyle = ob.bias === 'bull' ? 'rgba(49,121,245,0.5)' : 'rgba(247,124,128,0.5)'
+    ctx.lineWidth = 1
+    const boxW = Math.max(w - x, 40)
+    ctx.fillRect(x, Math.min(y1, y2), boxW, Math.abs(y2 - y1))
+    ctx.strokeRect(x, Math.min(y1, y2), boxW, Math.abs(y2 - y1))
+  }
+
+  // Structure lines (BOS/CHoCH)
+  for (const s of smc.structures) {
+    const x1 = toX(s.time)
+    const x2 = toX(s.endTime)
+    const y = toY(s.price)
+    if (x1 < 0 || x2 < 0 || y < 0) continue
+    ctx.strokeStyle = s.bias === 'bull' ? '#089981' : '#F23645'
+    ctx.lineWidth = s.type === 'CHoCH' ? 2 : 1
+    ctx.setLineDash(s.type === 'CHoCH' ? [] : [4, 3])
+    ctx.beginPath()
+    ctx.moveTo(x1, y)
+    ctx.lineTo(x2, y)
+    ctx.stroke()
+    ctx.setLineDash([])
+    // Label
+    ctx.font = '9px monospace'
+    ctx.fillStyle = s.bias === 'bull' ? '#089981' : '#F23645'
+    ctx.fillText(s.type, (x1 + x2) / 2 - 10, y - 4)
+  }
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+}
+
 function BtcChartView() {
   const rootRef = useRef<HTMLDivElement>(null)
   const mainElRef = useRef<HTMLDivElement>(null)
@@ -608,6 +682,8 @@ function BtcChartView() {
   const volElRef = useRef<HTMLDivElement>(null)
   const vpCanvasRef = useRef<HTMLCanvasElement>(null)
   const ofCanvasRef = useRef<HTMLCanvasElement>(null)
+  const smcCanvasRef = useRef<HTMLCanvasElement>(null)
+  const smcDataRef = useRef<SMCResult>({ structures: [], orderBlocks: [], fvgs: [] })
   const ofOverlayRef = useRef<OFOverlaySignal[]>([])
   const legendRef = useRef<HTMLDivElement>(null)
   const chartRefs = useRef<ChartRefs | null>(null)
@@ -894,6 +970,28 @@ function BtcChartView() {
       }))
     }
 
+    // ── SMC overlay ──
+    const smcResult = v.smc
+      ? computeSMC(data, {
+          structure: true,
+          orderBlocks: true,
+          fvg: true,
+          swingLen: 10,
+          internalLen: 5,
+        })
+      : { structures: [], orderBlocks: [], fvgs: [] }
+    smcDataRef.current = smcResult
+    if (smcCanvasRef.current && mainElRef.current && refs.mainChart) {
+      drawSMCOverlay(
+        smcCanvasRef.current,
+        mainElRef.current,
+        refs.mainChart,
+        refs.candleSeries,
+        smcResult,
+        v.smc,
+      )
+    }
+
     // Legend
     const i = data.length - 1
     if (legendRef.current) {
@@ -1171,6 +1269,16 @@ function BtcChartView() {
           candleSeries,
           visRef.current.of ? ofOverlayRef.current : [],
           true,
+        )
+      }
+      if (smcCanvasRef.current && mainElRef.current) {
+        drawSMCOverlay(
+          smcCanvasRef.current,
+          mainElRef.current,
+          mainChart,
+          candleSeries,
+          smcDataRef.current,
+          visRef.current.smc,
         )
       }
     })
@@ -1885,6 +1993,7 @@ function BtcChartView() {
     { key: 'nwe', label: 'MH Band' },
     { key: 'ma50', label: 'MA50' },
     { key: 'ma200', label: 'MA200' },
+    { key: 'smc', label: 'SMC' },
     { key: 'of', label: 'Order Flow' },
     { key: 'vp', label: 'Vol Profile', sep: true },
     { key: 'rsi', label: 'RSI' },
@@ -2069,6 +2178,7 @@ function BtcChartView() {
         <div className="btc-chart__col">
           <div className="btc-chart__legend" ref={legendRef} />
           <canvas className="btc-chart__of-canvas" ref={ofCanvasRef} />
+          <canvas className="btc-chart__smc-canvas" ref={smcCanvasRef} />
           <div className="btc-chart__main" ref={mainElRef} />
           <div className="btc-chart__rsi" ref={rsiElRef} />
           <div className="btc-chart__vol" ref={volElRef} />

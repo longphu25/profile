@@ -301,6 +301,13 @@
   pointer-events: none;
   z-index: 5;
 }
+.btc-chart__smc-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 4;
+}
 
 /* Floating legend */
 .btc-chart__legend {
