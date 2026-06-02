@@ -80,7 +80,7 @@ const SYMBOLS = [
     symbol: 'LABUSDT',
     base: 'LAB',
     quote: 'USDT',
-    exchange: 'mexc' as Exchange,
+    exchange: 'binance' as Exchange,
     mexcSymbol: 'LAB_USDT',
   },
 ] as const
@@ -1404,9 +1404,7 @@ function BtcChartView() {
           if (k.confirm) renderData(arr)
         }
       } else {
-        ws = new WebSocket(
-          `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${interval}`,
-        )
+        ws = new WebSocket(`wss://fstream.binance.com/ws/${symbol.toLowerCase()}@kline_${interval}`)
         ws.onopen = () => {
           if (cancelled) return
           setWsStatus({ text: 'Live', tone: 'live' })
@@ -1522,7 +1520,7 @@ function BtcChartView() {
           }))
         } else {
           const r = await fetch(
-            `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
+            `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
           )
           if (!r.ok) throw new Error('HTTP ' + r.status)
           const raw = (await r.json()) as any[][]
@@ -1671,10 +1669,10 @@ function BtcChartView() {
       const sym = symbol
       const info = symbolInfoRef.current
       const results: { name: string; rate: number }[] = []
-      // MEXC futures (for MEXC-exchange symbols)
-      if (info.exchange === 'mexc') {
+      // MEXC futures (when mexcSymbol defined — user trades on MEXC)
+      if ('mexcSymbol' in info) {
         try {
-          const msym = 'mexcSymbol' in info ? info.mexcSymbol : sym
+          const msym = info.mexcSymbol
           const d = await (await fetch(`/api/mexc/api/v1/contract/ticker?symbol=${msym}`)).json()
           if (d.data?.fundingRate) results.push({ name: 'MEXC', rate: +d.data.fundingRate * 100 })
         } catch {
