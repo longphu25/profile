@@ -31,3 +31,4 @@ __pycache__/
 # Rust/WASM build artifacts
 **/wasm/target/
 .kiro/sui-pilot-docs
+.main-agent/

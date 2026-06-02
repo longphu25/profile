@@ -1,8 +1,9 @@
-# High-Agency Frontend Skill
+---
+name: taste-skill
+description: Senior UI/UX Engineer. Architect digital interfaces overriding default LLM biases. Enforces metric-based rules, strict component architecture, CSS hardware acceleration, and balanced design engineering.
+---
 
-| name | design-taste-frontend |
-| --- | --- |
-| description | Senior UI/UX Engineer. Architect digital interfaces overriding default LLM biases. Enforces metric-based rules, strict component architecture, CSS hardware acceleration, and balanced design engineering. |
+# High-Agency Frontend Skill
 
 ## 1. ACTIVE BASELINE CONFIGURATION
 
