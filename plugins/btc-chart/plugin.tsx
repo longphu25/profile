@@ -649,6 +649,114 @@ function BtcChartView() {
   const [fng, setFng] = useState({ val: '—', label: 'Loading…', color: '#9fb9b1', pct: 50 })
   const [sidebar, setSidebar] = useState<SidebarState>(INITIAL_SIDEBAR)
 
+  // ── Positions ────────────────────────────────────────────────────────
+  interface Position {
+    id: string
+    side: 'long' | 'short'
+    type: 'isolated' | 'cross'
+    entryPrice: number
+    size: number // contracts / qty
+    margin: number // USDT
+    stopLoss: number | null
+  }
+  const loadPositions = (): Position[] => {
+    try {
+      return JSON.parse(localStorage.getItem('btc-chart:positions') || '[]')
+    } catch {
+      return []
+    }
+  }
+  const [positions, setPositions] = useState<Position[]>(loadPositions)
+  const [showPosForm, setShowPosForm] = useState(false)
+  const [posForm, setPosForm] = useState({
+    side: 'long',
+    type: 'isolated',
+    entry: '',
+    size: '',
+    margin: '',
+    sl: '',
+  })
+
+  const savePositions = (ps: Position[]) => {
+    setPositions(ps)
+    try {
+      localStorage.setItem('btc-chart:positions', JSON.stringify(ps))
+    } catch {
+      /* noop */
+    }
+  }
+
+  const addPosition = () => {
+    const entry = parseFloat(posForm.entry)
+    const size = parseFloat(posForm.size)
+    const margin = parseFloat(posForm.margin)
+    if (!entry || !size || !margin) return
+    const p: Position = {
+      id: Date.now().toString(),
+      side: posForm.side as 'long' | 'short',
+      type: posForm.type as 'isolated' | 'cross',
+      entryPrice: entry,
+      size,
+      margin,
+      stopLoss: posForm.sl ? parseFloat(posForm.sl) : null,
+    }
+    savePositions([...positions, p])
+    setPosForm({ side: 'long', type: 'isolated', entry: '', size: '', margin: '', sl: '' })
+    setShowPosForm(false)
+  }
+
+  const calcPnl = (p: Position, mark: number) => {
+    const diff = p.side === 'long' ? mark - p.entryPrice : p.entryPrice - mark
+    const pnl = (diff / p.entryPrice) * p.size * p.entryPrice
+    const pct = (diff / p.entryPrice) * 100
+    return { pnl, pct }
+  }
+
+  // Draw entry + SL price lines on chart whenever positions change
+  const posLinesRef = useRef<{ id: string; lines: any[] }[]>([])
+  useEffect(() => {
+    const series = chartRefs.current?.candleSeries
+    if (!series) return
+    // Remove old lines
+    for (const entry of posLinesRef.current) {
+      for (const ln of entry.lines) {
+        try {
+          series.removePriceLine(ln)
+        } catch {
+          /* noop */
+        }
+      }
+    }
+    posLinesRef.current = []
+    // Add new lines
+    for (const p of positions) {
+      const lines: any[] = []
+      lines.push(
+        series.createPriceLine({
+          price: p.entryPrice,
+          color: p.side === 'long' ? '#34d8a4' : '#ff7a85',
+          lineWidth: 2,
+          lineStyle: 0,
+          axisLabelVisible: true,
+          title: `${p.side.toUpperCase()} ${p.type} ${p.size}`,
+        }),
+      )
+      if (p.stopLoss) {
+        lines.push(
+          series.createPriceLine({
+            price: p.stopLoss,
+            color: '#ffc46b',
+            lineWidth: 1,
+            lineStyle: 2,
+            axisLabelVisible: true,
+            title: 'SL',
+          }),
+        )
+      }
+      posLinesRef.current.push({ id: p.id, lines })
+    }
+  }, [positions])
+
   // Keep refs in sync with state for use inside imperative callbacks.
   useEffect(() => {
     visRef.current = vis
@@ -1885,6 +1993,139 @@ function BtcChartView() {
               </div>
               <div className="btc-chart__ml-foot">Confidence · MH Band + MA + RSI + MACD</div>
             </div>
+          </div>
+
+          {/* Positions */}
+          <div className="btc-chart__panel">
+            <div className="btc-chart__panel-header">
+              <div className="btc-chart__panel-title">Positions</div>
+              <button
+                type="button"
+                className="btc-chart__pos-add"
+                onClick={() => setShowPosForm((v) => !v)}
+              >
+                {showPosForm ? '×' : '+ Add'}
+              </button>
+            </div>
+            {showPosForm && (
+              <div className="btc-chart__pos-form">
+                <div className="btc-chart__pos-row">
+                  <select
+                    className="btc-chart__pos-select"
+                    value={posForm.side}
+                    onChange={(e) => setPosForm((f) => ({ ...f, side: e.target.value }))}
+                  >
+                    <option value="long">Long</option>
+                    <option value="short">Short</option>
+                  </select>
+                  <select
+                    className="btc-chart__pos-select"
+                    value={posForm.type}
+                    onChange={(e) => setPosForm((f) => ({ ...f, type: e.target.value }))}
+                  >
+                    <option value="isolated">Isolated</option>
+                    <option value="cross">Cross</option>
+                  </select>
+                </div>
+                <input
+                  className="btc-chart__pos-input"
+                  type="number"
+                  placeholder="Giá mở (Entry)"
+                  value={posForm.entry}
+                  onChange={(e) => setPosForm((f) => ({ ...f, entry: e.target.value }))}
+                />
+                <input
+                  className="btc-chart__pos-input"
+                  type="number"
+                  placeholder="Số lượng (Size)"
+                  value={posForm.size}
+                  onChange={(e) => setPosForm((f) => ({ ...f, size: e.target.value }))}
+                />
+                <input
+                  className="btc-chart__pos-input"
+                  type="number"
+                  placeholder="Ký quỹ USDT (Margin)"
+                  value={posForm.margin}
+                  onChange={(e) => setPosForm((f) => ({ ...f, margin: e.target.value }))}
+                />
+                <input
+                  className="btc-chart__pos-input"
+                  type="number"
+                  placeholder="Stop Loss (tuỳ chọn)"
+                  value={posForm.sl}
+                  onChange={(e) => setPosForm((f) => ({ ...f, sl: e.target.value }))}
+                />
+                <button type="button" className="btc-chart__pos-confirm" onClick={addPosition}>
+                  Thêm vị thế
+                </button>
+              </div>
+            )}
+            {positions.length === 0 && !showPosForm && (
+              <span className="btc-chart__of-empty">Chưa có vị thế</span>
+            )}
+            {positions.map((p) => {
+              const mark = lastPriceRef.current ?? p.entryPrice
+              const { pnl, pct } = calcPnl(p, mark)
+              const liq =
+                p.type === 'isolated'
+                  ? p.side === 'long'
+                    ? p.entryPrice * (1 - p.margin / (p.size * p.entryPrice))
+                    : p.entryPrice * (1 + p.margin / (p.size * p.entryPrice))
+                  : null
+              return (
+                <div key={p.id} className="btc-chart__pos-item">
+                  <div className="btc-chart__pos-top">
+                    <span className={`btc-chart__pos-side ${p.side === 'long' ? 'up' : 'dn'}`}>
+                      {p.side === 'long' ? '▲ LONG' : '▼ SHORT'}
+                    </span>
+                    <span className="btc-chart__pos-badge">{p.type}</span>
+                    <button
+                      type="button"
+                      className="btc-chart__pos-del"
+                      onClick={() => savePositions(positions.filter((x) => x.id !== p.id))}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="btc-chart__pos-rows">
+                    <div className="btc-chart__row">
+                      <span className="btc-chart__row-label">Entry</span>
+                      <span className="btc-chart__row-val">{fmtP(p.entryPrice)}</span>
+                    </div>
+                    <div className="btc-chart__row">
+                      <span className="btc-chart__row-label">Size</span>
+                      <span className="btc-chart__row-val">{p.size}</span>
+                    </div>
+                    <div className="btc-chart__row">
+                      <span className="btc-chart__row-label">Margin</span>
+                      <span className="btc-chart__row-val">{fmtP(p.margin)} USDT</span>
+                    </div>
+                    {p.stopLoss && (
+                      <div className="btc-chart__row">
+                        <span className="btc-chart__row-label">Stop Loss</span>
+                        <span className="btc-chart__row-val dn">{fmtP(p.stopLoss)}</span>
+                      </div>
+                    )}
+                    {liq && (
+                      <div className="btc-chart__row">
+                        <span className="btc-chart__row-label">Liq. ~</span>
+                        <span className="btc-chart__row-val" style={{ color: 'var(--amber)' }}>
+                          {fmtP(liq)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="btc-chart__row">
+                      <span className="btc-chart__row-label">PnL</span>
+                      <span className={`btc-chart__row-val ${pnl >= 0 ? 'up' : 'dn'}`}>
+                        {pnl >= 0 ? '+' : ''}
+                        {pnl.toFixed(2)} USDT ({pct >= 0 ? '+' : ''}
+                        {pct.toFixed(2)}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
           {/* Funding */}

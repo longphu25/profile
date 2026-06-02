@@ -979,3 +979,107 @@
 .btc-chart__alert-del:hover {
   color: var(--dn);
 }
+
+/* ── Positions panel ───────────────────────────────────────────────── */
+.btc-chart__panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.btc-chart__pos-add {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--mint);
+  cursor: pointer;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  padding: 2px 7px;
+}
+.btc-chart__pos-form {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.btc-chart__pos-row {
+  display: flex;
+  gap: 5px;
+}
+.btc-chart__pos-select,
+.btc-chart__pos-input {
+  flex: 1;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 4px 6px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.btc-chart__pos-select:focus,
+.btc-chart__pos-input:focus {
+  border-color: var(--mint);
+}
+.btc-chart__pos-confirm {
+  background: linear-gradient(135deg, var(--mint), var(--teal));
+  border: none;
+  border-radius: 4px;
+  color: #06231d;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 5px;
+  width: 100%;
+}
+.btc-chart__pos-item {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+.btc-chart__pos-item:last-child { margin-bottom: 0; }
+.btc-chart__pos-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.btc-chart__pos-side {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+.btc-chart__pos-badge {
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 4px;
+  text-transform: uppercase;
+}
+.btc-chart__pos-del {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.btc-chart__pos-del:hover { color: var(--dn); }
+.btc-chart__pos-rows {
+  padding: 4px 8px;
+}
