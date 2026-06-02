@@ -1479,7 +1479,7 @@ function BtcChartView() {
         if (info.exchange === 'mexc') {
           const msym = 'mexcSymbol' in info ? info.mexcSymbol : symbol
           const r = await fetch(
-            `https://contract.mexc.com/api/v1/contract/kline/${msym}?interval=${MEXC_INTERVAL[interval]}&limit=${LIMIT}`,
+            `/api/mexc/api/v1/contract/kline/${msym}?interval=${MEXC_INTERVAL[interval]}&limit=${LIMIT}`,
           )
           if (!r.ok) throw new Error('HTTP ' + r.status)
           const json = (await r.json()) as {
@@ -1595,9 +1595,7 @@ function BtcChartView() {
         const info = symbolInfoRef.current
         if (info.exchange === 'mexc') {
           const msym = 'mexcSymbol' in info ? info.mexcSymbol : symbol
-          const json = await (
-            await fetch(`https://contract.mexc.com/api/v1/contract/ticker?symbol=${msym}`)
-          ).json()
+          const json = await (await fetch(`/api/mexc/api/v1/contract/ticker?symbol=${msym}`)).json()
           const t = json.data
           if (!t || stopped) return
           p = +t.lastPrice
@@ -1677,9 +1675,7 @@ function BtcChartView() {
       if (info.exchange === 'mexc') {
         try {
           const msym = 'mexcSymbol' in info ? info.mexcSymbol : sym
-          const d = await (
-            await fetch(`https://contract.mexc.com/api/v1/contract/ticker?symbol=${msym}`)
-          ).json()
+          const d = await (await fetch(`/api/mexc/api/v1/contract/ticker?symbol=${msym}`)).json()
           if (d.data?.fundingRate) results.push({ name: 'MEXC', rate: +d.data.fundingRate * 100 })
         } catch {
           /* noop */

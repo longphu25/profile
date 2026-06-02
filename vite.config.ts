@@ -75,6 +75,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      '/api/mexc': {
+        target: 'https://contract.mexc.com',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api\/mexc/, ''),
+      },
       '/api/polymarket/auth': {
         target: 'https://clob.polymarket.com',
         changeOrigin: true,
