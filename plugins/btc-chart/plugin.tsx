@@ -619,6 +619,9 @@ function BtcChartView() {
   const [interval, setInterval_] = useState<Interval>(cfgInit.interval as Interval)
   const [symbol, setSymbol] = useState<SymbolId>('BTCUSDT')
   const symbolInfo = SYMBOLS.find((s) => s.symbol === symbol)!
+  // Also keep a ref so effects always see the latest value without stale closures
+  const symbolInfoRef = useRef(symbolInfo)
+  symbolInfoRef.current = symbolInfo
   const [vis, setVis] = useState<VisFlags>(visRef.current)
   const [vpOpts, setVpOpts] = useState(vpOptsRef.current)
   const [alerts, setAlerts] = useState<AlertRule[]>(alertsRef.current)
@@ -1155,7 +1158,9 @@ function BtcChartView() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    setLoadingText(`Tải dữ liệu ${symbolInfo.base}/${symbolInfo.quote} ${interval}…`)
+    setLoadingText(
+      `Tải dữ liệu ${symbolInfoRef.current.base}/${symbolInfoRef.current.quote} ${interval}…`,
+    )
     fitNextRef.current = true
 
     const closeWs = () => {
@@ -1171,8 +1176,9 @@ function BtcChartView() {
 
     const connectWs = () => {
       let ws: WebSocket
-      if (symbolInfo.exchange === 'bybit') {
-        const cat = 'bybitCategory' in symbolInfo ? symbolInfo.bybitCategory : 'linear'
+      if (symbolInfoRef.current.exchange === 'bybit') {
+        const cat =
+          'bybitCategory' in symbolInfoRef.current ? symbolInfoRef.current.bybitCategory : 'linear'
         ws = new WebSocket(`wss://stream.bybit.com/v5/public/${cat}`)
         ws.onopen = () => {
           if (cancelled) return
@@ -1294,8 +1300,11 @@ function BtcChartView() {
     ;(async () => {
       try {
         let cands: Candle[]
-        if (symbolInfo.exchange === 'bybit') {
-          const cat = 'bybitCategory' in symbolInfo ? symbolInfo.bybitCategory : 'linear'
+        if (symbolInfoRef.current.exchange === 'bybit') {
+          const cat =
+            'bybitCategory' in symbolInfoRef.current
+              ? symbolInfoRef.current.bybitCategory
+              : 'linear'
           const r = await fetch(
             `https://api.bybit.com/v5/market/kline?category=${cat}&symbol=${symbol}&interval=${BYBIT_INTERVAL[interval]}&limit=${LIMIT}`,
           )
@@ -1383,8 +1392,11 @@ function BtcChartView() {
     const fetchTicker = async () => {
       try {
         let p: number, ch: number, high: number, low: number, vol: number, quoteVol: number
-        if (symbolInfo.exchange === 'bybit') {
-          const cat = 'bybitCategory' in symbolInfo ? symbolInfo.bybitCategory : 'linear'
+        if (symbolInfoRef.current.exchange === 'bybit') {
+          const cat =
+            'bybitCategory' in symbolInfoRef.current
+              ? symbolInfoRef.current.bybitCategory
+              : 'linear'
           const json = await (
             await fetch(`https://api.bybit.com/v5/market/tickers?category=${cat}&symbol=${symbol}`)
           ).json()
@@ -1439,7 +1451,7 @@ function BtcChartView() {
       }
     }
     const fetchFunding = async () => {
-      if (symbolInfo.exchange === 'bybit') return // already in ticker
+      if (symbolInfoRef.current.exchange === 'bybit') return // already in ticker
       try {
         const d = await (
           await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`)
