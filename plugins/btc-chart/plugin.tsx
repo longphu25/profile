@@ -71,13 +71,30 @@ declare global {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
+type Exchange = 'binance' | 'bybit'
 const SYMBOLS = [
-  { symbol: 'BTCUSDT', base: 'BTC', quote: 'USDT' },
-  { symbol: 'ETHUSDT', base: 'ETH', quote: 'USDT' },
-  { symbol: 'SOLUSDT', base: 'SOL', quote: 'USDT' },
-  { symbol: 'LABUSDT', base: 'LAB', quote: 'USDT' },
+  { symbol: 'BTCUSDT', base: 'BTC', quote: 'USDT', exchange: 'binance' as Exchange },
+  { symbol: 'ETHUSDT', base: 'ETH', quote: 'USDT', exchange: 'binance' as Exchange },
+  { symbol: 'SOLUSDT', base: 'SOL', quote: 'USDT', exchange: 'binance' as Exchange },
+  {
+    symbol: 'LABUSDT',
+    base: 'LAB',
+    quote: 'USDT',
+    exchange: 'bybit' as Exchange,
+    bybitCategory: 'linear' as const,
+  },
 ] as const
 type SymbolId = (typeof SYMBOLS)[number]['symbol']
+
+// Bybit interval mapping from Binance format
+const BYBIT_INTERVAL: Record<string, string> = {
+  '1m': '1',
+  '5m': '5',
+  '15m': '15',
+  '1h': '60',
+  '4h': '240',
+  '1d': 'D',
+}
 
 const LIMIT = 300
 const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const
@@ -1153,95 +1170,166 @@ function BtcChartView() {
     }
 
     const connectWs = () => {
-      const ws = new WebSocket(
-        `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${interval}`,
-      )
-      wsRef.current = ws
-      ws.onopen = () => {
-        if (cancelled) return
-        setWsStatus({ text: 'Live', tone: 'live' })
-        setLastUpdate(tsNow())
-      }
-      ws.onmessage = (ev) => {
-        if (cancelled) return
-        const k = JSON.parse(ev.data).k
-        const candle: Candle = {
-          time: Math.floor(k.t / 1000),
-          open: +k.o,
-          high: +k.h,
-          low: +k.l,
-          close: +k.c,
-          volume: +k.v,
+      let ws: WebSocket
+      if (symbolInfo.exchange === 'bybit') {
+        const cat = 'bybitCategory' in symbolInfo ? symbolInfo.bybitCategory : 'linear'
+        ws = new WebSocket(`wss://stream.bybit.com/v5/public/${cat}`)
+        ws.onopen = () => {
+          if (cancelled) return
+          ws.send(
+            JSON.stringify({
+              op: 'subscribe',
+              args: [`kline.${BYBIT_INTERVAL[interval]}.${symbol}`],
+            }),
+          )
+          setWsStatus({ text: 'Live', tone: 'live' })
+          setLastUpdate(tsNow())
         }
-        const arr = candlesRef.current
-        const last = arr[arr.length - 1]
-        if (last && last.time === candle.time) arr[arr.length - 1] = candle
-        else if (!last || candle.time > last.time) {
-          arr.push(candle)
-          if (arr.length > LIMIT + 50) arr.shift()
-        }
-        chartRefs.current?.candleSeries.update({
-          time: candle.time,
-          open: candle.open,
-          high: candle.high,
-          low: candle.low,
-          close: candle.close,
-        })
-        chartRefs.current?.volSeries.update({
-          time: candle.time,
-          value: candle.volume,
-          color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
-        })
-        setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
-        setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
-        setLastUpdate(tsNow())
-
-        // ── Alerts: evaluate against latest indicators ─────────────
-        const ctx = {
-          price: candle.close,
-          prevPrice: lastPriceRef.current,
-          nweUpper: sidebarRef.current.nweUp,
-          nweLower: sidebarRef.current.nweLo,
-          rsi: sidebarRef.current.rsiNow,
-        }
-        lastPriceRef.current = candle.close
-        const fired = evaluateAlerts(alertsRef.current, ctx)
-        if (fired.length) {
-          // sound + browser notif + in-app toast
-          if (sound.enabled) soundRef.current.play()
-          for (const f of fired) {
-            pushNotification('BTC Chart Alert', `${describeRule(f.rule)} — ${f.message}`)
+        ws.onmessage = (ev) => {
+          if (cancelled) return
+          const msg = JSON.parse(ev.data)
+          const k = msg.data?.[0]
+          if (!k) return
+          const candle: Candle = {
+            time: Math.floor(Number(k.start) / 1000),
+            open: +k.open,
+            high: +k.high,
+            low: +k.low,
+            close: +k.close,
+            volume: +k.volume,
           }
-          setFiredToast(fired.map((f) => describeRule(f.rule)).join(' · '))
-          // persist trigger state + force re-render of alerts list
-          setAlerts([...alertsRef.current])
+          const arr = candlesRef.current
+          const last = arr[arr.length - 1]
+          if (last && last.time === candle.time) arr[arr.length - 1] = candle
+          else if (!last || candle.time > last.time) {
+            arr.push(candle)
+            if (arr.length > LIMIT + 50) arr.shift()
+          }
+          chartRefs.current?.candleSeries.update({
+            time: candle.time,
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close,
+          })
+          chartRefs.current?.volSeries.update({
+            time: candle.time,
+            value: candle.volume,
+            color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
+          })
+          setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
+          setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
+          setLastUpdate(tsNow())
+          if (k.confirm) renderData(arr)
         }
-
-        if (k.x) renderData(arr)
+      } else {
+        ws = new WebSocket(
+          `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${interval}`,
+        )
+        ws.onopen = () => {
+          if (cancelled) return
+          setWsStatus({ text: 'Live', tone: 'live' })
+          setLastUpdate(tsNow())
+        }
+        ws.onmessage = (ev) => {
+          if (cancelled) return
+          const k = JSON.parse(ev.data).k
+          const candle: Candle = {
+            time: Math.floor(k.t / 1000),
+            open: +k.o,
+            high: +k.h,
+            low: +k.l,
+            close: +k.c,
+            volume: +k.v,
+          }
+          const arr = candlesRef.current
+          const last = arr[arr.length - 1]
+          if (last && last.time === candle.time) arr[arr.length - 1] = candle
+          else if (!last || candle.time > last.time) {
+            arr.push(candle)
+            if (arr.length > LIMIT + 50) arr.shift()
+          }
+          chartRefs.current?.candleSeries.update({
+            time: candle.time,
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close,
+          })
+          chartRefs.current?.volSeries.update({
+            time: candle.time,
+            value: candle.volume,
+            color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
+          })
+          setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
+          setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
+          setLastUpdate(tsNow())
+          // ── Alerts ─────────────────────────────────────────────────
+          const ctx = {
+            price: candle.close,
+            prevPrice: lastPriceRef.current,
+            nweUpper: sidebarRef.current.nweUp,
+            nweLower: sidebarRef.current.nweLo,
+            rsi: sidebarRef.current.rsiNow,
+          }
+          lastPriceRef.current = candle.close
+          const fired = evaluateAlerts(alertsRef.current, ctx)
+          if (fired.length) {
+            if (sound.enabled) soundRef.current.play()
+            for (const f of fired)
+              pushNotification('BTC Chart Alert', `${describeRule(f.rule)} — ${f.message}`)
+            setFiredToast(fired.map((f) => describeRule(f.rule)).join(' · '))
+            setAlerts([...alertsRef.current])
+          }
+          if (k.x) renderData(arr)
+        }
       }
       ws.onerror = () => setWsStatus({ text: 'Error', tone: 'err' })
-      ws.onclose = () => setWsStatus({ text: 'Closed', tone: 'muted' })
+      ws.onclose = () => {
+        if (!cancelled) setWsStatus({ text: 'Closed', tone: 'muted' })
+      }
+      wsRef.current = ws
     }
 
     ;(async () => {
       try {
-        const r = await fetch(
-          `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
-        )
-        if (!r.ok) throw new Error('HTTP ' + r.status)
-        const raw = (await r.json()) as any[][]
+        let cands: Candle[]
+        if (symbolInfo.exchange === 'bybit') {
+          const cat = 'bybitCategory' in symbolInfo ? symbolInfo.bybitCategory : 'linear'
+          const r = await fetch(
+            `https://api.bybit.com/v5/market/kline?category=${cat}&symbol=${symbol}&interval=${BYBIT_INTERVAL[interval]}&limit=${LIMIT}`,
+          )
+          if (!r.ok) throw new Error('HTTP ' + r.status)
+          const json = (await r.json()) as { result: { list: string[][] } }
+          if (cancelled) return
+          // Bybit returns newest-first, reverse to get ascending time
+          cands = json.result.list.reverse().map((d) => ({
+            time: Math.floor(Number(d[0]) / 1000),
+            open: +d[1],
+            high: +d[2],
+            low: +d[3],
+            close: +d[4],
+            volume: +d[5],
+          }))
+        } else {
+          const r = await fetch(
+            `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
+          )
+          if (!r.ok) throw new Error('HTTP ' + r.status)
+          const raw = (await r.json()) as any[][]
+          if (cancelled) return
+          cands = raw.map((d) => ({
+            time: Math.floor(d[0] / 1000),
+            open: +d[1],
+            high: +d[2],
+            low: +d[3],
+            close: +d[4],
+            volume: +d[5],
+          }))
+        }
         if (cancelled) return
-        const cands: Candle[] = raw.map((d) => ({
-          time: Math.floor(d[0] / 1000),
-          open: +d[1],
-          high: +d[2],
-          low: +d[3],
-          close: +d[4],
-          volume: +d[5],
-        }))
         candlesRef.current = cands
         renderData(cands)
-        // Restore saved zoom (if any) — applied after fitContent in renderData.
         const savedZoom = loadConfig().zoom
         if (savedZoom && chartRefs.current?.mainChart) {
           chartRefs.current.mainChart.timeScale().setVisibleLogicalRange(savedZoom)
@@ -1294,28 +1382,46 @@ function BtcChartView() {
 
     const fetchTicker = async () => {
       try {
-        const t = await (
-          await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`)
-        ).json()
-        if (stopped) return
-        const p = +t.lastPrice,
+        let p: number, ch: number, high: number, low: number, vol: number, quoteVol: number
+        if (symbolInfo.exchange === 'bybit') {
+          const cat = 'bybitCategory' in symbolInfo ? symbolInfo.bybitCategory : 'linear'
+          const json = await (
+            await fetch(`https://api.bybit.com/v5/market/tickers?category=${cat}&symbol=${symbol}`)
+          ).json()
+          const t = json.result?.list?.[0]
+          if (!t || stopped) return
+          p = +t.lastPrice
+          high = +t.highPrice24h
+          low = +t.lowPrice24h
+          vol = +t.volume24h
+          quoteVol = +t.turnover24h
+          const prev = +t.prevPrice24h
+          ch = prev ? ((p - prev) / prev) * 100 : 0
+        } else {
+          const t = await (
+            await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`)
+          ).json()
+          if (stopped) return
+          p = +t.lastPrice
           ch = +t.priceChangePercent
-        setPrice({
-          cur: fmtP(p),
-          chg: (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%',
-          up: ch >= 0,
-        })
-        setOhlcv({
-          o: fmtP(+t.openPrice),
-          h: fmtP(+t.highPrice),
-          l: fmtP(+t.lowPrice),
+          high = +t.highPrice
+          low = +t.lowPrice
+          vol = +t.volume
+          quoteVol = +t.quoteVolume
+        }
+        setPrice({ cur: fmtP(p), chg: (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%', up: ch >= 0 })
+        setOhlcv((o) => ({
+          ...o,
+          o: fmtP(low),
+          h: fmtP(high),
+          l: fmtP(low),
           c: fmtP(p),
-          v: fmtV(+t.volume),
-        })
+          v: fmtV(vol),
+        }))
         setStats({
-          high: fmtP(+t.highPrice),
-          low: fmtP(+t.lowPrice),
-          vol: fmtV(+t.quoteVolume),
+          high: fmtP(high),
+          low: fmtP(low),
+          vol: fmtV(quoteVol),
           chg: (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%',
           up: ch >= 0,
         })
@@ -1324,6 +1430,7 @@ function BtcChartView() {
       }
     }
     const fetchFunding = async () => {
+      if (symbolInfo.exchange === 'bybit') return // already in ticker
       try {
         const d = await (
           await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`)
