@@ -74,17 +74,27 @@ declare global {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-type Exchange = 'binance' | 'bybit' | 'mexc'
+type Exchange = 'binance' | 'bybit' | 'mexc' | 'okx'
 const SYMBOLS = [
   { symbol: 'BTCUSDT', base: 'BTC', quote: 'USDT', exchange: 'binance' as Exchange },
   { symbol: 'ETHUSDT', base: 'ETH', quote: 'USDT', exchange: 'binance' as Exchange },
   { symbol: 'SOLUSDT', base: 'SOL', quote: 'USDT', exchange: 'binance' as Exchange },
+  { symbol: 'SUIUSDT', base: 'SUI', quote: 'USDT', exchange: 'binance' as Exchange },
+  { symbol: 'HYPEUSDT', base: 'HYPE', quote: 'USDT', exchange: 'binance' as Exchange },
+  { symbol: 'CHIPUSDT', base: 'CHIP', quote: 'USDT', exchange: 'binance' as Exchange },
   {
     symbol: 'LABUSDT',
     base: 'LAB',
     quote: 'USDT',
     exchange: 'binance' as Exchange,
     mexcSymbol: 'LAB_USDT',
+  },
+  {
+    symbol: 'OKBUSDT',
+    base: 'OKB',
+    quote: 'USDT',
+    exchange: 'okx' as Exchange,
+    okxInstId: 'OKB-USDT-SWAP',
   },
 ] as const
 type SymbolId = (typeof SYMBOLS)[number]['symbol']
@@ -106,6 +116,15 @@ const MEXC_INTERVAL: Record<string, string> = {
   '1h': 'Hour1',
   '4h': 'Hour4',
   '1d': 'Day1',
+}
+// OKX interval mapping
+const OKX_INTERVAL: Record<string, string> = {
+  '1m': '1m',
+  '5m': '5m',
+  '15m': '15m',
+  '1h': '1H',
+  '4h': '4H',
+  '1d': '1D',
 }
 
 const LIMIT = 300
@@ -1710,6 +1729,57 @@ function BtcChartView() {
           setLastUpdate(tsNow())
           if (k.confirm) renderData(arr)
         }
+      } else if (info.exchange === 'okx') {
+        const instId = 'okxInstId' in info ? info.okxInstId : symbol
+        ws = new WebSocket('wss://ws.okx.com:8443/ws/v5/business')
+        ws.onopen = () => {
+          if (cancelled) return
+          ws.send(
+            JSON.stringify({
+              op: 'subscribe',
+              args: [{ channel: 'candle' + OKX_INTERVAL[interval], instId }],
+            }),
+          )
+          setWsStatus({ text: 'Live', tone: 'live' })
+          setLastUpdate(tsNow())
+        }
+        ws.onmessage = (ev) => {
+          if (cancelled) return
+          const msg = JSON.parse(ev.data)
+          if (!msg.data?.[0]) return
+          const k = msg.data[0]
+          const candle: Candle = {
+            time: Math.floor(Number(k[0]) / 1000),
+            open: +k[1],
+            high: +k[2],
+            low: +k[3],
+            close: +k[4],
+            volume: +k[5],
+          }
+          const arr = candlesRef.current
+          const last = arr[arr.length - 1]
+          if (last && last.time === candle.time) arr[arr.length - 1] = candle
+          else if (!last || candle.time > last.time) {
+            arr.push(candle)
+            if (arr.length > LIMIT + 50) arr.shift()
+          }
+          chartRefs.current?.candleSeries.update({
+            time: candle.time,
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close,
+          })
+          chartRefs.current?.volSeries.update({
+            time: candle.time,
+            value: candle.volume,
+            color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
+          })
+          setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
+          setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
+          setLastUpdate(tsNow())
+          if (k[8] === '1') renderData(arr)
+        }
       } else {
         ws = new WebSocket(`wss://fstream.binance.com/ws/${symbol.toLowerCase()}@kline_${interval}`)
         ws.onopen = () => {
@@ -1825,6 +1895,22 @@ function BtcChartView() {
             close: +d[4],
             volume: +d[5],
           }))
+        } else if (info.exchange === 'okx') {
+          const instId = 'okxInstId' in info ? info.okxInstId : symbol
+          const r = await fetch(
+            `/api/okx/api/v5/market/candles?instId=${instId}&bar=${OKX_INTERVAL[interval]}&limit=${LIMIT}`,
+          )
+          if (!r.ok) throw new Error('HTTP ' + r.status)
+          const json = (await r.json()) as { data: string[][] }
+          if (cancelled) return
+          cands = json.data.reverse().map((d) => ({
+            time: Math.floor(Number(d[0]) / 1000),
+            open: +d[1],
+            high: +d[2],
+            low: +d[3],
+            close: +d[4],
+            volume: +d[5],
+          }))
         } else {
           const r = await fetch(
             `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
@@ -1909,6 +1995,18 @@ function BtcChartView() {
           vol = +t.volume24
           quoteVol = +t.amount24
           ch = +t.riseFallRate * 100
+        } else if (info.exchange === 'okx') {
+          const instId = 'okxInstId' in info ? info.okxInstId : symbol
+          const json = await (await fetch(`/api/okx/api/v5/market/ticker?instId=${instId}`)).json()
+          const t = json.data?.[0]
+          if (!t || stopped) return
+          p = +t.last
+          high = +t.high24h
+          low = +t.low24h
+          vol = +t.vol24h
+          quoteVol = +t.volCcy24h
+          const open24 = +t.open24h
+          ch = open24 ? ((p - open24) / open24) * 100 : 0
         } else {
           // Try Binance futures first (most accurate price), fall back to Bybit or Binance spot
           const binFut = await fetch(

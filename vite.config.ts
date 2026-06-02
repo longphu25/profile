@@ -80,6 +80,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path: string) => path.replace(/^\/api\/mexc/, ''),
       },
+      '/api/okx': {
+        target: 'https://www.okx.com',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api\/okx/, ''),
+      },
       '/api/polymarket/auth': {
         target: 'https://clob.polymarket.com',
         changeOrigin: true,
