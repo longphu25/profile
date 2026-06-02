@@ -71,7 +71,7 @@ declare global {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-type Exchange = 'binance' | 'bybit'
+type Exchange = 'binance' | 'bybit' | 'mexc'
 const SYMBOLS = [
   { symbol: 'BTCUSDT', base: 'BTC', quote: 'USDT', exchange: 'binance' as Exchange },
   { symbol: 'ETHUSDT', base: 'ETH', quote: 'USDT', exchange: 'binance' as Exchange },
@@ -80,8 +80,8 @@ const SYMBOLS = [
     symbol: 'LABUSDT',
     base: 'LAB',
     quote: 'USDT',
-    exchange: 'bybit' as Exchange,
-    bybitCategory: 'linear' as const,
+    exchange: 'mexc' as Exchange,
+    mexcSymbol: 'LAB_USDT',
   },
 ] as const
 type SymbolId = (typeof SYMBOLS)[number]['symbol']
@@ -94,6 +94,15 @@ const BYBIT_INTERVAL: Record<string, string> = {
   '1h': '60',
   '4h': '240',
   '1d': 'D',
+}
+// MEXC futures interval mapping
+const MEXC_INTERVAL: Record<string, string> = {
+  '1m': 'Min1',
+  '5m': 'Min5',
+  '15m': 'Min15',
+  '1h': 'Hour1',
+  '4h': 'Hour4',
+  '1d': 'Day1',
 }
 
 const LIMIT = 300
@@ -1290,9 +1299,61 @@ function BtcChartView() {
 
     const connectWs = () => {
       let ws: WebSocket
-      if (symbolInfoRef.current.exchange === 'bybit') {
-        const cat =
-          'bybitCategory' in symbolInfoRef.current ? symbolInfoRef.current.bybitCategory : 'linear'
+      const info = symbolInfoRef.current
+      if (info.exchange === 'mexc') {
+        const msym = 'mexcSymbol' in info ? info.mexcSymbol : symbol
+        ws = new WebSocket('wss://contract.mexc.com/edge')
+        ws.onopen = () => {
+          if (cancelled) return
+          ws.send(
+            JSON.stringify({
+              method: 'sub.kline',
+              param: { symbol: msym, interval: MEXC_INTERVAL[interval] },
+            }),
+          )
+          setWsStatus({ text: 'Live', tone: 'live' })
+          setLastUpdate(tsNow())
+        }
+        ws.onmessage = (ev) => {
+          if (cancelled) return
+          const msg = JSON.parse(ev.data)
+          if (msg.channel !== 'push.kline') return
+          const k = msg.data
+          if (!k) return
+          const candle: Candle = {
+            time: Math.floor(Number(k.t) / 1000),
+            open: +k.o,
+            high: +k.h,
+            low: +k.l,
+            close: +k.c,
+            volume: +k.v,
+          }
+          const arr = candlesRef.current
+          const last = arr[arr.length - 1]
+          if (last && last.time === candle.time) arr[arr.length - 1] = candle
+          else if (!last || candle.time > last.time) {
+            arr.push(candle)
+            if (arr.length > LIMIT + 50) arr.shift()
+          }
+          chartRefs.current?.candleSeries.update({
+            time: candle.time,
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close,
+          })
+          chartRefs.current?.volSeries.update({
+            time: candle.time,
+            value: candle.volume,
+            color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
+          })
+          setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
+          setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
+          setLastUpdate(tsNow())
+          if (k.end) renderData(arr)
+        }
+      } else if (info.exchange === 'bybit') {
+        const cat = 'bybitCategory' in info ? info.bybitCategory : 'linear'
         ws = new WebSocket(`wss://stream.bybit.com/v5/public/${cat}`)
         ws.onopen = () => {
           if (cancelled) return
@@ -1414,18 +1475,43 @@ function BtcChartView() {
     ;(async () => {
       try {
         let cands: Candle[]
-        if (symbolInfoRef.current.exchange === 'bybit') {
-          const cat =
-            'bybitCategory' in symbolInfoRef.current
-              ? symbolInfoRef.current.bybitCategory
-              : 'linear'
+        const info = symbolInfoRef.current
+        if (info.exchange === 'mexc') {
+          const msym = 'mexcSymbol' in info ? info.mexcSymbol : symbol
+          const r = await fetch(
+            `https://contract.mexc.com/api/v1/contract/kline/${msym}?interval=${MEXC_INTERVAL[interval]}&limit=${LIMIT}`,
+          )
+          if (!r.ok) throw new Error('HTTP ' + r.status)
+          const json = (await r.json()) as {
+            data: {
+              time: number[]
+              open: string[]
+              high: string[]
+              low: string[]
+              close: string[]
+              vol: string[]
+            }
+          }
+          if (cancelled) return
+          const d = json.data
+          cands = d.time
+            .map((t, i) => ({
+              time: t,
+              open: +d.open[i],
+              high: +d.high[i],
+              low: +d.low[i],
+              close: +d.close[i],
+              volume: +d.vol[i],
+            }))
+            .sort((a, b) => a.time - b.time)
+        } else if (info.exchange === 'bybit') {
+          const cat = 'bybitCategory' in info ? info.bybitCategory : 'linear'
           const r = await fetch(
             `https://api.bybit.com/v5/market/kline?category=${cat}&symbol=${symbol}&interval=${BYBIT_INTERVAL[interval]}&limit=${LIMIT}`,
           )
           if (!r.ok) throw new Error('HTTP ' + r.status)
           const json = (await r.json()) as { result: { list: string[][] } }
           if (cancelled) return
-          // Bybit returns newest-first, reverse to get ascending time
           cands = json.result.list.reverse().map((d) => ({
             time: Math.floor(Number(d[0]) / 1000),
             open: +d[1],
@@ -1506,45 +1592,62 @@ function BtcChartView() {
     const fetchTicker = async () => {
       try {
         let p: number, ch: number, high: number, low: number, vol: number, quoteVol: number
-        // Always try Binance futures first (most accurate spot-aligned price)
-        const binFut = await fetch(`https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=${symbol}`)
-          .then((r) => (r.ok ? r.json() : null))
-          .catch(() => null)
-        if (binFut && !stopped && binFut.lastPrice) {
-          p = +binFut.lastPrice
-          ch = +binFut.priceChangePercent
-          high = +binFut.highPrice
-          low = +binFut.lowPrice
-          vol = +binFut.volume
-          quoteVol = +binFut.quoteVolume
-        } else if (symbolInfoRef.current.exchange === 'bybit') {
-          const cat =
-            'bybitCategory' in symbolInfoRef.current
-              ? symbolInfoRef.current.bybitCategory
-              : 'linear'
+        const info = symbolInfoRef.current
+        if (info.exchange === 'mexc') {
+          const msym = 'mexcSymbol' in info ? info.mexcSymbol : symbol
           const json = await (
-            await fetch(`https://api.bybit.com/v5/market/tickers?category=${cat}&symbol=${symbol}`)
+            await fetch(`https://contract.mexc.com/api/v1/contract/ticker?symbol=${msym}`)
           ).json()
-          const t = json.result?.list?.[0]
+          const t = json.data
           if (!t || stopped) return
           p = +t.lastPrice
-          high = +t.highPrice24h
-          low = +t.lowPrice24h
-          vol = +t.volume24h
-          quoteVol = +t.turnover24h
-          const prev = +t.prevPrice24h
-          ch = prev ? ((p - prev) / prev) * 100 : 0
+          high = +t.high24Price
+          low = +t.lower24Price
+          vol = +t.volume24
+          quoteVol = +t.amount24
+          ch = +t.riseFallRate * 100
         } else {
-          const t = await (
-            await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`)
-          ).json()
-          if (stopped) return
-          p = +t.lastPrice
-          ch = +t.priceChangePercent
-          high = +t.highPrice
-          low = +t.lowPrice
-          vol = +t.volume
-          quoteVol = +t.quoteVolume
+          // Try Binance futures first (most accurate price), fall back to Bybit or Binance spot
+          const binFut = await fetch(
+            `https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=${symbol}`,
+          )
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+          if (binFut && !stopped && binFut.lastPrice) {
+            p = +binFut.lastPrice
+            ch = +binFut.priceChangePercent
+            high = +binFut.highPrice
+            low = +binFut.lowPrice
+            vol = +binFut.volume
+            quoteVol = +binFut.quoteVolume
+          } else if (info.exchange === 'bybit') {
+            const cat = 'bybitCategory' in info ? info.bybitCategory : 'linear'
+            const json = await (
+              await fetch(
+                `https://api.bybit.com/v5/market/tickers?category=${cat}&symbol=${symbol}`,
+              )
+            ).json()
+            const t = json.result?.list?.[0]
+            if (!t || stopped) return
+            p = +t.lastPrice
+            high = +t.highPrice24h
+            low = +t.lowPrice24h
+            vol = +t.volume24h
+            quoteVol = +t.turnover24h
+            const prev = +t.prevPrice24h
+            ch = prev ? ((p - prev) / prev) * 100 : 0
+          } else {
+            const t = await (
+              await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`)
+            ).json()
+            if (stopped) return
+            p = +t.lastPrice
+            ch = +t.priceChangePercent
+            high = +t.highPrice
+            low = +t.lowPrice
+            vol = +t.volume
+            quoteVol = +t.quoteVolume
+          }
         }
         setPrice({ cur: fmtP(p), chg: (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%', up: ch >= 0 })
         setOhlcv((o) => ({
@@ -1568,7 +1671,20 @@ function BtcChartView() {
     }
     const fetchFunding = async () => {
       const sym = symbol
+      const info = symbolInfoRef.current
       const results: { name: string; rate: number }[] = []
+      // MEXC futures (for MEXC-exchange symbols)
+      if (info.exchange === 'mexc') {
+        try {
+          const msym = 'mexcSymbol' in info ? info.mexcSymbol : sym
+          const d = await (
+            await fetch(`https://contract.mexc.com/api/v1/contract/ticker?symbol=${msym}`)
+          ).json()
+          if (d.data?.fundingRate) results.push({ name: 'MEXC', rate: +d.data.fundingRate * 100 })
+        } catch {
+          /* noop */
+        }
+      }
       // Binance USDM futures
       try {
         const d = await (
@@ -1590,10 +1706,9 @@ function BtcChartView() {
       } catch {
         /* noop */
       }
-      // Bybit linear (always available for LAB)
+      // Bybit linear
       try {
-        const cat =
-          'bybitCategory' in symbolInfoRef.current ? symbolInfoRef.current.bybitCategory : 'linear'
+        const cat = 'bybitCategory' in info ? info.bybitCategory : 'linear'
         const d = await (
           await fetch(
             `https://api.bybit.com/v5/market/funding/history?category=${cat}&symbol=${sym}&limit=1`,
