@@ -1850,16 +1850,92 @@ function BtcChartView() {
             </div>
           </div>
 
-          {/* Alerts */}
-          <AlertsPanel
-            alerts={alerts}
-            onAdd={addAlert}
-            onRemove={removeAlert}
-            onToggle={toggleAlert}
-            onReset={resetAlert}
-            currentPrice={candlesRef.current[candlesRef.current.length - 1]?.close ?? null}
-            currentRsi={sidebar.rsiNow}
-          />
+          {/* Funding */}
+          <div className="btc-chart__panel">
+            <div className="btc-chart__panel-title">Funding rate (avg)</div>
+            <div className={`btc-chart__fund-val ${funding.cls}`}>{funding.val}</div>
+            <div className={`btc-chart__fund-sentiment ${funding.cls}`}>{funding.sub}</div>
+            {funding.breakdown.length > 0 && (
+              <div className="btc-chart__fund-breakdown">
+                {funding.breakdown.map((b) => (
+                  <div key={b.name} className="btc-chart__fund-row">
+                    <span>{b.name}</span>
+                    <span className={b.rate < 0 ? 'up' : b.rate > 0.05 ? 'dn' : ''}>
+                      {(b.rate >= 0 ? '+' : '') + b.rate.toFixed(4) + '%'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="btc-chart__fund-rules">
+              <div>
+                <span>&gt; 0.10%</span>
+                <span className="dn">Long heavy (bearish signal)</span>
+              </div>
+              <div>
+                <span>0 – 0.05%</span>
+                <span>Balanced</span>
+              </div>
+              <div>
+                <span>&lt; 0%</span>
+                <span className="up">Short heavy (bullish signal)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="btc-chart__panel">
+            <div className="btc-chart__panel-title">24h stats</div>
+            <div className="btc-chart__row">
+              <span className="btc-chart__row-label">High</span>
+              <span className="btc-chart__row-val">{stats.high}</span>
+            </div>
+            <div className="btc-chart__row">
+              <span className="btc-chart__row-label">Low</span>
+              <span className="btc-chart__row-val">{stats.low}</span>
+            </div>
+            <div className="btc-chart__row">
+              <span className="btc-chart__row-label">Volume</span>
+              <span className="btc-chart__row-val">{stats.vol}</span>
+            </div>
+            <div className="btc-chart__row">
+              <span className="btc-chart__row-label">Change</span>
+              <span className={`btc-chart__row-val ${stats.up ? 'up' : 'dn'}`}>{stats.chg}</span>
+            </div>
+          </div>
+
+          {/* Order Flow */}
+          <div className="btc-chart__panel">
+            <div className="btc-chart__panel-title">Midnight Hunter signals</div>
+            {sidebar.ofLog.length === 0 ? (
+              <span className="btc-chart__of-empty">Chưa có tín hiệu rebound</span>
+            ) : (
+              sidebar.ofLog.map((s, idx) => (
+                <div key={idx} className="btc-chart__of-item">
+                  <span className={`btc-chart__of-tag ${s.type === 'buy' ? 'is-buy' : 'is-sell'}`}>
+                    {s.type === 'buy' ? 'BUY' : 'SELL'}
+                  </span>
+                  <span className="btc-chart__of-text">
+                    ${s.price} · ×{s.ratio}
+                  </span>
+                  <span className="btc-chart__of-time">{s.time}</span>
+                </div>
+              ))
+            )}
+            <div className="btc-chart__of-note">
+              <div>
+                <b className="dn">SELL ▼</b> — nến trước chọc lên trên dải trên (Upper Band) rồi nến
+                hiện tại đảo chiều giảm.
+              </div>
+              <div>
+                <b className="up">BUY ▲</b> — nến trước chọc xuống dưới dải dưới (Lower Band) rồi
+                nến hiện tại đảo chiều tăng.
+              </div>
+              <div className="btc-chart__of-note-sub">
+                ×N = bội số volume so với SMA20 (tham khảo, không phải điều kiện tín hiệu).
+              </div>
+            </div>
+          </div>
 
           {/* MH Band */}
           <div className="btc-chart__panel">
@@ -1883,6 +1959,17 @@ function BtcChartView() {
               </span>
             </div>
           </div>
+
+          {/* Alerts */}
+          <AlertsPanel
+            alerts={alerts}
+            onAdd={addAlert}
+            onRemove={removeAlert}
+            onToggle={toggleAlert}
+            onReset={resetAlert}
+            currentPrice={candlesRef.current[candlesRef.current.length - 1]?.close ?? null}
+            currentRsi={sidebar.rsiNow}
+          />
 
           {/* TA Signals */}
           <div className="btc-chart__panel">
@@ -1935,39 +2022,6 @@ function BtcChartView() {
             </div>
           </div>
 
-          {/* Order Flow */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Midnight Hunter signals</div>
-            {sidebar.ofLog.length === 0 ? (
-              <span className="btc-chart__of-empty">Chưa có tín hiệu rebound</span>
-            ) : (
-              sidebar.ofLog.map((s, idx) => (
-                <div key={idx} className="btc-chart__of-item">
-                  <span className={`btc-chart__of-tag ${s.type === 'buy' ? 'is-buy' : 'is-sell'}`}>
-                    {s.type === 'buy' ? 'BUY' : 'SELL'}
-                  </span>
-                  <span className="btc-chart__of-text">
-                    ${s.price} · ×{s.ratio}
-                  </span>
-                  <span className="btc-chart__of-time">{s.time}</span>
-                </div>
-              ))
-            )}
-            <div className="btc-chart__of-note">
-              <div>
-                <b className="dn">SELL ▼</b> — nến trước chọc lên trên dải trên (Upper Band) rồi nến
-                hiện tại đảo chiều giảm.
-              </div>
-              <div>
-                <b className="up">BUY ▲</b> — nến trước chọc xuống dưới dải dưới (Lower Band) rồi
-                nến hiện tại đảo chiều tăng.
-              </div>
-              <div className="btc-chart__of-note-sub">
-                ×N = bội số volume so với SMA20 (tham khảo, không phải điều kiện tín hiệu).
-              </div>
-            </div>
-          </div>
-
           {/* Volume Profile */}
           <div className="btc-chart__panel">
             <div className="btc-chart__panel-title">Volume profile</div>
@@ -2010,60 +2064,6 @@ function BtcChartView() {
               <div className="btc-chart__fng-bar">
                 <div className="btc-chart__fng-ptr" style={{ left: fng.pct + '%' }} />
               </div>
-            </div>
-          </div>
-
-          {/* Funding */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Funding rate (avg)</div>
-            <div className={`btc-chart__fund-val ${funding.cls}`}>{funding.val}</div>
-            <div className={`btc-chart__fund-sentiment ${funding.cls}`}>{funding.sub}</div>
-            {funding.breakdown.length > 0 && (
-              <div className="btc-chart__fund-breakdown">
-                {funding.breakdown.map((b) => (
-                  <div key={b.name} className="btc-chart__fund-row">
-                    <span>{b.name}</span>
-                    <span className={b.rate < 0 ? 'up' : b.rate > 0.05 ? 'dn' : ''}>
-                      {(b.rate >= 0 ? '+' : '') + b.rate.toFixed(4) + '%'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="btc-chart__fund-rules">
-              <div>
-                <span>&gt; 0.10%</span>
-                <span className="dn">Long heavy (bearish signal)</span>
-              </div>
-              <div>
-                <span>0 – 0.05%</span>
-                <span>Balanced</span>
-              </div>
-              <div>
-                <span>&lt; 0%</span>
-                <span className="up">Short heavy (bullish signal)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">24h stats</div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">High</span>
-              <span className="btc-chart__row-val">{stats.high}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Low</span>
-              <span className="btc-chart__row-val">{stats.low}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Volume</span>
-              <span className="btc-chart__row-val">{stats.vol}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Change</span>
-              <span className={`btc-chart__row-val ${stats.up ? 'up' : 'dn'}`}>{stats.chg}</span>
             </div>
           </div>
         </div>
