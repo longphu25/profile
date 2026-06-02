@@ -1712,7 +1712,20 @@ function BtcChartView() {
         <select
           className="btc-chart__symbol-select"
           value={symbol}
-          onChange={(e) => setSymbol(e.target.value as SymbolId)}
+          onChange={(e) => {
+            const next = e.target.value as SymbolId
+            setSymbol(next)
+            // Write immediately so a quick refresh doesn't lose the selection
+            try {
+              const saved = JSON.parse(localStorage.getItem('btc-chart:config:v1') || '{}')
+              localStorage.setItem(
+                'btc-chart:config:v1',
+                JSON.stringify({ ...saved, symbol: next }),
+              )
+            } catch {
+              /* noop */
+            }
+          }}
           aria-label="Select trading pair"
         >
           {SYMBOLS.map((s) => (
@@ -1727,7 +1740,18 @@ function BtcChartView() {
               key={iv}
               type="button"
               className={`btc-chart__iv-btn${interval === iv ? ' is-active' : ''}`}
-              onClick={() => setInterval_(iv)}
+              onClick={() => {
+                setInterval_(iv)
+                try {
+                  const saved = JSON.parse(localStorage.getItem('btc-chart:config:v1') || '{}')
+                  localStorage.setItem(
+                    'btc-chart:config:v1',
+                    JSON.stringify({ ...saved, interval: iv }),
+                  )
+                } catch {
+                  /* noop */
+                }
+              }}
             >
               {iv.toUpperCase()}
             </button>
