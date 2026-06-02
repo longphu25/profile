@@ -71,7 +71,14 @@ declare global {
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const SYMBOL = 'BTCUSDT'
+const SYMBOLS = [
+  { symbol: 'BTCUSDT', base: 'BTC', quote: 'USDT' },
+  { symbol: 'ETHUSDT', base: 'ETH', quote: 'USDT' },
+  { symbol: 'SOLUSDT', base: 'SOL', quote: 'USDT' },
+  { symbol: 'LABUSDT', base: 'LAB', quote: 'USDT' },
+] as const
+type SymbolId = (typeof SYMBOLS)[number]['symbol']
+
 const LIMIT = 300
 const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const
 type Interval = (typeof INTERVALS)[number]
@@ -593,6 +600,8 @@ function BtcChartView() {
   const sidebarRef = useRef<SidebarState>(INITIAL_SIDEBAR)
 
   const [interval, setInterval_] = useState<Interval>(cfgInit.interval as Interval)
+  const [symbol, setSymbol] = useState<SymbolId>('BTCUSDT')
+  const symbolInfo = SYMBOLS.find((s) => s.symbol === symbol)!
   const [vis, setVis] = useState<VisFlags>(visRef.current)
   const [vpOpts, setVpOpts] = useState(vpOptsRef.current)
   const [alerts, setAlerts] = useState<AlertRule[]>(alertsRef.current)
@@ -1129,7 +1138,7 @@ function BtcChartView() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    setLoadingText(`Tải dữ liệu ${interval}…`)
+    setLoadingText(`Tải dữ liệu ${symbolInfo.base}/${symbolInfo.quote} ${interval}…`)
     fitNextRef.current = true
 
     const closeWs = () => {
@@ -1145,7 +1154,7 @@ function BtcChartView() {
 
     const connectWs = () => {
       const ws = new WebSocket(
-        `wss://stream.binance.com:9443/ws/${SYMBOL.toLowerCase()}@kline_${interval}`,
+        `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${interval}`,
       )
       wsRef.current = ws
       ws.onopen = () => {
@@ -1217,7 +1226,7 @@ function BtcChartView() {
     ;(async () => {
       try {
         const r = await fetch(
-          `https://api.binance.com/api/v3/klines?symbol=${SYMBOL}&interval=${interval}&limit=${LIMIT}`,
+          `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
         )
         if (!r.ok) throw new Error('HTTP ' + r.status)
         const raw = (await r.json()) as any[][]
@@ -1277,7 +1286,7 @@ function BtcChartView() {
       cancelled = true
       closeWs()
     }
-  }, [interval, renderData])
+  }, [interval, symbol, renderData])
 
   // ── Background polls: ticker / funding / fng ───────────────────────
   useEffect(() => {
@@ -1286,7 +1295,7 @@ function BtcChartView() {
     const fetchTicker = async () => {
       try {
         const t = await (
-          await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${SYMBOL}`)
+          await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`)
         ).json()
         if (stopped) return
         const p = +t.lastPrice,
@@ -1317,7 +1326,7 @@ function BtcChartView() {
     const fetchFunding = async () => {
       try {
         const d = await (
-          await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${SYMBOL}`)
+          await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`)
         ).json()
         if (stopped) return
         const rate = +d.lastFundingRate * 100
@@ -1364,7 +1373,7 @@ function BtcChartView() {
       clearInterval(id2)
       clearInterval(id3)
     }
-  }, [])
+  }, [symbol])
 
   // ── Toggles ─────────────────────────────────────────────────────────
   const toggle = useCallback(
@@ -1530,8 +1539,21 @@ function BtcChartView() {
       {/* Header */}
       <div className="btc-chart__header">
         <span className="btc-chart__pair">
-          BTC<small>/ USDT</small>
+          {symbolInfo.base}
+          <small>/ {symbolInfo.quote}</small>
         </span>
+        <select
+          className="btc-chart__symbol-select"
+          value={symbol}
+          onChange={(e) => setSymbol(e.target.value as SymbolId)}
+          aria-label="Select trading pair"
+        >
+          {SYMBOLS.map((s) => (
+            <option key={s.symbol} value={s.symbol}>
+              {s.base}/{s.quote}
+            </option>
+          ))}
+        </select>
         <div className="btc-chart__intervals">
           {INTERVALS.map((iv) => (
             <button
