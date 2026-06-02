@@ -1,0 +1,454 @@
+/* Polymarket Wallet Plugin */
+:host,
+.pmw-root {
+  --bg: #0a0a0c;
+  --surface: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --red: #f85149;
+  --yellow: #d29922;
+  --purple: #8247e5;
+  --radius: 12px;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.pmw-root {
+  max-width: 480px;
+  padding: 4px;
+}
+
+/* Header */
+.pmw-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+/* Tabs */
+.pmw-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+
+.pmw-tab {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.pmw-tab:hover {
+  color: var(--text);
+}
+
+.pmw-tab--active {
+  background: var(--purple);
+  color: #fff;
+}
+
+/* Panel */
+.pmw-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.pmw-panel__desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+/* Form */
+.pmw-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.pmw-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  outline: none;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+
+.pmw-input::placeholder {
+  color: #555;
+}
+.pmw-input:focus {
+  border-color: var(--purple);
+}
+
+/* Buttons */
+.pmw-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 0;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.2s;
+}
+
+.pmw-btn:hover {
+  opacity: 0.85;
+}
+
+.pmw-btn--primary {
+  background: var(--purple);
+  color: #fff;
+}
+
+/* Connected state */
+.pmw-connected {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid rgba(63, 185, 80, 0.3);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+
+.pmw-connected__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(63, 185, 80, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pmw-connected__info {
+  flex: 1;
+}
+
+.pmw-connected__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green);
+}
+
+.pmw-connected__addr {
+  font-size: 13px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* Info rows */
+.pmw-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+  font-size: 12px;
+}
+
+.pmw-info-row__label {
+  color: var(--muted);
+}
+.pmw-info-row__val {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Secret sections */
+.pmw-secret-section {
+  margin-top: 12px;
+}
+
+.pmw-reveal-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.pmw-reveal-btn:hover {
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+
+.pmw-secret-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid rgba(210, 153, 34, 0.3);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pmw-secret-box__code {
+  flex: 1;
+  font-size: 11px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--yellow);
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* Copy button */
+.pmw-copy {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.pmw-copy:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pmw-copy--block {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 0;
+  text-align: center;
+  font-size: 11px;
+}
+
+/* Mnemonic grid */
+.pmw-mnemonic {
+  margin-top: 8px;
+  padding: 14px;
+  background: var(--bg);
+  border: 1px solid rgba(210, 153, 34, 0.3);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pmw-mnemonic__word {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.pmw-mnemonic__idx {
+  font-size: 9px;
+  color: var(--muted);
+  min-width: 14px;
+}
+
+/* Warning */
+.pmw-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: rgba(210, 153, 34, 0.08);
+  border: 1px solid rgba(210, 153, 34, 0.2);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--yellow);
+  line-height: 1.5;
+}
+
+.pmw-warning svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Disconnect */
+.pmw-disconnect {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 0;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.pmw-disconnect:hover {
+  background: rgba(248, 81, 73, 0.08);
+  border-color: var(--red);
+}
+
+/* Error */
+.pmw-error {
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  background: rgba(248, 81, 73, 0.06);
+  color: var(--red);
+  font-size: 12px;
+}
+
+/* Footer */
+.pmw-footer {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 10px;
+  color: #555;
+}
+
+/* Browser wallet button */
+.pmw-btn--browser {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--purple);
+  color: #fff;
+}
+
+.pmw-btn--browser:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pmw-btn__loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Browser wallet connected icon variant */
+.pmw-connected__icon--browser {
+  background: rgba(130, 71, 229, 0.12);
+}
+
+/* No provider state */
+.pmw-no-provider {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.pmw-no-provider p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.pmw-provider-links {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.pmw-provider-links a {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.pmw-provider-links a:hover {
+  border-color: var(--accent);
+  background: rgba(88, 166, 255, 0.06);
+}
+
+/* Info note for browser wallet */
+.pmw-info-note {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(88, 166, 255, 0.06);
+  border: 1px solid rgba(88, 166, 255, 0.15);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--accent);
+  line-height: 1.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

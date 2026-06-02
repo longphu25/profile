@@ -1,0 +1,59 @@
+/* NAVI MCP Chatbot Plugin */
+
+.navi-cb { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ededed; max-width: 100%; display: flex; flex-direction: column; height: 480px; }
+
+/* Header */
+.navi-cb__header { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #1e1e22; margin-bottom: 8px; flex-shrink: 0; }
+.navi-cb__header-left { display: flex; align-items: center; gap: 8px; }
+.navi-cb__icon { width: 18px; height: 18px; color: #4da2ff; }
+.navi-cb__title { font-size: 14px; font-weight: 600; color: #ededed; }
+.navi-cb__wallet { font-size: 10px; color: #4da2ff; background: #4da2ff15; padding: 2px 8px; border-radius: 4px; font-family: monospace; transition: all 0.2s; }
+.navi-cb__wallet:hover { background: #4da2ff30; }
+.navi-cb__wallet--copied { background: #4ade8030; color: #4ade80; }
+
+/* Messages area */
+.navi-cb__messages { flex: 1; overflow-y: auto; padding: 4px 0; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; scrollbar-color: #333 transparent; }
+.navi-cb__messages::-webkit-scrollbar { width: 4px; }
+.navi-cb__messages::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+/* Message bubbles */
+.navi-cb__msg { display: flex; flex-direction: column; max-width: 92%; }
+.navi-cb__msg--user { align-self: flex-end; }
+.navi-cb__msg--bot { align-self: flex-start; }
+
+.navi-cb__bubble { padding: 10px 14px; border-radius: 12px; font-size: 12px; line-height: 1.5; word-break: break-word; }
+.navi-cb__msg--user .navi-cb__bubble { background: #4da2ff; color: #fff; border-bottom-right-radius: 4px; }
+.navi-cb__msg--bot .navi-cb__bubble { background: #18181c; border: 1px solid #1e1e22; border-bottom-left-radius: 4px; }
+
+.navi-cb__line { min-height: 1em; }
+.navi-cb__line strong { color: #ededed; font-weight: 600; }
+.navi-cb__line code { background: #111114; padding: 1px 5px; border-radius: 3px; font-size: 11px; font-family: monospace; color: #4da2ff; }
+.navi-cb__line .navi-cb__addr { cursor: pointer; text-overflow: ellipsis; overflow: hidden; max-width: 180px; display: inline-block; vertical-align: bottom; transition: all 0.2s; }
+.navi-cb__line .navi-cb__addr:hover { background: #4da2ff30; }
+.navi-cb__line .navi-cb__addr--copied { background: #4ade8030; color: #4ade80; }
+.navi-cb__line a { color: #4da2ff; text-decoration: none; }
+.navi-cb__line a:hover { text-decoration: underline; }
+
+/* Loading dots */
+.navi-cb__bubble--loading { display: flex; gap: 4px; padding: 12px 18px; }
+.navi-cb__dot { width: 6px; height: 6px; background: #4da2ff; border-radius: 50%; animation: navi-cb-bounce 1.2s infinite; }
+.navi-cb__dot:nth-child(2) { animation-delay: 0.2s; }
+.navi-cb__dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes navi-cb-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-6px); opacity: 1; } }
+
+/* Action buttons */
+.navi-cb__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.navi-cb__action-btn { background: #111114; border: 1px solid #2a2a30; border-radius: 16px; color: #ccc; font-size: 11px; padding: 5px 12px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.navi-cb__action-btn:hover { background: #1e1e22; border-color: #4da2ff; color: #4da2ff; }
+.navi-cb__action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Input row */
+.navi-cb__input-row { display: flex; gap: 6px; padding-top: 8px; border-top: 1px solid #1e1e22; flex-shrink: 0; }
+.navi-cb__input { flex: 1; background: #111114; border: 1px solid #1e1e22; border-radius: 20px; color: #ededed; font-size: 13px; padding: 10px 16px; outline: none; }
+.navi-cb__input:focus { border-color: #4da2ff; }
+.navi-cb__input::placeholder { color: #555; }
+.navi-cb__input:disabled { opacity: 0.5; }
+
+.navi-cb__send { background: #4da2ff; border: none; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0; color: #fff; }
+.navi-cb__send:hover { opacity: 0.85; }
+.navi-cb__send:disabled { opacity: 0.3; cursor: not-allowed; }

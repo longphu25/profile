@@ -1,0 +1,34 @@
+[package]
+name = "polymarket-wasm"
+version = "1.0.0"
+edition = "2021"
+description = "WASM module for Polymarket CLOB: EIP-712 signing, HMAC-SHA256 auth, order building"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+serde_json = "1"
+# Crypto primitives
+k256 = { version = "0.13", features = ["ecdsa", "arithmetic"] }
+sha2 = "0.10"
+hmac = "0.12"
+# Keccak256 for Ethereum
+tiny-keccak = { version = "2.0", features = ["keccak"] }
+# Hex encoding
+hex = "0.4"
+# Base64 for HMAC secret
+base64 = "0.21"
+# For getrandom in WASM (v0.2 needed by k256 transitive deps)
+getrandom = { version = "0.2", features = ["js"] }
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true

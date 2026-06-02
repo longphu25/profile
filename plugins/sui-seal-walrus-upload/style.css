@@ -1,0 +1,52 @@
+/* Seal → Walrus Upload Plugin */
+
+.sui-sew { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ededed; max-width: 100%; }
+.sui-sew__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.sui-sew__title { font-size: 15px; font-weight: 600; margin: 0; }
+.sui-sew__net { font-size: 10px; color: #4da2ff; background: #4da2ff15; padding: 2px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+
+.sui-sew__warn { background: #2a1f00; border: 1px solid #4a3500; border-radius: 8px; padding: 8px 12px; font-size: 11px; color: #f0b429; margin-bottom: 10px; }
+.sui-sew__error { background: #2a0000; border: 1px solid #4a0000; border-radius: 8px; padding: 8px 12px; font-size: 11px; color: #ff6b6b; margin-bottom: 10px; word-break: break-word; }
+
+/* Drop zone */
+.sui-sew__drop { background: #18181c; border: 2px dashed #2a2a30; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; }
+.sui-sew__drop:hover { border-color: #4da2ff40; }
+.sui-sew__drop--active { border-color: #4da2ff; background: #4da2ff08; }
+.sui-sew__drop-text { font-size: 12px; color: #555; }
+.sui-sew__file-info { display: flex; justify-content: center; gap: 12px; align-items: center; }
+.sui-sew__file-name { font-size: 13px; color: #ededed; font-weight: 500; }
+.sui-sew__file-size { font-size: 11px; color: #888; }
+
+/* Fields */
+.sui-sew__fields { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.sui-sew__field { }
+.sui-sew__field--sm { max-width: 100px; }
+.sui-sew__label { font-size: 10px; color: #666; display: block; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+.sui-sew__input { width: 100%; background: #111114; border: 1px solid #1e1e22; border-radius: 6px; color: #ededed; font-size: 11px; font-family: monospace; padding: 7px 10px; outline: none; box-sizing: border-box; }
+.sui-sew__input:focus { border-color: #4da2ff; }
+.sui-sew__input::placeholder { color: #444; }
+.sui-sew__input--url { flex: 1; font-size: 10px; }
+
+/* Button */
+.sui-sew__btn { width: 100%; background: linear-gradient(135deg, #4da2ff, #a78bfa); border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600; padding: 10px; cursor: pointer; transition: opacity 0.2s; margin-bottom: 10px; }
+.sui-sew__btn:hover { opacity: 0.85; }
+.sui-sew__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Result */
+.sui-sew__result { background: #18181c; border: 1px solid #1e1e22; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+.sui-sew__result-title { font-size: 13px; font-weight: 600; color: #4ade80; margin-bottom: 8px; }
+.sui-sew__meta { margin-bottom: 8px; }
+.sui-sew__meta-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 11px; border-bottom: 1px solid #111114; }
+.sui-sew__meta-row span { color: #888; }
+.sui-sew__meta-row code { color: #ededed; font-family: monospace; font-size: 10px; }
+.sui-sew__url-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.sui-sew__copy { background: #1a1a3a; border: 1px solid #2a2a5a; border-radius: 6px; color: #4da2ff; font-size: 11px; font-weight: 600; padding: 6px 12px; cursor: pointer; white-space: nowrap; }
+.sui-sew__copy:hover { background: #2a2a5a; }
+.sui-sew__copy--ok { background: #1a3a1a; border-color: #2a5a2a; color: #4ade80; }
+.sui-sew__hint { font-size: 10px; color: #555; font-style: italic; margin: 0; }
+
+/* Footer */
+.sui-sew__footer { display: flex; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid #1e1e22; font-size: 10px; }
+.sui-sew__badge { background: #4da2ff15; color: #4da2ff; border-radius: 3px; padding: 2px 6px; font-weight: 600; }
+.sui-sew__badge--walrus { background: #4ade8015; color: #4ade80; }
+.sui-sew__disclaimer { color: #555; margin-left: auto; font-style: italic; }

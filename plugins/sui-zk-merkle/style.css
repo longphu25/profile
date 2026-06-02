@@ -1,0 +1,54 @@
+/* ZK Merkle Identity Plugin */
+
+.sui-zm { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ededed; max-width: 100%; }
+.sui-zm__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.sui-zm__title { font-size: 15px; font-weight: 600; margin: 0; }
+
+.sui-zm__badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+.sui-zm__badge--ok { background: #4ade8015; color: #4ade80; }
+.sui-zm__badge--err { background: #f8717115; color: #f87171; }
+
+.sui-zm__card { background: #18181c; border: 1px solid #1e1e22; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+.sui-zm__card-title { font-size: 13px; font-weight: 600; color: #a78bfa; margin-bottom: 8px; }
+
+.sui-zm__label { font-size: 10px; color: #888; display: block; margin-bottom: 4px; }
+.sui-zm__textarea { width: 100%; background: #111114; border: 1px solid #1e1e22; border-radius: 6px; color: #ededed; font-size: 11px; font-family: monospace; padding: 8px; outline: none; resize: vertical; box-sizing: border-box; margin-bottom: 8px; }
+.sui-zm__textarea:focus { border-color: #a78bfa; }
+.sui-zm__textarea::placeholder { color: #444; }
+.sui-zm__input { width: 100%; background: #111114; border: 1px solid #1e1e22; border-radius: 6px; color: #ededed; font-size: 12px; padding: 8px; outline: none; box-sizing: border-box; }
+.sui-zm__input:focus { border-color: #a78bfa; }
+.sui-zm__input::placeholder { color: #444; }
+.sui-zm__row { display: flex; gap: 8px; margin-bottom: 8px; }
+.sui-zm__field { flex: 1; }
+
+.sui-zm__btn { width: 100%; background: #a78bfa; border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 500; padding: 10px; cursor: pointer; transition: opacity 0.2s; }
+.sui-zm__btn:hover { opacity: 0.85; }
+.sui-zm__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.sui-zm__btn--dl { background: #1a1a3a; border: 1px solid #2a2a5a; color: #4da2ff; }
+.sui-zm__btn--dl:hover { background: #2a2a5a; }
+
+.sui-zm__info { margin-bottom: 8px; }
+.sui-zm__info-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11px; border-bottom: 1px solid #111114; }
+.sui-zm__info-row span { color: #888; }
+.sui-zm__info-row code { color: #ededed; font-family: monospace; font-size: 10px; background: #111114; padding: 2px 6px; border-radius: 3px; }
+
+.sui-zm__list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+.sui-zm__identity { background: #111114; border: 1px solid #1e1e22; border-radius: 6px; padding: 8px 10px; }
+.sui-zm__identity--selected { border-color: #a78bfa40; }
+.sui-zm__identity-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.sui-zm__identity-idx { color: #a78bfa; font-size: 10px; font-weight: 700; }
+.sui-zm__identity-addr { font-size: 10px; font-family: monospace; color: #ccc; }
+.sui-zm__identity-meta { font-size: 9px; color: #555; display: flex; gap: 12px; margin-bottom: 6px; }
+.sui-zm__identity-actions { display: flex; gap: 6px; align-items: center; }
+
+.sui-zm__btn-sm { background: #1e1e22; border: 1px solid #2a2a30; border-radius: 4px; color: #ccc; font-size: 10px; padding: 3px 8px; cursor: pointer; }
+.sui-zm__btn-sm:hover { border-color: #4da2ff; color: #4da2ff; }
+.sui-zm__btn-sm--verify { border-color: #a78bfa40; color: #a78bfa; }
+.sui-zm__btn-sm--verify:hover { border-color: #a78bfa; }
+.sui-zm__verify-ok { color: #4ade80; font-size: 10px; font-weight: 600; }
+.sui-zm__verify-fail { color: #f87171; font-size: 10px; font-weight: 600; }
+
+.sui-zm__error { background: #2a0000; border: 1px solid #4a0000; border-radius: 8px; padding: 8px 12px; font-size: 11px; color: #ff6b6b; margin-bottom: 10px; }
+
+.sui-zm__footer { display: flex; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid #1e1e22; font-size: 10px; }
+.sui-zm__disclaimer { color: #555; margin-left: auto; font-style: italic; }
