@@ -1397,7 +1397,18 @@ function BtcChartView() {
     const fetchTicker = async () => {
       try {
         let p: number, ch: number, high: number, low: number, vol: number, quoteVol: number
-        if (symbolInfoRef.current.exchange === 'bybit') {
+        // Always try Binance futures first (most accurate spot-aligned price)
+        const binFut = await fetch(`https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=${symbol}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+        if (binFut && !stopped && binFut.lastPrice) {
+          p = +binFut.lastPrice
+          ch = +binFut.priceChangePercent
+          high = +binFut.highPrice
+          low = +binFut.lowPrice
+          vol = +binFut.volume
+          quoteVol = +binFut.quoteVolume
+        } else if (symbolInfoRef.current.exchange === 'bybit') {
           const cat =
             'bybitCategory' in symbolInfoRef.current
               ? symbolInfoRef.current.bybitCategory
