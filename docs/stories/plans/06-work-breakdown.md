@@ -4,7 +4,7 @@
 
 Owner type: Product/engineering lead
 
-- Keep `docs/plans/README.md` as the planning index.
+- Keep `docs/stories/plans/README.md` as the planning index.
 - Keep source-specific docs in `docs/deepbook/` and `docs/deepbook/predict/`.
 - Decide whether `deepbook.html` becomes the main user-facing DeepBook entry.
 - Confirm the first build target:
@@ -184,4 +184,3 @@ Acceptance:
 - Wallet connection works across DeepBook Suite.
 - Plugin CSS remains isolated in Shadow DOM.
 - Production plugin paths resolve.
-

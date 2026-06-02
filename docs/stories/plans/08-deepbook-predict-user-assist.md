@@ -212,7 +212,7 @@ sequenceDiagram
 - `docs/deepbook/btc/order-flow-overlay.md`
 - `docs/deepbook/onchain-finance/deepbook-predict.md`
 - `plugins/sui-deepbook-predict/docs/ARCHITECTURE.md`
-- `docs/plans/10-interactive-predict-position-chart.md`
+- `docs/stories/plans/10-interactive-predict-position-chart.md`
 
 ## Assumptions
 

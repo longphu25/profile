@@ -154,8 +154,8 @@ interface PositionOverlay {
 
 ## Related Docs
 
-- `docs/plans/08-deepbook-predict-user-assist.md`
-- `docs/plans/09-predict-manager-bot-architecture.md`
+- `docs/stories/plans/08-deepbook-predict-user-assist.md`
+- `docs/stories/plans/09-predict-manager-bot-architecture.md`
 - `docs/deepbook/onchain-finance/deepbook-predict.md`
 - `docs/deepbook/btc/overview.md`
 - `docs/deepbook/btc/order-flow-overlay.md`

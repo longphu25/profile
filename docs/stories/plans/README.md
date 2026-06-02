@@ -1,6 +1,8 @@
-# Product Plans Index
+# Story Plans Index
 
-This folder collects the planning material discussed for the DeepBook / Predict / TaskOS direction.
+This folder collects story-sized planning material for the DeepBook / Predict /
+TaskOS direction. It lives under `docs/stories/` because these files describe
+candidate work slices, roadmap order, and implementation packets.
 
 ## Files
 
@@ -17,6 +19,7 @@ This folder collects the planning material discussed for the DeepBook / Predict 
 | [09-predict-manager-bot-architecture.md](09-predict-manager-bot-architecture.md) | Non-custodial bot architecture for user PredictManager monitoring, user-signed PTBs, keepers, and future vault automation. |
 | [10-interactive-predict-position-chart.md](10-interactive-predict-position-chart.md) | Interactive Predict chart for click-to-select binary strikes, drag-to-select ranges, and minted position overlays. |
 | [11-deepbook-suite-modular-refactor.md](11-deepbook-suite-modular-refactor.md) | Refactor plan for `deepbook.html`, reusable plugin modules, thin Predict plugin entry, clean architecture, and chart integration. |
+| [12-deepbook-predict-standalone-chart-trading.md](12-deepbook-predict-standalone-chart-trading.md) | Standalone `deepbook-predict.html` plan with BTC-chart-style host, wallet wiring, chart trade popup, DUSDC preview, and existing-position overlays. |
 
 ## Recommended Build Order
 
@@ -31,3 +34,4 @@ This folder collects the planning material discussed for the DeepBook / Predict 
 9. Add non-custodial bot support for PredictManager monitoring and settled-position keeper flows.
 10. Add interactive chart-based position picking and position overlays for binary and range Predict positions.
 11. Refactor the DeepBook Suite and Predict plugin into reusable clean-architecture modules before broader sub-plugin splitting.
+12. Add the standalone DeepBook Predict page with chart-click DUSDC trade popup and wallet-scoped position overlays.

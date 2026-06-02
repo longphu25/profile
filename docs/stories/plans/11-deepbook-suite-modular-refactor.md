@@ -30,7 +30,7 @@ Existing reusable pieces:
 - `plugins/sui-deepbook-predict/components/*` for many tabs.
 - `plugins/sui-deepbook-predict/strategies/*` for pure strategy simulations.
 - `plugins/sui-deepbook-predict/oracleService.ts` and hooks for shared oracle state.
-- `docs/plans/10-interactive-predict-position-chart.md` for chart interaction behavior.
+- `docs/stories/plans/10-interactive-predict-position-chart.md` for chart interaction behavior.
 
 ## Target Architecture
 
