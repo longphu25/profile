@@ -2,6 +2,24 @@
 
 > Project memory vault. Open this folder as an Obsidian vault.
 
+## Harness
+
+- [[README]] — Documentation map and folder roles
+- [[REFERENCE]] — External references and repo reference docs
+- [[SETUP]] — Harness, RTK, QMD, and MCP setup notes
+- [[HARNESS]] — Human-agent collaboration model for this repo
+- [[FEATURE_INTAKE]] — Tiny / normal / high-risk classification before work
+- [[ARCHITECTURE]] — Architecture boundaries and source docs
+- [[TEST_MATRIX]] — Validation expectations by work type
+- [[HARNESS_BACKLOG]] — Missing harness improvements
+- [[QMD]] — Local docs search setup without local LLM models
+- [[product/README]] — Product contract map
+- [[stories/README]] — Story packet and plan folder
+- [[decisions/README]] — Durable decision records
+- [[templates/story]] — Story template
+- [[templates/decision]] — Decision template
+- [[templates/validation]] — Validation report template
+
 ## Project Guide
 
 - [[project-overview]] — Bức tranh tổng thể: mục tiêu repo, các lớp hệ thống, lộ trình đọc
@@ -86,6 +104,11 @@
 - [[deepbook/error-log]] — Error tracking
 - [[deepbook/SESSION-CONTEXT]] — Session context notes
 - [[deepbook-plugins]] — Plugin list (root level)
+
+## Story Plans
+
+- [[stories/plans/README]] — DeepBook Predict / TaskOS planning index
+- [[stories/plans/12-deepbook-predict-standalone-chart-trading]] — Standalone `deepbook-predict.html` plan with chart-click DUSDC trade popup and wallet-scoped position overlays
 
 ## Walrus Storage (3 plugins)
 

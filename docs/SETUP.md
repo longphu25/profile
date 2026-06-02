@@ -1,0 +1,88 @@
+# Setup
+
+This page records repo-level setup for agents and local documentation search.
+
+## Agent Harness
+
+Read these docs first when starting documentation or implementation work:
+
+1. `docs/README.md`
+2. `docs/HARNESS.md`
+3. `docs/FEATURE_INTAKE.md`
+4. `docs/ARCHITECTURE.md`
+5. `docs/TEST_MATRIX.md`
+
+Use these folders consistently:
+
+- `docs/product/`: stable product truth.
+- `docs/stories/`: scoped plans, story packets, and roadmap slices.
+- `docs/decisions/`: durable tradeoffs and architecture decisions.
+- `docs/templates/`: reusable formats for stories, decisions, and validation.
+
+## RTK
+
+RTK is installed and configured for Codex.
+
+```bash
+rtk --version
+rtk init -g --codex
+rtk gain
+```
+
+Current observed binary:
+
+```text
+/usr/local/bin/rtk
+```
+
+## QMD
+
+QMD is installed and configured for simple local docs search.
+
+```bash
+qmd --version
+qmd collection list
+qmd search "plugin architecture" -c profile-docs
+qmd get qmd://profile-docs/ARCHITECTURE.md
+qmd update
+```
+
+Current collection:
+
+```text
+profile-docs
+Path: docs/
+Mask: **/*.md
+```
+
+Use `qmd search` and `qmd get` for normal work. Do not run `qmd query`,
+`qmd vsearch`, or `qmd embed` unless a task explicitly requires local models.
+
+## QMD MCP
+
+Codex global config contains:
+
+```toml
+[mcp_servers.qmd]
+command = "qmd"
+args = [ "mcp" ]
+enabled = true
+```
+
+The MCP `query` tool defaults to reranking. If using that tool, pass
+`rerank: false` to keep the setup model-free. Prefer CLI `qmd search` for
+ordinary docs lookup.
+
+Restart Codex after changing `~/.codex/config.toml` so the MCP server list is
+reloaded.
+
+## QMD Model Policy
+
+Cached QMD GGUF model files were removed from:
+
+```text
+~/.cache/qmd/models/
+```
+
+`qmd status` can still display upstream default model URLs. That does not mean
+models are present locally. Check the cache directory if in doubt.

@@ -13,3 +13,11 @@ details.
 
 For Sui TypeScript SDK 2.0 migration guidance (breaking changes, new client APIs, client extensions,
 dApp Kit rewrite, etc.), see `.agents/skills/sui-sdk-2-migration/SKILL.md`.
+
+## Project Harness
+
+- Start docs work at `docs/README.md`, `docs/HARNESS.md`, and `docs/FEATURE_INTAKE.md`.
+- Use `docs/product/` for stable product truth, `docs/stories/` for scoped plans/work packets,
+  `docs/decisions/` for durable tradeoffs, and existing domain folders for technical depth.
+- For local docs search, prefer `qmd search ... -c profile-docs` and `qmd get ...`.
+  Do not use `qmd query` unless explicitly needed, because it can use local GGUF models.
