@@ -30,6 +30,7 @@ import {
 import { drawVolumeProfile as drawVP } from './volume-profile'
 import { drawOrderFlow, type OFOverlaySignal } from './order-flow-overlay'
 import { computeSMC, type SMCResult } from './smc'
+import { buildBoxFlipSignals, type BoxFlipResult } from './box-flip'
 import { downloadChartSnapshot } from './snapshot'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -432,6 +433,7 @@ interface SidebarState {
   ofLog: OrderFlowSignal[]
   vp: { poc: string; vah: string; val: string; pos: string }
   vpHvn: number
+  boxFlip: { count: number; last: 'B' | 'S' | null }
   /** Latest indicator snapshot for alert evaluation. */
   rsiNow: number | null
   nweUp: number | null
@@ -452,6 +454,7 @@ const INITIAL_SIDEBAR: SidebarState = {
   ofLog: [],
   vp: { poc: '—', vah: '—', val: '—', pos: '—' },
   vpHvn: 0,
+  boxFlip: { count: 0, last: null },
   rsiNow: null,
   nweUp: null,
   nweLo: null,
@@ -675,6 +678,78 @@ function drawSMCOverlay(
   ctx.setTransform(1, 0, 0, 1, 0, 0)
 }
 
+function drawBoxFlipOverlay(
+  canvas: HTMLCanvasElement,
+  mainEl: HTMLElement,
+  chart: any,
+  series: any,
+  candles: Candle[],
+  boxFlip: BoxFlipResult,
+  visible: boolean,
+) {
+  const rect = mainEl.getBoundingClientRect()
+  const dpr = window.devicePixelRatio || 1
+  canvas.width = Math.max(1, Math.floor(rect.width * dpr))
+  canvas.height = Math.max(1, Math.floor(rect.height * dpr))
+  canvas.style.width = `${rect.width}px`
+  canvas.style.height = `${rect.height}px`
+  canvas.style.top = '0'
+  canvas.style.left = '0'
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.clearRect(0, 0, rect.width, rect.height)
+  if (!visible || !candles.length) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    return
+  }
+
+  const timeScale = chart.timeScale()
+  const toX = (idx: number) => {
+    const candle = candles[Math.max(0, Math.min(candles.length - 1, idx))]
+    const x = timeScale.timeToCoordinate(candle.time)
+    return typeof x === 'number' ? x : null
+  }
+  const toY = (price: number) => {
+    const y = series.priceToCoordinate(price)
+    return typeof y === 'number' ? y : null
+  }
+
+  for (const box of boxFlip.boxes) {
+    const x1 = toX(box.startIndex)
+    const x2 = toX(box.endIndex ?? candles.length - 1)
+    const yHigh = toY(box.high)
+    const yLow = toY(box.low)
+    if (x1 == null || x2 == null || yHigh == null || yLow == null) continue
+
+    const x = Math.min(x1, x2)
+    const y = Math.min(yHigh, yLow)
+    const w = Math.max(4, Math.abs(x2 - x1))
+    const h = Math.max(2, Math.abs(yLow - yHigh))
+    const isBull = box.dir === 'B'
+    const isBear = box.dir === 'S'
+
+    ctx.fillStyle = isBull
+      ? 'rgba(34,197,94,0.055)'
+      : isBear
+        ? 'rgba(249,115,22,0.055)'
+        : 'rgba(148,163,184,0.045)'
+    ctx.strokeStyle = isBull
+      ? 'rgba(34,197,94,0.34)'
+      : isBear
+        ? 'rgba(249,115,22,0.34)'
+        : 'rgba(148,163,184,0.20)'
+    ctx.lineWidth = 1
+    ctx.setLineDash([5, 4])
+    ctx.fillRect(x, y, w, h)
+    ctx.strokeRect(x, y, w, h)
+  }
+
+  ctx.setLineDash([])
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+}
+
 function BtcChartView() {
   const rootRef = useRef<HTMLDivElement>(null)
   const mainElRef = useRef<HTMLDivElement>(null)
@@ -683,7 +758,9 @@ function BtcChartView() {
   const vpCanvasRef = useRef<HTMLCanvasElement>(null)
   const ofCanvasRef = useRef<HTMLCanvasElement>(null)
   const smcCanvasRef = useRef<HTMLCanvasElement>(null)
+  const boxCanvasRef = useRef<HTMLCanvasElement>(null)
   const smcDataRef = useRef<SMCResult>({ structures: [], orderBlocks: [], fvgs: [] })
+  const boxFlipRef = useRef<BoxFlipResult>({ boxes: [], signals: [] })
   const ofOverlayRef = useRef<OFOverlaySignal[]>([])
   const legendRef = useRef<HTMLDivElement>(null)
   const chartRefs = useRef<ChartRefs | null>(null)
@@ -899,6 +976,12 @@ function BtcChartView() {
     const rsi = calcRSI(data, 14)
     const macd = calcMACD(data)
     const of_ = buildOrderFlow(data, nwe)
+    const boxFlip = buildBoxFlipSignals(data, {
+      minBoxBars: 10,
+      maxBoxHeightPct: 0.012,
+      breakoutConfirm: 'close',
+      bufferPct: 0.0007,
+    })
     const ml = mlSignal(data, nwe, sma50, sma200, rsi, macd)
 
     const toLine = (arr: (number | null)[]) =>
@@ -918,6 +1001,29 @@ function BtcChartView() {
     // Order flow markers are drawn on our own overlay canvas in the
     // top/bottom gutter bands instead of the built-in setMarkers (which
     // hugs wicks and quickly becomes unreadable).
+    refs.candleSeries.setMarkers(
+      v.boxFlip
+        ? boxFlip.signals.map((sig) => ({
+            time: sig.time,
+            position: sig.dir === 'B' ? 'belowBar' : 'aboveBar',
+            color: sig.dir === 'B' ? '#22c55e' : '#f97316',
+            shape: sig.dir === 'B' ? 'arrowUp' : 'arrowDown',
+            text: sig.dir,
+          }))
+        : [],
+    )
+    boxFlipRef.current = boxFlip
+    if (boxCanvasRef.current && mainElRef.current && refs.candleSeries) {
+      drawBoxFlipOverlay(
+        boxCanvasRef.current,
+        mainElRef.current,
+        refs.mainChart,
+        refs.candleSeries,
+        data,
+        boxFlip,
+        v.boxFlip,
+      )
+    }
     ofOverlayRef.current = of_.overlay
     if (ofCanvasRef.current && mainElRef.current && refs.candleSeries) {
       drawOrderFlow(
@@ -1090,6 +1196,10 @@ function BtcChartView() {
       sigNwe,
       ml,
       ofLog: of_.log,
+      boxFlip: {
+        count: boxFlip.signals.length,
+        last: boxFlip.signals[boxFlip.signals.length - 1]?.dir ?? null,
+      },
       rsiNow: rsi[i] ?? null,
       nweUp: nwe.upper[i] ?? null,
       nweLo: nwe.lower[i] ?? null,
@@ -1281,6 +1391,17 @@ function BtcChartView() {
           visRef.current.smc,
         )
       }
+      if (boxCanvasRef.current && mainElRef.current) {
+        drawBoxFlipOverlay(
+          boxCanvasRef.current,
+          mainElRef.current,
+          mainChart,
+          candleSeries,
+          candlesRef.current,
+          boxFlipRef.current,
+          visRef.current.boxFlip,
+        )
+      }
     })
 
     mainChart.subscribeCrosshairMove((param: any) => {
@@ -1333,6 +1454,17 @@ function BtcChartView() {
           candleSeries,
           visRef.current.of ? ofOverlayRef.current : [],
           true,
+        )
+      }
+      if (boxCanvasRef.current) {
+        drawBoxFlipOverlay(
+          boxCanvasRef.current,
+          mainElRef.current,
+          mainChart,
+          candleSeries,
+          candlesRef.current,
+          boxFlipRef.current,
+          visRef.current.boxFlip,
         )
       }
     }
@@ -1994,6 +2126,7 @@ function BtcChartView() {
     { key: 'ma50', label: 'MA50' },
     { key: 'ma200', label: 'MA200' },
     { key: 'smc', label: 'SMC' },
+    { key: 'boxFlip', label: 'Box Flip' },
     { key: 'of', label: 'Order Flow' },
     { key: 'vp', label: 'Vol Profile', sep: true },
     { key: 'rsi', label: 'RSI' },
@@ -2179,6 +2312,7 @@ function BtcChartView() {
           <div className="btc-chart__legend" ref={legendRef} />
           <canvas className="btc-chart__of-canvas" ref={ofCanvasRef} />
           <canvas className="btc-chart__smc-canvas" ref={smcCanvasRef} />
+          <canvas className="btc-chart__box-canvas" ref={boxCanvasRef} />
           <div className="btc-chart__main" ref={mainElRef} />
           <div className="btc-chart__rsi" ref={rsiElRef} />
           <div className="btc-chart__vol" ref={volElRef} />
@@ -2434,6 +2568,31 @@ function BtcChartView() {
             </div>
           </div>
 
+          {/* Box Flip */}
+          <div className="btc-chart__panel">
+            <div className="btc-chart__panel-title">Box breakout flip</div>
+            <div className="btc-chart__row">
+              <span className="btc-chart__row-label">Signals</span>
+              <span className="btc-chart__row-val">{sidebar.boxFlip.count}</span>
+            </div>
+            <div className="btc-chart__row">
+              <span className="btc-chart__row-label">Last flip</span>
+              <span
+                className={`btc-chart__row-val ${
+                  sidebar.boxFlip.last === 'B' ? 'up' : sidebar.boxFlip.last === 'S' ? 'dn' : ''
+                }`}
+              >
+                {sidebar.boxFlip.last ?? '—'}
+              </span>
+            </div>
+            <div className="btc-chart__of-note">
+              <div>
+                <b className="up">B</b> / <b className="dn">S</b> only prints when box breakout
+                direction flips.
+              </div>
+            </div>
+          </div>
+
           {/* MH Band */}
           <div className="btc-chart__panel">
             <div className="btc-chart__panel-title">Midnight Hunter Band</div>
@@ -2580,7 +2739,8 @@ function BtcChartView() {
         </span>
         <span>{lastUpdate}</span>
         <span>OF · {sidebar.ofLog.length}</span>
-        <span className="btc-chart__status-tag">NWE · VP · Order Flow</span>
+        <span>Box · {sidebar.boxFlip.count}</span>
+        <span className="btc-chart__status-tag">NWE · VP · Order Flow · Box Flip</span>
       </div>
     </div>
   )

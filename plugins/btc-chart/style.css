@@ -308,6 +308,13 @@
   pointer-events: none;
   z-index: 4;
 }
+.btc-chart__box-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 3;
+}
 
 /* Floating legend */
 .btc-chart__legend {

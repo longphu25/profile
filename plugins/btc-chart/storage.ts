@@ -13,6 +13,7 @@ export interface VisFlags {
   rsi: boolean
   vol: boolean
   smc: boolean
+  boxFlip: boolean
 }
 
 export interface ZoomState {
@@ -42,7 +43,17 @@ export const DEFAULT_CONFIG: ChartConfig = {
   version: 1,
   interval: '1h',
   symbol: 'BTCUSDT',
-  vis: { nwe: true, ma50: true, ma200: true, of: true, vp: true, rsi: true, vol: true, smc: false },
+  vis: {
+    nwe: true,
+    ma50: true,
+    ma200: true,
+    of: true,
+    vp: true,
+    rsi: true,
+    vol: true,
+    smc: false,
+    boxFlip: false,
+  },
   zoom: null,
   alerts: [],
   sound: { enabled: true, volume: 0.4 },
