@@ -617,7 +617,7 @@ function BtcChartView() {
   const sidebarRef = useRef<SidebarState>(INITIAL_SIDEBAR)
 
   const [interval, setInterval_] = useState<Interval>(cfgInit.interval as Interval)
-  const [symbol, setSymbol] = useState<SymbolId>('BTCUSDT')
+  const [symbol, setSymbol] = useState<SymbolId>((cfgInit.symbol as SymbolId) || 'BTCUSDT')
   const symbolInfo = SYMBOLS.find((s) => s.symbol === symbol)!
   // Also keep a ref so effects always see the latest value without stale closures
   const symbolInfoRef = useRef(symbolInfo)
@@ -672,6 +672,7 @@ function BtcChartView() {
       saveConfig({
         version: 1,
         interval,
+        symbol,
         vis,
         zoom: zoom === undefined ? loadConfig().zoom : zoom,
         alerts,
@@ -680,7 +681,7 @@ function BtcChartView() {
         minimal: false,
       })
     },
-    [interval, vis, alerts, sound, notifAllowed],
+    [interval, symbol, vis, alerts, sound, notifAllowed],
   )
   useEffect(() => {
     persist(undefined)
@@ -1622,6 +1623,7 @@ function BtcChartView() {
     exportConfig({
       version: 1,
       interval,
+      symbol,
       vis,
       zoom: loadConfig().zoom,
       alerts,
@@ -1629,7 +1631,7 @@ function BtcChartView() {
       notifications: notifAllowed,
       minimal: false,
     })
-  }, [interval, vis, alerts, sound, notifAllowed])
+  }, [interval, symbol, vis, alerts, sound, notifAllowed])
 
   const importNow = useCallback(
     async (file: File) => {

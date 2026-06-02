@@ -28,18 +28,19 @@ export interface SoundConfig {
 export interface ChartConfig {
   version: 1
   interval: string
+  symbol: string
   vis: VisFlags
   zoom: ZoomState | null
   alerts: AlertRule[]
   sound: SoundConfig
   notifications: boolean
-  /** Minimal mode = chart-only canvas with side VP, hide all chrome. */
   minimal: boolean
 }
 
 export const DEFAULT_CONFIG: ChartConfig = {
   version: 1,
   interval: '1h',
+  symbol: 'BTCUSDT',
   vis: { nwe: true, ma50: true, ma200: true, of: true, vp: true, rsi: true, vol: true },
   zoom: null,
   alerts: [],
