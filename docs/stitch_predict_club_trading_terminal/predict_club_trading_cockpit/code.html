@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Predict Club - Trading Cockpit</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-high": "#232c28",
+                      "inverse-surface": "#dbe5df",
+                      "secondary-container": "#3a4a5f",
+                      "on-error-container": "#ffdad6",
+                      "secondary-fixed": "#d3e4fe",
+                      "outline": "#83958d",
+                      "inverse-on-surface": "#29322f",
+                      "on-primary-container": "#00725a",
+                      "tertiary-container": "#ffe150",
+                      "primary": "#fdfffc",
+                      "background": "#0c1512",
+                      "primary-fixed-dim": "#00e0b3",
+                      "error-container": "#93000a",
+                      "surface-dim": "#0c1512",
+                      "tertiary-fixed-dim": "#e2c635",
+                      "surface-bright": "#323b37",
+                      "outline-variant": "#3a4a44",
+                      "on-background": "#dbe5df",
+                      "on-surface": "#dbe5df",
+                      "surface-container-lowest": "#07100d",
+                      "secondary-fixed-dim": "#b7c8e1",
+                      "surface-tint": "#00e0b3",
+                      "primary-container": "#00ffcc",
+                      "tertiary-fixed": "#ffe257",
+                      "surface-container-highest": "#2e3733",
+                      "on-primary-fixed-variant": "#00513f",
+                      "tertiary": "#fffeff",
+                      "on-secondary-fixed-variant": "#38485d",
+                      "surface": "#0c1512",
+                      "surface-variant": "#2e3733",
+                      "surface-container": "#19211e",
+                      "on-secondary-container": "#a9bad3",
+                      "on-secondary-fixed": "#0b1c30",
+                      "on-primary": "#00382b",
+                      "on-tertiary": "#393000",
+                      "on-tertiary-fixed-variant": "#534600",
+                      "inverse-primary": "#006b54",
+                      "on-secondary": "#213145",
+                      "on-primary-fixed": "#002118",
+                      "on-tertiary-container": "#746300",
+                      "on-error": "#690005",
+                      "primary-fixed": "#24ffcd",
+                      "surface-container-low": "#151d1a",
+                      "on-surface-variant": "#b9cbc2",
+                      "on-tertiary-fixed": "#211b00",
+                      "error": "#ffb4ab",
+                      "secondary": "#b7c8e1"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "sm": "0.5rem",
+                      "xl": "1.5rem",
+                      "md": "0.75rem",
+                      "lg": "1rem",
+                      "panel-gutter": "1px",
+                      "xs": "0.25rem"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "data-sm": [
+                              "JetBrains Mono"
+                      ],
+                      "data-md": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "data-lg": [
+                              "JetBrains Mono"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "body-base": [
+                              "Inter"
+                      ],
+                      "label-caps": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "18px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "data-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "data-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "data-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-base": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "10px",
+                              {
+                                      "lineHeight": "12px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        /* Tabular lining nums for data fields */
+        .tabular-nums { font-variant-numeric: tabular-nums; }
+        
+        /* Subtle glow for mint elements */
+        .glow-mint { box-shadow: 0 0 8px rgba(0, 224, 179, 0.3); }
+        .glow-mint-active:focus-within { box-shadow: 0 0 12px rgba(0, 224, 179, 0.4); border-color: #00e0b3; }
+        
+        /* Custom scrollbar for dark terminal look */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0c1512; }
+        ::-webkit-scrollbar-thumb { background: #3a4a44; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #83958d; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-base h-screen flex flex-col overflow-hidden">
+<!-- TopNavBar Shared Component -->
+<header class="flex justify-between items-center w-full px-lg h-14 bg-surface-container-lowest border-b border-outline-variant shrink-0">
+<div class="flex items-center gap-xl">
+<div class="font-headline-lg text-headline-lg font-black text-primary-fixed tracking-tight">PREDICT CLUB</div>
+<nav class="hidden md:flex gap-lg">
+<a class="text-primary border-b-2 border-primary-fixed pb-1 font-headline-md text-headline-md hover:text-primary transition-colors duration-200" href="#">Clubs</a>
+<a class="text-on-surface-variant font-body-base text-body-base hover:text-primary transition-colors duration-200 py-1" href="#">Market</a>
+<a class="text-on-surface-variant font-body-base text-body-base hover:text-primary transition-colors duration-200 py-1" href="#">History</a>
+<a class="text-on-surface-variant font-body-base text-body-base hover:text-primary transition-colors duration-200 py-1" href="#">Leaderboard</a>
+</nav>
+</div>
+<div class="flex items-center gap-lg">
+<!-- Balances -->
+<div class="hidden lg:flex items-center gap-md font-data-sm text-data-sm text-on-surface-variant bg-surface-container-high px-sm py-xs rounded border border-outline-variant">
+<span class="flex items-center gap-1"><span class="text-primary-fixed-dim">SUI:</span> <span class="tabular-nums">1,240.50</span></span>
+<div class="w-px h-4 bg-outline-variant"></div>
+<span class="flex items-center gap-1"><span class="text-primary-fixed-dim">USDC:</span> <span class="tabular-nums">5,000.00</span></span>
+<div class="w-px h-4 bg-outline-variant"></div>
+<span class="flex items-center gap-1"><span class="text-primary-fixed-dim">DUSDC:</span> <span class="tabular-nums">2,500.00</span></span>
+</div>
+<div class="flex items-center gap-sm text-primary-fixed-dim">
+<button class="p-xs hover:bg-surface-bright rounded transition-colors"><span class="material-symbols-outlined">account_balance_wallet</span></button>
+<button class="p-xs hover:bg-surface-bright rounded transition-colors"><span class="material-symbols-outlined">sensors</span></button>
+</div>
+<button class="bg-primary-fixed-dim text-on-primary-fixed px-md py-xs rounded font-data-sm text-data-sm hover:bg-primary-container transition-colors">
+                Connect Wallet
+            </button>
+</div>
+</header>
+<!-- Decision Strip (Sub-header) -->
+<div class="w-full bg-surface-container border-b border-outline-variant px-lg py-sm flex flex-wrap lg:flex-nowrap items-center justify-between gap-md shrink-0">
+<div class="flex items-center gap-lg flex-wrap">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Asset</span>
+<div class="flex items-center gap-sm">
+<span class="font-data-lg text-data-lg font-bold">BTC</span>
+<span class="font-data-md text-data-md text-on-surface-variant tabular-nums">$64,231.50</span>
+</div>
+</div>
+<div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Direction</span>
+<span class="font-data-md text-data-md text-primary-fixed-dim font-bold flex items-center gap-1"><span class="material-symbols-outlined text-sm">trending_up</span> UP</span>
+</div>
+<div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Strike</span>
+<span class="font-data-md text-data-md tabular-nums">65,000</span>
+</div>
+<div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Expiry</span>
+<span class="font-data-md text-data-md tabular-nums text-tertiary-fixed-dim">02:14:55</span>
+</div>
+<div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Pledged</span>
+<span class="font-data-md text-data-md tabular-nums">45,000 DUSDC</span>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-2 border border-primary-fixed-dim rounded-full px-sm py-1 bg-[#00e0b31a]">
+<div class="w-2 h-2 rounded-full bg-primary-fixed-dim glow-mint"></div>
+<span class="font-data-sm text-data-sm text-primary-fixed-dim uppercase tracking-widest">Ready</span>
+</div>
+<button class="bg-primary-fixed-dim text-on-primary-fixed px-lg py-sm rounded font-headline-md text-headline-md hover:bg-primary-container transition-colors glow-mint">
+                Accept Signal
+            </button>
+</div>
+</div>
+<!-- Main Viewport -->
+<div class="flex-1 flex flex-col lg:flex-row overflow-hidden bg-background p-[1px] gap-[1px]">
+<!-- LEFT COLUMN: Club Details -->
+<aside class="w-full lg:w-72 bg-surface-container flex flex-col shrink-0 border border-outline-variant lg:border-none">
+<div class="p-md border-b border-outline-variant bg-surface-container-high">
+<h2 class="font-headline-md text-headline-md text-primary">Alpha Sui Predictors</h2>
+<div class="flex items-center gap-sm mt-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">military_tech</span>
+<span class="font-data-sm text-data-sm">Leader: <span class="text-secondary-fixed">@SuiWhale</span></span>
+</div>
+</div>
+<div class="p-xs bg-surface-container-highest border-b border-outline-variant flex justify-between items-center px-md">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Members (12)</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Status</span>
+</div>
+<div class="flex-1 overflow-y-auto">
+<ul class="flex flex-col">
+<!-- Member Row -->
+<li class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors">
+<div class="flex items-center gap-sm">
+<div class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data-sm text-data-sm text-on-surface-variant border border-outline-variant">T</div>
+<span class="font-data-sm text-data-sm">TraderX</span>
+</div>
+<span class="font-data-sm text-data-sm text-primary-fixed-dim">Pledged</span>
+</li>
+<li class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors">
+<div class="flex items-center gap-sm">
+<div class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data-sm text-data-sm text-on-surface-variant border border-outline-variant">N</div>
+<span class="font-data-sm text-data-sm">NovaNode</span>
+</div>
+<span class="font-data-sm text-data-sm text-on-surface-variant">Watching</span>
+</li>
+<li class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors">
+<div class="flex items-center gap-sm">
+<div class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data-sm text-data-sm text-on-surface-variant border border-outline-variant">Z</div>
+<span class="font-data-sm text-data-sm">ZeroSum</span>
+</div>
+<span class="font-data-sm text-data-sm text-primary-fixed-dim">Pledged</span>
+</li>
+<!-- Add a few more purely visual rows to fill space -->
+<li class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors opacity-70">
+<div class="flex items-center gap-sm">
+<div class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data-sm text-data-sm text-on-surface-variant border border-outline-variant">B</div>
+<span class="font-data-sm text-data-sm">BlockHead</span>
+</div>
+<span class="font-data-sm text-data-sm text-on-surface-variant">Watching</span>
+</li>
+<li class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors opacity-70">
+<div class="flex items-center gap-sm">
+<div class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data-sm text-data-sm text-on-surface-variant border border-outline-variant">S</div>
+<span class="font-data-sm text-data-sm">SuiMaxi</span>
+</div>
+<span class="font-data-sm text-data-sm text-on-surface-variant">Watching</span>
+</li>
+</ul>
+</div>
+</aside>
+<!-- CENTER COLUMN: Prediction Room -->
+<main class="flex-1 bg-surface-container flex flex-col border border-outline-variant lg:border-none relative">
+<div class="p-md border-b border-outline-variant bg-surface-container-high flex justify-between items-center">
+<h2 class="font-headline-md text-headline-md text-primary flex items-center gap-2">
+<span class="material-symbols-outlined">analytics</span> Prediction Room
+                </h2>
+<div class="px-sm py-1 bg-surface-container border border-outline-variant rounded font-label-caps text-label-caps text-on-surface-variant">
+                    Phase: FUNDING
+                </div>
+</div>
+<div class="flex-1 overflow-y-auto p-md flex flex-col gap-md">
+<!-- Thesis Panel -->
+<div class="bg-surface-container-lowest border border-outline-variant p-md rounded-lg relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-secondary-fixed"></div>
+<div class="flex justify-between items-start mb-2 ml-2">
+<span class="font-label-caps text-label-caps text-secondary-fixed uppercase tracking-wider">Leader Thesis</span>
+<span class="font-data-sm text-data-sm text-on-surface-variant">12m ago</span>
+</div>
+<p class="font-body-base text-body-base text-on-surface ml-2 leading-relaxed">
+                        "BTC consolidating above support at 63.8k, expecting breakout past 65k within next 2 hours based on increasing order book depth on bid side."
+                    </p>
+</div>
+<!-- Indicator Panel (Bento-ish) -->
+<div class="grid grid-cols-3 gap-panel-gutter bg-outline-variant rounded-lg overflow-hidden border border-outline-variant">
+<div class="bg-surface-container p-sm flex flex-col justify-center items-center gap-1 hover:bg-surface-bright transition-colors">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Box Flip</span>
+<span class="font-data-md text-data-md text-primary-fixed-dim font-bold">Bullish</span>
+</div>
+<div class="bg-surface-container p-sm flex flex-col justify-center items-center gap-1 hover:bg-surface-bright transition-colors">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">RSI (15m)</span>
+<span class="font-data-md text-data-md text-on-surface-variant font-bold">Neutral (52)</span>
+</div>
+<div class="bg-surface-container p-sm flex flex-col justify-center items-center gap-1 hover:bg-surface-bright transition-colors">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Vol Profile</span>
+<span class="font-data-md text-data-md text-primary-fixed-dim font-bold">Bullish</span>
+</div>
+</div>
+<!-- Chart Placeholder Context -->
+<div class="flex-1 min-h-[200px] border border-outline-variant bg-surface-container-lowest rounded-lg flex items-center justify-center relative overflow-hidden">
+<!-- Minimalist visual grid for "chart" feel -->
+<div class="absolute inset-0" style="background-image: linear-gradient(#2e3733 1px, transparent 1px), linear-gradient(90deg, #2e3733 1px, transparent 1px); background-size: 20px 20px; opacity: 0.2;"></div>
+<span class="font-data-md text-data-md text-on-surface-variant relative z-10 flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-4xl opacity-50">candlestick_chart</span>
+                        [ DeepBook Order Flow Visualization ]
+                    </span>
+</div>
+</div>
+</main>
+<!-- RIGHT COLUMN: Risk & Execution -->
+<aside class="w-full lg:w-80 bg-surface-container flex flex-col shrink-0 border border-outline-variant lg:border-none">
+<div class="p-md border-b border-outline-variant bg-surface-container-high">
+<h2 class="font-headline-md text-headline-md text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-error">gpp_maybe</span> Risk &amp; Execution
+                </h2>
+</div>
+<div class="p-md flex flex-col gap-lg flex-1 overflow-y-auto">
+<!-- Readiness Checklist -->
+<div>
+<div class="flex justify-between items-center mb-sm">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Execution Readiness</span>
+<span class="font-data-sm text-data-sm text-on-surface-variant">4/6</span>
+</div>
+<div class="flex flex-col gap-xs">
+<div class="flex items-center gap-sm font-data-sm text-data-sm">
+<span class="material-symbols-outlined text-[16px] text-primary-fixed-dim">check_circle</span>
+<span class="text-on-surface">Signal Received</span>
+</div>
+<div class="flex items-center gap-sm font-data-sm text-data-sm">
+<span class="material-symbols-outlined text-[16px] text-primary-fixed-dim">check_circle</span>
+<span class="text-on-surface">Club Consensus</span>
+</div>
+<div class="flex items-center gap-sm font-data-sm text-data-sm">
+<span class="material-symbols-outlined text-[16px] text-primary-fixed-dim">check_circle</span>
+<span class="text-on-surface">Wallet Connected</span>
+</div>
+<div class="flex items-center gap-sm font-data-sm text-data-sm">
+<span class="material-symbols-outlined text-[16px] text-primary-fixed-dim">check_circle</span>
+<span class="text-on-surface">Liquidity Sourced</span>
+</div>
+<div class="flex items-center gap-sm font-data-sm text-data-sm opacity-50">
+<span class="material-symbols-outlined text-[16px] text-outline">radio_button_unchecked</span>
+<span class="text-on-surface-variant">Funds Escrowed</span>
+</div>
+<div class="flex items-center gap-sm font-data-sm text-data-sm opacity-50">
+<span class="material-symbols-outlined text-[16px] text-outline">radio_button_unchecked</span>
+<span class="text-on-surface-variant">Contract Signed</span>
+</div>
+</div>
+</div>
+<!-- Exposure Panel -->
+<div class="bg-surface-container-highest border border-outline-variant p-md rounded-lg flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<span class="font-data-sm text-data-sm text-on-surface-variant">Your Max Loss</span>
+<span class="font-data-md text-data-md text-error tabular-nums">-500 DUSDC</span>
+</div>
+<div class="w-full h-px bg-outline-variant"></div>
+<div class="flex justify-between items-center">
+<span class="font-data-sm text-data-sm text-on-surface-variant">Est. Payout</span>
+<span class="font-data-md text-data-md text-primary-fixed-dim tabular-nums">+1,250 DUSDC</span>
+</div>
+</div>
+<div class="mt-auto">
+<button class="w-full bg-surface-variant text-on-surface-variant border border-outline px-md py-sm rounded font-headline-md text-headline-md opacity-50 cursor-not-allowed flex justify-center items-center gap-2">
+<span class="material-symbols-outlined">lock</span> Execute Trade
+                    </button>
+<p class="font-data-sm text-data-sm text-center text-on-surface-variant mt-2">Awaiting full escrow funding</p>
+</div>
+</div>
+</aside>
+</div>
+<!-- BOTTOM SECTION: Funding & History -->
+<div class="h-64 bg-surface-container border-t border-outline-variant shrink-0 flex flex-col lg:flex-row gap-panel-gutter overflow-hidden">
+<!-- Funding Router -->
+<div class="flex-1 flex flex-col border-r border-outline-variant">
+<div class="p-xs bg-surface-container-high border-b border-outline-variant px-md flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-secondary-fixed">route</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Funding Router</span>
+</div>
+<div class="flex-1 p-sm flex gap-sm overflow-x-auto items-center">
+<!-- Node 1 -->
+<div class="min-w-[120px] h-24 bg-surface-container-highest border border-primary-fixed-dim rounded-lg p-sm flex flex-col justify-between glow-mint relative">
+<div class="absolute -right-3 top-1/2 w-4 h-px bg-primary-fixed-dim hidden md:block z-10"></div>
+<span class="font-label-caps text-label-caps text-primary-fixed-dim">Ready</span>
+<span class="font-data-sm text-data-sm text-on-surface">Direct Wallet</span>
+<span class="font-data-md text-data-md text-on-surface font-bold tabular-nums">DUSDC</span>
+</div>
+<!-- Node 2 -->
+<div class="min-w-[120px] h-24 bg-surface-container-highest border border-outline-variant rounded-lg p-sm flex flex-col justify-between relative opacity-60">
+<div class="absolute -right-3 top-1/2 w-4 h-px bg-outline-variant hidden md:block z-10"></div>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Standby</span>
+<span class="font-data-sm text-data-sm text-on-surface">Swap</span>
+<span class="font-data-md text-data-md text-on-surface font-bold">DeepBook</span>
+</div>
+<!-- Node 3 -->
+<div class="min-w-[120px] h-24 bg-surface-container-highest border border-outline-variant rounded-lg p-sm flex flex-col justify-between relative opacity-60">
+<div class="absolute -right-3 top-1/2 w-4 h-px bg-outline-variant hidden md:block z-10"></div>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Standby</span>
+<span class="font-data-sm text-data-sm text-on-surface">Borrow</span>
+<span class="font-data-md text-data-md text-on-surface font-bold">Scallop</span>
+</div>
+<!-- Node 4 -->
+<div class="min-w-[120px] h-24 bg-surface-container-highest border border-outline-variant rounded-lg p-sm flex flex-col justify-between relative opacity-60">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Pending</span>
+<span class="font-data-sm text-data-sm text-on-surface">Escrow</span>
+<span class="font-data-md text-data-md text-on-surface font-bold">Predict P2P</span>
+</div>
+</div>
+</div>
+<!-- Escrow / History Tables Container -->
+<div class="flex-[1.5] flex flex-col lg:flex-row gap-panel-gutter bg-outline-variant">
+<!-- Escrow Offers -->
+<div class="flex-1 bg-surface-container flex flex-col">
+<div class="p-xs bg-surface-container-high border-b border-outline-variant px-md">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">P2P Escrow Offers</span>
+</div>
+<div class="flex-1 overflow-y-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-highest font-label-caps text-label-caps text-on-surface-variant uppercase">
+<th class="p-2 font-normal">Provider</th>
+<th class="p-2 font-normal text-right">Amount</th>
+<th class="p-2 font-normal text-right">Rate</th>
+</tr>
+</thead>
+<tbody class="font-data-sm text-data-sm">
+<tr class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors">
+<td class="p-2 text-on-surface">@YieldMax</td>
+<td class="p-2 text-right tabular-nums">1,000 USDC</td>
+<td class="p-2 text-right tabular-nums text-secondary-fixed">0.05%</td>
+</tr>
+<tr class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors">
+<td class="p-2 text-on-surface">@SuiLend</td>
+<td class="p-2 text-right tabular-nums">5,000 USDC</td>
+<td class="p-2 text-right tabular-nums text-secondary-fixed">0.08%</td>
+</tr>
+<tr class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors">
+<td class="p-2 text-on-surface">@DeepLiq</td>
+<td class="p-2 text-right tabular-nums">500 USDC</td>
+<td class="p-2 text-right tabular-nums text-secondary-fixed">0.04%</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Round History -->
+<div class="flex-1 bg-surface-container flex flex-col">
+<div class="p-xs bg-surface-container-high border-b border-outline-variant px-md">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Club Round History</span>
+</div>
+<div class="flex-1 overflow-y-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-highest font-label-caps text-label-caps text-on-surface-variant uppercase">
+<th class="p-2 font-normal">Round</th>
+<th class="p-2 font-normal">Asset</th>
+<th class="p-2 font-normal text-right">PnL</th>
+</tr>
+</thead>
+<tbody class="font-data-sm text-data-sm">
+<tr class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors">
+<td class="p-2 text-on-surface-variant">#4092</td>
+<td class="p-2 font-bold text-on-surface">SUI/USDC</td>
+<td class="p-2 text-right tabular-nums text-primary-fixed-dim">+450.00</td>
+</tr>
+<tr class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors">
+<td class="p-2 text-on-surface-variant">#4091</td>
+<td class="p-2 font-bold text-on-surface">BTC/USDC</td>
+<td class="p-2 text-right tabular-nums text-error">-120.50</td>
+</tr>
+<tr class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors">
+<td class="p-2 text-on-surface-variant">#4089</td>
+<td class="p-2 font-bold text-on-surface">ETH/USDC</td>
+<td class="p-2 text-right tabular-nums text-primary-fixed-dim">+890.25</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<!-- BottomNavBar Shared Component (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-md pb-4 pt-2 bg-surface-container-high md:hidden border-t border-outline-variant shadow-lg rounded-t-xl">
+<a class="flex flex-col items-center justify-center bg-secondary-container text-primary-fixed rounded-full px-md py-xs scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1">groups</span>
+<span class="font-label-caps text-label-caps">Clubs</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-bright px-md py-xs rounded-full transition-colors" href="#">
+<span class="material-symbols-outlined mb-1">query_stats</span>
+<span class="font-label-caps text-label-caps">Predict</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-bright px-md py-xs rounded-full transition-colors" href="#">
+<span class="material-symbols-outlined mb-1">bolt</span>
+<span class="font-label-caps text-label-caps">Execution</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-bright px-md py-xs rounded-full transition-colors" href="#">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-label-caps text-label-caps">Account</span>
+</a>
+</nav>
+</body></html>

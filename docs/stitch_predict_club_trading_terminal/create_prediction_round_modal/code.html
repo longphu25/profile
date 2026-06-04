@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PREDICT CLUB - Create Prediction Round</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#232c28",
+                        "inverse-surface": "#dbe5df",
+                        "secondary-container": "#3a4a5f",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed": "#d3e4fe",
+                        "outline": "#83958d",
+                        "inverse-on-surface": "#29322f",
+                        "on-primary-container": "#00725a",
+                        "tertiary-container": "#ffe150",
+                        "primary": "#fdfffc",
+                        "background": "#0c1512",
+                        "primary-fixed-dim": "#00e0b3",
+                        "error-container": "#93000a",
+                        "surface-dim": "#0c1512",
+                        "tertiary-fixed-dim": "#e2c635",
+                        "surface-bright": "#323b37",
+                        "outline-variant": "#3a4a44",
+                        "on-background": "#dbe5df",
+                        "on-surface": "#dbe5df",
+                        "surface-container-lowest": "#07100d",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "surface-tint": "#00e0b3",
+                        "primary-container": "#00ffcc",
+                        "tertiary-fixed": "#ffe257",
+                        "surface-container-highest": "#2e3733",
+                        "on-primary-fixed-variant": "#00513f",
+                        "tertiary": "#fffeff",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "surface": "#0c1512",
+                        "surface-variant": "#2e3733",
+                        "surface-container": "#19211e",
+                        "on-secondary-container": "#a9bad3",
+                        "on-secondary-fixed": "#0b1c30",
+                        "on-primary": "#00382b",
+                        "on-tertiary": "#393000",
+                        "on-tertiary-fixed-variant": "#534600",
+                        "inverse-primary": "#006b54",
+                        "on-secondary": "#213145",
+                        "on-primary-fixed": "#002118",
+                        "on-tertiary-container": "#746300",
+                        "on-error": "#690005",
+                        "primary-fixed": "#24ffcd",
+                        "surface-container-low": "#151d1a",
+                        "on-surface-variant": "#b9cbc2",
+                        "on-tertiary-fixed": "#211b00",
+                        "error": "#ffb4ab",
+                        "secondary": "#b7c8e1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sm": "0.5rem",
+                        "xl": "1.5rem",
+                        "md": "0.75rem",
+                        "lg": "1rem",
+                        "panel-gutter": "1px",
+                        "xs": "0.25rem"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "data-sm": ["JetBrains Mono"],
+                        "data-md": ["JetBrains Mono"],
+                        "headline-lg": ["Inter"],
+                        "data-lg": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "body-base": ["Inter"],
+                        "label-caps": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["18px", {"lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "data-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "data-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "data-lg": ["16px", {"lineHeight": "24px", "fontWeight": "500"}],
+                        "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                        "body-base": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-caps": ["10px", {"lineHeight": "12px", "letterSpacing": "0.05em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-surface'); margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .blur-backdrop { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .input-glow:focus-within { box-shadow: 0 0 0 2px rgba(0, 224, 179, 0.3); border-color: theme('colors.primary-fixed-dim'); }
+        /* Custom scrollbar for terminal feel */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: theme('colors.surface-container-lowest'); }
+        ::-webkit-scrollbar-thumb { background: theme('colors.outline-variant'); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: theme('colors.outline'); }
+    </style>
+</head>
+<body class="antialiased">
+<!-- TopNavBar (Dimmed for background) -->
+<header class="flex justify-between items-center w-full px-lg h-14 bg-surface-container-lowest border-b border-outline-variant opacity-30 pointer-events-none z-10">
+<div class="flex items-center gap-xl">
+<div class="font-headline-lg text-headline-lg font-black text-primary-fixed tracking-tight">PREDICT CLUB</div>
+<nav class="hidden md:flex gap-lg">
+<a class="text-primary border-b-2 border-primary-fixed pb-1 font-body-base text-body-base hover:text-primary transition-colors duration-200" href="#">Clubs</a>
+<a class="text-on-surface-variant font-body-base text-body-base hover:text-primary transition-colors duration-200" href="#">Market</a>
+<a class="text-on-surface-variant font-body-base text-body-base hover:text-primary transition-colors duration-200" href="#">History</a>
+<a class="text-on-surface-variant font-body-base text-body-base hover:text-primary transition-colors duration-200" href="#">Leaderboard</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<button class="bg-primary-fixed-dim text-on-primary font-body-sm text-body-sm px-md py-sm rounded">Connect Wallet</button>
+<span class="material-symbols-outlined text-primary-fixed-dim">account_balance_wallet</span>
+<span class="material-symbols-outlined text-primary-fixed-dim">sensors</span>
+</div>
+</header>
+<!-- Background Cockpit (Dimmed) -->
+<main class="flex-1 flex flex-col md:flex-row gap-panel-gutter bg-outline-variant p-panel-gutter overflow-hidden opacity-30 pointer-events-none z-0 relative">
+<div class="flex-1 bg-surface-container-high border border-outline-variant rounded p-md flex flex-col">
+<div class="border-b border-outline-variant pb-sm mb-sm flex justify-between">
+<span class="font-headline-md text-headline-md">SUI/USDC</span>
+</div>
+<!-- Dummy chart area -->
+<div class="flex-1 bg-surface-container-low rounded border border-outline-variant"></div>
+</div>
+</main>
+<!-- Modal Overlay -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-md bg-background/80 blur-backdrop">
+<div class="bg-surface-container border border-outline-variant rounded-lg shadow-2xl w-full max-w-2xl max-h-full flex flex-col overflow-hidden">
+<!-- Modal Header -->
+<div class="flex justify-between items-center p-md border-b border-outline-variant bg-surface-container-high">
+<h2 class="font-headline-md text-headline-md text-on-surface">Create Prediction Round</h2>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Modal Body -->
+<div class="p-lg overflow-y-auto flex-1 flex flex-col gap-xl">
+<!-- Oracle & Asset -->
+<div class="flex gap-md">
+<div class="flex-1 flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">ORACLE</label>
+<div class="flex rounded bg-surface border border-outline-variant">
+<button class="flex-1 py-sm font-data-md text-data-md bg-secondary-container text-primary-fixed rounded-l border-r border-outline-variant">PYTH</button>
+<button class="flex-1 py-sm font-data-md text-data-md text-on-surface-variant hover:text-primary transition-colors rounded-r">SWITCHBOARD</button>
+</div>
+</div>
+<div class="flex-1 flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">ASSET PAIR</label>
+<div class="input-glow flex items-center bg-surface border border-outline-variant rounded px-md h-9">
+<input class="bg-transparent border-none outline-none font-data-md text-data-md text-on-surface w-full focus:ring-0" readonly="" type="text" value="SUI/USDC"/>
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">keyboard_arrow_down</span>
+</div>
+</div>
+</div>
+<!-- Direction -->
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">DIRECTION THESIS</label>
+<div class="flex gap-panel-gutter bg-outline-variant rounded border border-outline-variant overflow-hidden">
+<button class="flex-1 py-sm bg-surface text-primary-fixed-dim hover:bg-surface-bright transition-colors font-headline-md text-headline-md">UP</button>
+<button class="flex-1 py-sm bg-surface text-error hover:bg-surface-bright transition-colors font-headline-md text-headline-md">DOWN</button>
+<button class="flex-1 py-sm bg-secondary-container text-primary-fixed font-headline-md text-headline-md border-b-2 border-primary-fixed">RANGE</button>
+</div>
+</div>
+<!-- Parameters Grid -->
+<div class="grid grid-cols-2 gap-md">
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">LOWER BOUND (USDC)</label>
+<div class="input-glow flex items-center bg-surface border border-outline-variant rounded px-md h-9">
+<input class="bg-transparent border-none outline-none font-data-md text-data-md text-on-surface w-full focus:ring-0" placeholder="0.000" type="text" value="1.850"/>
+</div>
+</div>
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">UPPER BOUND (USDC)</label>
+<div class="input-glow flex items-center bg-surface border border-outline-variant rounded px-md h-9">
+<input class="bg-transparent border-none outline-none font-data-md text-data-md text-on-surface w-full focus:ring-0" placeholder="0.000" type="text" value="2.150"/>
+</div>
+</div>
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">EXPIRY</label>
+<div class="input-glow flex items-center bg-surface border border-outline-variant rounded px-md h-9">
+<input class="bg-transparent border-none outline-none font-data-sm text-data-sm text-on-surface w-full focus:ring-0" type="datetime-local" value="2023-12-01T12:00"/>
+</div>
+</div>
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">SUGGESTED SIZE (DUSDC)</label>
+<div class="input-glow flex items-center bg-surface border border-outline-variant rounded px-md h-9">
+<input class="bg-transparent border-none outline-none font-data-md text-data-md text-on-surface w-full focus:ring-0" placeholder="100" type="text"/>
+</div>
+</div>
+</div>
+<!-- Leader Thesis -->
+<div class="flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">LEADER THESIS (OPTIONAL)</label>
+<div class="input-glow rounded border border-outline-variant bg-surface overflow-hidden">
+<textarea class="w-full bg-transparent border-none outline-none p-md font-body-sm text-body-sm text-on-surface resize-none focus:ring-0" placeholder="Explain your rationale..." rows="3"></textarea>
+</div>
+</div>
+<!-- Confidence & Indicators -->
+<div class="flex gap-md">
+<div class="flex-1 flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">CONFIDENCE</label>
+<div class="flex rounded bg-surface border border-outline-variant overflow-hidden">
+<button class="flex-1 py-xs font-data-sm text-data-sm text-on-surface-variant hover:bg-surface-bright border-r border-outline-variant">LOW</button>
+<button class="flex-1 py-xs font-data-sm text-data-sm bg-secondary-container text-primary-fixed border-r border-outline-variant">MED</button>
+<button class="flex-1 py-xs font-data-sm text-data-sm text-on-surface-variant hover:bg-surface-bright">HIGH</button>
+</div>
+</div>
+<div class="flex-1 flex flex-col gap-sm">
+<label class="font-label-caps text-label-caps text-on-surface-variant">INDICATORS</label>
+<div class="flex flex-wrap gap-xs">
+<button class="px-sm py-xs border border-primary-fixed-dim text-primary-fixed-dim rounded font-data-sm text-data-sm bg-primary-fixed-dim/10">Box Flip</button>
+<button class="px-sm py-xs border border-outline-variant text-on-surface-variant rounded font-data-sm text-data-sm hover:border-outline transition-colors">RSI Div</button>
+<button class="px-sm py-xs border border-outline-variant text-on-surface-variant rounded font-data-sm text-data-sm hover:border-outline transition-colors">VWAP</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal Footer -->
+<div class="p-md border-t border-outline-variant bg-surface-container-high flex justify-end gap-md">
+<button class="px-lg py-sm border border-outline-variant text-primary-fixed-dim font-data-md text-data-md rounded hover:bg-surface-bright transition-colors">Save Draft</button>
+<button class="px-lg py-sm bg-primary-fixed-dim text-on-primary font-data-md text-data-md rounded hover:bg-surface-tint transition-colors shadow-[0_0_10px_rgba(0,224,179,0.2)]">Publish Round</button>
+</div>
+</div>
+</div>
+</body></html>

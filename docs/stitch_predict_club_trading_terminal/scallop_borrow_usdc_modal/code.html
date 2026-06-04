@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Predict Club - Scallop Borrow USDC</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Subtle terminal grid background for the app context underneath the modal */
+        body {
+            background-color: #0c1512;
+            background-image: 
+                linear-gradient(rgba(58, 74, 68, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(58, 74, 68, 0.1) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* Custom scrollbar for terminal feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0c1512; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a4a44; 
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #83958d; 
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-bright": "#323b37",
+                        "surface": "#0c1512",
+                        "on-secondary-fixed": "#0b1c30",
+                        "surface-container-lowest": "#07100d",
+                        "on-primary-fixed-variant": "#00513f",
+                        "background": "#0c1512",
+                        "on-tertiary-fixed": "#211b00",
+                        "on-secondary": "#213145",
+                        "tertiary-fixed-dim": "#e2c635",
+                        "on-background": "#dbe5df",
+                        "secondary-fixed": "#d3e4fe",
+                        "on-primary-container": "#00725a",
+                        "surface-container-high": "#232c28",
+                        "primary": "#fdfffc",
+                        "primary-fixed": "#24ffcd",
+                        "on-secondary-container": "#a9bad3",
+                        "tertiary-container": "#ffe150",
+                        "inverse-on-surface": "#29322f",
+                        "error": "#ffb4ab",
+                        "on-surface-variant": "#b9cbc2",
+                        "surface-tint": "#00e0b3",
+                        "primary-container": "#00ffcc",
+                        "outline-variant": "#3a4a44",
+                        "on-tertiary": "#393000",
+                        "on-surface": "#dbe5df",
+                        "inverse-primary": "#006b54",
+                        "surface-dim": "#0c1512",
+                        "on-primary": "#00382b",
+                        "surface-container-low": "#151d1a",
+                        "on-tertiary-container": "#746300",
+                        "tertiary": "#fffeff",
+                        "secondary-container": "#3a4a5f",
+                        "on-error": "#690005",
+                        "surface-variant": "#2e3733",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "primary-fixed-dim": "#00e0b3",
+                        "on-tertiary-fixed-variant": "#534600",
+                        "inverse-surface": "#dbe5df",
+                        "on-primary-fixed": "#002118",
+                        "surface-container-highest": "#2e3733",
+                        "tertiary-fixed": "#ffe257",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "surface-container": "#19211e",
+                        "error-container": "#93000a",
+                        "secondary": "#b7c8e1",
+                        "on-error-container": "#ffdad6",
+                        "outline": "#83958d"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    spacing: {
+                        "xl": "1.5rem",
+                        "panel-gutter": "1px",
+                        "xs": "0.25rem",
+                        "md": "0.75rem",
+                        "lg": "1rem",
+                        "sm": "0.5rem"
+                    },
+                    fontFamily: {
+                        "body-sm": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "data-sm": ["JetBrains Mono"],
+                        "body-base": ["Inter"],
+                        "data-md": ["JetBrains Mono"],
+                        "headline-lg": ["Inter"],
+                        "data-lg": ["JetBrains Mono"]
+                    },
+                    fontSize: {
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "label-caps": ["10px", { "lineHeight": "12px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "data-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "body-base": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "data-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "data-lg": ["16px", { "lineHeight": "24px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-on-surface antialiased h-screen w-full overflow-hidden flex items-center justify-center">
+<!-- Modal Backdrop Overlay -->
+<div class="fixed inset-0 bg-background/80 backdrop-blur-md z-40 flex items-center justify-center p-md sm:p-lg">
+<!-- Modal Container -->
+<div class="w-full max-w-[480px] bg-surface border border-outline-variant rounded-xl shadow-2xl flex flex-col relative overflow-hidden flex-shrink-0 max-h-[921px]">
+<!-- Top Accent Line -->
+<div class="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-surface-container via-primary-fixed to-surface-container"></div>
+<!-- Header -->
+<div class="flex items-center justify-between p-lg border-b border-outline-variant bg-surface-container-low">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary-fixed">water_drop</span>
+<h2 class="font-headline-md text-headline-md text-primary">Scallop Borrow USDC</h2>
+</div>
+<button aria-label="Close modal" class="text-on-surface-variant hover:text-primary transition-colors focus:outline-none">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Scrollable Body -->
+<div class="p-lg flex flex-col gap-lg overflow-y-auto">
+<!-- Input: SUI Collateral -->
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between items-center px-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Collateral Amount</span>
+<div class="flex items-center gap-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Balance:</span>
+<span class="font-data-sm text-data-sm text-on-surface">12,450.00 SUI</span>
+</div>
+</div>
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant rounded px-md py-sm focus-within:border-primary-fixed focus-within:ring-1 focus-within:ring-primary-fixed/30 transition-all group">
+<input class="bg-transparent w-full outline-none font-data-lg text-data-lg text-primary placeholder-on-surface-variant/50" placeholder="0.00" type="text" value="5000.00"/>
+<div class="flex items-center gap-sm ml-2 border-l border-outline-variant pl-sm">
+<button class="font-label-caps text-label-caps text-primary-fixed-dim hover:text-primary-fixed transition-colors">MAX</button>
+<span class="font-body-base text-body-base text-on-surface">SUI</span>
+</div>
+</div>
+<div class="flex justify-between items-center px-xs mt-1">
+<span class="font-data-sm text-data-sm text-on-surface-variant">≈ $4,210.50</span>
+</div>
+</div>
+<!-- Spacer / Link Icon -->
+<div class="flex justify-center -my-sm relative z-10">
+<div class="bg-surface border border-outline-variant rounded-full p-xs text-outline">
+<span class="material-symbols-outlined text-[16px]">arrow_downward</span>
+</div>
+</div>
+<!-- Input: USDC Borrow -->
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between items-center px-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Borrow Amount</span>
+<div class="flex items-center gap-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant">Max Borrow:</span>
+<span class="font-data-sm text-data-sm text-primary-fixed">2,526.30 USDC</span>
+</div>
+</div>
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant rounded px-md py-sm focus-within:border-primary-fixed focus-within:ring-1 focus-within:ring-primary-fixed/30 transition-all">
+<input class="bg-transparent w-full outline-none font-data-lg text-data-lg text-primary placeholder-on-surface-variant/50" placeholder="0.00" type="text" value="1500.00"/>
+<div class="flex items-center gap-sm ml-2 border-l border-outline-variant pl-sm">
+<span class="font-body-base text-body-base text-on-surface">USDC</span>
+</div>
+</div>
+</div>
+<!-- Health Factor Visualization -->
+<div class="flex flex-col gap-sm bg-surface-container-low border border-outline-variant rounded p-md">
+<div class="flex justify-between items-end">
+<div class="flex flex-col gap-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Est. Health Factor</span>
+<div class="flex items-center gap-xs text-primary-fixed">
+<span class="material-symbols-outlined icon-fill text-[14px]">health_and_safety</span>
+<span class="font-headline-md text-headline-md">1.85</span>
+</div>
+</div>
+<span class="font-label-caps text-label-caps text-primary-fixed">Safe</span>
+</div>
+<!-- Gauge Bar -->
+<div class="relative w-full h-[6px] bg-surface-container-highest rounded-full mt-xs overflow-hidden flex">
+<!-- Danger Zone (0 - 1.0) -->
+<div class="h-full bg-error" style="width: 25%;"></div>
+<!-- Warning Zone (1.0 - 1.5) -->
+<div class="h-full bg-tertiary-container" style="width: 25%;"></div>
+<!-- Safe Zone (> 1.5) -->
+<div class="h-full bg-primary-fixed/40" style="width: 50%;"></div>
+<!-- Current Marker (Positioned at ~65% for HF 1.85) -->
+<div class="absolute top-0 bottom-0 w-[2px] bg-primary shadow-[0_0_8px_rgba(253,255,252,0.8)] z-10" style="left: 65%;"></div>
+</div>
+<div class="flex justify-between w-full px-1">
+<span class="font-data-sm text-data-sm text-on-surface-variant/50 text-[10px]">0.0</span>
+<span class="font-data-sm text-data-sm text-on-surface-variant/50 text-[10px]">1.0</span>
+<span class="font-data-sm text-data-sm text-on-surface-variant/50 text-[10px]">1.5</span>
+<span class="font-data-sm text-data-sm text-on-surface-variant/50 text-[10px]">3.0+</span>
+</div>
+</div>
+<!-- Key Metrics Panel -->
+<div class="grid grid-cols-3 gap-panel-gutter bg-outline-variant border border-outline-variant rounded overflow-hidden">
+<div class="bg-surface-container-low p-sm flex flex-col gap-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Oracle Status</span>
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 rounded-full bg-primary-fixed animate-pulse"></div>
+<span class="font-data-sm text-data-sm text-primary-fixed">Healthy</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-sm flex flex-col gap-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Liq. Price</span>
+<span class="font-data-sm text-data-sm text-tertiary-fixed">≈ $0.42 SUI</span>
+</div>
+<div class="bg-surface-container-low p-sm flex flex-col gap-xs">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Borrow APY</span>
+<span class="font-data-sm text-data-sm text-primary">6.45%</span>
+</div>
+</div>
+<!-- Liquidation Warning Checkbox -->
+<label class="flex items-start gap-sm p-sm border border-tertiary-fixed/30 bg-tertiary-fixed/5 rounded cursor-pointer group hover:bg-tertiary-fixed/10 transition-colors">
+<div class="relative flex items-center justify-center mt-[2px]">
+<input class="peer appearance-none w-4 h-4 border border-tertiary-fixed rounded-sm bg-transparent checked:bg-tertiary-fixed checked:border-tertiary-fixed focus:ring-1 focus:ring-tertiary-fixed/50 transition-colors cursor-pointer" type="checkbox"/>
+<span class="material-symbols-outlined absolute text-surface text-[14px] pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity">check</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface/90 group-hover:text-on-surface transition-colors leading-relaxed">
+                        I understand that my SUI collateral may be liquidated by the protocol if the health factor drops below 1.0.
+                    </p>
+</label>
+</div>
+<!-- Footer Actions -->
+<div class="p-lg border-t border-outline-variant bg-surface-container-low flex justify-end gap-md">
+<button class="px-lg py-2 rounded border border-outline-variant font-headline-md text-body-base text-primary hover:bg-surface-container-high hover:border-outline transition-colors focus:outline-none focus:ring-2 focus:ring-outline-variant">
+                    Preview Borrow
+                </button>
+<button class="px-lg py-2 rounded bg-primary-fixed text-on-primary-fixed font-headline-md text-body-base hover:bg-primary-fixed-dim hover:shadow-[0_0_12px_rgba(36,255,205,0.3)] transition-all focus:outline-none focus:ring-2 focus:ring-primary-fixed focus:ring-offset-2 focus:ring-offset-surface flex items-center gap-sm">
+                    Continue to Wallet
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

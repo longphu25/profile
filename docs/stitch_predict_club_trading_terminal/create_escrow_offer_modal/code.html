@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Predict Club - Create Escrow Offer</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed-dim": "#00e0b3",
+                    "on-tertiary-fixed": "#211b00",
+                    "on-primary-fixed-variant": "#00513f",
+                    "on-error": "#690005",
+                    "primary-container": "#00ffcc",
+                    "primary-fixed": "#24ffcd",
+                    "tertiary": "#fffeff",
+                    "surface-container-low": "#151d1a",
+                    "secondary-container": "#3a4a5f",
+                    "surface-container-lowest": "#07100d",
+                    "on-error-container": "#ffdad6",
+                    "surface-dim": "#0c1512",
+                    "surface-container": "#19211e",
+                    "error-container": "#93000a",
+                    "surface": "#0c1512",
+                    "on-tertiary-container": "#746300",
+                    "outline": "#83958d",
+                    "inverse-surface": "#dbe5df",
+                    "on-primary": "#00382b",
+                    "inverse-on-surface": "#29322f",
+                    "surface-variant": "#2e3733",
+                    "secondary-fixed": "#d3e4fe",
+                    "primary": "#fdfffc",
+                    "surface-container-high": "#232c28",
+                    "on-primary-fixed": "#002118",
+                    "inverse-primary": "#006b54",
+                    "on-secondary-container": "#a9bad3",
+                    "on-secondary-fixed-variant": "#38485d",
+                    "secondary-fixed-dim": "#b7c8e1",
+                    "secondary": "#b7c8e1",
+                    "error": "#ffb4ab",
+                    "background": "#0c1512",
+                    "surface-container-highest": "#2e3733",
+                    "tertiary-fixed-dim": "#e2c635",
+                    "outline-variant": "#3a4a44",
+                    "on-tertiary-fixed-variant": "#534600",
+                    "on-primary-container": "#00725a",
+                    "on-background": "#dbe5df",
+                    "on-surface-variant": "#b9cbc2",
+                    "surface-bright": "#323b37",
+                    "on-tertiary": "#393000",
+                    "on-surface": "#dbe5df",
+                    "on-secondary-fixed": "#0b1c30",
+                    "tertiary-container": "#ffe150",
+                    "on-secondary": "#213145",
+                    "tertiary-fixed": "#ffe257",
+                    "surface-tint": "#00e0b3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "md": "0.75rem",
+                    "lg": "1rem",
+                    "sm": "0.5rem",
+                    "xs": "0.25rem",
+                    "panel-gutter": "1px",
+                    "xl": "1.5rem"
+            },
+            "fontFamily": {
+                    "body-sm": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "data-lg": ["JetBrains Mono"],
+                    "body-base": ["Inter"],
+                    "label-caps": ["Inter"],
+                    "data-sm": ["JetBrains Mono"],
+                    "data-md": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                    "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                    "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                    "data-lg": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                    "body-base": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                    "label-caps": ["10px", { "lineHeight": "12px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                    "data-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                    "data-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Hide scrollbar for clean terminal look */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3a4a44; border-radius: 2px; }
+        
+        /* Input Focus Glow */
+        .terminal-input-group:focus-within {
+            border-color: #24ffcd;
+            box-shadow: 0 0 8px rgba(36, 255, 205, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen flex items-center justify-center font-body-base p-md md:p-lg antialiased">
+<!-- Synthetic Background for context (representing the underlying trading interface) -->
+<div class="fixed inset-0 z-0 pointer-events-none opacity-20" style="background-image: radial-gradient(circle at 50% 50%, rgba(36, 255, 205, 0.05) 0%, transparent 60%), linear-gradient(to bottom, #0c1512 0%, #07100d 100%);"></div>
+<!-- Modal Overlay Backdrop -->
+<div class="fixed inset-0 bg-surface/80 backdrop-blur-md z-40 flex items-center justify-center p-sm md:p-lg">
+<!-- Modal Container -->
+<div class="w-full max-w-[480px] bg-surface-container-low border border-outline-variant rounded-xl shadow-2xl flex flex-col overflow-hidden relative z-50">
+<!-- Header -->
+<header class="flex justify-between items-center px-lg py-md border-b border-outline-variant bg-surface-container">
+<h2 class="font-headline-md text-headline-md text-on-surface">Create Escrow Offer</h2>
+<button class="text-on-surface-variant hover:text-primary-fixed transition-colors p-xs rounded-DEFAULT hover:bg-surface-variant">
+<span class="material-symbols-outlined text-[20px]" data-icon="close">close</span>
+</button>
+</header>
+<!-- Body -->
+<div class="p-lg flex flex-col gap-lg">
+<!-- Offer Asset Section -->
+<div class="flex flex-col gap-sm">
+<div class="flex justify-between items-end">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Offer Asset</label>
+<span class="font-data-sm text-data-sm text-on-surface-variant">Bal: 1,245.50 DUSDC</span>
+</div>
+<div class="terminal-input-group bg-surface-container-lowest border border-outline-variant rounded-DEFAULT flex items-stretch h-[48px] transition-all duration-200">
+<!-- Asset Selector Dropdown Mock -->
+<button class="flex items-center gap-sm px-md border-r border-outline-variant bg-surface-container hover:bg-surface-variant transition-colors rounded-l-DEFAULT">
+<div class="w-4 h-4 rounded-full bg-secondary-container border border-outline-variant flex items-center justify-center text-[8px] font-bold text-on-secondary-container">D</div>
+<span class="font-data-md text-data-md text-on-surface">DUSDC</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant" data-icon="expand_more">expand_more</span>
+</button>
+<!-- Amount Input -->
+<div class="flex-1 flex items-center pr-md">
+<input class="w-full bg-transparent border-none text-right font-data-lg text-data-lg text-on-surface focus:ring-0 placeholder:text-on-surface-variant/50" placeholder="0.00" type="text" value="500.00"/>
+</div>
+<button class="px-sm text-primary-fixed font-label-caps text-label-caps hover:opacity-80 transition-opacity flex items-center border-l border-outline-variant/50">MAX</button>
+</div>
+</div>
+<!-- Direction Indicator -->
+<div class="flex justify-center -my-md relative z-10">
+<div class="bg-surface-container-highest border border-outline-variant rounded-full p-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="arrow_downward">arrow_downward</span>
+</div>
+</div>
+<!-- Want Asset Section -->
+<div class="flex flex-col gap-sm">
+<div class="flex justify-between items-end">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Want Asset</label>
+</div>
+<div class="terminal-input-group bg-surface-container-lowest border border-outline-variant rounded-DEFAULT flex items-stretch h-[48px] transition-all duration-200">
+<!-- Asset Selector Dropdown Mock -->
+<button class="flex items-center gap-sm px-md border-r border-outline-variant bg-surface-container hover:bg-surface-variant transition-colors rounded-l-DEFAULT">
+<div class="w-4 h-4 rounded-full bg-primary-fixed-dim border border-outline-variant flex items-center justify-center text-[8px] font-bold text-on-primary-fixed-variant">U</div>
+<span class="font-data-md text-data-md text-on-surface">USDC</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant" data-icon="expand_more">expand_more</span>
+</button>
+<!-- Amount Input -->
+<div class="flex-1 flex items-center px-md">
+<input class="w-full bg-transparent border-none text-right font-data-lg text-data-lg text-on-surface focus:ring-0 placeholder:text-on-surface-variant/50" placeholder="0.00" type="text" value="480.00"/>
+</div>
+</div>
+</div>
+<!-- Grid for Optional Fields -->
+<div class="grid grid-cols-2 gap-md pt-sm">
+<!-- Recipient Wallet (Optional) -->
+<div class="flex flex-col gap-xs">
+<div class="flex items-center gap-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Recipient (Optional)</label>
+<span class="material-symbols-outlined text-[12px] text-on-surface-variant cursor-help" title="Leave blank for a public offer">info</span>
+</div>
+<div class="terminal-input-group bg-surface-container-lowest border border-outline-variant rounded-DEFAULT flex items-center h-[36px] px-sm transition-all duration-200">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant mr-xs" data-icon="account_balance_wallet">account_balance_wallet</span>
+<input class="w-full bg-transparent border-none font-data-sm text-data-sm text-on-surface focus:ring-0 placeholder:text-on-surface-variant/50 px-0" placeholder="0x..." type="text"/>
+</div>
+</div>
+<!-- Round ID (Optional) -->
+<div class="flex flex-col gap-xs">
+<div class="flex items-center gap-xs">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Round ID (Optional)</label>
+<span class="material-symbols-outlined text-[12px] text-on-surface-variant cursor-help" title="Link to a specific prediction round">info</span>
+</div>
+<div class="terminal-input-group bg-surface-container-lowest border border-outline-variant rounded-DEFAULT flex items-center h-[36px] px-sm transition-all duration-200">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant mr-xs" data-icon="tag">tag</span>
+<input class="w-full bg-transparent border-none font-data-sm text-data-sm text-on-surface focus:ring-0 placeholder:text-on-surface-variant/50 px-0" placeholder="e.g. 1409" type="text"/>
+</div>
+</div>
+</div>
+<!-- Expiry Time -->
+<div class="flex flex-col gap-sm pt-sm border-t border-outline-variant/30">
+<label class="font-label-caps text-label-caps text-on-surface-variant uppercase">Expiry Time</label>
+<div class="flex flex-wrap gap-sm">
+<button class="px-md py-xs rounded-full border border-outline-variant text-on-surface-variant font-label-caps text-label-caps hover:border-primary-fixed transition-colors">1H</button>
+<button class="px-md py-xs rounded-full border border-outline-variant text-on-surface-variant font-label-caps text-label-caps hover:border-primary-fixed transition-colors">4H</button>
+<button class="px-md py-xs rounded-full border border-primary-fixed bg-secondary-container/50 text-primary-fixed font-label-caps text-label-caps transition-colors">12H</button>
+<button class="px-md py-xs rounded-full border border-outline-variant text-on-surface-variant font-label-caps text-label-caps hover:border-primary-fixed transition-colors">24H</button>
+<button class="px-md py-xs rounded-full border border-outline-variant text-on-surface-variant font-label-caps text-label-caps hover:border-primary-fixed transition-colors flex items-center gap-xs">
+<span class="material-symbols-outlined text-[12px]" data-icon="edit_calendar">edit_calendar</span>
+                            Custom
+                        </button>
+</div>
+</div>
+<!-- Summary Panel -->
+<div class="bg-surface-container-highest border border-outline-variant rounded-lg p-md flex justify-between items-center mt-xs">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Exchange Rate</span>
+<div class="flex items-center gap-xs">
+<span class="font-data-md text-data-md text-primary-fixed">1 DUSDC = 0.96 USDC</span>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<footer class="flex justify-end gap-md px-lg py-md border-t border-outline-variant bg-surface-container">
+<button class="h-[36px] px-lg border border-outline-variant rounded-DEFAULT text-on-surface font-data-md text-data-md hover:bg-surface-variant transition-colors">
+                    Cancel
+                </button>
+<button class="h-[36px] px-lg bg-primary-fixed text-on-primary-fixed rounded-DEFAULT font-data-md text-data-md hover:opacity-90 transition-opacity flex items-center gap-xs shadow-[0_0_12px_rgba(36,255,205,0.2)]">
+<span class="material-symbols-outlined text-[18px]" data-icon="check_circle">check_circle</span>
+                    Create Offer
+                </button>
+</footer>
+</div>
+</div>
+</body></html>

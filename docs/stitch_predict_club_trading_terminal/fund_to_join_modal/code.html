@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fund to Join - Predict Club</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for terminal feel */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0c1512;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3a4a44;
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00e0b3;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#232c28",
+                        "inverse-surface": "#dbe5df",
+                        "secondary-container": "#3a4a5f",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed": "#d3e4fe",
+                        "outline": "#83958d",
+                        "inverse-on-surface": "#29322f",
+                        "on-primary-container": "#00725a",
+                        "tertiary-container": "#ffe150",
+                        "primary": "#fdfffc",
+                        "background": "#0c1512",
+                        "primary-fixed-dim": "#00e0b3",
+                        "error-container": "#93000a",
+                        "surface-dim": "#0c1512",
+                        "tertiary-fixed-dim": "#e2c635",
+                        "surface-bright": "#323b37",
+                        "outline-variant": "#3a4a44",
+                        "on-background": "#dbe5df",
+                        "on-surface": "#dbe5df",
+                        "surface-container-lowest": "#07100d",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "surface-tint": "#00e0b3",
+                        "primary-container": "#00ffcc",
+                        "tertiary-fixed": "#ffe257",
+                        "surface-container-highest": "#2e3733",
+                        "on-primary-fixed-variant": "#00513f",
+                        "tertiary": "#fffeff",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "surface": "#0c1512",
+                        "surface-variant": "#2e3733",
+                        "surface-container": "#19211e",
+                        "on-secondary-container": "#a9bad3",
+                        "on-secondary-fixed": "#0b1c30",
+                        "on-primary": "#00382b",
+                        "on-tertiary": "#393000",
+                        "on-tertiary-fixed-variant": "#534600",
+                        "inverse-primary": "#006b54",
+                        "on-secondary": "#213145",
+                        "on-primary-fixed": "#002118",
+                        "on-tertiary-container": "#746300",
+                        "on-error": "#690005",
+                        "primary-fixed": "#24ffcd",
+                        "surface-container-low": "#151d1a",
+                        "on-surface-variant": "#b9cbc2",
+                        "on-tertiary-fixed": "#211b00",
+                        "error": "#ffb4ab",
+                        "secondary": "#b7c8e1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sm": "0.5rem",
+                        "xl": "1.5rem",
+                        "md": "0.75rem",
+                        "lg": "1rem",
+                        "panel-gutter": "1px",
+                        "xs": "0.25rem"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "data-sm": ["JetBrains Mono"],
+                        "data-md": ["JetBrains Mono"],
+                        "headline-lg": ["Inter"],
+                        "data-lg": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "body-base": ["Inter"],
+                        "label-caps": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "data-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "data-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "data-lg": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "body-base": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-caps": ["10px", { "lineHeight": "12px", "letterSpacing": "0.05em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background h-screen w-screen overflow-hidden font-body-base flex flex-col selection:bg-primary-fixed-dim selection:text-on-primary-fixed">
+<!-- Dimmed Cockpit Background (Simulated Terminal Layout) -->
+<div class="fixed inset-0 z-0 flex flex-col opacity-30 pointer-events-none filter blur-[2px]">
+<!-- Top App Bar Mock -->
+<header class="flex justify-between items-center w-full px-lg h-14 bg-surface-container-lowest border-b border-outline-variant shrink-0">
+<div class="font-headline-lg font-black text-primary-fixed tracking-tight">PREDICT CLUB</div>
+<div class="flex gap-lg">
+<span class="text-on-surface-variant font-body-base">Clubs</span>
+<span class="text-primary border-b-2 border-primary-fixed pb-1 font-body-base">Market</span>
+</div>
+</header>
+<!-- Main Panel Grid Mock -->
+<main class="flex-1 flex gap-panel-gutter bg-outline-variant overflow-hidden p-panel-gutter">
+<!-- Left Side: Order Book & Trades -->
+<div class="w-1/4 flex flex-col gap-panel-gutter">
+<div class="flex-1 bg-surface-container p-md">
+<div class="font-label-caps text-on-surface-variant mb-sm">ORDER BOOK</div>
+<div class="space-y-xs">
+<div class="flex justify-between font-data-sm text-error"><span class="w-1/3 text-left">2.451</span><span class="w-1/3 text-right">1,200</span><span class="w-1/3 text-right text-on-surface-variant">2,941</span></div>
+<div class="flex justify-between font-data-sm text-error"><span class="w-1/3 text-left">2.450</span><span class="w-1/3 text-right">800</span><span class="w-1/3 text-right text-on-surface-variant">1,960</span></div>
+<div class="my-md py-xs border-y border-outline-variant flex justify-between items-center">
+<span class="font-data-md text-primary-fixed">2.448</span>
+<span class="font-data-sm text-on-surface-variant">Mark</span>
+</div>
+<div class="flex justify-between font-data-sm text-primary-fixed-dim"><span class="w-1/3 text-left">2.447</span><span class="w-1/3 text-right">5,400</span><span class="w-1/3 text-right text-on-surface-variant">13,213</span></div>
+<div class="flex justify-between font-data-sm text-primary-fixed-dim"><span class="w-1/3 text-left">2.445</span><span class="w-1/3 text-right">10,000</span><span class="w-1/3 text-right text-on-surface-variant">24,450</span></div>
+</div>
+</div>
+</div>
+<!-- Center: Chart Area -->
+<div class="flex-1 bg-surface-container p-md flex flex-col relative">
+<div class="flex justify-between items-start">
+<div>
+<h1 class="font-headline-lg text-primary">SUI-PERP</h1>
+<div class="font-data-lg text-primary-fixed mt-xs">2.448 <span class="font-data-sm text-on-surface-variant ml-sm">+0.05 (2.1%)</span></div>
+</div>
+</div>
+<!-- Mock Chart Grid -->
+<div class="absolute inset-0 mt-20 border-t border-outline-variant grid grid-cols-4 grid-rows-4 opacity-20">
+<div class="border-b border-r border-outline-variant"></div><div class="border-b border-r border-outline-variant"></div><div class="border-b border-r border-outline-variant"></div><div class="border-b border-outline-variant"></div>
+<div class="border-b border-r border-outline-variant"></div><div class="border-b border-r border-outline-variant"></div><div class="border-b border-r border-outline-variant"></div><div class="border-b border-outline-variant"></div>
+</div>
+</div>
+<!-- Right Side: Action Panel -->
+<div class="w-[320px] bg-surface-container flex flex-col p-md gap-md">
+<div class="flex bg-surface-bright rounded p-xs">
+<button class="flex-1 py-xs text-center font-label-caps bg-surface-container text-primary-fixed rounded shadow-sm">BUY / LONG</button>
+<button class="flex-1 py-xs text-center font-label-caps text-on-surface-variant">SELL / SHORT</button>
+</div>
+</div>
+</main>
+</div>
+<!-- Backdrop Overlay -->
+<div class="fixed inset-0 z-40 bg-background/60 backdrop-blur-[24px]"></div>
+<!-- Modal Container -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-md sm:p-xl">
+<!-- Modal Card -->
+<div class="w-full max-w-[480px] bg-surface-container border border-outline-variant rounded-lg shadow-2xl flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+<!-- Header -->
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-high">
+<h2 class="font-headline-md text-primary">Fund to Join</h2>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Scrollable Content -->
+<div class="p-lg flex flex-col gap-xl overflow-y-auto max-h-[819px]">
+<!-- Balances Display -->
+<div class="flex flex-col gap-sm">
+<span class="font-label-caps text-on-surface-variant tracking-widest">AVAILABLE BALANCES</span>
+<div class="grid grid-cols-3 gap-xs">
+<div class="bg-surface p-sm border border-outline-variant rounded flex flex-col items-center justify-center hover:bg-surface-bright transition-colors cursor-default">
+<span class="font-data-sm text-on-surface-variant mb-xs">SUI</span>
+<span class="font-data-md text-primary">1,452.80</span>
+</div>
+<div class="bg-surface p-sm border border-outline-variant rounded flex flex-col items-center justify-center hover:bg-surface-bright transition-colors cursor-default">
+<span class="font-data-sm text-on-surface-variant mb-xs">USDC</span>
+<span class="font-data-md text-primary">450.00</span>
+</div>
+<div class="bg-surface p-sm border border-outline-variant rounded flex flex-col items-center justify-center hover:bg-surface-bright transition-colors cursor-default opacity-50">
+<span class="font-data-sm text-on-surface-variant mb-xs">DUSDC</span>
+<span class="font-data-md text-primary">0.00</span>
+</div>
+</div>
+</div>
+<!-- Funding Route Selector -->
+<div class="flex flex-col gap-sm">
+<div class="flex justify-between items-baseline">
+<span class="font-label-caps text-on-surface-variant tracking-widest">FUNDING ROUTE</span>
+<span class="font-data-sm text-primary-fixed-dim flex items-center gap-xs cursor-help">
+<span class="material-symbols-outlined text-[14px]">info</span> Auto-detect
+                        </span>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<!-- Active Route -->
+<label class="relative flex flex-col p-md bg-surface border-border-outline-variant border rounded cursor-pointer ring-1 ring-primary-fixed shadow-[0_0_8px_rgba(0,224,179,0.15)] group">
+<input checked="" class="sr-only" name="funding_route" type="radio" value="swap"/>
+<div class="flex justify-between items-start mb-sm">
+<span class="material-symbols-outlined text-primary-fixed-dim">swap_horiz</span>
+<div class="w-3 h-3 rounded-full bg-primary-fixed"></div>
+</div>
+<span class="font-body-base font-medium text-primary">Native Swap</span>
+<span class="font-data-sm text-on-surface-variant mt-xs">DeepBook V3</span>
+</label>
+<!-- Inactive Routes -->
+<label class="relative flex flex-col p-md bg-surface border border-outline-variant rounded cursor-pointer hover:bg-surface-bright hover:border-outline transition-colors group">
+<input class="sr-only" name="funding_route" type="radio" value="borrow"/>
+<div class="flex justify-between items-start mb-sm">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">account_balance</span>
+<div class="w-3 h-3 rounded-full border border-outline-variant"></div>
+</div>
+<span class="font-body-base font-medium text-on-surface-variant group-hover:text-primary">Borrow</span>
+<span class="font-data-sm text-on-surface-variant mt-xs">via Scallop</span>
+</label>
+<label class="relative flex flex-col p-md bg-surface border border-outline-variant rounded cursor-pointer hover:bg-surface-bright hover:border-outline transition-colors group">
+<input class="sr-only" name="funding_route" type="radio" value="bridge"/>
+<div class="flex justify-between items-start mb-sm">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">route</span>
+<div class="w-3 h-3 rounded-full border border-outline-variant"></div>
+</div>
+<span class="font-body-base font-medium text-on-surface-variant group-hover:text-primary">Bridge</span>
+<span class="font-data-sm text-on-surface-variant mt-xs">Wormhole</span>
+</label>
+<label class="relative flex flex-col p-md bg-surface border border-outline-variant rounded cursor-pointer hover:bg-surface-bright hover:border-outline transition-colors group opacity-70">
+<input class="sr-only" disabled="" name="funding_route" type="radio" value="escrow"/>
+<div class="flex justify-between items-start mb-sm">
+<span class="material-symbols-outlined text-on-surface-variant">lock</span>
+</div>
+<span class="font-body-base font-medium text-on-surface-variant">Escrow</span>
+<span class="font-data-sm text-on-surface-variant mt-xs">Coming Soon</span>
+</label>
+</div>
+</div>
+<!-- Amount Input -->
+<div class="flex flex-col gap-sm">
+<div class="flex justify-between items-baseline">
+<span class="font-label-caps text-on-surface-variant tracking-widest">AMOUNT TO FUND</span>
+<span class="font-data-sm text-on-surface-variant">Target: <span class="text-primary">100.00 USDC</span></span>
+</div>
+<div class="flex items-center bg-background border border-outline-variant rounded px-md py-sm focus-within:border-primary-fixed focus-within:ring-1 focus-within:ring-primary-fixed transition-all group">
+<div class="flex items-center gap-sm pr-md border-r border-outline-variant mr-md">
+<span class="w-6 h-6 rounded-full bg-[#3898FF] flex items-center justify-center overflow-hidden shrink-0">
+<span class="text-[10px] font-bold text-white">SUI</span>
+</span>
+<span class="font-label-caps text-on-surface">SUI</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant cursor-pointer group-hover:text-primary">arrow_drop_down</span>
+</div>
+<input class="w-full bg-transparent border-none outline-none font-data-lg text-primary placeholder:text-outline-variant text-right p-0 focus:ring-0" placeholder="0.00" type="number" value="45.2"/>
+<button class="ml-md font-label-caps text-primary-fixed-dim hover:text-primary-fixed">MAX</button>
+</div>
+<div class="flex justify-end font-data-sm text-on-surface-variant">≈ $98.45 USD</div>
+</div>
+<!-- Execution Settings (Gas & Slippage) -->
+<div class="bg-surface-container-low border border-outline-variant p-md rounded flex flex-col gap-md">
+<!-- Slippage -->
+<div class="flex items-center justify-between">
+<span class="font-body-sm text-on-surface-variant flex items-center gap-xs">
+                            Slippage Tolerance
+                            <span class="material-symbols-outlined text-[14px] cursor-help">info</span>
+</span>
+<div class="flex bg-background border border-outline-variant rounded p-[2px]">
+<button class="px-sm py-xs text-data-sm text-on-surface-variant hover:text-primary rounded">0.1%</button>
+<button class="px-sm py-xs text-data-sm bg-surface-bright text-primary rounded shadow-sm">0.5%</button>
+<button class="px-sm py-xs text-data-sm text-on-surface-variant hover:text-primary rounded">1.0%</button>
+<button class="px-sm py-xs text-data-sm text-on-surface-variant hover:text-primary border-l border-outline-variant ml-xs pl-md flex items-center">Custom <span class="material-symbols-outlined text-[14px] ml-xs">edit</span></button>
+</div>
+</div>
+<!-- Gas Preservation -->
+<div class="flex items-center justify-between pt-md border-t border-outline-variant">
+<span class="font-body-sm text-on-surface-variant">Preserve for Gas</span>
+<div class="flex items-center gap-sm">
+<span class="font-data-sm text-primary">1.5 SUI</span>
+<button class="font-label-caps text-outline hover:text-primary-fixed-dim underline decoration-dotted underline-offset-2">EDIT</button>
+</div>
+</div>
+</div>
+<!-- Risk Acknowledgment -->
+<label class="flex items-start gap-md cursor-pointer group">
+<div class="relative flex items-center justify-center mt-xs">
+<input class="peer appearance-none w-4 h-4 border border-outline-variant rounded-sm bg-background checked:bg-primary-fixed checked:border-primary-fixed focus:ring-1 focus:ring-primary-fixed focus:ring-offset-1 focus:ring-offset-surface-container transition-colors" type="checkbox"/>
+<span class="material-symbols-outlined text-[14px] text-background absolute opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity">check</span>
+</div>
+<span class="font-body-sm text-on-surface-variant leading-relaxed group-hover:text-on-surface transition-colors">
+                        I acknowledge the risks associated with multi-hop execution. Slippage during native swaps or collateral value changes during borrowing may result in receiving less than the target funded amount.
+                    </span>
+</label>
+</div>
+<!-- Footer Actions -->
+<div class="p-lg border-t border-outline-variant bg-surface-container-lowest flex gap-md justify-end">
+<button class="px-lg py-sm rounded border border-outline-variant text-primary-fixed-dim font-headline-md text-headline-md hover:bg-surface-bright hover:text-primary hover:border-primary transition-all">
+                    Preview Route
+                </button>
+<button class="px-lg py-sm rounded bg-primary-fixed text-on-primary-fixed font-headline-md text-headline-md hover:brightness-110 hover:shadow-[0_0_12px_rgba(36,255,205,0.4)] transition-all flex items-center gap-sm">
+                    Continue
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

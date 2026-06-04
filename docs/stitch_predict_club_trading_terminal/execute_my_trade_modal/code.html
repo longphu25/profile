@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Execute Trade Modal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#323b37",
+                        "primary-fixed-dim": "#00e0b3",
+                        "primary": "#fdfffc",
+                        "surface-container": "#19211e",
+                        "on-primary-fixed": "#002118",
+                        "on-primary": "#00382b",
+                        "tertiary": "#fffeff",
+                        "surface-container-high": "#232c28",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "surface-container-low": "#151d1a",
+                        "on-tertiary": "#393000",
+                        "on-background": "#dbe5df",
+                        "on-secondary-fixed": "#0b1c30",
+                        "background": "#0c1512",
+                        "outline-variant": "#3a4a44",
+                        "on-secondary-container": "#a9bad3",
+                        "tertiary-fixed-dim": "#e2c635",
+                        "on-error-container": "#ffdad6",
+                        "error": "#ffb4ab",
+                        "surface-container-highest": "#2e3733",
+                        "surface-container-lowest": "#07100d",
+                        "on-tertiary-container": "#746300",
+                        "on-surface": "#dbe5df",
+                        "on-primary-fixed-variant": "#00513f",
+                        "secondary-fixed": "#d3e4fe",
+                        "tertiary-fixed": "#ffe257",
+                        "on-primary-container": "#00725a",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "surface": "#0c1512",
+                        "inverse-on-surface": "#29322f",
+                        "primary-fixed": "#24ffcd",
+                        "secondary-container": "#3a4a5f",
+                        "inverse-primary": "#006b54",
+                        "outline": "#83958d",
+                        "secondary": "#b7c8e1",
+                        "inverse-surface": "#dbe5df",
+                        "on-tertiary-fixed": "#211b00",
+                        "on-error": "#690005",
+                        "on-surface-variant": "#b9cbc2",
+                        "tertiary-container": "#ffe150",
+                        "on-secondary": "#213145",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#534600",
+                        "surface-dim": "#0c1512",
+                        "primary-container": "#00ffcc",
+                        "surface-tint": "#00e0b3",
+                        "surface-variant": "#2e3733"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "0.25rem",
+                        "panel-gutter": "1px",
+                        "xl": "1.5rem",
+                        "md": "0.75rem",
+                        "sm": "0.5rem",
+                        "lg": "1rem"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "data-lg": ["JetBrains Mono"],
+                        "headline-lg": ["Inter"],
+                        "data-sm": ["JetBrains Mono"],
+                        "body-base": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "data-md": ["JetBrains Mono"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "data-lg": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "data-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "body-base": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-caps": ["10px", { "lineHeight": "12px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "data-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #0c1512; }
+    </style>
+</head>
+<body class="bg-background text-on-surface h-screen w-screen flex items-center justify-center font-body-base overflow-hidden">
+<!-- Modal Overlay Backdrop -->
+<div class="absolute inset-0 bg-background/80 backdrop-blur-md z-40"></div>
+<!-- Modal Container -->
+<div class="relative z-50 w-full max-w-[480px] bg-surface-container-lowest border border-outline-variant shadow-2xl flex flex-col">
+<!-- Header -->
+<div class="flex justify-between items-center px-lg py-md border-b border-outline-variant bg-surface-container-low">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary-fixed-dim" style="font-variation-settings: 'FILL' 1;">terminal</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Execute My Trade</h2>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors focus:outline-none">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Scrollable Content Body -->
+<div class="p-md flex flex-col gap-sm overflow-y-auto">
+<!-- Round Summary -->
+<div class="border border-outline-variant bg-surface-container p-sm flex flex-col">
+<div class="font-label-caps text-label-caps text-on-surface-variant mb-xs flex justify-between items-center">
+<span>Round Summary</span>
+<span class="font-data-sm text-data-sm text-primary-fixed-dim flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]">timer</span> 04:12:39
+                    </span>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<div>
+<div class="font-label-caps text-label-caps text-on-surface-variant/70 uppercase">Asset Pair</div>
+<div class="font-data-lg text-data-lg text-on-surface">BTC/USDC</div>
+</div>
+<div>
+<div class="font-label-caps text-label-caps text-on-surface-variant/70 uppercase">Direction</div>
+<div class="font-data-lg text-data-lg text-primary-fixed-dim flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">trending_up</span> UP
+                        </div>
+</div>
+<div class="col-span-2 border-t border-outline-variant/50 pt-xs mt-xs flex justify-between items-end">
+<div class="font-label-caps text-label-caps text-on-surface-variant/70 uppercase">Target Strike</div>
+<div class="font-data-lg text-data-lg text-on-surface">$65,000.00</div>
+</div>
+</div>
+</div>
+<!-- Position Details -->
+<div class="border border-outline-variant bg-surface-container p-sm flex flex-col">
+<div class="font-label-caps text-label-caps text-on-surface-variant mb-xs">Position Details</div>
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Amount</span>
+<span class="font-data-md text-data-md text-on-surface">45,000 DUSDC</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">PredictManager Status</span>
+<div class="flex items-center gap-xs border border-primary-fixed-dim/30 bg-primary-fixed-dim/10 px-xs py-[2px] rounded-DEFAULT">
+<div class="w-2 h-2 rounded-full bg-primary-fixed-dim animate-pulse"></div>
+<span class="font-data-sm text-data-sm text-primary-fixed-dim uppercase">Active/Ready</span>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Oracle Health</span>
+<div class="flex items-center gap-xs text-on-surface">
+<span class="material-symbols-outlined text-[14px] text-primary-fixed-dim">verified</span>
+<span class="font-data-sm text-data-sm uppercase">Healthy</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Risk Assessment -->
+<div class="flex gap-sm">
+<div class="flex-1 border border-error/30 bg-error/5 p-sm flex flex-col justify-between">
+<div class="font-label-caps text-label-caps text-error mb-xs">Max Loss</div>
+<div class="font-data-lg text-data-lg text-error">-500 DUSDC</div>
+</div>
+<div class="flex-1 border border-primary-fixed-dim/30 bg-primary-fixed-dim/5 p-sm flex flex-col justify-between">
+<div class="font-label-caps text-label-caps text-primary-fixed-dim mb-xs">Potential Payout</div>
+<div class="font-data-lg text-data-lg text-primary-fixed-dim">+1,250 DUSDC</div>
+</div>
+</div>
+<!-- Transaction Checklist -->
+<div class="border border-outline-variant bg-surface-container p-sm flex flex-col">
+<div class="font-label-caps text-label-caps text-on-surface-variant mb-xs">Transaction Checklist</div>
+<div class="flex flex-col gap-xs font-data-sm text-data-sm">
+<div class="flex items-center gap-sm text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary-fixed-dim">check_circle</span>
+                        Wallet Connected
+                    </div>
+<div class="flex items-center gap-sm text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary-fixed-dim">check_circle</span>
+                        Sufficient DUSDC Balance
+                    </div>
+<div class="flex items-center gap-sm text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary-fixed-dim">check_circle</span>
+                        Oracle Validated
+                    </div>
+<div class="flex items-center gap-sm text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary-fixed-dim">check_circle</span>
+                        Expiry Safe (Within tolerances)
+                    </div>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="p-md border-t border-outline-variant bg-surface-container-low flex gap-md">
+<button class="flex-1 border border-outline-variant text-on-surface-variant font-data-md text-data-md py-sm rounded-DEFAULT hover:text-primary hover:border-primary transition-colors focus:outline-none flex justify-center items-center">
+                Back to Cockpit
+            </button>
+<button class="flex-1 bg-primary-container text-on-primary-container font-data-md text-data-md py-sm rounded-DEFAULT hover:bg-primary-fixed transition-colors shadow-[0_0_10px_rgba(0,255,204,0.2)] focus:outline-none flex justify-center items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">draw</span>
+                Sign &amp; Execute Trade
+            </button>
+</div>
+</div>
+</body></html>
