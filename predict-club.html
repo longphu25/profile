@@ -278,20 +278,22 @@
     >
       <div class="flex items-center gap-lg flex-wrap">
         <!-- Asset -->
-        <div class="flex flex-col">
+        <div class="flex flex-col" data-animate="strip-item">
           <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
             >Asset</span
           >
           <div class="flex items-center gap-sm">
             <span class="font-data text-data-lg font-bold">BTC</span>
-            <span class="font-data text-data-md text-on-surface-variant tabular-nums"
+            <span
+              class="font-data text-data-md text-on-surface-variant tabular-nums"
+              id="live-price"
               >$64,231.50</span
             >
           </div>
         </div>
         <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
         <!-- Direction -->
-        <div class="flex flex-col">
+        <div class="flex flex-col" data-animate="strip-item">
           <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
             >Direction</span
           >
@@ -303,7 +305,7 @@
         </div>
         <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
         <!-- Strike -->
-        <div class="flex flex-col">
+        <div class="flex flex-col" data-animate="strip-item">
           <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
             >Strike</span
           >
@@ -311,7 +313,7 @@
         </div>
         <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
         <!-- Expiry -->
-        <div class="flex flex-col">
+        <div class="flex flex-col" data-animate="strip-item">
           <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
             >Expiry</span
           >
@@ -323,7 +325,7 @@
         </div>
         <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
         <!-- Pledged -->
-        <div class="flex flex-col">
+        <div class="flex flex-col" data-animate="strip-item">
           <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
             >Pledged</span
           >
@@ -344,6 +346,7 @@
         </div>
         <button
           class="bg-primary-fixed-dim text-on-primary-fixed px-lg py-sm rounded font-headline text-headline-md cursor-pointer hover:bg-primary-container transition-colors glow-mint"
+          id="accept-signal-btn"
         >
           Accept Signal
         </button>
@@ -353,7 +356,10 @@
     <!-- ═══════════════════════ MAIN VIEWPORT ═══════════════════════ -->
     <div class="flex-1 flex flex-col lg:flex-row overflow-hidden bg-background gap-[1px]">
       <!-- LEFT COLUMN: Club Details -->
-      <aside class="w-full lg:w-72 bg-surface-container flex flex-col shrink-0 overflow-hidden">
+      <aside
+        class="w-full lg:w-72 bg-surface-container flex flex-col shrink-0 overflow-hidden"
+        data-animate="column"
+      >
         <div class="p-md border-b border-outline-variant bg-surface-container-high">
           <h2 class="font-headline text-headline-md text-primary">Alpha Sui Predictors</h2>
           <div class="flex items-center gap-sm mt-1 text-on-surface-variant">
@@ -476,7 +482,7 @@
       </aside>
 
       <!-- CENTER COLUMN: Prediction Room -->
-      <main class="flex-1 bg-surface-container flex flex-col overflow-hidden">
+      <main class="flex-1 bg-surface-container flex flex-col overflow-hidden" data-animate="column">
         <div
           class="p-md border-b border-outline-variant bg-surface-container-high flex justify-between items-center"
         >
@@ -528,6 +534,7 @@
           >
             <div
               class="bg-surface-container p-sm flex flex-col justify-center items-center gap-1 hover:bg-surface-bright transition-colors cursor-pointer"
+              data-animate="bento-tile"
             >
               <span class="font-label text-label-caps text-on-surface-variant uppercase"
                 >Box Flip</span
@@ -536,6 +543,7 @@
             </div>
             <div
               class="bg-surface-container p-sm flex flex-col justify-center items-center gap-1 hover:bg-surface-bright transition-colors cursor-pointer"
+              data-animate="bento-tile"
             >
               <span class="font-label text-label-caps text-on-surface-variant uppercase"
                 >RSI (15m)</span
@@ -546,6 +554,7 @@
             </div>
             <div
               class="bg-surface-container p-sm flex flex-col justify-center items-center gap-1 hover:bg-surface-bright transition-colors cursor-pointer"
+              data-animate="bento-tile"
             >
               <span class="font-label text-label-caps text-on-surface-variant uppercase"
                 >Vol Profile</span
@@ -554,6 +563,7 @@
             </div>
             <div
               class="bg-surface-container p-sm flex flex-col justify-center items-center gap-1 hover:bg-surface-bright transition-colors cursor-pointer"
+              data-animate="bento-tile"
             >
               <span class="font-label text-label-caps text-on-surface-variant uppercase"
                 >OB Imbalance</span
@@ -574,6 +584,7 @@
               viewBox="0 0 400 200"
             >
               <polyline
+                id="chart-line"
                 fill="none"
                 stroke="#00e0b3"
                 stroke-width="2"
@@ -585,6 +596,7 @@
               <polyline fill="none" stroke="#00e0b3" stroke-width="0" opacity="0.1"></polyline>
               <!-- Fill area under line -->
               <polygon
+                id="chart-area"
                 fill="url(#mintGradient)"
                 opacity="0.15"
                 points="0,140 30,135 60,130 90,145 120,120 150,125 180,110 210,115 240,100 270,95 300,105 330,90 360,85 400,80 400,200 0,200"
@@ -624,7 +636,10 @@
       </main>
 
       <!-- RIGHT COLUMN: Risk & Execution -->
-      <aside class="w-full lg:w-80 bg-surface-container flex flex-col shrink-0 overflow-hidden">
+      <aside
+        class="w-full lg:w-80 bg-surface-container flex flex-col shrink-0 overflow-hidden"
+        data-animate="column"
+      >
         <div class="p-md border-b border-outline-variant bg-surface-container-high">
           <h2 class="font-headline text-headline-md text-primary flex items-center gap-2">
             <span class="material-symbols-outlined text-error">gpp_maybe</span> Risk & Execution
@@ -641,40 +656,62 @@
             </div>
             <!-- Progress bar -->
             <div class="w-full h-1 bg-surface-container-highest rounded-full mb-sm overflow-hidden">
-              <div class="h-full bg-primary-fixed-dim rounded-full" style="width: 66%"></div>
+              <div
+                class="h-full bg-primary-fixed-dim rounded-full"
+                id="readiness-bar"
+                style="width: 66%"
+              ></div>
             </div>
             <div class="flex flex-col gap-xs">
-              <div class="flex items-center gap-sm font-data text-data-sm">
+              <div
+                class="flex items-center gap-sm font-data text-data-sm"
+                data-animate="check-item"
+              >
                 <span class="material-symbols-outlined text-[16px] text-primary-fixed-dim"
                   >check_circle</span
                 >
                 <span class="text-on-surface">Signal Received</span>
               </div>
-              <div class="flex items-center gap-sm font-data text-data-sm">
+              <div
+                class="flex items-center gap-sm font-data text-data-sm"
+                data-animate="check-item"
+              >
                 <span class="material-symbols-outlined text-[16px] text-primary-fixed-dim"
                   >check_circle</span
                 >
                 <span class="text-on-surface">Club Consensus</span>
               </div>
-              <div class="flex items-center gap-sm font-data text-data-sm">
+              <div
+                class="flex items-center gap-sm font-data text-data-sm"
+                data-animate="check-item"
+              >
                 <span class="material-symbols-outlined text-[16px] text-primary-fixed-dim"
                   >check_circle</span
                 >
                 <span class="text-on-surface">Wallet Connected</span>
               </div>
-              <div class="flex items-center gap-sm font-data text-data-sm">
+              <div
+                class="flex items-center gap-sm font-data text-data-sm"
+                data-animate="check-item"
+              >
                 <span class="material-symbols-outlined text-[16px] text-primary-fixed-dim"
                   >check_circle</span
                 >
                 <span class="text-on-surface">Liquidity Sourced</span>
               </div>
-              <div class="flex items-center gap-sm font-data text-data-sm opacity-50">
+              <div
+                class="flex items-center gap-sm font-data text-data-sm opacity-50"
+                data-animate="check-item"
+              >
                 <span class="material-symbols-outlined text-[16px] text-outline"
                   >radio_button_unchecked</span
                 >
                 <span class="text-on-surface-variant">Funds Escrowed</span>
               </div>
-              <div class="flex items-center gap-sm font-data text-data-sm opacity-50">
+              <div
+                class="flex items-center gap-sm font-data text-data-sm opacity-50"
+                data-animate="check-item"
+              >
                 <span class="material-symbols-outlined text-[16px] text-outline"
                   >radio_button_unchecked</span
                 >
@@ -761,6 +798,7 @@
           <!-- Node: Direct Wallet -->
           <div
             class="min-w-[130px] h-20 bg-surface-container-highest border border-primary-fixed-dim rounded-xl p-sm flex flex-col justify-between glow-mint relative hover-lift cursor-pointer flow-connector text-primary-fixed-dim"
+            data-animate="fund-node"
           >
             <span class="font-label text-label-caps text-primary-fixed-dim">Active</span>
             <span class="font-data text-data-sm text-on-surface">Direct Wallet</span>
@@ -771,6 +809,7 @@
           <!-- Node: Swap -->
           <div
             class="min-w-[130px] h-20 bg-surface-container-highest border border-outline-variant rounded-xl p-sm flex flex-col justify-between relative opacity-60 hover-lift cursor-pointer flow-connector text-outline-variant"
+            data-animate="fund-node"
           >
             <span class="font-label text-label-caps text-on-surface-variant">Standby</span>
             <span class="font-data text-data-sm text-on-surface">Swap</span>
@@ -779,6 +818,7 @@
           <!-- Node: Borrow -->
           <div
             class="min-w-[130px] h-20 bg-surface-container-highest border border-outline-variant rounded-xl p-sm flex flex-col justify-between relative opacity-60 hover-lift cursor-pointer flow-connector text-outline-variant"
+            data-animate="fund-node"
           >
             <span class="font-label text-label-caps text-on-surface-variant">Standby</span>
             <span class="font-data text-data-sm text-on-surface">Borrow</span>
@@ -787,6 +827,7 @@
           <!-- Node: Escrow -->
           <div
             class="min-w-[130px] h-20 bg-surface-container-highest border border-outline-variant rounded-xl p-sm flex flex-col justify-between relative opacity-60 hover-lift cursor-pointer"
+            data-animate="fund-node"
           >
             <span class="font-label text-label-caps text-on-surface-variant">Pending</span>
             <span class="font-data text-data-sm text-on-surface">Escrow</span>
@@ -942,8 +983,13 @@
     </nav>
 
     <!-- Countdown timer script -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
     <script>
       ;(function () {
+        // ─── Reduced Motion Check ───
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+        // ─── Countdown Timer ───
         let total = 2 * 3600 + 14 * 60 + 55
         const el = document.getElementById('expiry-timer')
         function tick() {
@@ -958,6 +1004,130 @@
           el.textContent = h + ':' + m + ':' + s
         }
         setInterval(tick, 1000)
+
+        // ─── GSAP Animations (skip if reduced motion) ───
+        if (prefersReduced) return
+
+        gsap.defaults({ ease: 'power2.out' })
+
+        // 1. Page load: stagger the 3 main columns
+        const columns = document.querySelectorAll('[data-animate="column"]')
+        gsap.from(columns, {
+          opacity: 0,
+          y: 12,
+          duration: 0.5,
+          stagger: 0.1,
+          delay: 0.2,
+        })
+
+        // 2. Decision strip items stagger in
+        const stripItems = document.querySelectorAll('[data-animate="strip-item"]')
+        gsap.from(stripItems, {
+          opacity: 0,
+          y: 8,
+          duration: 0.4,
+          stagger: 0.06,
+          delay: 0.3,
+        })
+
+        // 3. Chart SVG line draw animation
+        const chartLine = document.getElementById('chart-line')
+        if (chartLine) {
+          const length = chartLine.getTotalLength()
+          gsap.set(chartLine, { strokeDasharray: length, strokeDashoffset: length, opacity: 1 })
+          gsap.to(chartLine, {
+            strokeDashoffset: 0,
+            duration: 2,
+            delay: 0.6,
+            ease: 'power1.inOut',
+          })
+        }
+
+        // 4. Chart gradient area fade in after line draws
+        const chartArea = document.getElementById('chart-area')
+        if (chartArea) {
+          gsap.from(chartArea, { opacity: 0, duration: 0.8, delay: 2.2 })
+        }
+
+        // 5. Funding router nodes flow in sequentially
+        const fundingNodes = document.querySelectorAll('[data-animate="fund-node"]')
+        gsap.from(fundingNodes, {
+          opacity: 0,
+          x: -16,
+          duration: 0.4,
+          stagger: 0.12,
+          delay: 0.5,
+        })
+
+        // 6. Progress bar fill animation
+        const progressBar = document.getElementById('readiness-bar')
+        if (progressBar) {
+          gsap.from(progressBar, {
+            width: '0%',
+            duration: 1,
+            delay: 0.8,
+            ease: 'power2.inOut',
+          })
+        }
+
+        // 7. Readiness checklist items stagger
+        const checkItems = document.querySelectorAll('[data-animate="check-item"]')
+        gsap.from(checkItems, {
+          opacity: 0,
+          x: -8,
+          duration: 0.3,
+          stagger: 0.08,
+          delay: 0.6,
+        })
+
+        // 8. Indicator bento tiles scale in
+        const bentoTiles = document.querySelectorAll('[data-animate="bento-tile"]')
+        gsap.from(bentoTiles, {
+          opacity: 0,
+          scale: 0.92,
+          duration: 0.4,
+          stagger: 0.08,
+          delay: 0.4,
+        })
+
+        // 9. Simulated live price ticker (subtle)
+        const priceEl = document.getElementById('live-price')
+        if (priceEl) {
+          const basePrice = 64231.5
+          function updatePrice() {
+            const delta = (Math.random() - 0.48) * 15
+            const newPrice = basePrice + delta
+            priceEl.textContent =
+              '$' +
+              newPrice.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
+            // Brief flash on change
+            gsap.fromTo(
+              priceEl,
+              { color: delta > 0 ? '#00e0b3' : '#ffb4ab' },
+              {
+                color: '#b9cbc2',
+                duration: 0.8,
+                ease: 'power2.out',
+              },
+            )
+          }
+          setInterval(updatePrice, 3000)
+        }
+
+        // 10. Accept Signal button subtle breathing glow
+        const ctaBtn = document.getElementById('accept-signal-btn')
+        if (ctaBtn) {
+          gsap.to(ctaBtn, {
+            boxShadow: '0 0 16px rgba(0, 224, 179, 0.5)',
+            duration: 1.5,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+          })
+        }
       })()
     </script>
   </body>
