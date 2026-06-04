@@ -1,0 +1,6 @@
+[package]
+name = "seal_policy"
+edition = "2024"
+
+[addresses]
+seal_policy = "0x0"
