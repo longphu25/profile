@@ -7,3 +7,10 @@ authorization, wallet/signing boundaries, provider behavior, validation
 requirements, or user-visible product contracts.
 
 Use `../templates/decision.md` for new records.
+
+## Records
+
+| File | Decision |
+| --- | --- |
+| [predict-club-architecture.md](predict-club-architecture.md) | Predict Club starts as hybrid non-custodial coordination and defers pooled DUSDC custody to a future policy-guarded group vault. |
+| [predict-club-funding-escrow.md](predict-club-funding-escrow.md) | Predict Club uses P2P escrow exchange for USDC to DUSDC funding instead of treating USDC as a Predict quote asset. |
