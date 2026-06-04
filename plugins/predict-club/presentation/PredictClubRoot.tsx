@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { recommendFundingRoute } from '../application/recommendFundingRoute'
 import { loadClubState, saveClubState } from '../data/localClubStore'
-import type { AssetBalances, ClubState, EscrowOfferView, ModalKind, RoundStatus } from '../domain/types'
+import type {
+  AssetBalances,
+  ClubState,
+  EscrowOfferView,
+  ModalKind,
+  RoundStatus,
+} from '../domain/types'
 import type { SuiContext, SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
 
 interface PredictClubRootProps {
@@ -46,8 +52,10 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
   const isLeader = context.address ? context.address.toLowerCase().endsWith('7c') : false
 
   const primary = useMemo(() => {
-    if (!context.isConnected) return { label: 'Connect Wallet', action: () => host?.requestConnect() }
-    if (round.status === 'settled') return { label: 'Claim Settlement', action: () => setModal('claim-settlement') }
+    if (!context.isConnected)
+      return { label: 'Connect Wallet', action: () => host?.requestConnect() }
+    if (round.status === 'settled')
+      return { label: 'Claim Settlement', action: () => setModal('claim-settlement') }
     if (round.status === 'confirmed' || round.status === 'funding') {
       if (demoBalances.dusdc < round.suggestedDusdc) {
         return { label: 'Fund to Join', action: () => setModal('fund-to-join') }
@@ -68,11 +76,20 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
   }
 
   return (
-    <div className="pc-root">
-      <DecisionStrip club={club} fundingLabel={funding.label} onPrimary={primary.action} primaryLabel={primary.label} />
+    <div className="pc-root pc-root--full">
+      <DecisionStrip
+        club={club}
+        fundingLabel={funding.label}
+        onPrimary={primary.action}
+        primaryLabel={primary.label}
+      />
 
       <main className="pc-viewport">
-        <ClubColumn club={club} mobileTab={mobileTab} onCreateRound={() => setModal('create-round')} />
+        <ClubColumn
+          club={club}
+          mobileTab={mobileTab}
+          onCreateRound={() => setModal('create-round')}
+        />
         <PredictionRoom club={club} mobileTab={mobileTab} />
         <RiskExecutionColumn
           club={club}
@@ -86,7 +103,11 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
 
       <section className={`pc-bottom ${mobileTab === 'funding' ? 'pc-mobile-show' : ''}`}>
         <FundingRouter onOpenModal={setModal} />
-        <EscrowOffers offers={club.escrowOffers} onCreate={() => setModal('create-escrow')} onFill={openFillOffer} />
+        <EscrowOffers
+          offers={club.escrowOffers}
+          onCreate={() => setModal('create-escrow')}
+          onFill={openFillOffer}
+        />
         <RoundHistory club={club} />
       </section>
 
@@ -141,7 +162,11 @@ function DecisionStrip({
           <i />
           {round.risk === 'ready' ? 'Ready' : labelize(round.risk)}
         </span>
-        <button className="pc-button pc-button-primary pc-button-lg" type="button" onClick={onPrimary}>
+        <button
+          className="pc-button pc-button-primary pc-button-lg"
+          type="button"
+          onClick={onPrimary}
+        >
           {primaryLabel}
         </button>
         <span className="pc-funding-note">{fundingLabel}</span>
@@ -169,7 +194,12 @@ function ClubColumn({
             <Icon name="military_tech" /> Leader: <span>{club.leaderName}</span>
           </p>
         </div>
-        <button className="pc-icon-button" type="button" onClick={onCreateRound} aria-label="Create prediction round">
+        <button
+          className="pc-icon-button"
+          type="button"
+          onClick={onCreateRound}
+          aria-label="Create prediction round"
+        >
           <Icon name="add" />
         </button>
       </header>
@@ -184,7 +214,9 @@ function ClubColumn({
               <span>{member.name.charAt(0)}</span>
               <strong>{member.name}</strong>
             </div>
-            <em className={`pc-member-state pc-member-state-${member.state}`}>{labelize(member.state)}</em>
+            <em className={`pc-member-state pc-member-state-${member.state}`}>
+              {labelize(member.state)}
+            </em>
           </li>
         ))}
       </ul>
@@ -279,10 +311,18 @@ function RiskExecutionColumn({
         </section>
         <section className="pc-exposure-card">
           <DataRow label="Your Max Loss" value={`-${round.suggestedDusdc} DUSDC`} tone="error" />
-          <DataRow label="Est. Payout" value={`+${formatUsd(round.suggestedDusdc * 2.5)} DUSDC`} tone="mint" />
+          <DataRow
+            label="Est. Payout"
+            value={`+${formatUsd(round.suggestedDusdc * 2.5)} DUSDC`}
+            tone="mint"
+          />
         </section>
         <div className="pc-execute-box">
-          <button className="pc-button pc-button-primary pc-button-full" type="button" onClick={onPrimary}>
+          <button
+            className="pc-button pc-button-primary pc-button-full"
+            type="button"
+            onClick={onPrimary}
+          >
             {primaryLabel}
           </button>
           <p>Awaiting full escrow funding</p>
@@ -353,7 +393,9 @@ function EscrowOffers({
           {offers.map((offer) => (
             <tr key={offer.id} onClick={() => onFill(offer)}>
               <td>{offer.maker}</td>
-              <td>{formatUsd(offer.offerAmount)} {offer.offerAsset}</td>
+              <td>
+                {formatUsd(offer.offerAmount)} {offer.offerAsset}
+              </td>
               <td>{offer.status === 'open' ? '0.05%' : labelize(offer.status)}</td>
             </tr>
           ))}
@@ -382,7 +424,9 @@ function RoundHistory({ club }: { club: ClubState }) {
             <tr key={row.id}>
               <td>{row.id}</td>
               <td>BTC/USDC</td>
-              <td className={row.pnlDusdc >= 0 ? 'pc-positive' : 'pc-negative'}>{formatSigned(row.pnlDusdc)}</td>
+              <td className={row.pnlDusdc >= 0 ? 'pc-positive' : 'pc-negative'}>
+                {formatSigned(row.pnlDusdc)}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -391,7 +435,13 @@ function RoundHistory({ club }: { club: ClubState }) {
   )
 }
 
-function MobileNav({ active, onChange }: { active: MobileTab; onChange: (tab: MobileTab) => void }) {
+function MobileNav({
+  active,
+  onChange,
+}: {
+  active: MobileTab
+  onChange: (tab: MobileTab) => void
+}) {
   const items: Array<[MobileTab, string, string]> = [
     ['clubs', 'groups', 'Clubs'],
     ['predict', 'query_stats', 'Predict'],
@@ -403,7 +453,12 @@ function MobileNav({ active, onChange }: { active: MobileTab; onChange: (tab: Mo
   return (
     <nav className="pc-mobile-nav" aria-label="Predict Club mobile navigation">
       {items.map(([tab, icon, label]) => (
-        <button className={active === tab ? 'pc-active' : ''} key={tab} type="button" onClick={() => onChange(tab)}>
+        <button
+          className={active === tab ? 'pc-active' : ''}
+          key={tab}
+          type="button"
+          onClick={() => onChange(tab)}
+        >
           <Icon name={icon} />
           <span>{label}</span>
         </button>
@@ -423,10 +478,20 @@ function PredictClubModal({
 }) {
   return (
     <div className="pc-modal-backdrop">
-      <section className={`pc-modal pc-modal-${modal}`} role="dialog" aria-modal="true" aria-label={modalTitle(modal)}>
+      <section
+        className={`pc-modal pc-modal-${modal}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={modalTitle(modal)}
+      >
         <header>
           <h2>{modalTitle(modal)}</h2>
-          <button className="pc-icon-button" type="button" onClick={onClose} aria-label="Close modal">
+          <button
+            className="pc-icon-button"
+            type="button"
+            onClick={onClose}
+            aria-label="Close modal"
+          >
             <Icon name="close" />
           </button>
         </header>
@@ -483,8 +548,12 @@ function CreateRoundModal({
     <ModalBody
       footer={
         <>
-          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>Save Draft</button>
-          <button className="pc-button pc-button-primary" type="button" onClick={onCreateRound}>Publish Round</button>
+          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>
+            Save Draft
+          </button>
+          <button className="pc-button pc-button-primary" type="button" onClick={onCreateRound}>
+            Publish Round
+          </button>
         </>
       }
     >
@@ -492,7 +561,12 @@ function CreateRoundModal({
         <SegmentedField label="Oracle" options={['PYTH', 'SWITCHBOARD']} active="PYTH" />
         <InputField label="Asset Pair" value="SUI/USDC" readOnly icon="keyboard_arrow_down" />
       </div>
-      <SegmentedField label="Direction Thesis" options={['UP', 'DOWN', 'RANGE']} active={round.direction} wide />
+      <SegmentedField
+        label="Direction Thesis"
+        options={['UP', 'DOWN', 'RANGE']}
+        active={round.direction}
+        wide
+      />
       <div className="pc-form-row pc-two-col">
         <InputField label="Lower Bound (USDC)" value={String(round.lowerStrike ?? 63800)} />
         <InputField label="Upper Bound (USDC)" value={String(round.upperStrike ?? 65000)} />
@@ -504,12 +578,20 @@ function CreateRoundModal({
         <textarea defaultValue={round.thesis} rows={3} />
       </label>
       <div className="pc-form-row pc-two-col">
-        <SegmentedField label="Confidence" options={['LOW', 'MED', 'HIGH']} active={round.confidence === 'High' ? 'HIGH' : 'MED'} />
+        <SegmentedField
+          label="Confidence"
+          options={['LOW', 'MED', 'HIGH']}
+          active={round.confidence === 'High' ? 'HIGH' : 'MED'}
+        />
         <div className="pc-field">
           <span>Indicators</span>
           <div className="pc-chip-row">
             {round.indicators.slice(0, 4).map((item, index) => (
-              <button className={index === 0 ? 'pc-chip pc-chip-active' : 'pc-chip'} key={item.id} type="button">
+              <button
+                className={index === 0 ? 'pc-chip pc-chip-active' : 'pc-chip'}
+                key={item.id}
+                type="button"
+              >
                 {item.name}
               </button>
             ))}
@@ -533,7 +615,9 @@ function FundToJoinModal({
     <ModalBody
       footer={
         <>
-          <button className="pc-button pc-button-secondary" type="button">Preview Route</button>
+          <button className="pc-button pc-button-secondary" type="button">
+            Preview Route
+          </button>
           <button className="pc-button pc-button-primary" type="button" onClick={onClose}>
             Continue <Icon name="arrow_forward" />
           </button>
@@ -554,7 +638,13 @@ function FundToJoinModal({
           <RouteChoice icon="lock" title="Escrow" note="Club P2P" />
         </div>
       </div>
-      <AmountInput label="Amount to Fund" target={`${club.activeRound.suggestedDusdc}.00 USDC`} asset="SUI" value="45.2" fiat="$98.45 USD" />
+      <AmountInput
+        label="Amount to Fund"
+        target={`${club.activeRound.suggestedDusdc}.00 USDC`}
+        asset="SUI"
+        value="45.2"
+        fiat="$98.45 USD"
+      />
       <div className="pc-settings-box pc-wide">
         <DataRow label="Slippage Tolerance" value="0.5%" />
         <DataRow label="Preserve for Gas" value="1.5 SUI" />
@@ -569,25 +659,43 @@ function CreateEscrowModal({ club, onClose }: { club: ClubState; onClose: () => 
     <ModalBody
       footer={
         <>
-          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>Cancel</button>
+          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>
+            Cancel
+          </button>
           <button className="pc-button pc-button-primary" type="button" onClick={onClose}>
             <Icon name="check_circle" /> Create Offer
           </button>
         </>
       }
     >
-      <SwapAssetInput label="Offer Asset" balance="Bal: 1,245.50 DUSDC" asset="DUSDC" value="500.00" />
-      <div className="pc-swap-arrow"><Icon name="arrow_downward" /></div>
+      <SwapAssetInput
+        label="Offer Asset"
+        balance="Bal: 1,245.50 DUSDC"
+        asset="DUSDC"
+        value="500.00"
+      />
+      <div className="pc-swap-arrow">
+        <Icon name="arrow_downward" />
+      </div>
       <SwapAssetInput label="Want Asset" asset="USDC" value="480.00" />
       <div className="pc-form-row pc-two-col">
-        <InputField label="Recipient (Optional)" value="" placeholder="0x..." icon="account_balance_wallet" />
+        <InputField
+          label="Recipient (Optional)"
+          value=""
+          placeholder="0x..."
+          icon="account_balance_wallet"
+        />
         <InputField label="Round ID (Optional)" value={club.activeRound.id} icon="tag" />
       </div>
       <div className="pc-field pc-wide">
         <span>Expiry Time</span>
         <div className="pc-chip-row">
           {['1H', '4H', '12H', '24H', 'Custom'].map((value) => (
-            <button className={value === '12H' ? 'pc-chip pc-chip-active' : 'pc-chip'} key={value} type="button">
+            <button
+              className={value === '12H' ? 'pc-chip pc-chip-active' : 'pc-chip'}
+              key={value}
+              type="button"
+            >
               {value}
             </button>
           ))}
@@ -607,7 +715,9 @@ function ExecuteTradeModal({ club, onClose }: { club: ClubState; onClose: () => 
     <ModalBody
       footer={
         <>
-          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>Back to Cockpit</button>
+          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>
+            Back to Cockpit
+          </button>
           <button className="pc-button pc-button-primary" type="button" onClick={onClose}>
             <Icon name="draw" /> Sign &amp; Execute Trade
           </button>
@@ -617,7 +727,9 @@ function ExecuteTradeModal({ club, onClose }: { club: ClubState; onClose: () => 
       <div className="pc-info-card pc-wide">
         <div className="pc-section-title">
           <span>Round Summary</span>
-          <b><Icon name="timer" /> {round.expiryMinutes}:00</b>
+          <b>
+            <Icon name="timer" /> {round.expiryMinutes}:00
+          </b>
         </div>
         <div className="pc-form-row pc-two-col">
           <MetricBox label="Asset Pair" value="BTC/USDC" />
@@ -632,15 +744,21 @@ function ExecuteTradeModal({ club, onClose }: { club: ClubState; onClose: () => 
       </div>
       <div className="pc-form-row pc-two-col">
         <MetricBox label="Max Loss" value={`-${round.suggestedDusdc} DUSDC`} tone="error" />
-        <MetricBox label="Potential Payout" value={`+${formatUsd(round.suggestedDusdc * 2.5)} DUSDC`} tone="mint" />
+        <MetricBox
+          label="Potential Payout"
+          value={`+${formatUsd(round.suggestedDusdc * 2.5)} DUSDC`}
+          tone="mint"
+        />
       </div>
       <div className="pc-info-card pc-wide">
-        {['Wallet Connected', 'Sufficient DUSDC Balance', 'Oracle Validated', 'Expiry Safe'].map((item) => (
-          <div className="pc-check-ok" key={item}>
-            <Icon name="check_circle" />
-            <span>{item}</span>
-          </div>
-        ))}
+        {['Wallet Connected', 'Sufficient DUSDC Balance', 'Oracle Validated', 'Expiry Safe'].map(
+          (item) => (
+            <div className="pc-check-ok" key={item}>
+              <Icon name="check_circle" />
+              <span>{item}</span>
+            </div>
+          ),
+        )}
       </div>
     </ModalBody>
   )
@@ -651,30 +769,55 @@ function ScallopBorrowModal({ onClose }: { onClose: () => void }) {
     <ModalBody
       footer={
         <>
-          <button className="pc-button pc-button-secondary" type="button">Preview Borrow</button>
+          <button className="pc-button pc-button-secondary" type="button">
+            Preview Borrow
+          </button>
           <button className="pc-button pc-button-primary" type="button" onClick={onClose}>
             Continue to Wallet <Icon name="arrow_forward" />
           </button>
         </>
       }
     >
-      <AmountInput label="Collateral Amount" target="Balance: 12,450.00 SUI" asset="SUI" value="5000.00" fiat="$4,210.50" />
-      <div className="pc-swap-arrow"><Icon name="arrow_downward" /></div>
-      <AmountInput label="Borrow Amount" target="Max Borrow: 2,526.30 USDC" asset="USDC" value="1500.00" />
+      <AmountInput
+        label="Collateral Amount"
+        target="Balance: 12,450.00 SUI"
+        asset="SUI"
+        value="5000.00"
+        fiat="$4,210.50"
+      />
+      <div className="pc-swap-arrow">
+        <Icon name="arrow_downward" />
+      </div>
+      <AmountInput
+        label="Borrow Amount"
+        target="Max Borrow: 2,526.30 USDC"
+        asset="USDC"
+        value="1500.00"
+      />
       <div className="pc-health-card pc-wide">
         <div className="pc-section-title">
           <span>Est. Health Factor</span>
           <b>1.85 Safe</b>
         </div>
-        <div className="pc-health-bar"><i /></div>
-        <div className="pc-health-scale"><span>0.0</span><span>1.0</span><span>1.5</span><span>3.0+</span></div>
+        <div className="pc-health-bar">
+          <i />
+        </div>
+        <div className="pc-health-scale">
+          <span>0.0</span>
+          <span>1.0</span>
+          <span>1.5</span>
+          <span>3.0+</span>
+        </div>
       </div>
       <div className="pc-form-row pc-three-col">
         <MetricBox label="Oracle Status" value="Healthy" tone="mint" />
         <MetricBox label="Liq. Price" value="$0.42 SUI" tone="amber" />
         <MetricBox label="Borrow APY" value="6.45%" />
       </div>
-      <CheckNotice text="I understand that my SUI collateral may be liquidated by the protocol if the health factor drops below 1.0." warning />
+      <CheckNotice
+        text="I understand that my SUI collateral may be liquidated by the protocol if the health factor drops below 1.0."
+        warning
+      />
     </ModalBody>
   )
 }
@@ -695,16 +838,26 @@ function SimpleModalBody({
     <ModalBody
       footer={
         <>
-          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>Cancel</button>
-          <button className="pc-button pc-button-primary" type="button" onClick={onClose}>{isFill ? 'Fill Offer' : 'Claim'}</button>
+          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="pc-button pc-button-primary" type="button" onClick={onClose}>
+            {isFill ? 'Fill Offer' : 'Claim'}
+          </button>
         </>
       }
     >
       {isFill ? (
         <>
           <DataRow label="Offer" value={offer?.id ?? 'Selected offer'} />
-          <DataRow label="You pay" value={offer ? `${formatUsd(offer.wantAmount)} ${offer.wantAsset}` : '-'} />
-          <DataRow label="You receive" value={offer ? `${formatUsd(offer.offerAmount)} ${offer.offerAsset}` : '-'} />
+          <DataRow
+            label="You pay"
+            value={offer ? `${formatUsd(offer.wantAmount)} ${offer.wantAsset}` : '-'}
+          />
+          <DataRow
+            label="You receive"
+            value={offer ? `${formatUsd(offer.offerAmount)} ${offer.offerAsset}` : '-'}
+          />
           <DataRow label="Expiry" value={offer?.expiry ?? '-'} />
         </>
       ) : (
@@ -744,13 +897,24 @@ function DataBlock({
   return (
     <div className="pc-data-block">
       <span>{label}</span>
-      <strong className={tone ? `pc-tone-${tone}` : ''}>{icon ? <Icon name={icon} /> : null}{value}</strong>
+      <strong className={tone ? `pc-tone-${tone}` : ''}>
+        {icon ? <Icon name={icon} /> : null}
+        {value}
+      </strong>
       {note ? <em>{note}</em> : null}
     </div>
   )
 }
 
-function DataRow({ label, value, tone }: { label: string; value: string; tone?: 'mint' | 'amber' | 'error' }) {
+function DataRow({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone?: 'mint' | 'amber' | 'error'
+}) {
   return (
     <div className="pc-data-row">
       <span>{label}</span>
@@ -831,7 +995,17 @@ function SegmentedField({
   )
 }
 
-function RouteChoice({ icon, title, note, active = false }: { icon: string; title: string; note: string; active?: boolean }) {
+function RouteChoice({
+  icon,
+  title,
+  note,
+  active = false,
+}: {
+  icon: string
+  title: string
+  note: string
+  active?: boolean
+}) {
   return (
     <label className={active ? 'pc-route-choice pc-active' : 'pc-route-choice'}>
       <input defaultChecked={active} name="funding_route" type="radio" />
@@ -871,7 +1045,17 @@ function AmountInput({
   )
 }
 
-function SwapAssetInput({ label, balance, asset, value }: { label: string; balance?: string; asset: string; value: string }) {
+function SwapAssetInput({
+  label,
+  balance,
+  asset,
+  value,
+}: {
+  label: string
+  balance?: string
+  asset: string
+  value: string
+}) {
   return (
     <div className="pc-field pc-wide">
       <div className="pc-field-line">
@@ -879,7 +1063,11 @@ function SwapAssetInput({ label, balance, asset, value }: { label: string; balan
         {balance ? <em>{balance}</em> : null}
       </div>
       <div className="pc-swap-input">
-        <button type="button"><b>{asset.charAt(0)}</b>{asset}<Icon name="expand_more" /></button>
+        <button type="button">
+          <b>{asset.charAt(0)}</b>
+          {asset}
+          <Icon name="expand_more" />
+        </button>
         <input defaultValue={value} />
         <button type="button">MAX</button>
       </div>
@@ -901,7 +1089,11 @@ function Divider() {
 }
 
 function Icon({ name }: { name: string }) {
-  return <span className="material-symbols-outlined" aria-hidden="true">{name}</span>
+  return (
+    <span className="material-symbols-outlined" aria-hidden="true">
+      {name}
+    </span>
+  )
 }
 
 function modalTitle(modal: ModalKind) {
