@@ -181,6 +181,16 @@
         background-size: 24px 24px;
         opacity: 0.15;
       }
+
+      /* Respect reduced motion preference */
+      @media (prefers-reduced-motion: reduce) {
+        .animate-pulse-dot {
+          animation: none;
+        }
+        .hover-lift:hover {
+          transform: none;
+        }
+      }
     </style>
   </head>
 
