@@ -13,6 +13,10 @@ distributed across existing root notes and domain docs.
 
 ## Domain Contracts
 
+- Predict Club: `predict-club.md`
+- Predict Club Architecture: `predict-club-architecture.md`
+- Predict Club Escrow Contract: `predict-club-escrow-contract.md`
+- Predict Club Funding: `predict-club-funding.md`
 - DeepBook: `../deepbook/README.md`
 - NAVI: `../defi/navi/TECHNICAL.md`
 - Seal: `../seal/TECHNICAL.md`
