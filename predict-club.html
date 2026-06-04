@@ -266,6 +266,7 @@
         </div>
         <button
           class="bg-primary-fixed-dim text-on-primary-fixed px-md py-xs rounded font-data text-data-sm cursor-pointer hover:bg-primary-container transition-colors"
+          data-wallet-btn
         >
           Connect Wallet
         </button>
@@ -1103,5 +1104,20 @@
           })
       })()
     </script>
+
+    <!-- React plugin multi-slot mounting (hidden orchestrator) -->
+    <div id="root" style="display: none"></div>
+    <div id="pc-slot-decision-strip" style="display: none"></div>
+    <div id="pc-slot-club-panel" style="display: none"></div>
+    <div id="pc-slot-prediction-room" style="display: none"></div>
+    <div id="pc-slot-risk-panel" style="display: none"></div>
+    <div id="pc-slot-funding-router" style="display: none"></div>
+    <div id="pc-slot-escrow-offers" style="display: none"></div>
+    <div id="pc-slot-round-history" style="display: none"></div>
+    <div
+      id="pc-slot-modal-layer"
+      class="fixed inset-0 z-50 pointer-events-none [&>*]:pointer-events-auto"
+    ></div>
+    <script type="module" src="/src/predict-club/main.tsx"></script>
   </body>
 </html>
