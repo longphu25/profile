@@ -1,8 +1,13 @@
+import { useMemo } from 'react'
 import { usePredictClub } from './PredictClubContext'
+import { computeConsensus } from '../domain/indicatorConsensus'
+import { labelize } from './shared'
 
 export function PredictionRoomPanel() {
   const { club } = usePredictClub()
   const round = club.activeRound
+
+  const consensus = useMemo(() => computeConsensus(round.indicators), [round.indicators])
 
   return (
     <>
@@ -65,6 +70,34 @@ export function PredictionRoomPanel() {
               </span>
             </div>
           ))}
+        </div>
+
+        {/* Consensus Summary */}
+        <div className="flex items-center gap-md p-sm bg-surface-container-highest rounded-xl border border-outline-variant">
+          <div
+            className={`px-sm py-1 rounded font-label text-label-caps uppercase ${
+              consensus.bias === 'bullish'
+                ? 'bg-primary-fixed-dim/20 text-primary-fixed-dim'
+                : consensus.bias === 'bearish'
+                  ? 'bg-error/20 text-error'
+                  : consensus.bias === 'no-trade'
+                    ? 'bg-error/20 text-error'
+                    : 'bg-surface-container text-on-surface-variant'
+            }`}
+          >
+            {labelize(consensus.bias)}
+          </div>
+          <span className="font-data text-data-sm text-on-surface-variant">
+            Confidence: <span className="text-on-surface">{consensus.confidence}</span>
+          </span>
+          <div className="ml-auto flex items-center gap-sm font-data text-data-sm">
+            <span className="text-primary-fixed-dim">{consensus.bullishCount}↑</span>
+            <span className="text-error">{consensus.bearishCount}↓</span>
+            <span className="text-on-surface-variant">{consensus.neutralCount}—</span>
+            {consensus.blockedCount > 0 && (
+              <span className="text-error">{consensus.blockedCount}✕</span>
+            )}
+          </div>
         </div>
 
         {/* Chart placeholder */}

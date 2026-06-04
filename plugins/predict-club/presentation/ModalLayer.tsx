@@ -1,425 +1,303 @@
-import type { ReactNode } from 'react'
 import { usePredictClub } from './PredictClubContext'
-import { formatUsd, Icon } from './shared'
-import type { ClubState, AssetBalances, EscrowOfferView, ModalKind } from '../domain/types'
+import { formatUsd } from './shared'
+import type { ModalKind } from '../domain/types'
+import { demoClubState } from '../domain/fixtures'
 
 export function ModalLayer() {
-  const { modal, setModal, club, balances, selectedOffer, updateRoundStatus } = usePredictClub()
-
+  const { modal, setModal } = usePredictClub()
   if (!modal) return null
 
   return (
-    <div className="pc-modal-backdrop">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-lg bg-[#0c1512cc] backdrop-blur-xl"
+      onClick={() => setModal(null)}
+    >
       <section
-        className={`pc-modal pc-modal-${modal}`}
+        className="w-full max-w-[480px] max-h-[80vh] flex flex-col border border-outline-variant rounded-xl bg-surface-container overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={modalTitle(modal)}
       >
-        <header>
-          <h2>{modalTitle(modal)}</h2>
+        <header className="flex items-center justify-between p-md border-b border-outline-variant bg-surface-container-high">
+          <h2 className="font-headline text-headline-md text-on-surface">{modalTitle(modal)}</h2>
           <button
-            className="pc-icon-button"
+            className="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-bright cursor-pointer"
             type="button"
             onClick={() => setModal(null)}
-            aria-label="Close modal"
           >
-            <Icon name="close" />
+            <span className="material-symbols-outlined text-on-surface-variant">close</span>
           </button>
         </header>
-        <ModalContent
-          balances={balances}
-          club={club}
-          modal={modal}
-          offer={selectedOffer}
-          onClose={() => setModal(null)}
-          onCreateRound={() => {
-            updateRoundStatus('open')
-            setModal(null)
-          }}
-        />
+        <div className="flex-1 overflow-y-auto p-lg flex flex-col gap-lg">
+          <ModalBodyContent modal={modal} />
+        </div>
+        <footer className="flex justify-end gap-md p-md border-t border-outline-variant bg-surface-container-lowest">
+          <ModalFooterContent modal={modal} />
+        </footer>
       </section>
     </div>
   )
 }
 
-function ModalContent({
-  modal,
-  club,
-  balances,
-  offer,
-  onClose,
-  onCreateRound,
-}: {
-  modal: ModalKind
-  club: ClubState
-  balances: AssetBalances
-  offer: EscrowOfferView | null
-  onClose: () => void
-  onCreateRound: () => void
-}) {
-  if (modal === 'create-round') {
-    return <CreateRoundModal club={club} onClose={onClose} onCreateRound={onCreateRound} />
-  }
-  if (modal === 'fund-to-join') {
-    return <FundToJoinModal balances={balances} club={club} onClose={onClose} />
-  }
-  if (modal === 'create-escrow') {
-    return <CreateEscrowModal club={club} onClose={onClose} />
-  }
-  if (modal === 'execute-trade') {
-    return <ExecuteTradeModal club={club} onClose={onClose} />
-  }
-  if (modal === 'scallop-borrow') {
-    return <ScallopBorrowModal onClose={onClose} />
-  }
-  return <SimpleModalBody club={club} modal={modal} offer={offer} onClose={onClose} />
-}
-
-function ModalBody({ children, footer }: { children: ReactNode; footer: ReactNode }) {
-  return (
-    <>
-      <div className="pc-modal-body">{children}</div>
-      <footer className="pc-modal-footer">{footer}</footer>
-    </>
-  )
-}
-
-function CreateRoundModal({
-  club,
-  onClose,
-  onCreateRound,
-}: {
-  club: ClubState
-  onClose: () => void
-  onCreateRound: () => void
-}) {
+function ModalBodyContent({ modal }: { modal: ModalKind }) {
+  const { club, balances, selectedOffer } = usePredictClub()
   const round = club.activeRound
-  return (
-    <ModalBody
-      footer={
-        <>
-          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>
-            Save Draft
-          </button>
-          <button className="pc-button pc-button-primary" type="button" onClick={onCreateRound}>
-            Publish Round
-          </button>
-        </>
-      }
-    >
-      <div className="pc-form-row pc-two-col">
-        <SegmentedField label="Oracle" options={['PYTH', 'SWITCHBOARD']} active="PYTH" />
-        <InputField label="Asset Pair" value="SUI/USDC" readOnly icon="keyboard_arrow_down" />
-      </div>
-      <SegmentedField
-        label="Direction Thesis"
-        options={['UP', 'DOWN', 'RANGE']}
-        active={round.direction}
-        wide
-      />
-      <div className="pc-form-row pc-two-col">
-        <InputField label="Lower Bound (USDC)" value={String(round.lowerStrike ?? 63800)} />
-        <InputField label="Upper Bound (USDC)" value={String(round.upperStrike ?? 65000)} />
-        <InputField label="Expiry" value="2026-06-04T12:00" type="datetime-local" />
-        <InputField label="Suggested Size (DUSDC)" value={String(round.suggestedDusdc)} />
-      </div>
-      <label className="pc-field pc-wide">
-        <span>Leader Thesis (Optional)</span>
-        <textarea defaultValue={round.thesis} rows={3} />
-      </label>
-    </ModalBody>
-  )
-}
 
-function FundToJoinModal({
-  club,
-  balances,
-  onClose,
-}: {
-  club: ClubState
-  balances: AssetBalances
-  onClose: () => void
-}) {
-  return (
-    <ModalBody
-      footer={
+  switch (modal) {
+    case 'create-round':
+      return (
         <>
-          <button className="pc-button pc-button-secondary" type="button">
-            Preview Route
-          </button>
-          <button className="pc-button pc-button-primary" type="button" onClick={onClose}>
-            Continue <Icon name="arrow_forward" />
-          </button>
+          <InfoRow label="Oracle" value="Pyth BTC/USD" />
+          <InfoRow label="Market" value="BTC/USD 5m" />
+          <InfoRow label="Direction" value={round.direction} />
+          <InfoRow label="Strike" value={formatUsd(round.strike)} />
+          <InfoRow label="Expiry" value={`${round.expiryMinutes} minutes`} />
+          <InfoRow label="Suggested Size" value={`${round.suggestedDusdc} DUSDC`} />
+          <div className="text-body-sm text-on-surface-variant bg-surface-container-lowest p-sm rounded border border-outline-variant">
+            {round.thesis}
+          </div>
         </>
-      }
-    >
-      <div className="pc-balance-grid pc-wide">
-        <MetricBox label="SUI" value={balances.sui.toFixed(2)} />
-        <MetricBox label="USDC" value={balances.usdc.toFixed(2)} />
-        <MetricBox label="DUSDC" value={balances.dusdc.toFixed(2)} />
-      </div>
-      <AmountInput
-        label="Amount to Fund"
-        target={`${club.activeRound.suggestedDusdc}.00 USDC`}
-        asset="SUI"
-        value="45.2"
-      />
-    </ModalBody>
-  )
-}
-
-function CreateEscrowModal({ club, onClose }: { club: ClubState; onClose: () => void }) {
-  return (
-    <ModalBody
-      footer={
+      )
+    case 'fund-to-join':
+      return (
         <>
-          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="pc-button pc-button-primary" type="button" onClick={onClose}>
-            <Icon name="check_circle" /> Create Offer
-          </button>
+          <div className="grid grid-cols-3 gap-xs">
+            <MetricCard label="SUI" value={balances.sui.toFixed(2)} />
+            <MetricCard label="USDC" value={balances.usdc.toFixed(2)} />
+            <MetricCard label="DUSDC" value={balances.dusdc.toFixed(2)} />
+          </div>
+          <InfoRow label="Suggested Pledge" value={`${round.suggestedDusdc} DUSDC`} />
+          <InfoRow label="Funding Route" value="Ready with DUSDC" tone="mint" />
         </>
-      }
-    >
-      <div className="pc-field pc-wide">
-        <span>Offer: 500 DUSDC for USDC</span>
-      </div>
-      <div className="pc-field pc-wide">
-        <span>Round: {club.activeRound.id}</span>
-      </div>
-      <div className="pc-summary-box pc-wide">
-        <span>Exchange Rate</span>
-        <strong>1 DUSDC = 0.96 USDC</strong>
-      </div>
-    </ModalBody>
-  )
-}
-
-function ExecuteTradeModal({ club, onClose }: { club: ClubState; onClose: () => void }) {
-  const round = club.activeRound
-  return (
-    <ModalBody
-      footer={
+      )
+    case 'execute-trade':
+      return (
         <>
-          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>
-            Back to Cockpit
-          </button>
-          <button className="pc-button pc-button-primary" type="button" onClick={onClose}>
-            <Icon name="draw" /> Sign &amp; Execute Trade
-          </button>
-        </>
-      }
-    >
-      <div className="pc-info-card pc-wide">
-        <div className="pc-section-title">
-          <span>Round Summary</span>
-          <b>
-            <Icon name="timer" /> {round.expiryMinutes}:00
-          </b>
-        </div>
-        <div className="pc-form-row pc-two-col">
-          <MetricBox label="Asset Pair" value="BTC/USDC" />
-          <MetricBox label="Direction" value={round.direction} tone="mint" />
-        </div>
-      </div>
-      <div className="pc-form-row pc-two-col">
-        <MetricBox label="Max Loss" value={`-${round.suggestedDusdc} DUSDC`} tone="error" />
-        <MetricBox
-          label="Potential Payout"
-          value={`+${formatUsd(round.suggestedDusdc * 2.5)} DUSDC`}
-          tone="mint"
-        />
-      </div>
-    </ModalBody>
-  )
-}
-
-function ScallopBorrowModal({ onClose }: { onClose: () => void }) {
-  return (
-    <ModalBody
-      footer={
-        <>
-          <button className="pc-button pc-button-secondary" type="button">
-            Preview Borrow
-          </button>
-          <button className="pc-button pc-button-primary" type="button" onClick={onClose}>
-            Continue to Wallet <Icon name="arrow_forward" />
-          </button>
-        </>
-      }
-    >
-      <AmountInput label="Collateral" target="Balance: 12,450 SUI" asset="SUI" value="5000" />
-      <AmountInput label="Borrow" target="Max: 2,526 USDC" asset="USDC" value="1500" />
-      <div className="pc-form-row pc-two-col">
-        <MetricBox label="Health Factor" value="1.85" tone="mint" />
-        <MetricBox label="Borrow APY" value="6.45%" />
-      </div>
-    </ModalBody>
-  )
-}
-
-function SimpleModalBody({
-  modal,
-  club,
-  offer,
-  onClose,
-}: {
-  modal: ModalKind
-  club: ClubState
-  offer: EscrowOfferView | null
-  onClose: () => void
-}) {
-  const isFill = modal === 'fill-escrow'
-  return (
-    <ModalBody
-      footer={
-        <>
-          <button className="pc-button pc-button-secondary" type="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="pc-button pc-button-primary" type="button" onClick={onClose}>
-            {isFill ? 'Fill Offer' : 'Claim'}
-          </button>
-        </>
-      }
-    >
-      {isFill ? (
-        <>
-          <DataRow label="Offer" value={offer?.id ?? 'Selected offer'} />
-          <DataRow
-            label="You pay"
-            value={offer ? `${formatUsd(offer.wantAmount)} ${offer.wantAsset}` : '-'}
+          <InfoRow label="Direction" value={round.direction} tone="mint" />
+          <InfoRow label="Strike" value={formatUsd(round.strike)} />
+          <InfoRow label="Amount" value={`${round.suggestedDusdc} DUSDC`} />
+          <InfoRow label="Max Loss" value={`-${round.suggestedDusdc} DUSDC`} tone="error" />
+          <InfoRow
+            label="Est. Payout"
+            value={`+${formatUsd(round.suggestedDusdc * 2.5)} DUSDC`}
+            tone="mint"
           />
-          <DataRow
-            label="You receive"
-            value={offer ? `${formatUsd(offer.offerAmount)} ${offer.offerAsset}` : '-'}
+          <InfoRow label="Oracle" value={round.oracle} />
+        </>
+      )
+    case 'create-escrow':
+      return (
+        <>
+          <InfoRow label="Offer" value="500 DUSDC" />
+          <InfoRow label="Want" value="480 USDC" />
+          <InfoRow label="Rate" value="1 DUSDC = 0.96 USDC" />
+          <InfoRow label="Expiry" value="12 hours" />
+        </>
+      )
+    case 'fill-escrow':
+      return (
+        <>
+          <InfoRow label="Offer ID" value={selectedOffer?.id ?? '-'} />
+          <InfoRow
+            label="You Pay"
+            value={
+              selectedOffer
+                ? `${formatUsd(selectedOffer.wantAmount)} ${selectedOffer.wantAsset}`
+                : '-'
+            }
+          />
+          <InfoRow
+            label="You Receive"
+            value={
+              selectedOffer
+                ? `${formatUsd(selectedOffer.offerAmount)} ${selectedOffer.offerAsset}`
+                : '-'
+            }
           />
         </>
-      ) : (
+      )
+    case 'scallop-borrow':
+      return (
         <>
-          <DataRow label="Settled round" value={club.history[0]?.id ?? 'ROUND-041'} />
-          <DataRow label="Position result" value="Won" tone="mint" />
-          <DataRow label="Claimable" value="188.40 DUSDC" />
+          <InfoRow label="Collateral" value="5,000 SUI" />
+          <InfoRow label="Borrow" value="1,500 USDC" />
+          <InfoRow label="Health Factor" value="1.85" tone="mint" />
+          <InfoRow label="APY" value="6.45%" />
         </>
-      )}
-    </ModalBody>
-  )
+      )
+    case 'claim-settlement':
+      return (
+        <>
+          <InfoRow label="Round" value={round.id} />
+          <InfoRow label="Result" value="Won" tone="mint" />
+          <InfoRow label="Claimable" value={`${formatUsd(round.suggestedDusdc * 2.5)} DUSDC`} />
+        </>
+      )
+    default:
+      return null
+  }
 }
 
-/* ─── Tiny modal sub-components ─── */
+function ModalFooterContent({ modal }: { modal: ModalKind }) {
+  const { setModal, actions, club, selectedOffer, updateRoundStatus } = usePredictClub()
 
-function DataRow({
+  switch (modal) {
+    case 'create-round':
+      return (
+        <>
+          <Btn label="Cancel" onClick={() => setModal(null)} />
+          <BtnPrimary
+            label="Create & Publish"
+            onClick={() => {
+              const round = club.activeRound
+              const result = actions.createRound({
+                oracle: round.oracle,
+                market: round.market,
+                expiryMinutes: round.expiryMinutes,
+                direction: round.direction,
+                strike: round.strike,
+                lowerStrike: round.lowerStrike,
+                upperStrike: round.upperStrike,
+                suggestedDusdc: round.suggestedDusdc,
+                thesis: round.thesis || 'New prediction round',
+                indicators: demoClubState.activeRound.indicators,
+              })
+              if (result.ok) actions.publishRound()
+            }}
+          />
+        </>
+      )
+    case 'fund-to-join':
+      return (
+        <>
+          <Btn label="Cancel" onClick={() => setModal(null)} />
+          <BtnPrimary
+            label="Pledge DUSDC"
+            onClick={() => {
+              actions.pledgeToRound('m2', club.activeRound.suggestedDusdc)
+              setModal(null)
+            }}
+          />
+        </>
+      )
+    case 'execute-trade':
+      return (
+        <>
+          <Btn label="Back" onClick={() => setModal(null)} />
+          <BtnPrimary label="Sign & Execute" onClick={() => actions.executeRound()} />
+        </>
+      )
+    case 'create-escrow':
+      return (
+        <>
+          <Btn label="Cancel" onClick={() => setModal(null)} />
+          <BtnPrimary
+            label="Create Offer"
+            onClick={() =>
+              actions.createEscrowOffer({
+                offerAsset: 'DUSDC',
+                wantAsset: 'USDC',
+                offerAmount: 500,
+                wantAmount: 480,
+                expiryMinutes: 720,
+                maker: club.leaderName,
+              })
+            }
+          />
+        </>
+      )
+    case 'fill-escrow':
+      return (
+        <>
+          <Btn label="Cancel" onClick={() => setModal(null)} />
+          <BtnPrimary
+            label="Fill Offer"
+            onClick={() => {
+              if (selectedOffer) actions.fillEscrowOffer(selectedOffer.id)
+            }}
+          />
+        </>
+      )
+    case 'scallop-borrow':
+      return (
+        <>
+          <Btn label="Cancel" onClick={() => setModal(null)} />
+          <BtnPrimary label="Continue" onClick={() => setModal(null)} />
+        </>
+      )
+    case 'claim-settlement':
+      return (
+        <>
+          <Btn label="Close" onClick={() => setModal(null)} />
+          <BtnPrimary
+            label="Claim"
+            onClick={() => {
+              updateRoundStatus('claimed')
+              setModal(null)
+            }}
+          />
+        </>
+      )
+    default:
+      return <Btn label="Close" onClick={() => setModal(null)} />
+  }
+}
+
+function InfoRow({
   label,
   value,
   tone,
 }: {
   label: string
   value: string
-  tone?: 'mint' | 'error'
+  tone?: 'mint' | 'error' | 'amber'
 }) {
   return (
-    <div className="pc-data-row">
-      <span>{label}</span>
-      <strong className={tone ? `pc-tone-${tone}` : ''}>{value}</strong>
+    <div className="flex justify-between items-center">
+      <span className="font-data text-data-sm text-on-surface-variant">{label}</span>
+      <span
+        className={`font-data text-data-md tabular-nums ${tone === 'mint' ? 'text-primary-fixed-dim' : tone === 'error' ? 'text-error' : tone === 'amber' ? 'text-tertiary-fixed-dim' : 'text-on-surface'}`}
+      >
+        {value}
+      </span>
     </div>
   )
 }
 
-function MetricBox({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: string
-  tone?: 'mint' | 'amber' | 'error'
-}) {
+function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="pc-metric-box">
-      <span>{label}</span>
-      <strong className={tone ? `pc-tone-${tone}` : ''}>{value}</strong>
+    <div className="flex flex-col items-center p-sm border border-outline-variant rounded bg-surface-container-lowest">
+      <span className="font-label text-label-caps text-on-surface-variant">{label}</span>
+      <span className="font-data text-data-md tabular-nums">{value}</span>
     </div>
   )
 }
 
-function InputField({
-  label,
-  value,
-  type = 'text',
-  readOnly,
-  icon,
-}: {
-  label: string
-  value: string
-  type?: string
-  readOnly?: boolean
-  icon?: string
-}) {
+function Btn({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <label className="pc-field">
-      <span>{label}</span>
-      <div className="pc-input-shell">
-        {icon ? <Icon name={icon} /> : null}
-        <input defaultValue={value} readOnly={readOnly} type={type} />
-      </div>
-    </label>
+    <button
+      className="px-md py-xs border border-outline-variant rounded font-data text-data-sm text-on-surface-variant hover:bg-surface-bright cursor-pointer transition-colors"
+      type="button"
+      onClick={onClick}
+    >
+      {label}
+    </button>
   )
 }
 
-function SegmentedField({
-  label,
-  options,
-  active,
-  wide,
-}: {
-  label: string
-  options: string[]
-  active: string
-  wide?: boolean
-}) {
+function BtnPrimary({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <div className={`pc-field ${wide ? 'pc-wide' : ''}`}>
-      <span>{label}</span>
-      <div className="pc-segmented">
-        {options.map((option) => (
-          <button className={option === active ? 'pc-active' : ''} key={option} type="button">
-            {option}
-          </button>
-        ))}
-      </div>
-    </div>
+    <button
+      className="px-md py-xs bg-primary-fixed-dim text-on-primary-fixed rounded font-data text-data-sm hover:bg-primary-container cursor-pointer transition-colors glow-mint"
+      type="button"
+      onClick={onClick}
+    >
+      {label}
+    </button>
   )
 }
 
-function AmountInput({
-  label,
-  target,
-  asset,
-  value,
-}: {
-  label: string
-  target: string
-  asset: string
-  value: string
-}) {
-  return (
-    <div className="pc-field pc-wide">
-      <div className="pc-field-line">
-        <span>{label}</span>
-        <em>{target}</em>
-      </div>
-      <div className="pc-amount-input">
-        <strong>{asset}</strong>
-        <input defaultValue={value} type="number" />
-        <button type="button">MAX</button>
-      </div>
-    </div>
-  )
-}
-
-function modalTitle(modal: ModalKind) {
+function modalTitle(modal: ModalKind): string {
   return (
     {
       'create-round': 'Create Prediction Round',

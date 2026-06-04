@@ -2,7 +2,7 @@ import { usePredictClub } from './PredictClubContext'
 import { formatUsd, labelize } from './shared'
 
 export function DecisionStripPanel() {
-  const { club, primaryAction } = usePredictClub()
+  const { club, primaryAction, toastMessage } = usePredictClub()
   const round = club.activeRound
 
   return (
@@ -30,9 +30,9 @@ export function DecisionStripPanel() {
           <span className="font-data text-data-md tabular-nums">{formatUsd(round.strike)}</span>
         </StripItem>
         <Divider />
-        <StripItem label="Expiry">
-          <span className="font-data text-data-md tabular-nums text-tertiary-fixed-dim">
-            {round.expiryMinutes}:00
+        <StripItem label="Status">
+          <span className="font-data text-data-md tabular-nums text-tertiary-fixed-dim uppercase">
+            {round.status}
           </span>
         </StripItem>
         <Divider />
@@ -47,7 +47,7 @@ export function DecisionStripPanel() {
         <div className="flex items-center gap-2 border border-primary-fixed-dim rounded-full px-sm py-1 bg-[#00e0b31a]">
           <div className="w-2 h-2 rounded-full bg-primary-fixed-dim glow-mint animate-pulse-dot" />
           <span className="font-data text-data-sm text-primary-fixed-dim uppercase tracking-widest">
-            {round.risk === 'ready' ? 'Ready' : labelize(round.risk)}
+            {labelize(round.risk)}
           </span>
         </div>
         <button
@@ -58,6 +58,11 @@ export function DecisionStripPanel() {
           {primaryAction.label}
         </button>
       </div>
+      {toastMessage && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-md py-xs bg-surface-container-highest border border-primary-fixed-dim/50 rounded text-data-sm font-data text-primary-fixed-dim z-50 whitespace-nowrap">
+          {toastMessage}
+        </div>
+      )}
     </>
   )
 }

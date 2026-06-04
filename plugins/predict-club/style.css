@@ -1194,6 +1194,17 @@ select {
   font-size: 14px;
 }
 
+.pc-error-message {
+  padding: var(--sm) var(--md);
+  border: 1px solid rgba(255, 180, 171, 0.3);
+  border-radius: var(--radius);
+  background: rgba(255, 180, 171, 0.08);
+  color: var(--error);
+  font-family: var(--font-data);
+  font-size: 12px;
+  line-height: 16px;
+}
+
 .pc-health-bar {
   position: relative;
   height: 6px;

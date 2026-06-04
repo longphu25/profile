@@ -3,26 +3,91 @@ import type { ClubState } from '../domain/types'
 
 const STORAGE_KEY = 'predict-club:v1'
 
+export interface PersistedClubStateV1 {
+  _version: 1
+  _updatedAt: number
+  club: ClubState
+}
+
+/**
+ * Saves club state to localStorage wrapped in a versioned envelope.
+ * No-op in non-browser environments.
+ */
+export function saveClubState(state: ClubState): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const persisted: PersistedClubStateV1 = {
+    _version: 1,
+    _updatedAt: Date.now(),
+    club: state,
+  }
+
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted))
+  } catch (e) {
+    console.warn('[predict-club] Failed to save state to localStorage:', e)
+  }
+}
+
+/**
+ * Loads club state from localStorage with version validation.
+ * Returns default state on corruption, missing data, or version mismatch.
+ * Never throws.
+ */
 export function loadClubState(): ClubState {
   if (typeof window === 'undefined') {
     return demoClubState
   }
 
   try {
-    const saved = window.localStorage.getItem(STORAGE_KEY)
-    if (!saved) {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) {
       return demoClubState
     }
-    return { ...demoClubState, ...JSON.parse(saved) } as ClubState
-  } catch {
+
+    const parsed = JSON.parse(raw)
+
+    // Validate versioned envelope
+    if (!parsed || typeof parsed !== 'object') {
+      console.warn('[predict-club] localStorage data is not an object, using default state')
+      return demoClubState
+    }
+
+    if (parsed._version !== 1) {
+      console.warn(
+        '[predict-club] Unknown schema version:',
+        parsed._version,
+        '— using default state',
+      )
+      return demoClubState
+    }
+
+    if (!parsed.club || typeof parsed.club !== 'object') {
+      console.warn(
+        '[predict-club] Missing or invalid club field in persisted state, using default state',
+      )
+      return demoClubState
+    }
+
+    // Validate required ClubState fields exist
+    const club = parsed.club
+    if (
+      typeof club.name !== 'string' ||
+      typeof club.leaderName !== 'string' ||
+      !club.activeRound ||
+      !Array.isArray(club.members)
+    ) {
+      console.warn(
+        '[predict-club] Persisted club state missing required fields, using default state',
+      )
+      return demoClubState
+    }
+
+    return club as ClubState
+  } catch (e) {
+    console.warn('[predict-club] Failed to load state from localStorage:', e)
     return demoClubState
   }
-}
-
-export function saveClubState(state: ClubState): void {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
 }

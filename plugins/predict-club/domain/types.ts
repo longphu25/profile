@@ -9,6 +9,7 @@ export type RoundStatus =
   | 'executed'
   | 'settled'
   | 'claimed'
+  | 'cancelled'
 
 export type MemberRoundState = 'watching' | 'pledged' | 'accepted' | 'executed' | 'claimed'
 export type SignalBias = 'bullish' | 'bearish' | 'neutral' | 'no-trade'
@@ -30,7 +31,7 @@ export type FundingRoute =
   | 'bridge-assets-to-sui'
   | 'club-escrow-usdc-to-dusdc'
 
-export type EscrowStatus = 'open' | 'reserved' | 'filled' | 'expired'
+export type EscrowStatus = 'open' | 'reserved' | 'filled' | 'expired' | 'cancelled'
 
 export interface AssetBalances {
   sui: number
