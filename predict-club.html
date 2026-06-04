@@ -982,14 +982,10 @@
       </a>
     </nav>
 
-    <!-- Countdown timer script -->
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
+    <!-- GSAP Animations via esm.sh -->
     <script>
+      // Countdown timer (runs immediately, no GSAP needed)
       ;(function () {
-        // ─── Reduced Motion Check ───
-        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-        // ─── Countdown Timer ───
         let total = 2 * 3600 + 14 * 60 + 55
         const el = document.getElementById('expiry-timer')
         function tick() {
@@ -1004,130 +1000,107 @@
           el.textContent = h + ':' + m + ':' + s
         }
         setInterval(tick, 1000)
+      })()
 
-        // ─── GSAP Animations (skip if reduced motion) ───
-        if (prefersReduced) return
+      // Load GSAP from esm.sh and run animations
+      ;(async function () {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
+        const mod = await import('https://esm.sh/gsap@3.12.7')
+        const gsap = mod.gsap || mod.default
         gsap.defaults({ ease: 'power2.out' })
 
         // 1. Page load: stagger the 3 main columns
-        const columns = document.querySelectorAll('[data-animate="column"]')
-        gsap.from(columns, {
+        gsap.from('[data-animate="column"]', {
           opacity: 0,
           y: 12,
           duration: 0.5,
           stagger: 0.1,
-          delay: 0.2,
+          delay: 0.15,
         })
 
         // 2. Decision strip items stagger in
-        const stripItems = document.querySelectorAll('[data-animate="strip-item"]')
-        gsap.from(stripItems, {
+        gsap.from('[data-animate="strip-item"]', {
           opacity: 0,
           y: 8,
           duration: 0.4,
           stagger: 0.06,
-          delay: 0.3,
+          delay: 0.25,
         })
 
-        // 3. Chart SVG line draw animation
+        // 3. Chart SVG line draw
         const chartLine = document.getElementById('chart-line')
         if (chartLine) {
-          const length = chartLine.getTotalLength()
-          gsap.set(chartLine, { strokeDasharray: length, strokeDashoffset: length, opacity: 1 })
-          gsap.to(chartLine, {
-            strokeDashoffset: 0,
-            duration: 2,
-            delay: 0.6,
-            ease: 'power1.inOut',
-          })
+          const len = chartLine.getTotalLength()
+          gsap.set(chartLine, { strokeDasharray: len, strokeDashoffset: len, opacity: 1 })
+          gsap.to(chartLine, { strokeDashoffset: 0, duration: 2, delay: 0.5, ease: 'power1.inOut' })
         }
 
         // 4. Chart gradient area fade in after line draws
         const chartArea = document.getElementById('chart-area')
-        if (chartArea) {
-          gsap.from(chartArea, { opacity: 0, duration: 0.8, delay: 2.2 })
-        }
+        if (chartArea) gsap.from(chartArea, { opacity: 0, duration: 0.8, delay: 2.0 })
 
-        // 5. Funding router nodes flow in sequentially
-        const fundingNodes = document.querySelectorAll('[data-animate="fund-node"]')
-        gsap.from(fundingNodes, {
+        // 5. Funding router nodes flow in
+        gsap.from('[data-animate="fund-node"]', {
           opacity: 0,
           x: -16,
           duration: 0.4,
           stagger: 0.12,
-          delay: 0.5,
+          delay: 0.4,
         })
 
-        // 6. Progress bar fill animation
-        const progressBar = document.getElementById('readiness-bar')
-        if (progressBar) {
-          gsap.from(progressBar, {
-            width: '0%',
-            duration: 1,
-            delay: 0.8,
-            ease: 'power2.inOut',
-          })
-        }
+        // 6. Progress bar fill
+        const bar = document.getElementById('readiness-bar')
+        if (bar) gsap.from(bar, { width: '0%', duration: 1, delay: 0.7, ease: 'power2.inOut' })
 
         // 7. Readiness checklist items stagger
-        const checkItems = document.querySelectorAll('[data-animate="check-item"]')
-        gsap.from(checkItems, {
+        gsap.from('[data-animate="check-item"]', {
           opacity: 0,
           x: -8,
           duration: 0.3,
           stagger: 0.08,
-          delay: 0.6,
+          delay: 0.5,
         })
 
         // 8. Indicator bento tiles scale in
-        const bentoTiles = document.querySelectorAll('[data-animate="bento-tile"]')
-        gsap.from(bentoTiles, {
+        gsap.from('[data-animate="bento-tile"]', {
           opacity: 0,
           scale: 0.92,
           duration: 0.4,
           stagger: 0.08,
-          delay: 0.4,
+          delay: 0.35,
         })
 
-        // 9. Simulated live price ticker (subtle)
+        // 9. Live price ticker (subtle)
         const priceEl = document.getElementById('live-price')
         if (priceEl) {
-          const basePrice = 64231.5
-          function updatePrice() {
-            const delta = (Math.random() - 0.48) * 15
-            const newPrice = basePrice + delta
+          const base = 64231.5
+          setInterval(() => {
+            const d = (Math.random() - 0.48) * 15
             priceEl.textContent =
               '$' +
-              newPrice.toLocaleString('en-US', {
+              (base + d).toLocaleString('en-US', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })
-            // Brief flash on change
             gsap.fromTo(
               priceEl,
-              { color: delta > 0 ? '#00e0b3' : '#ffb4ab' },
-              {
-                color: '#b9cbc2',
-                duration: 0.8,
-                ease: 'power2.out',
-              },
+              { color: d > 0 ? '#00e0b3' : '#ffb4ab' },
+              { color: '#b9cbc2', duration: 0.8 },
             )
-          }
-          setInterval(updatePrice, 3000)
+          }, 3000)
         }
 
-        // 10. Accept Signal button subtle breathing glow
-        const ctaBtn = document.getElementById('accept-signal-btn')
-        if (ctaBtn) {
-          gsap.to(ctaBtn, {
-            boxShadow: '0 0 16px rgba(0, 224, 179, 0.5)',
+        // 10. Accept Signal button breathing glow
+        const cta = document.getElementById('accept-signal-btn')
+        if (cta)
+          gsap.to(cta, {
+            boxShadow: '0 0 16px rgba(0,224,179,0.5)',
             duration: 1.5,
             repeat: -1,
             yoyo: true,
             ease: 'sine.inOut',
           })
-        }
       })()
     </script>
   </body>
