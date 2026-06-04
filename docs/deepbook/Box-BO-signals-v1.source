@@ -1,0 +1,52 @@
+//@version=5
+indicator("Box BO signals v1", overlay=true, max_boxes_count=500, max_lines_count=500)
+
+// persistent box state
+var float boxHigh = na
+var float boxLow  = na
+var box currBox   = na
+var bool first    = true
+var int lastSignal = 0      // 0 = none, 1 = buy, -1 = sell
+
+// detect breakout BEFORE adjusting box
+rawSell  = not na(boxLow)  and close < boxLow
+rawBuy   = not na(boxHigh) and close > boxHigh
+
+// only trigger if direction flips
+buySignal  = rawBuy  and lastSignal != 1
+sellSignal = rawSell and lastSignal != -1
+
+// update direction
+if buySignal
+    lastSignal := 1
+if sellSignal
+    lastSignal := -1
+
+// new box starts when breakout OR first bar
+newBox = first or rawSell or rawBuy
+first := false
+
+// update limits
+float newHigh = newBox ? high : math.max(boxHigh, high)
+float newLow  = newBox ? low  : math.min(boxLow, low)
+boxHigh := newHigh
+boxLow  := newLow
+
+// draw/extend box
+if newBox
+    if not na(currBox)
+        box.set_right(currBox, bar_index), box.set_extend(currBox, extend.none)
+    currBox := box.new(bar_index, boxHigh, bar_index, boxLow, bgcolor=color.new(color.yellow,80), border_color=color.yellow)
+else
+    box.set_right(currBox, bar_index)
+    box.set_top(currBox, boxHigh)
+    box.set_bottom(currBox, boxLow)
+
+// -------------------- SIGNAL VISUALS USING LABELS --------------------
+boxHeight = boxHigh - boxLow
+offset = boxHeight * 0.35   // adjust spacing distance
+
+if buySignal
+    label.new(bar_index, low - offset, "B", style=label.style_label_up, size=size.tiny, color=color.new(color.green,0), textcolor=color.white)
+if sellSignal
+    label.new(bar_index, high + offset, "S", style=label.style_label_down, size=size.tiny, color=color.new(color.red,0), textcolor=color.white)
