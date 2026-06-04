@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "qmd": {
+      "command": "/Users/longphu/.bun/bin/qmd",
+      "args": ["mcp"],
+      "disabled": false
+    }
+  }
+}

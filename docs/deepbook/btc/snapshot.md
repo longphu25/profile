@@ -7,11 +7,11 @@ Source: `plugins/btc-chart/snapshot.ts`
 ```ts
 downloadChartSnapshot({
   main: { chart, height },     // mainChart instance + main pane height
-  rsi?: { chart, height },     // null/undefined nếu RSI bị tắt
-  vol?: { chart, height },     // null/undefined nếu Volume bị tắt
-  vpOverlay?: HTMLCanvasElement | null,  // VP canvas, null nếu VP tắt
-  vpRightOffset?: number,      // default 64 (offset khỏi price ladder)
-  ofOverlay?: HTMLCanvasElement | null,  // Order flow canvas, full main-pane size
+  rsi?: { chart, height },     // null/undefined when RSI is hidden
+  vol?: { chart, height },     // null/undefined when Volume is hidden
+  vpOverlay?: HTMLCanvasElement | null,  // VP canvas, null when VP is hidden
+  vpRightOffset?: number,      // default 64 (offset from the price ladder)
+  ofOverlay?: HTMLCanvasElement | null,  // Order-flow canvas, full main-pane size
   filename?: string,           // default `btc-chart-{timestamp}.png`
   bg?: string,                 // default '#071011' (token --color-ink)
 })
@@ -19,7 +19,9 @@ downloadChartSnapshot({
 
 ## Implementation
 
-`lightweight-charts` expose `chart.takeScreenshot()` trả về `HTMLCanvasElement` với toàn bộ pane (candles, indicators, axes). Plugin compose 3 panes lên một canvas chung:
+`lightweight-charts` exposes `chart.takeScreenshot()`, which returns an
+`HTMLCanvasElement` containing a full pane (candles, indicators, axes). The
+plugin composes 3 panes onto one shared canvas:
 
 ```ts
 const mainCanvas = main.chart.takeScreenshot()
@@ -46,7 +48,7 @@ ctx.drawImage(mainCanvas, 0, y)
 // OF overlay (full main-pane size)
 if (ofOverlay) ctx.drawImage(ofOverlay, 0, y)
 
-// VP overlay (composite lên main pane đúng vị trí)
+// VP overlay (composited into the main pane at the right position)
 if (vpOverlay) {
   const x = Math.max(0, W - vpOverlay.width - vpRightOffset)
   ctx.drawImage(vpOverlay, x, y)
@@ -87,30 +89,32 @@ const snapshot = useCallback(() => {
 }, [])
 ```
 
-Nút "PNG" trên toolbar gọi callback này.
+The "PNG" toolbar button calls this callback.
 
 ## Output
 
-- Format: PNG (transparency tắt vì có background fill).
-- Dpi: 1× (theo lightweight-charts internal canvas — DPR-aware nếu canvas `devicePixelRatio` > 1).
+- Format: PNG (transparency disabled because the background is filled).
+- DPI: 1× logically, but uses the lightweight-charts internal canvas, which is
+  DPR-aware when `devicePixelRatio > 1`.
 - Filename: `btc-chart-1717245819895.png` (timestamp ms).
 
 ## Limitations
 
-- Markers Order Flow (▲BUY/▼SELL) thuộc series internal, được include trong screenshot.
-- Floating legend (`<div class="btc-chart__legend">`) là HTML overlay — KHÔNG có trong screenshot. Nếu cần legend trên ảnh, thêm step vẽ text bằng `ctx.fillText`.
-- Sidebar không nằm trong screenshot — chỉ chart panes.
-- Crosshair không bị capture (nó là interactive layer).
+- Order-flow markers that belong to internal series are included in the screenshot.
+- The floating legend (`<div class="btc-chart__legend">`) is an HTML overlay and
+  is NOT included. If it should appear in the image, add a `ctx.fillText` step.
+- The sidebar is not part of the screenshot — only chart panes are exported.
+- The crosshair is not captured because it lives in an interactive layer.
 
-## Mở rộng đề xuất
+## Suggested Extensions
 
 ```ts
-// Vẽ thêm watermark
+// Draw an extra watermark
 ctx.fillStyle = 'rgba(255,255,255,0.04)'
 ctx.font = 'bold 64px sans-serif'
 ctx.fillText('BTC/USDT', W / 2 - 100, H / 2)
 
-// Vẽ legend snapshot vào góc
+// Draw a legend snapshot into the corner
 ctx.fillStyle = '#9fb9b1'
 ctx.font = '11px ui-monospace'
 ctx.fillText('NWE 67,400 · MA50 67,200 · RSI 56.3', 12, 20)
@@ -120,6 +124,10 @@ out.toBlob(saveBlob, 'image/jpeg', 0.92)   // JPEG with quality
 out.toBlob(saveBlob, 'image/webp', 0.95)   // WebP
 ```
 
-## Lưu ý DPR
+## DPR Notes
 
-Nếu màn user là retina (DPR=2), `chart.takeScreenshot()` trả về canvas với `width = clientWidth * 2`. Code hiện tại pass đúng W/H qua `canvas.width`, không cần tự nhân DPR. Nếu cần file kích thước cố định 1920×1080 cho social, downscale bằng `ctx.drawImage(src, 0, 0, targetW, targetH)`.
+If the user's display is retina (DPR=2), `chart.takeScreenshot()` returns a
+canvas with `width = clientWidth * 2`. The current code already passes the
+correct W/H through `canvas.width`, so no manual DPR multiplication is needed.
+If a fixed-size 1920×1080 export is needed for social distribution, downscale
+with `ctx.drawImage(src, 0, 0, targetW, targetH)`.

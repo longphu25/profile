@@ -1,8 +1,10 @@
 # Styling & Design Discipline
 
-## Design tokens
+## Design Tokens
 
-Plugin Shadow DOM bị scope hoàn toàn — tokens phải khai báo lại trong `:host`. Lấy giá trị từ design system TaskForm + locked palette:
+The plugin Shadow DOM is fully scoped, so tokens must be declared again in
+`:host`. Values are borrowed from the TaskForm design system plus the locked
+palette:
 
 ```css
 :host {
@@ -41,9 +43,10 @@ Plugin Shadow DOM bị scope hoàn toàn — tokens phải khai báo lại trong
 }
 ```
 
-## Locked accent rule
+## Locked Accent Rule
 
-Chỉ 4 màu data: `--up`, `--dn`, `--neu`, `--hi`. KHÔNG thêm orange / yellow / cyan / purple từ TradingView default.
+Only 4 data colors are allowed: `--up`, `--dn`, `--neu`, `--hi`. Do not add the
+default TradingView orange / yellow / cyan / purple accents.
 
 | Element | Color | Token |
 |---------|------|------|
@@ -53,7 +56,8 @@ Chỉ 4 màu data: `--up`, `--dn`, `--neu`, `--hi`. KHÔNG thêm orange / yellow
 | POC, MA200, alert highlight | `#ffc46b` | `--hi` |
 | MA50 | `#80ffd5` | `--mint` |
 
-NWE upper/lower dùng tint của `--dn` / `--up` (alpha 0.6). VP buy/sell dùng tint của `--up` / `--dn` (alpha 0.3-0.95 theo POC/HVN/VA tier).
+NWE upper/lower use tinted `--dn` / `--up` (alpha 0.6). VP buy/sell uses tinted
+`--up` / `--dn` (alpha 0.3-0.95 depending on POC/HVN/VA tier).
 
 ## Typography
 
@@ -66,13 +70,16 @@ NWE upper/lower dùng tint của `--dn` / `--up` (alpha 0.6). VP buy/sell dùng 
 
 Letter spacing cho mono: `0.04em`. Cho uppercase eyebrows: `0.16em` đến `0.18em`.
 
-## No emoji discipline
+## No Emoji Discipline
 
-Theo `design-taste-frontend` skill — tất cả icon UI phải là SVG hoặc text. Plugin hiện tại tránh emoji trong panel titles, status bars, alert labels. Còn lại 1-2 chỗ tasteful (▲▼ trong TA signal text — chấp nhận vì đây là directional arrow chuẩn).
+Following the `design-taste-frontend` skill, every UI icon should be SVG or
+text. This plugin avoids emoji in panel titles, status bars, and alert labels.
+There are still 1-2 tasteful exceptions (▲▼ in TA signal text), which are
+acceptable because they are standard directional arrows.
 
-## Layout discipline
+## Layout Discipline
 
-### Flex panes (root cause của mọi resize bug)
+### Flex Panes (Root Cause of Most Resize Bugs)
 
 ```css
 .btc-chart        { position: absolute; inset: 0; display: flex; flex-direction: column; }
@@ -82,13 +89,16 @@ Theo `design-taste-frontend` skill — tất cả icon UI phải là SVG hoặc 
 .btc-chart__vol   { flex: 1.5 1 0; min-height: 0; }
 ```
 
-`min-height: 0` trên cả `__col` và 3 panes là **bắt buộc** — flex children mặc định có `min-height: auto` ngăn shrink.
+`min-height: 0` on both `__col` and all 3 panes is **mandatory**. Flex children
+default to `min-height: auto`, which prevents shrinking.
 
-`position: absolute; inset: 0` trên `.btc-chart` để escape khỏi `<div>` mount-point của ShadowContainer (vốn không có chiều cao).
+`position: absolute; inset: 0` on `.btc-chart` lets the chart escape the
+ShadowContainer mount-point `<div>`, which does not provide its own height.
 
-JS không bao giờ set `el.style.height`. Chart pixel size do `applyOptions({ height })` cập nhật từ `clientHeight` thật trong `ResizeObserver`.
+JS never sets `el.style.height`. Pixel height is updated through
+`applyOptions({ height })` using the real `clientHeight` from `ResizeObserver`.
 
-### Page-level cascade (host page)
+### Page-level Cascade (Host Page)
 
 ```css
 /* src/btc-chart/btc-chart.css */
@@ -99,22 +109,27 @@ html, body { height: 100dvh; overflow: hidden; }
 .btc-page > div { flex: 1; min-height: 0; height: 100%; }
 ```
 
-`.btc-page > div` target div mà ShadowContainer tạo. Đây là rule bắt cầu cho size từ viewport xuống Shadow root.
+`.btc-page > div` targets the `<div>` created by `ShadowContainer`. This is the
+bridging rule that carries viewport height into the Shadow root.
 
-## Ghost borders
+## Ghost Borders
 
-Theo design system: không dùng 1px solid border đậm. Tất cả border dùng `--border` (alpha 0.10) hoặc `--border-strong` (0.22). Ngoại lệ:
+Per the design system, do not use heavy 1px solid borders. All borders use
+`--border` (alpha 0.10) or `--border-strong` (0.22). Exceptions:
 
-- Active state buttons: dùng inset shadow `box-shadow: inset 0 -1.5px 0 0 var(--mint)` thay vì border.
-- Alert "fired" state: `border-left: 2px solid var(--mint)` — visual anchor cần solid line.
+- Active state buttons: use inset shadow
+  `box-shadow: inset 0 -1.5px 0 0 var(--mint)` instead of a border.
+- Alert "fired" state: `border-left: 2px solid var(--mint)` because the visual
+  anchor needs a solid line.
 
-## Spacing rhythm
+## Spacing Rhythm
 
 Sidebar panel padding: `14px 16px`.
 Row gap trong panel: `6px`.
 Section title margin-bottom: `10px`.
 
-Không dùng `margin: auto` cho center — flex `align-items` / `justify-content` thay thế.
+Do not use `margin: auto` for centering. Use flex `align-items` /
+`justify-content` instead.
 
 ## Responsive
 
@@ -138,18 +153,20 @@ Không dùng `margin: auto` cho center — flex `align-items` / `justify-content
 }
 ```
 
-## Toast positioning
+## Toast Positioning
 
-Toast sử dụng `position: absolute; top: 12px; left: 50%; translateX(-50%)`. KHÔNG dùng `position: fixed` vì plugin nằm trong Shadow DOM — `fixed` sẽ vượt khỏi shadow tree và bị viewport-relative thay vì shadow-root-relative.
+The toast uses `position: absolute; top: 12px; left: 50%; translateX(-50%)`.
+Do not use `position: fixed` because the plugin lives inside Shadow DOM;
+`fixed` becomes viewport-relative rather than shadow-root-relative.
 
-## Anti-patterns đã tránh
+## Anti-patterns Avoided
 
-| Anti-pattern | Lý do tránh | Áp dụng |
+| Anti-pattern | Why it is avoided | Applied replacement |
 |--------------|------------|--------|
-| Toolbar 7 colored dots | Visual noise, low signal | Buttons text-only, active = inset underline |
-| ML label hiển thị 2 lần | Duplicate signal | Single block, label + bar + foot trong cùng card |
-| Emoji panel titles (🤖 〰️ 📊) | AI default | Plain caps mono titles |
-| TradingView default palette (orange/yellow/purple/cyan) | Generic, không brand | Locked 4-color palette |
-| Mixed corner radii | Shape inconsistency | Tất cả rounded `4-8px`, pill chỉ cho FNG bar pointer |
-| Drop shadows đậm | 2010s era | Tonal layering qua surface tiers |
-| `useState` cho continuous values | Re-render mỗi tick | Refs cho candle data, alerts, vp opts |
+| Toolbar with 7 colored dots | Visual noise, low signal | Text-only buttons, active state = inset underline |
+| ML label shown twice | Duplicate signal | Single block, label + bar + foot in one card |
+| Emoji panel titles (🤖 〰️ 📊) | AI default look | Plain uppercase mono titles |
+| TradingView default palette (orange/yellow/purple/cyan) | Generic, unbranded | Locked 4-color palette |
+| Mixed corner radii | Shape inconsistency | Everything rounded `4-8px`, pills only for the FNG bar pointer |
+| Heavy drop shadows | Outdated visual style | Tonal layering through surface tiers |
+| `useState` for continuous values | Re-render on every tick | Refs for candle data, alerts, VP options |

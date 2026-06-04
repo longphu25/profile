@@ -2,7 +2,7 @@
 
 Source: `plugins/btc-chart/storage.ts`
 
-## Key & schema
+## Key & Schema
 
 `localStorage` key: **`btc-chart:config:v1`**.
 
@@ -26,31 +26,32 @@ interface ChartConfig {
 }
 ```
 
-`version` để dự phòng migration sau này. Nếu schema thay đổi, đổi thành `v2`, default config sẽ được trả về cho file `v1` cũ.
+`version` exists to support future migration. If the schema changes, bump to
+`v2`, and return the default config for old `v1` files.
 
 ## API
 
 ```ts
-// Đọc config — luôn trả về một config hợp lệ (merge defaults).
+// Read config — always returns a valid config (merged with defaults).
 loadConfig(): ChartConfig
 
-// Ghi config — throttled 250ms để pan/zoom mượt.
+// Write config — throttled to 250ms for smooth pan/zoom.
 saveConfig(cfg: ChartConfig): void
 
-// Flush ghi pending ngay lập tức (gọi trong beforeunload).
+// Flush pending writes immediately (called in beforeunload).
 flushConfig(): void
 
-// Tải config về dưới dạng JSON file.
+// Download config as a JSON file.
 exportConfig(cfg: ChartConfig, filename?: string): void
 
-// Đọc file JSON do user upload, validate, merge defaults.
+// Read a user-uploaded JSON file, validate it, merge defaults.
 importConfigFromFile(file: File): Promise<ChartConfig>
 
-// Helper merge một partial vào defaults — dùng cả lúc load và import.
+// Helper that merges a partial config into defaults — used by load and import.
 mergeConfig(p: Partial<ChartConfig>): ChartConfig
 ```
 
-## Throttle implementation
+## Throttle Implementation
 
 ```ts
 let writeTimer: ReturnType<typeof setTimeout> | null = null
@@ -58,23 +59,24 @@ let pending: ChartConfig | null = null
 
 export function saveConfig(cfg: ChartConfig): void {
   pending = cfg
-  if (writeTimer) return            // đã có timer chờ
+  if (writeTimer) return            // timer already scheduled
   writeTimer = setTimeout(() => {
     writeTimer = null
     if (!pending) return
     try {
       localStorage.setItem(KEY, JSON.stringify(pending))
     } catch {
-      // quota exceeded / private mode → silent
+      // quota exceeded / private mode → fail silently
     }
     pending = null
   }, 250)
 }
 ```
 
-Tại sao throttle:
-- `subscribeVisibleLogicalRangeChange` fire mỗi frame khi user pan/zoom (60fps).
-- Không throttle → 60 lần `JSON.stringify + setItem` mỗi giây, gây jank.
+Why throttle:
+- `subscribeVisibleLogicalRangeChange` fires every frame while the user pans or zooms (60fps).
+- Without throttling, that becomes 60 `JSON.stringify + setItem` calls per
+  second, which causes jank.
 
 `flushConfig()` gọi trong `beforeunload`:
 ```ts
@@ -85,7 +87,7 @@ useEffect(() => {
 }, [])
 ```
 
-## Plugin-side persist
+## Plugin-side Persistence
 
 Trong `BtcChartView`, một effect duy nhất gom toàn bộ state liên quan và gọi `saveConfig()`:
 
@@ -102,7 +104,9 @@ const persist = useCallback((zoom: ChartConfig['zoom'] | undefined) => {
 useEffect(() => { persist(undefined) }, [persist])
 ```
 
-Khi `interval/vis/alerts/sound/notifAllowed` thay đổi, persist auto-fire. Zoom được persist riêng từ `subscribeVisibleLogicalRangeChange`:
+When `interval/vis/alerts/sound/notifAllowed` changes, persistence fires
+automatically. Zoom is persisted separately from
+`subscribeVisibleLogicalRangeChange`:
 
 ```ts
 mainChart.timeScale().subscribeVisibleLogicalRangeChange((r) => {
@@ -111,9 +115,10 @@ mainChart.timeScale().subscribeVisibleLogicalRangeChange((r) => {
 })
 ```
 
-Việc dùng `loadConfig()` ở đây để giữ các trường khác đã persist (tránh race với `persist` callback).
+Using `loadConfig()` here preserves the other already-persisted fields and
+avoids racing with the `persist` callback.
 
-## Restore khi mount
+## Restore on Mount
 
 ```ts
 const cfgInit = useMemo<ChartConfig>(() => loadConfig(), [])
@@ -126,7 +131,8 @@ const [sound, setSound] = useState(cfgInit.sound)
 const [notifAllowed, setNotifAllowed] = useState(cfgInit.notifications)
 ```
 
-Zoom restore sau khi klines đã load (interval-based useEffect):
+Zoom is restored after klines finish loading (inside the interval-based
+`useEffect`):
 
 ```ts
 candlesRef.current = cands
@@ -138,7 +144,7 @@ if (savedZoom && chartRefs.current?.mainChart) {
 connectWs()
 ```
 
-## Import / Export JSON
+## JSON Import / Export
 
 **Export** = stringify config + Blob + `<a download>` click:
 
@@ -150,7 +156,8 @@ a.href = url; a.download = filename; a.click()
 URL.revokeObjectURL(url)
 ```
 
-**Import** dùng `<label>` bao input file ẩn (tránh dùng programmatic dialog):
+**Import** uses a `<label>` wrapping a hidden file input (avoids a programmatic
+dialog):
 
 ```tsx
 <label className="btc-chart__ind-btn btc-chart__file">
@@ -159,18 +166,19 @@ URL.revokeObjectURL(url)
     onChange={(e) => {
       const f = e.target.files?.[0]
       if (f) importNow(f)
-      e.target.value = ''           // reset để chọn lại cùng file
+      e.target.value = ''           // reset so the same file can be chosen again
     }}
   />
 </label>
 ```
 
-Trên `importNow(file)`:
+Inside `importNow(file)`:
 1. `importConfigFromFile(file)` → parse + merge defaults.
-2. Apply vào tất cả state: `setVis`, `setAlerts`, `setSound`, `setNotifAllowed`, `setInterval_`.
+2. Apply to all relevant state: `setVis`, `setAlerts`, `setSound`,
+   `setNotifAllowed`, `setInterval_`.
 3. Restore zoom nếu có (gọi `setVisibleLogicalRange`).
-4. `saveConfig(cfg)` để ghi luôn (không cần đợi throttle effect).
-5. Lỗi parse → `setImportErr` → toast đỏ.
+4. Call `saveConfig(cfg)` immediately (no need to wait for the throttled effect).
+5. Parse errors go through `setImportErr` and show a red toast.
 
 ## Migration
 
@@ -182,7 +190,7 @@ export function loadConfig(): ChartConfig {
   if (!raw) return { ...DEFAULT_CONFIG }
   try {
     const parsed = JSON.parse(raw) as Partial<ChartConfig>
-    // Future: switch parsed.version case 'v1' → migrate
+    // Future: switch on parsed.version and migrate older schemas
     if (parsed.version !== 1) return { ...DEFAULT_CONFIG }
     return mergeConfig(parsed)
   } catch {
@@ -191,4 +199,6 @@ export function loadConfig(): ChartConfig {
 }
 ```
 
-Strategy đơn giản: schema cũ → reset về defaults. Để giữ data cũ qua migration, đổi thành `case 1: …` rồi map fields.
+The current strategy is simple: old schema → reset to defaults. If preserving
+old data across migrations matters, replace that with explicit `case 1: …`
+mapping logic.

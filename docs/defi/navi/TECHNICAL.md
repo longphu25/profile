@@ -5,7 +5,8 @@ aliases: [NAVI Technical, NAVI Dashboard]
 
 # NAVI Protocol Dashboard — Technical Reference
 
-Plugin DeFi dashboard cho NAVI Protocol trên Sui, powered by NAVI MCP (Model Context Protocol).
+DeFi dashboard plugin for NAVI Protocol on Sui, powered by NAVI MCP
+(Model Context Protocol).
 
 > See also: [[seal/TECHNICAL|Seal Plugins]] · [[deepbook/README|DeepBook]] · [[walrus/integration|Walrus]]
 
@@ -14,7 +15,7 @@ Plugin DeFi dashboard cho NAVI Protocol trên Sui, powered by NAVI MCP (Model Co
 ```
 URL:    https://open-api.naviprotocol.io/api/mcp
 Auth:   None (public, free)
-Mode:   Read-only — không sign, không execute transaction
+Mode:   Read-only — no signing, no transaction execution
 Proto:  JSON-RPC 2.0 over Streamable HTTP
 ```
 
@@ -41,7 +42,8 @@ Proto:  JSON-RPC 2.0 over Streamable HTTP
 └──────────────────────────────────────┘
 ```
 
-Plugin gọi MCP server trực tiếp từ browser — không cần backend, không cần proxy.
+The plugin calls the MCP server directly from the browser, so it does not need
+any backend or proxy.
 
 ## MCP Call Pattern
 
@@ -67,11 +69,12 @@ const json = await res.json()
 return JSON.parse(json.result.content[0].text)
 ```
 
-Response luôn wrap trong `content[0].text` dưới dạng JSON string — cần parse 2 lần.
+The response is always wrapped in `content[0].text` as a JSON string, so it
+must be parsed twice.
 
 ## Available Tools (37 total)
 
-### Đang dùng trong plugin (10)
+### Used in the plugin (10)
 
 | Tool | Tab | Params | Returns |
 |------|-----|--------|---------|
@@ -86,7 +89,7 @@ Response luôn wrap trong `content[0].text` dưới dạng JSON string — cần
 | `getPositions` | (API only) | `{ address }` | Multi-protocol DeFi positions |
 | `volo_get_vaults` | (API only) | none | VOLO yield vaults list |
 
-### Chưa dùng — có thể mở rộng
+### Not used yet — extension candidates
 
 | Category | Tools | Use Case |
 |----------|-------|----------|
@@ -105,80 +108,86 @@ Response luôn wrap trong `content[0].text` dưới dạng JSON string — cần
 ## Plugin Tabs
 
 ### Overview
-- Auto-load khi mở tab
-- Hiển thị 5 stats: TVL, Total Borrow, Utilization, Max APY, Users
+- Auto-loads when the tab opens
+- Shows 5 stats: TVL, Total Borrow, Utilization, Max APY, Users
 - Grid layout responsive
 
 ### Pools
-- Load tất cả pools từ `navi_get_pools`
+- Loads all pools from `navi_get_pools`
 - Sortable: TVL (default), Supply APY, Borrow APY
-- Mỗi pool card: symbol, TVL, supply/borrow rates, LTV
+- Each pool card shows symbol, TVL, supply/borrow rates, and LTV
 - Color-coded: green = supply, red = borrow
 
 ### Portfolio
-- Cần wallet address (từ `walletProfile` shared data)
+- Requires a wallet address (from shared `walletProfile` data)
 - Parallel fetch: coins + health factor + rewards
 - Health factor indicator: green (safe) / red (danger ≤ 1.2)
 - Coin list filtered by usdValue > $0.01
-- Rewards hiển thị raw JSON (structure varies)
+- Rewards are shown as raw JSON (the structure varies)
 
 ### Swap Quote
-- Read-only — chỉ quote, không execute
+- Read-only — quote only, no execution
 - Input: amount, from symbol, to symbol
-- Gọi `navi_get_swap_quote` — DEX aggregator route
+- Calls `navi_get_swap_quote` — DEX aggregator route
 - Output: raw JSON (route, priceImpact, amounts)
 
 ### Tx Explain
 - Input: transaction digest
-- Gọi `sui_explain_transaction`
+- Calls `sui_explain_transaction`
 - Output: human-readable explanation (raw JSON)
 
 ## Plugins
 
 ### sui-navi-dashboard (5 tabs)
-Dashboard tổng quan: Overview, Pools, Portfolio, Swap Quote, Tx Explain.
+General dashboard: Overview, Pools, Portfolio, Swap Quote, Tx Explain.
 
 ### sui-navi-advisor (Strategy Advisor) 
 
-Nhập budget (USD) → fetch real-time pool APYs + Volo vault yields → generate và rank chiến lược sinh lời.
+Input a USD budget, fetch real-time pool APYs plus Volo vault yields, then
+generate and rank yield strategies.
 
 **Data Sources:**
 
 | MCP Tool | Data |
 |----------|------|
-| `navi_get_pools` | Supply/Borrow APY, LTV cho mỗi asset |
+| `navi_get_pools` | Supply/Borrow APY, LTV for each asset |
 | `volo_get_vaults` | Vault APY (7d, 30d), TVL, risk level (CSV format) |
 
 **5 Strategy Types:**
 
 | # | Strategy | Risk | Logic |
 |---|----------|------|-------|
-| 1 | Best Supply | Low | Pool có supply APY cao nhất → deposit toàn bộ |
-| 2 | Best Volo Vault | Low-Med | Vault có 7d APY cao nhất |
-| 3 | Supply + Borrow Loop | Medium | Supply SUI → borrow stable ở 50% LTV → re-deposit. Net APY = supply - (borrow × LTV) |
+| 1 | Best Supply | Low | Deposit fully into the pool with the highest supply APY |
+| 2 | Best Volo Vault | Low-Med | Pick the vault with the highest 7d APY |
+| 3 | Supply + Borrow Loop | Medium | Supply SUI → borrow stable at 50% LTV → re-deposit. Net APY = supply - (borrow × LTV) |
 | 4 | Stable Vault | Low | Stablecoin vault (MMT) — lowest IL risk |
-| 5 | Diversified Top 3 | Low | Chia đều budget cho 3 pools APY cao nhất |
+| 5 | Diversified Top 3 | Low | Split the budget evenly across the top 3 APY pools |
 
-Output: ranked by APY, step-by-step, risk color-coded, estimated yearly earnings.
+Output is ranked by APY, with step-by-step actions, risk color coding, and
+estimated yearly earnings.
 
-**Execute buttons:** Tất cả strategies có nút action — 3 loại:
+**Execute buttons:** Every strategy includes an action button in one of 4 forms:
 
 | Action | Button | Tokens | Method |
 |--------|--------|--------|--------|
-| `deposit` | Green | SUI, WAL, DEEP, NAVX, ... (18 tokens) | `incentive_v3::entry_deposit` — SUI dùng `splitCoins(gas)`, non-SUI dùng `suix_getCoins` → merge → split |
+| `deposit` | Green | SUI, WAL, DEEP, NAVX, ... (18 tokens) | `incentive_v3::entry_deposit` — SUI uses `splitCoins(gas)`, non-SUI uses `suix_getCoins` → merge → split |
 | `volo-stake` | Green | SUI → vSUI | `stake_pool::stake` |
 | `supply-borrow` | Yellow | Supply SUI + Borrow stablecoin | 1 PTB: `entry_deposit` + `borrow_v2` + `coin::from_balance` + transfer |
 | `link` | Blue ↗ | Stable vault, diversified | Open NAVI app (earn / lending page) |
 
 > See [[defi/navi/MCP-REFERENCE|MCP Reference]] for full contract addresses, pool configs, and Move call patterns.
 
-**Tại sao không dùng `@naviprotocol/lending` SDK?** SDK mới import `SuiClient` từ `@mysten/sui/client` — không tương thích với project này dùng `@mysten/sui` v2 (`SuiGrpcClient`). Build raw `moveCall` trực tiếp với addresses từ navi-sdk source.
+**Why not use `@naviprotocol/lending`?** The newer SDK imports `SuiClient`
+from `@mysten/sui/client`, which is incompatible with this project using
+`@mysten/sui` v2 (`SuiGrpcClient`). The plugin builds raw `moveCall`
+transactions directly with addresses extracted from the navi-sdk source.
 
-**Volo CSV parsing:** MCP trả vaults dạng CSV — plugin parse headers + rows, filter `status === 'open'`.
+**Volo CSV parsing:** MCP returns vaults as CSV, so the plugin parses headers
+and rows, then filters `status === 'open'`.
 
 ## Potential Extensions
 
-| Plugin | MCP Tools | Mô tả |
+| Plugin | MCP Tools | Description |
 |--------|-----------|-------|
 | `sui-navi-bridge` | `navi_get_bridge_*` (5 tools) | Cross-chain bridge UI |
 | `sui-navi-volo` | `volo_*` (10 tools) | Volo Vault analytics dashboard |
@@ -200,9 +209,12 @@ plugins/
 
 ## Notes
 
-- MCP server đôi khi rate-limit address-based queries — retry thường fix
-- Response format: data wrap trong `content[0].text` (MCP spec) — cần double-parse JSON; nếu parse fail thì trả raw text
+- The MCP server can sometimes rate-limit address-based queries; a retry
+  usually fixes it.
+- Response format: data is wrapped inside `content[0].text` (MCP spec), so it
+  requires a double JSON parse. If parsing fails, return the raw text.
 - Swap quote params: `fromCoin`, `toCoin` (camelCase), `amount` (number)
-- `volo_get_vaults` trả CSV không phải JSON
-- `getPositions` trả về positions across multiple protocols (navi, suilend, walrus…) không chỉ NAVI
-- `healthFactor` có thể null nếu user chưa có lending position
+- `volo_get_vaults` returns CSV, not JSON
+- `getPositions` returns positions across multiple protocols (NAVI, Suilend,
+  Walrus, etc.), not just NAVI
+- `healthFactor` can be null when the user has no lending position

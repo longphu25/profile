@@ -5,7 +5,7 @@ aliases: [NAVI MCP Expansion, MCP Roadmap]
 
 # NAVI MCP — Expansion Roadmap
 
-> Hiện dùng **7/37 tools**. Còn 30 tools chưa khai thác.
+> The project currently uses **7/37 tools**. Another 30 tools remain unused.
 >
 > See also: [[defi/navi/MCP-REFERENCE|Full Tool Reference]] · [[defi/navi/ADVISOR|Advisor Technical]] · [[defi/navi/TECHNICAL|Plugin Technical]]
 
@@ -31,7 +31,9 @@ aliases: [NAVI MCP Expansion, MCP Roadmap]
 | `get_positions` | `{ address }` | Positions across **all protocols** (NAVI, Suilend, Walrus, Cetus...) | Multi-protocol position aggregator |
 | `navi_get_lending_rewards` | `{ address }` | Claimed reward history | Reward tracking timeline |
 
-**Impact:** Biến advisor thành full portfolio manager. `get_positions` đặc biệt mạnh vì cover nhiều protocol, không chỉ NAVI.
+**Impact:** This would turn the advisor into a full portfolio manager.
+`get_positions` is especially strong because it covers multiple protocols, not
+just NAVI.
 
 ### Group 2: Cross-chain Bridge — Astros (5 tools) — HIGH VALUE
 
@@ -45,7 +47,7 @@ aliases: [NAVI MCP Expansion, MCP Roadmap]
 
 **Plugin: `sui-navi-bridge`**
 - Chain selector → token selector → amount → quote
-- Submit bridge (cần thêm Astros SDK hoặc contract calls)
+- Submit bridge (requires Astros SDK or direct contract calls)
 - Track pending bridges real-time
 - History list
 

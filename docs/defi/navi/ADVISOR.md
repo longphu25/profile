@@ -9,7 +9,8 @@ aliases: [NAVI Advisor, Strategy Advisor]
 
 ## Overview
 
-Plugin nhập budget USD → fetch real-time data → generate + rank chiến lược sinh lời → execute on-chain.
+The plugin accepts a USD budget, fetches real-time data, generates and ranks
+yield strategies, then optionally executes them on-chain.
 
 ```
 User input: $100
@@ -43,7 +44,7 @@ User input: $100
 ### 1. Best Supply (deposit)
 
 ```ts
-// Tìm pool có supply APY cao nhất
+// Find the pool with the highest supply APY
 const topSupply = pools.filter(p => p.supplyApy > 0).sort((a,b) => b.supplyApy - a.supplyApy)
 const best = topSupply[0] // e.g. WAL 18.2% APY
 
@@ -52,12 +53,12 @@ const best = topSupply[0] // e.g. WAL 18.2% APY
 // Non-SUI (WAL, DEEP...): suix_getCoins → mergeCoins → splitCoins
 ```
 
-**Action:** `deposit` (green button) — hỗ trợ 18 tokens.
+**Action:** `deposit` (green button) — supports 18 tokens.
 
 ### 2. Best Volo Vault (volo-stake)
 
 ```ts
-// Parse CSV từ volo_get_vaults, sort by apy7d
+// Parse CSV from volo_get_vaults, sort by apy7d
 const topVault = vaults.filter(v => v.status === 'open').sort((a,b) => b.apy7d - a.apy7d)
 // e.g. "SUI MULTI STRATEGY" 10.05% APY
 
@@ -74,7 +75,7 @@ tx.transferObjects([vSuiCoin], walletAddr)
 ### 3. Supply + Borrow Loop (supply-borrow)
 
 ```ts
-// Điều kiện: suiPool.supplyApy > stablePool.borrowApy
+// Condition: suiPool.supplyApy > stablePool.borrowApy
 const safeLtv = 0.5  // conservative 50%
 const netApy = suiPool.supplyApy - (stablePool.borrowApy * safeLtv)
 
@@ -88,7 +89,7 @@ const netApy = suiPool.supplyApy - (stablePool.borrowApy * safeLtv)
 ### 4. Stable Vault (link)
 
 ```ts
-// Filter vaults có "stable" hoặc "MMT" trong tên
+// Filter vaults containing "stable" or "MMT" in the name
 const stableVaults = vaults.filter(v =>
   v.name.toLowerCase().includes('stable') || v.name.includes('MMT')
 )
@@ -100,7 +101,7 @@ const stableVaults = vaults.filter(v =>
 ### 5. Diversified Top 3 (link)
 
 ```ts
-// Chia đều budget cho 3 pools APY cao nhất
+// Split the budget evenly across the top 3 APY pools
 const top3 = topSupply.slice(0, 3)
 const avgApy = top3.reduce((s, p) => s + p.supplyApy, 0) / 3
 ```
@@ -112,12 +113,12 @@ const avgApy = top3.reduce((s, p) => s + p.supplyApy, 0) / 3
 ### deposit (any token)
 
 ```
-1. Tìm pool config từ NAVI_POOL_CFG[symbol]
+1. Look up the pool config in `NAVI_POOL_CFG[symbol]`
    → { poolId, assetId, type, decimals }
 
-2. Tính tokenAmount = (budget / pool.price) * 10^decimals
+2. Compute `tokenAmount = (budget / pool.price) * 10^decimals`
 
-3. Get coin object:
+3. Build the coin object:
    SUI → tx.splitCoins(tx.gas, [amount])
    Non-SUI → fetch suix_getCoins → mergeCoins → splitCoins
 
@@ -152,7 +153,7 @@ const avgApy = top3.reduce((s, p) => s + p.supplyApy, 0) / 3
 
 ## Volo CSV Parsing
 
-MCP `volo_get_vaults` trả CSV, không JSON:
+MCP `volo_get_vaults` returns CSV, not JSON:
 
 ```csv
 id,name,protocol,status,riskLevel,instantAPR,apy7d,apy30d,totalStakedUsd,minInvestment,...
@@ -182,7 +183,7 @@ function parseVaultsCsv(csv: string): Vault[] {
 
 ## NAVI Pool Config Map
 
-18 tokens supported, stored in `NAVI_POOL_CFG`:
+18 tokens are supported and stored in `NAVI_POOL_CFG`:
 
 ```ts
 const NAVI_POOL_CFG: Record<string, { poolId, assetId, type, decimals }> = {
@@ -198,7 +199,7 @@ Source: `navi-sdk/src/address.ts` (legacy SDK, mainnet addresses still valid).
 
 ## Non-SUI Coin Handling
 
-SUI dùng `splitCoins(tx.gas)`. Non-SUI tokens cần fetch + merge:
+SUI uses `splitCoins(tx.gas)`. Non-SUI tokens require fetch + merge:
 
 ```ts
 // 1. Fetch user's coins via JSON-RPC
@@ -218,7 +219,8 @@ if (coins.length > 1) {
 const coinObj = tx.splitCoins(primary, [tokenAmount])
 ```
 
-**Edge case:** Nếu user không có coin type đó → throw error "No {symbol} coins in wallet".
+**Edge case:** If the user does not hold that coin type, throw
+`"No {symbol} coins in wallet"`.
 
 ## UI Components
 

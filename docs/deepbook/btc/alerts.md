@@ -19,14 +19,14 @@ interface AlertRule {
   value: number        // target price | RSI threshold (NWE alerts ignore)
   label?: string
   enabled: boolean
-  repeat: boolean      // false = fire once, true = re-arm sau 60s
-  triggeredAt: number  // 0 = chưa fire
+  repeat: boolean      // false = fire once, true = re-arm after 60s
+  triggeredAt: number  // 0 = has not fired yet
 }
 ```
 
 ## Evaluation
 
-`evaluateAlerts(rules, ctx)` chạy mỗi tick từ WS handler:
+`evaluateAlerts(rules, ctx)` runs on every tick from the WS handler:
 
 ```ts
 const ctx = {
@@ -49,16 +49,18 @@ Mỗi rule check:
 | `rsi-overbought` | `rsi != null && rsi >= value` |
 | `rsi-oversold` | `rsi != null && rsi <= value` |
 
-Khi hit:
+When a rule hits:
 1. Set `triggeredAt = Date.now()`.
 2. Push vào `FiredAlert[]` trả về.
-3. Caller (plugin.tsx) xử lý:
-   - Phát sound (nếu enabled).
+3. The caller (`plugin.tsx`) handles:
+   - Play sound (if enabled).
    - Browser notification.
-   - In-app toast 5s.
-   - `setAlerts([...])` để persist trigger state.
+   - 5s in-app toast.
+   - `setAlerts([...])` to persist trigger state.
 
-Cooldown 60s áp dụng khi `repeat: true`. Mặc định `repeat: false` → một rule chỉ fire đúng một lần đến khi user reset (nút "reset" trong list).
+The 60s cooldown applies when `repeat: true`. By default, `repeat: false`, so
+a rule fires only once until the user resets it (the "reset" button in the
+list).
 
 ## Sound
 
@@ -78,11 +80,13 @@ osc.start(t)
 osc.stop(t + 0.14)
 ```
 
-Hai oscillator chồng lên nhau:
+Two oscillators are layered:
 - A5 (880Hz) tại t+0, duration 120ms.
 - E6 (1318.5Hz) tại t+130ms, duration 180ms.
 
-Lưu ý browser autoplay policy: AudioContext bắt đầu ở state `suspended`. Lần đầu user click "Sound on", plugin gọi `ctx.resume()` rồi phát beep ngay để xác nhận.
+Browser autoplay policy matters here: `AudioContext` starts in the `suspended`
+state. The first time the user clicks "Sound on", the plugin calls
+`ctx.resume()` and plays a confirmation beep immediately.
 
 ## Browser Notification
 
@@ -103,11 +107,13 @@ function pushNotification(title: string, body: string) {
 }
 ```
 
-`tag: 'btc-chart-alert'` đảm bảo notif mới ghi đè notif cũ thay vì đẩy stack. `silent: true` tắt beep mặc định của OS để không trùng với Web Audio.
+`tag: 'btc-chart-alert'` ensures the newest notification replaces the previous
+one instead of stacking. `silent: true` disables the OS default sound so it
+does not overlap with Web Audio.
 
 ## UI
 
-Form thêm rule (trong Alerts panel sidebar):
+Add-rule form (inside the Alerts sidebar panel):
 
 ```tsx
 <select value={kind} onChange={...}>
@@ -118,21 +124,24 @@ Form thêm rule (trong Alerts panel sidebar):
 <button type="submit">Add</button>
 ```
 
-Auto-suggest value khi user đổi kind:
+Auto-suggested values when the user changes `kind`:
 - RSI overbought → `70`
 - RSI oversold → `30`
-- NWE upper/lower → ignore (alert không cần value)
+- NWE upper/lower → ignore (the alert does not need a value)
 - Price cross → `Math.round(currentPrice)`
 
-List hiển thị:
-- ● = enabled, ○ = disabled (click toggle).
-- "reset" link xuất hiện sau khi rule fired (đưa `triggeredAt` về 0).
-- × xoá rule.
-- Background `is-fired` (mint highlight) khi đang trigger state.
+List behavior:
+- ● = enabled, ○ = disabled (click to toggle).
+- "reset" link appears after the rule fires (sets `triggeredAt` back to 0).
+- × deletes the rule.
+- `is-fired` background (mint highlight) while in triggered state.
 
 ## Limitations
 
-- Trigger evaluation chạy mỗi WS tick (~100-500ms tuỳ interval). Không nhanh hơn được.
-- Cooldown 60s là cố định trong code — chưa expose UI.
-- Nếu network mất, alert dừng theo. Mock data fallback không trigger alert (có thể mở rộng nếu cần testing).
-- iOS Safari < 16.4 không có Notification API trên web → graceful degrade (chỉ sound + toast).
+- Trigger evaluation runs on each WS tick (~100-500ms depending on interval). It
+  cannot be faster than the feed.
+- The 60s cooldown is hard-coded and not yet exposed in the UI.
+- If the network drops, alerts stop with it. Mock fallback data does not
+  trigger alerts (this could be extended for testing if needed).
+- iOS Safari < 16.4 does not expose Notification API on the web, so the plugin
+  degrades gracefully to sound + toast only.

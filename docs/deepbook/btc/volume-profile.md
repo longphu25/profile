@@ -4,21 +4,22 @@ Source: `plugins/btc-chart/volume-profile.ts`
 
 ## Concept
 
-Volume Profile (TPO) chia khoảng giá `[minLow, maxHigh]` của các candles thành N bins, gom volume vào bin chứa close. Output:
+Volume Profile (TPO) splits the candle price range `[minLow, maxHigh]` into N
+bins and assigns volume into the bin containing the close. Output:
 
 | Term | Definition |
 |------|-----------|
-| **POC** | Point of Control — bin có volume cao nhất |
-| **VAH/VAL** | Value Area High/Low — biên trên và dưới của vùng chứa 70% tổng volume quanh POC |
-| **HVN** | High Volume Node — bins ≥ 80% volume POC (configurable qua `hvnRatio`) |
-| **LVN** | Low Volume Node — bins có volume thấp (chưa highlight, có thể mở rộng) |
+| **POC** | Point of Control — the bin with the highest volume |
+| **VAH/VAL** | Value Area High/Low — the upper and lower bounds of the zone containing 70% of total volume around POC |
+| **HVN** | High Volume Node — bins ≥ 80% of POC volume (configurable via `hvnRatio`) |
+| **LVN** | Low Volume Node — bins with low volume (not highlighted yet, but extensible) |
 
 ## API
 
 ```ts
 drawVolumeProfile(
   canvas: HTMLCanvasElement,
-  mainEl: HTMLElement,         // dùng để lấy clientHeight
+  mainEl: HTMLElement,         // used to read clientHeight
   candles: VPCandle[],
   visible: boolean,
   opts: {
@@ -41,7 +42,7 @@ drawVolumeProfile(
 }
 ```
 
-## Build profile
+## Build Profile
 
 ```ts
 const minP = Math.min(...candles.map(c => c.low))
@@ -57,9 +58,11 @@ for (const c of candles) {
 }
 ```
 
-POC: argmax(total). VAH/VAL: expand 2-pointer từ POC, mỗi bước thêm bin volume cao hơn (lên hoặc xuống) đến khi `vaSum ≥ totalVol * 0.7`.
+POC is `argmax(total)`. VAH/VAL expands a two-pointer window out from POC, and
+on each step adds whichever adjacent bin has higher volume (up or down) until
+`vaSum ≥ totalVol * 0.7`.
 
-## Render layers
+## Render Layers
 
 ```
 ┌────────────────────────────────────┐
@@ -79,52 +82,58 @@ POC: argmax(total). VAH/VAL: expand 2-pointer từ POC, mỗi bước thêm bin 
    ↑ left gutter for VAH/VAL/POC labels
 ```
 
-Code layer thứ tự (rendering):
+Rendering order:
 
-1. **Heatmap strip** (5px bên trái), gradient theo intensity:
+1. **Heatmap strip** (5px on the left), gradient by intensity:
    - `t > 0.66` → amber
    - `0.33 < t ≤ 0.66` → mint
    - `t ≤ 0.33` → cool muted
 
-2. **Value Area band** — fill amber alpha 0.05 từ VAL đến VAH.
+2. **Value Area band** — amber fill alpha 0.05 from VAL to VAH.
 
-3. **Buy/Sell bars** — sell bên trái (red), buy bên phải (green). Width = `(side / maxVol) * (W - 14)`. Color tăng đậm theo `isPOC > isHVN > isVA > else`.
+3. **Buy/Sell bars** — sell on the left (red), buy on the right (green).
+   Width = `(side / maxVol) * (W - 14)`. Color strength increases by
+   `isPOC > isHVN > isVA > else`.
 
-4. **HVN dot** — vòng tròn 2px vàng bên phải gutter cho mỗi bin HVN.
+4. **HVN dot** — 2px yellow circle on the right side of the gutter for each HVN bin.
 
 5. **POC dashed line** — full width, amber dashed [4,3].
 
-6. **POC label pill** — bo tròn 3px, fill amber 0.95, text đen.
+6. **POC label pill** — 3px rounded corners, amber 0.95 fill, dark text.
 
-7. **VAH / VAL minor labels** — text 9px ở left gutter.
+7. **VAH / VAL minor labels** — 9px text in the left gutter.
 
-## Tuning parameters
+## Tuning Parameters
 
 | Param | Default | Effect |
 |-------|--------|-------|
-| `bins` | 64 | Resolution dọc. Nhiều hơn → granular, ít hơn → smooth. |
-| `width` | 220 | Width canvas. Cần đủ space cho POC pill + bars. |
+| `bins` | 64 | Vertical resolution. More = more granular, fewer = smoother. |
+| `width` | 220 | Canvas width. Must leave enough space for the POC pill + bars. |
 | `heatmap` | `true` | Có toggle UI riêng. |
-| `hvnRatio` | 0.8 | 0.7 → nhiều HVN, 0.9 → chỉ những vùng cực đậm. |
+| `hvnRatio` | 0.8 | 0.7 → more HVNs, 0.9 → only the strongest zones. |
 
-## Position trên main pane
+## Position on the Main Pane
 
-Canvas `<canvas class="btc-chart__vp-canvas">` đặt position absolute, `top: 0; right: 64px`. Width 220px, height = `mainEl.clientHeight`. `pointer-events: none` để không chặn crosshair.
+The `<canvas class="btc-chart__vp-canvas">` is absolutely positioned at
+`top: 0; right: 64px`. Width is 220px, height = `mainEl.clientHeight`.
+`pointer-events: none` so it does not block the crosshair.
 
-ResizeObserver re-render mỗi khi main pane đổi kích thước. Render cũng được trigger bởi `renderData()` khi candles update.
+`ResizeObserver` re-renders every time the main pane changes size. Rendering is
+also triggered by `renderData()` whenever candles update.
 
-## Edge cases
+## Edge Cases
 
 | Case | Behavior |
 |------|----------|
 | `candles.length < 10` | Skip render, return `{ poc: '—', … }` |
 | `visible: false` | Clear canvas, return empty info |
-| `maxVol === 0` | Use 1 để tránh divide-by-zero, tất cả bars width 0 |
-| Klines vừa load lần đầu | `mainEl.clientHeight` có thể 0 → ResizeObserver sẽ trigger lại sau frame đầu |
+| `maxVol === 0` | Use 1 to avoid divide-by-zero, all bars become width 0 |
+| Klines on first load | `mainEl.clientHeight` may be 0 → `ResizeObserver` will trigger again after the first frame |
 
-## Mở rộng đề xuất
+## Suggested Extensions
 
-- LVN markers (low volume nodes): bins ≤ `lvnRatio * maxVol` → tô outline màu mờ.
-- Naked POC: POC từ session trước chưa được giá quay lại touch.
-- Composite profile: gộp nhiều session thành một profile dài hạn.
-- VPVR (Visible Range): clip candles theo visible range của time scale thay vì `LIMIT` cuối cùng.
+- LVN markers (low volume nodes): bins ≤ `lvnRatio * maxVol` → faint outline.
+- Naked POC: previous-session POC that price has not revisited.
+- Composite profile: aggregate multiple sessions into a longer-horizon profile.
+- VPVR (Visible Range): clip candles to the visible time-scale range instead of
+  always using the last `LIMIT`.

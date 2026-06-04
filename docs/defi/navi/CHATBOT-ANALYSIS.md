@@ -1,6 +1,7 @@
 # NAVI Chatbot & Analysis — Technical Reference
 
-> Hai plugin mới mở rộng NAVI ecosystem: chatbot conversational và real-time analysis engine.
+> Two newer plugins extend the NAVI ecosystem: a conversational chatbot and a
+> real-time analysis engine.
 >
 > See also: [[defi/navi/TECHNICAL|NAVI Technical]] · [[defi/navi/MCP-REFERENCE|MCP Reference]] · [[wasm-native|WASM Native]]
 
@@ -8,7 +9,8 @@
 
 ## sui-navi-chatbot
 
-Chat-based DeFi advisor. User hỏi bằng tiếng Việt/Anh, bot gọi MCP tools và trả lời.
+Chat-based DeFi advisor. Users can ask in Vietnamese or English, and the bot
+will call MCP tools before answering.
 
 ### Intent Detection
 
@@ -25,23 +27,25 @@ Chat-based DeFi advisor. User hỏi bằng tiếng Việt/Anh, bot gọi MCP too
 
 ### Token Resolution Bug Fix
 
-`navi_get_coins` trả `{ coinType, totalBalance }` — không có symbol/decimals/price. Plugin resolve bằng:
+`navi_get_coins` returns `{ coinType, totalBalance }` without symbol, decimals,
+or price. The plugin resolves that by:
 
 1. Fetch `navi_get_pools` → build `poolMap[normalizedCoinType] = { symbol, price }`
 2. Normalize coinType: `0x000...002::sui::SUI` → `0x2::sui::SUI`
 3. Lookup decimals từ `KNOWN_DECIMALS` map
-4. Tokens không có trong pools → `navi_search_tokens` per-symbol (max 5 parallel)
+4. For tokens missing from pools, call `navi_search_tokens` per symbol (max 5 in parallel)
 
 ### Copyable Addresses
 
-- Header wallet: click to copy, green flash feedback
-- Chat messages: `\`0x...\`` auto-detected → clickable, copy to clipboard
+- Header wallet: click to copy, with green flash feedback
+- Chat messages: `\`0x...\`` are auto-detected, become clickable, and copy to clipboard
 
 ---
 
 ## sui-navi-analysis
 
-Real-time pool analysis engine. Auto-refresh 15s. WASM-accelerated computation.
+Real-time pool analysis engine. Auto-refreshes every 15s. Uses
+WASM-accelerated computation when available.
 
 ### Architecture
 
@@ -86,7 +90,7 @@ Pure functions in `analysis.ts`, mirrored in `wasm/src/lib.rs`:
 
 ### WASM vs TS Performance
 
-Footer hiển thị engine status:
+The footer shows engine status:
 - `WASM 120ms init` (green) — Rust engine loaded
 - `TS fallback` (yellow) — WASM unavailable
 - `0.3ms compute` (purple) — per-refresh computation time
@@ -95,14 +99,14 @@ Footer hiển thị engine status:
 
 ## sui-navi-advisor Updates
 
-### Swap Options (khi wallet thiếu target token)
+### Swap Options (when the wallet lacks the target token)
 
-Khi strategy recommend "Supply NS" nhưng wallet chỉ có SUI/USDC:
+When a strategy recommends "Supply NS" but the wallet only holds SUI/USDC:
 
 1. Check `held.usdValue >= budget * 0.5` (không chỉ check tồn tại)
-2. Hiện multi-select token buttons: `[USDC ($85)] [SUI ($3)]`
-3. Fetch swap quotes song song từ NAVI MCP
-4. Hiện human-readable amounts: `USDC: 20.00 → 261.74 WAL`
+2. Show multi-select token buttons: `[USDC ($85)] [SUI ($3)]`
+3. Fetch swap quotes in parallel from NAVI MCP
+4. Show human-readable amounts: `USDC: 20.00 → 261.74 WAL`
 5. Click → redirect NAVI app swap page
 
 ### Vault Target Token
@@ -111,8 +115,11 @@ Extract từ vault name: `"WAL MASTER#1".split(/\s/)[0]` → `"WAL"`
 
 ### Coin Resolution
 
-Same fix as chatbot: `resolveCoinsWithPools()` cross-reference raw MCP data với pool prices.
+Same fix as chatbot: `resolveCoinsWithPools()` cross-references raw MCP data
+with pool prices.
 
 ### Double `0x` Bug Fix
 
-`NAVI_POOL_CFG` types đã có `0x` prefix. Code cũ thêm `` `0x${cfg.type}` `` → `0x0x356a...`. Fixed tất cả 6 chỗ.
+`NAVI_POOL_CFG` types already include the `0x` prefix. Older code added
+`` `0x${cfg.type}` `` and produced `0x0x356a...`. This has been fixed in all 6
+occurrences.
