@@ -276,6 +276,7 @@
     <!-- ═══════════════════════ DECISION STRIP ═══════════════════════ -->
     <div
       class="w-full bg-surface-container border-b border-outline-variant px-lg py-sm flex flex-wrap lg:flex-nowrap items-center justify-between gap-md shrink-0"
+      data-pc-panel="decision-strip"
     >
       <div class="flex items-center gap-lg flex-wrap">
         <!-- Asset -->
@@ -360,6 +361,7 @@
       <aside
         class="w-full lg:w-72 bg-surface-container flex flex-col shrink-0 overflow-hidden"
         data-animate="column"
+        data-pc-panel="club-panel"
       >
         <div class="p-md border-b border-outline-variant bg-surface-container-high">
           <h2 class="font-headline text-headline-md text-primary">Alpha Sui Predictors</h2>
@@ -483,7 +485,11 @@
       </aside>
 
       <!-- CENTER COLUMN: Prediction Room -->
-      <main class="flex-1 bg-surface-container flex flex-col overflow-hidden" data-animate="column">
+      <main
+        class="flex-1 bg-surface-container flex flex-col overflow-hidden"
+        data-animate="column"
+        data-pc-panel="prediction-room"
+      >
         <div
           class="p-md border-b border-outline-variant bg-surface-container-high flex justify-between items-center"
         >
@@ -640,6 +646,7 @@
       <aside
         class="w-full lg:w-80 bg-surface-container flex flex-col shrink-0 overflow-hidden"
         data-animate="column"
+        data-pc-panel="risk-panel"
       >
         <div class="p-md border-b border-outline-variant bg-surface-container-high">
           <h2 class="font-headline text-headline-md text-primary flex items-center gap-2">
@@ -786,7 +793,7 @@
       class="h-56 lg:h-60 bg-surface-container border-t border-outline-variant shrink-0 flex flex-col lg:flex-row gap-[1px] overflow-hidden"
     >
       <!-- Funding Router -->
-      <div class="flex-1 flex flex-col">
+      <div class="flex-1 flex flex-col" data-pc-panel="funding-router">
         <div
           class="p-xs bg-surface-container-high border-b border-outline-variant px-md flex items-center gap-2"
         >
@@ -842,7 +849,10 @@
         class="flex-[1.5] flex flex-col lg:flex-row gap-[1px] bg-outline-variant overflow-hidden"
       >
         <!-- P2P Escrow Offers -->
-        <div class="flex-1 bg-surface-container flex flex-col overflow-hidden">
+        <div
+          class="flex-1 bg-surface-container flex flex-col overflow-hidden"
+          data-pc-panel="escrow-offers"
+        >
           <div
             class="p-xs bg-surface-container-high border-b border-outline-variant px-md flex items-center justify-between"
           >
@@ -890,7 +900,10 @@
         </div>
 
         <!-- Club Round History -->
-        <div class="flex-1 bg-surface-container flex flex-col overflow-hidden">
+        <div
+          class="flex-1 bg-surface-container flex flex-col overflow-hidden"
+          data-pc-panel="round-history"
+        >
           <div
             class="p-xs bg-surface-container-high border-b border-outline-variant px-md flex items-center justify-between"
           >
@@ -1105,15 +1118,8 @@
       })()
     </script>
 
-    <!-- React plugin multi-slot mounting (hidden orchestrator) -->
+    <!-- React plugin mounting -->
     <div id="root" style="display: none"></div>
-    <div id="pc-slot-decision-strip" style="display: none"></div>
-    <div id="pc-slot-club-panel" style="display: none"></div>
-    <div id="pc-slot-prediction-room" style="display: none"></div>
-    <div id="pc-slot-risk-panel" style="display: none"></div>
-    <div id="pc-slot-funding-router" style="display: none"></div>
-    <div id="pc-slot-escrow-offers" style="display: none"></div>
-    <div id="pc-slot-round-history" style="display: none"></div>
     <div
       id="pc-slot-modal-layer"
       class="fixed inset-0 z-50 pointer-events-none [&>*]:pointer-events-auto"

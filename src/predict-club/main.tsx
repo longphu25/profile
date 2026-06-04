@@ -32,16 +32,19 @@ declare module '@mysten/dapp-kit-react' {
   }
 }
 
-/** Slot ID → Plugin component name mapping */
-const SLOT_MAP: Array<[string, string]> = [
-  ['pc-slot-decision-strip', 'PredictClub.DecisionStrip'],
-  ['pc-slot-club-panel', 'PredictClub.ClubPanel'],
-  ['pc-slot-prediction-room', 'PredictClub.PredictionRoom'],
-  ['pc-slot-risk-panel', 'PredictClub.RiskPanel'],
-  ['pc-slot-funding-router', 'PredictClub.FundingRouter'],
-  ['pc-slot-escrow-offers', 'PredictClub.EscrowOffers'],
-  ['pc-slot-round-history', 'PredictClub.RoundHistory'],
-  ['pc-slot-modal-layer', 'PredictClub.ModalLayer'],
+/**
+ * Panel name → data-pc-panel attribute value + plugin component name.
+ * The orchestrator finds each [data-pc-panel="X"] in the DOM,
+ * replaces its inner static content with a React root.
+ */
+const PANEL_MAP: Array<[string, string]> = [
+  ['decision-strip', 'PredictClub.DecisionStrip'],
+  ['club-panel', 'PredictClub.ClubPanel'],
+  ['prediction-room', 'PredictClub.PredictionRoom'],
+  ['risk-panel', 'PredictClub.RiskPanel'],
+  ['funding-router', 'PredictClub.FundingRouter'],
+  ['escrow-offers', 'PredictClub.EscrowOffers'],
+  ['round-history', 'PredictClub.RoundHistory'],
 ]
 
 const pluginPath = import.meta.env.DEV
@@ -49,9 +52,9 @@ const pluginPath = import.meta.env.DEV
   : `${import.meta.env.BASE_URL}assets/plugins/predict-club.js`
 
 /**
- * Multi-slot mounting orchestrator.
- * Detects available slot containers in the HTML and mounts the corresponding
- * React panel component into each one.
+ * Interactive mode orchestrator.
+ * Loads the plugin, then replaces static HTML content inside each
+ * [data-pc-panel] container with a live React panel component.
  */
 function PredictClubOrchestrator() {
   const [, setReady] = useState(false)
@@ -83,7 +86,6 @@ function PredictClubOrchestrator() {
   useEffect(() => {
     registerActions({
       onConnect: () => {
-        // Wallet connect handled by HTML page button or can be triggered
         if (wallets.length > 0) {
           dAppKitInstance.connectWallet({ wallet: wallets[0] })
         }
@@ -106,7 +108,7 @@ function PredictClubOrchestrator() {
     })
   }, [dAppKitInstance, wallets])
 
-  // Load plugin and mount panels into slots
+  // Load plugin and mount panels into layout containers
   useEffect(() => {
     if (initRef.current) return
     initRef.current = true
@@ -121,9 +123,11 @@ function PredictClubOrchestrator() {
         plugin.init(suiHostAPI)
         plugin.mount?.()
 
-        // Mount each panel into its slot
-        for (const [slotId, componentName] of SLOT_MAP) {
-          const container = document.getElementById(slotId)
+        // Mount each panel into its [data-pc-panel] container
+        for (const [panelName, componentName] of PANEL_MAP) {
+          const container = document.querySelector(
+            `[data-pc-panel="${panelName}"]`,
+          ) as HTMLElement | null
           if (!container) continue
 
           const Component = suiHostAPI.getComponent(componentName) as
@@ -131,11 +135,31 @@ function PredictClubOrchestrator() {
             | undefined
           if (!Component) continue
 
+          // Clear static HTML content (replaced by React)
+          container.innerHTML = ''
+
           const root = createRoot(container)
           root.render(
             <StrictMode>
               <DAppKitProvider dAppKit={dAppKit}>
                 <Component />
+              </DAppKitProvider>
+            </StrictMode>,
+          )
+          rootsRef.current.push(root)
+        }
+
+        // Mount modal layer into its dedicated slot
+        const modalSlot = document.getElementById('pc-slot-modal-layer')
+        const ModalComponent = suiHostAPI.getComponent('PredictClub.ModalLayer') as
+          | ComponentType<unknown>
+          | undefined
+        if (modalSlot && ModalComponent) {
+          const root = createRoot(modalSlot)
+          root.render(
+            <StrictMode>
+              <DAppKitProvider dAppKit={dAppKit}>
+                <ModalComponent />
               </DAppKitProvider>
             </StrictMode>,
           )
@@ -173,14 +197,10 @@ function PredictClubOrchestrator() {
     console.error('[PredictClub] Mount error:', error)
   }
 
-  // This orchestrator renders nothing visible itself
   return null
 }
 
-/**
- * Bootstrap: render the invisible orchestrator into a hidden root.
- * It handles plugin loading, wallet sync, and panel mounting.
- */
+// Bootstrap: render orchestrator into hidden root
 const rootEl = document.getElementById('root') || document.createElement('div')
 if (!rootEl.id) {
   rootEl.id = 'root'
