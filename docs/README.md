@@ -8,6 +8,8 @@ and domain deep dives.
 
 - `INDEX.md`: vault-style knowledge base index.
 - `REFERENCE.md`: external references and repo reference docs.
+- `ORGANIZATION.md`: folder roles, language policy, and QMD indexing policy.
+- `ROOT_DOC_AUDIT.md`: classification of root-level docs and candidate moves.
 - `SETUP.md`: harness, RTK, QMD, and MCP setup.
 - `HARNESS.md`: how humans and agents should use these docs during work.
 - `FEATURE_INTAKE.md`: how to classify requests before implementation.
@@ -19,7 +21,22 @@ and domain deep dives.
 - `product/`: current product contract and product-facing maps.
 - `stories/`: story packets, roadmap slices, and historical plans.
 - `decisions/`: durable decisions and tradeoffs.
+- `demo/`: tiny example showing the harness flow from request to validation.
 - `templates/`: reusable story, decision, and validation formats.
+
+## Root-Level Project Docs
+
+Keep cross-cutting repo maps and shared plugin/runtime architecture at the root
+of `docs/` so they remain easy to find from the Obsidian index:
+
+- `project-overview.md`, `repo-map.md`, `runtime-entry-points.md`
+- `development-workflow.md`
+- `plugin-architecture.md`, `plugin-architecture-wasm.md`, `plugin-wasm.md`
+- `plugin-sui-wallet.md`, `plugin-catalog.md`, `plugin-ideas.md`
+- `wasm-native.md`
+
+For detailed placement rules, see `ORGANIZATION.md`.
+For root-level cleanup decisions, see `ROOT_DOC_AUDIT.md`.
 
 ## Domain Folders
 
@@ -57,6 +74,8 @@ chosen, and the existing domain folders for technical depth.
 - QMD was configured for simple BM25 docs search via the `profile-docs`
   collection.
 - QMD MCP was added to Codex global config as `qmd mcp`.
+- QMD MCP was added to Kiro workspace config in `.kiro/settings/mcp.json`.
 - QMD local GGUF model files were removed; use `qmd search` and `qmd get` for
   normal lookup.
 - RTK was configured for Codex with `rtk init -g --codex`.
+- Kiro steering now includes RTK and QMD policies.

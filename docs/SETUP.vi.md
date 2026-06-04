@@ -12,13 +12,18 @@ Hãy đọc các tài liệu này trước khi bắt đầu công việc tài li
 3. `docs/FEATURE_INTAKE.md`
 4. `docs/ARCHITECTURE.md`
 5. `docs/TEST_MATRIX.md`
+6. `docs/ORGANIZATION.md`
 
 Hãy dùng nhất quán các thư mục sau:
 
 - `docs/product/`: product truth ổn định.
 - `docs/stories/`: scoped plan, story packet và roadmap slice.
 - `docs/decisions/`: tradeoff bền vững và quyết định kiến trúc.
+- `docs/demo/`: ví dụ nhỏ về flow repository-harness.
 - `docs/templates/`: định dạng dùng lại cho story, decision và validation.
+
+Giữ các bản đồ repo root-level và kiến trúc plugin/runtime dùng chung ở root
+của `docs/`. Xem `docs/ORGANIZATION.md` trước khi di chuyển file tài liệu.
 
 ## RTK
 
@@ -56,6 +61,9 @@ Path: docs/
 Mask: **/*.md
 ```
 
+Collection này cố ý bao gồm cả file `.md` tiếng Anh và bản dịch tiếng Việt
+`*.vi.md`.
+
 Dùng `qmd search` và `qmd get` cho công việc thông thường. Không chạy
 `qmd query`, `qmd vsearch` hoặc `qmd embed` trừ khi tác vụ thực sự yêu cầu
 model cục bộ.
@@ -77,6 +85,19 @@ thường, ưu tiên CLI `qmd search`.
 
 Khởi động lại Codex sau khi thay đổi `~/.codex/config.toml` để danh sách MCP
 server được nạp lại.
+
+Cấu hình MCP workspace của Kiro nằm ở:
+
+```text
+.kiro/settings/mcp.json
+```
+
+Các file steering của Kiro:
+
+```text
+.kiro/steering/qmd.md
+.kiro/steering/rtk.md
+```
 
 ## Chính Sách Mô Hình QMD
 

@@ -5,6 +5,8 @@
 ## Harness
 
 - [[README]] — Bản đồ tài liệu và vai trò của từng thư mục
+- [[ORGANIZATION]] — Quy tắc đặt tài liệu, chính sách ngôn ngữ và chính sách index QMD
+- [[ROOT_DOC_AUDIT]] — Phân loại tài liệu root-level và các ứng viên di chuyển
 - [[REFERENCE]] — Tài liệu tham chiếu bên ngoài và tài liệu tham chiếu cấp repo
 - [[SETUP]] — Ghi chú thiết lập harness, RTK, QMD và MCP
 - [[HARNESS]] — Mô hình cộng tác giữa con người và agent cho repo này
@@ -13,6 +15,7 @@
 - [[TEST_MATRIX]] — Kỳ vọng validation theo loại công việc
 - [[HARNESS_BACKLOG]] — Những cải tiến harness còn thiếu
 - [[QMD]] — Thiết lập tìm kiếm docs cục bộ không dùng model LLM local
+- [[TERMINOLOGY.vi]] — Quy ước thuật ngữ tiếng Việt cho các bản dịch `*.vi.md`
 - [[product/README]] — Bản đồ product contract
 - [[product/predict-club]] — Product contract Predict Club và vòng đời round
 - [[product/predict-club-architecture]] — Sơ đồ Predict Club, runtime boundary và cấu trúc file dự kiến
@@ -25,6 +28,15 @@
 - [[templates/story]] — Mẫu story
 - [[templates/decision]] — Mẫu decision
 - [[templates/validation]] — Mẫu báo cáo validation
+- [[templates/feature-intake]] — Mẫu feature intake
+- [[templates/spec]] — Mẫu spec
+- [[templates/README]] — Bản đồ cách dùng template
+- [[demo/README]] — Demo flow repository-harness tối thiểu
+- [[demo/feature-intake]] — Demo phân loại yêu cầu
+- [[demo/product-contract]] — Demo product contract
+- [[demo/story]] — Demo story packet
+- [[demo/decision]] — Demo decision record
+- [[demo/validation]] — Demo validation note
 
 ## Hướng Dẫn Dự Án
 
@@ -33,6 +45,14 @@
 - [[runtime-entry-points]] — Các entry HTML/TSX, trang nào dùng để làm gì, build ra sao
 - [[plugin-catalog]] — Danh mục plugin theo domain: wallet, DeFi, DeepBook, Seal, Walrus
 - [[development-workflow]] — Cách chạy, build, thêm plugin mới và các lưu ý release/docs
+
+## Tổ Chức Tài Liệu
+
+- Giữ tài liệu nguồn tiếng Anh ở dạng `*.md`.
+- Giữ bản dịch tiếng Việt ở dạng `*.vi.md` cạnh tài liệu nguồn.
+- Dùng tài liệu root-level cho bản đồ repo và kiến trúc plugin/runtime dùng chung.
+- Dùng thư mục domain cho ghi chú kỹ thuật sâu.
+- Chạy `qmd update` sau khi thêm, dịch, di chuyển hoặc xóa tài liệu.
 
 ## Bảng Canvas
 
@@ -114,6 +134,17 @@
 ## Story Plans
 
 - [[stories/plans/README]] — Chỉ mục kế hoạch DeepBook Predict / TaskOS
+- [[stories/plans/01-deepbook-predict-hackathon]] — Kế hoạch hackathon DeepBook Predict Command Center
+- [[stories/plans/02-deepbook-predict-ux]] — Đơn giản hóa UX Predict cho người dùng lần đầu
+- [[stories/plans/03-deepbook-app-suite-trend-predict]] — Bộ ứng dụng DeepBook và Trend Predict
+- [[stories/plans/04-deepbook-static-plugin-split]] — Chiến lược tách trang tĩnh và plugin
+- [[stories/plans/05-commander-taskos]] — Mô hình mission Commander / TaskOS
+- [[stories/plans/06-work-breakdown]] — Phân rã công việc và thứ tự ưu tiên
+- [[stories/plans/07-hashi-suilink-later]] — Onboarding Hashi + SuiLink ở giai đoạn sau
+- [[stories/plans/08-deepbook-predict-user-assist]] — Predict Assistant và giao dịch có hướng dẫn
+- [[stories/plans/09-predict-manager-bot-architecture]] — Kiến trúc bot PredictManager non-custodial
+- [[stories/plans/10-interactive-predict-position-chart]] — Biểu đồ vị thế Predict tương tác
+- [[stories/plans/11-deepbook-suite-modular-refactor]] — Refactor module cho DeepBook Suite
 - [[stories/plans/12-deepbook-predict-standalone-chart-trading]] — Kế hoạch `deepbook-predict.html` độc lập với popup giao dịch DUSDC theo click biểu đồ và overlay vị thế theo ví
 - [[stories/plans/13-predict-club-community]] — Quy trình cộng đồng Predict Club, clean architecture, kế hoạch plugin và boundary group vault tương lai
 

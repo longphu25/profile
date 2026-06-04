@@ -8,6 +8,9 @@ hiện có và các phần đào sâu theo domain.
 
 - `INDEX.md`: chỉ mục knowledge base theo kiểu vault.
 - `REFERENCE.md`: tài liệu tham chiếu bên ngoài và tài liệu tham chiếu cấp repo.
+- `ORGANIZATION.md`: vai trò thư mục, chính sách ngôn ngữ và chính sách index
+  QMD.
+- `ROOT_DOC_AUDIT.md`: phân loại tài liệu root-level và các ứng viên di chuyển.
 - `TERMINOLOGY.vi.md`: quy ước thuật ngữ tiếng Việt dùng cho các bản dịch
   `*.vi.md`.
 - `SETUP.md`: thiết lập harness, RTK, QMD và MCP.
@@ -21,7 +24,22 @@ hiện có và các phần đào sâu theo domain.
 - `product/`: product contract hiện tại và các bản đồ hướng sản phẩm.
 - `stories/`: story packet, roadmap slice và các kế hoạch lịch sử.
 - `decisions/`: các quyết định bền vững và tradeoff.
+- `demo/`: ví dụ nhỏ minh họa flow harness từ request tới validation.
 - `templates/`: mẫu dùng lại cho story, decision và validation.
+
+## Tài Liệu Root Cấp Dự Án
+
+Giữ các bản đồ repo xuyên suốt và kiến trúc plugin/runtime dùng chung ở root
+của `docs/` để dễ tìm từ chỉ mục Obsidian:
+
+- `project-overview.md`, `repo-map.md`, `runtime-entry-points.md`
+- `development-workflow.md`
+- `plugin-architecture.md`, `plugin-architecture-wasm.md`, `plugin-wasm.md`
+- `plugin-sui-wallet.md`, `plugin-catalog.md`, `plugin-ideas.md`
+- `wasm-native.md`
+
+Quy tắc đặt tài liệu chi tiết nằm trong `ORGANIZATION.md`.
+Quyết định dọn root-level docs nằm trong `ROOT_DOC_AUDIT.md`.
 
 ## Các Thư Mục Domain
 
@@ -59,6 +77,9 @@ cho chiều sâu kỹ thuật.
 - QMD được cấu hình cho tìm kiếm tài liệu BM25 đơn giản qua collection
   `profile-docs`.
 - QMD MCP đã được thêm vào cấu hình Codex global dưới dạng `qmd mcp`.
+- QMD MCP đã được thêm vào cấu hình workspace của Kiro tại
+  `.kiro/settings/mcp.json`.
 - Các file model GGUF cục bộ của QMD đã bị xóa; dùng `qmd search` và `qmd get`
   cho nhu cầu tra cứu thông thường.
 - RTK đã được cấu hình cho Codex bằng `rtk init -g --codex`.
+- Kiro steering hiện có policy cho RTK và QMD.

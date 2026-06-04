@@ -11,13 +11,18 @@ Read these docs first when starting documentation or implementation work:
 3. `docs/FEATURE_INTAKE.md`
 4. `docs/ARCHITECTURE.md`
 5. `docs/TEST_MATRIX.md`
+6. `docs/ORGANIZATION.md`
 
 Use these folders consistently:
 
 - `docs/product/`: stable product truth.
 - `docs/stories/`: scoped plans, story packets, and roadmap slices.
 - `docs/decisions/`: durable tradeoffs and architecture decisions.
+- `docs/demo/`: small repository-harness flow example.
 - `docs/templates/`: reusable formats for stories, decisions, and validation.
+
+Keep root-level repo maps and shared plugin/runtime architecture in `docs/`
+root. See `docs/ORGANIZATION.md` before moving documentation files.
 
 ## RTK
 
@@ -55,6 +60,9 @@ Path: docs/
 Mask: **/*.md
 ```
 
+This collection intentionally includes both English `.md` files and Vietnamese
+`*.vi.md` translations.
+
 Use `qmd search` and `qmd get` for normal work. Do not run `qmd query`,
 `qmd vsearch`, or `qmd embed` unless a task explicitly requires local models.
 
@@ -75,6 +83,19 @@ ordinary docs lookup.
 
 Restart Codex after changing `~/.codex/config.toml` so the MCP server list is
 reloaded.
+
+Kiro workspace MCP config is stored in:
+
+```text
+.kiro/settings/mcp.json
+```
+
+Kiro steering files:
+
+```text
+.kiro/steering/qmd.md
+.kiro/steering/rtk.md
+```
 
 ## QMD Model Policy
 

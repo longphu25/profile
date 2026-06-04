@@ -5,6 +5,8 @@
 ## Harness
 
 - [[README]] — Documentation map and folder roles
+- [[ORGANIZATION]] — Folder placement rules, language policy, and QMD indexing policy
+- [[ROOT_DOC_AUDIT]] — Root-level documentation classification and candidate moves
 - [[REFERENCE]] — External references and repo reference docs
 - [[SETUP]] — Harness, RTK, QMD, and MCP setup notes
 - [[HARNESS]] — Human-agent collaboration model for this repo
@@ -13,6 +15,7 @@
 - [[TEST_MATRIX]] — Validation expectations by work type
 - [[HARNESS_BACKLOG]] — Missing harness improvements
 - [[QMD]] — Local docs search setup without local LLM models
+- [[TERMINOLOGY.vi]] — Vietnamese terminology policy for `*.vi.md` translations
 - [[product/README]] — Product contract map
 - [[product/predict-club]] — Predict Club product contract and round lifecycle
 - [[product/predict-club-architecture]] — Predict Club diagrams, runtime boundaries, and planned file structure
@@ -25,6 +28,15 @@
 - [[templates/story]] — Story template
 - [[templates/decision]] — Decision template
 - [[templates/validation]] — Validation report template
+- [[templates/feature-intake]] — Feature intake template
+- [[templates/spec]] — Spec template
+- [[templates/README]] — Template usage map
+- [[demo/README]] — Minimal repository-harness demo flow
+- [[demo/feature-intake]] — Demo request classification
+- [[demo/product-contract]] — Demo product contract
+- [[demo/story]] — Demo story packet
+- [[demo/decision]] — Demo decision record
+- [[demo/validation]] — Demo validation note
 
 ## Project Guide
 
@@ -33,6 +45,14 @@
 - [[runtime-entry-points]] — Các entry HTML/TSX, trang nào dùng để làm gì, build ra sao
 - [[plugin-catalog]] — Danh mục plugin theo domain: wallet, DeFi, DeepBook, Seal, Walrus
 - [[development-workflow]] — Cách chạy, build, thêm plugin mới, và các lưu ý release/docs
+
+## Documentation Organization
+
+- Keep English source docs as `*.md`.
+- Keep Vietnamese translations as `*.vi.md` beside the source document.
+- Use root-level docs for repo-wide maps and shared plugin/runtime architecture.
+- Use domain folders for deep technical notes.
+- Run `qmd update` after adding, translating, moving, or deleting docs.
 
 ## Canvas Boards
 
@@ -114,6 +134,17 @@
 ## Story Plans
 
 - [[stories/plans/README]] — DeepBook Predict / TaskOS planning index
+- [[stories/plans/01-deepbook-predict-hackathon]] — DeepBook Predict Command Center hackathon plan
+- [[stories/plans/02-deepbook-predict-ux]] — First-time Predict UX simplification
+- [[stories/plans/03-deepbook-app-suite-trend-predict]] — Multi-app DeepBook suite and Trend Predict
+- [[stories/plans/04-deepbook-static-plugin-split]] — Static page and plugin split strategy
+- [[stories/plans/05-commander-taskos]] — Commander / TaskOS mission model
+- [[stories/plans/06-work-breakdown]] — Work breakdown and priority order
+- [[stories/plans/07-hashi-suilink-later]] — Later-stage Hashi + SuiLink onboarding
+- [[stories/plans/08-deepbook-predict-user-assist]] — Predict Assistant and guided trade plan
+- [[stories/plans/09-predict-manager-bot-architecture]] — Non-custodial PredictManager bot architecture
+- [[stories/plans/10-interactive-predict-position-chart]] — Interactive Predict position chart
+- [[stories/plans/11-deepbook-suite-modular-refactor]] — DeepBook Suite modular refactor
 - [[stories/plans/12-deepbook-predict-standalone-chart-trading]] — Standalone `deepbook-predict.html` plan with chart-click DUSDC trade popup and wallet-scoped position overlays
 - [[stories/plans/13-predict-club-community]] — Predict Club community workflow, clean architecture, plugin plan, and future group vault boundary
 
