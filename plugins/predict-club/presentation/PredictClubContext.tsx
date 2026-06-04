@@ -2,9 +2,8 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react'
 import { recommendFundingRoute } from '../application/recommendFundingRoute'
@@ -21,7 +20,7 @@ import { settleRound, type SettlementOutcome } from '../application/settleRound'
 import { transition } from '../domain/roundLifecycle'
 import { evaluateRiskGate, type RiskEvaluation } from '../domain/riskGate'
 import { computeConsensus, type ConsensusResult } from '../domain/indicatorConsensus'
-import { loadClubState, saveClubState } from '../data/localClubStore'
+import * as store from '../data/clubStore'
 import type {
   AssetBalances,
   ClubState,
@@ -30,21 +29,13 @@ import type {
   RoundStatus,
 } from '../domain/types'
 import type { CreateRoundParams } from '../domain/policies'
-import type { SuiContext, SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
+import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
 
 const demoBalances: AssetBalances = { sui: 1240.5, usdc: 5000, dusdc: 2500 }
 
-const defaultContext: SuiContext = {
-  address: null,
-  network: 'testnet',
-  isConnected: false,
-  accounts: [],
-}
-
 export interface PredictClubContextValue {
   club: ClubState
-  setClub: React.Dispatch<React.SetStateAction<ClubState>>
-  context: SuiContext
+  context: { address: string | null; isConnected: boolean }
   balances: AssetBalances
   modal: ModalKind | null
   setModal: (m: ModalKind | null) => void
@@ -54,9 +45,7 @@ export interface PredictClubContextValue {
   fundingRecommendation: { route: string; label: string }
   updateRoundStatus: (status: RoundStatus) => void
   host: SuiHostAPI | null
-  // Use case actions
   actions: PredictClubActions
-  // Computed domain state
   riskEvaluation: RiskEvaluation
   consensus: ConsensusResult
   toastMessage: string | null
@@ -89,28 +78,12 @@ export function PredictClubProvider({
   host: SuiHostAPI | null
   children: ReactNode
 }) {
-  const [club, setClub] = useState<ClubState>(() => loadClubState())
-  const [modal, setModal] = useState<ModalKind | null>(null)
-  const [selectedOffer, setSelectedOffer] = useState<EscrowOfferView | null>(null)
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const [context, setContext] = useState<SuiContext>(() => host?.getSuiContext() ?? defaultContext)
-
-  useEffect(() => {
-    if (!host) return undefined
-    setContext(host.getSuiContext())
-    return host.onSuiContextChange(setContext)
-  }, [host])
-
-  useEffect(() => {
-    saveClubState(club)
-  }, [club])
-
-  // Auto-clear toast
-  useEffect(() => {
-    if (!toastMessage) return
-    const t = setTimeout(() => setToastMessage(null), 3000)
-    return () => clearTimeout(t)
-  }, [toastMessage])
+  // Subscribe to shared global store
+  const storeState = useSyncExternalStore(store.subscribe, store.getStoreState)
+  const club = storeState.club
+  const modal = storeState.modal
+  const selectedOffer = storeState.selectedOffer
+  const toastMessage = storeState.toastMessage
 
   const round = club.activeRound
   const funding = useMemo(() => recommendFundingRoute(demoBalances, round), [round])
@@ -118,7 +91,7 @@ export function PredictClubProvider({
   const riskEvaluation = useMemo(
     () =>
       evaluateRiskGate({
-        oracleLastUpdate: Date.now() - 15000, // 15s ago (simulated healthy)
+        oracleLastUpdate: Date.now() - 15000,
         oracleStaleThresholdMs: 60000,
         expiryMinutes: round.expiryMinutes,
         minSafeExpiryMinutes: 5,
@@ -132,181 +105,155 @@ export function PredictClubProvider({
 
   const consensus = useMemo(() => computeConsensus(round.indicators), [round.indicators])
 
-  const isLeader = context.address ? context.address.toLowerCase().endsWith('7c') : true // Demo: treat as leader when no wallet
-
-  function updateRoundStatus(status: RoundStatus) {
-    setClub((current) => ({
-      ...current,
-      activeRound: { ...current.activeRound, status },
-    }))
-  }
+  const updateRoundStatus = useCallback((status: RoundStatus) => {
+    store.updateClub((c) => ({ ...c, activeRound: { ...c.activeRound, status } }))
+  }, [])
 
   // ─── Use Case Actions ───
-
-  const actions: PredictClubActions = {
-    createRound: useCallback(
-      (params: CreateRoundParams) => {
+  const actions: PredictClubActions = useMemo(
+    () => ({
+      createRound: (params: CreateRoundParams) => {
         const result = createRound(club, params)
         if (result.ok && result.club) {
-          setClub(result.club)
-          setToastMessage('Round created successfully')
-          setModal(null)
+          store.setClub(result.club)
+          store.setToast('Round created')
+          store.setModal(null)
         }
         return result
       },
-      [club],
-    ),
 
-    confirmRound: useCallback(() => {
-      const result = confirmRound(club, {
-        oracleLastUpdate: Date.now() - 15000,
-        oracleStaleThresholdMs: 60000,
-        expiryMinutes: round.expiryMinutes,
-        minSafeExpiryMinutes: 5,
-        memberDusdc: demoBalances.dusdc,
-        suggestedDusdc: round.suggestedDusdc,
-        signalBias: round.signalBias,
-        indicators: round.indicators,
-      })
-      if (result.ok && result.club) {
-        setClub(result.club)
-        setToastMessage('Round confirmed by leader')
-      } else if (result.error) {
-        setToastMessage(result.error)
-      }
-      return result
-    }, [club, round]),
+      confirmRound: () => {
+        const result = confirmRound(club, {
+          oracleLastUpdate: Date.now() - 15000,
+          oracleStaleThresholdMs: 60000,
+          expiryMinutes: round.expiryMinutes,
+          minSafeExpiryMinutes: 5,
+          memberDusdc: demoBalances.dusdc,
+          suggestedDusdc: round.suggestedDusdc,
+          signalBias: round.signalBias,
+          indicators: round.indicators,
+        })
+        if (result.ok && result.club) {
+          store.setClub(result.club)
+          store.setToast('Round confirmed')
+        } else if (result.error) {
+          store.setToast(result.error)
+        }
+        return result
+      },
 
-    publishRound: useCallback(() => {
-      const result = transition(club.activeRound.status, 'publish')
-      if (result.ok && result.newStatus) {
-        setClub((c) => ({ ...c, activeRound: { ...c.activeRound, status: result.newStatus! } }))
-        setToastMessage('Round published - members can now pledge')
-        setModal(null)
-        return { ok: true }
-      }
-      return { ok: false, error: result.error }
-    }, [club]),
+      publishRound: () => {
+        const result = transition(club.activeRound.status, 'publish')
+        if (result.ok && result.newStatus) {
+          store.updateClub((c) => ({
+            ...c,
+            activeRound: { ...c.activeRound, status: result.newStatus! },
+          }))
+          store.setToast('Round published')
+          store.setModal(null)
+          return { ok: true }
+        }
+        return { ok: false, error: result.error }
+      },
 
-    pledgeToRound: useCallback(
-      (memberId: string, amount: number) => {
+      pledgeToRound: (memberId: string, amount: number) => {
         const result = pledgeToRound(club, {
           memberId,
           amountDusdc: amount,
           walletBalance: demoBalances.dusdc,
         })
         if (result.ok && result.club) {
-          setClub(result.club)
-          setToastMessage(`Pledged ${amount} DUSDC`)
+          store.setClub(result.club)
+          store.setToast(`Pledged ${amount} DUSDC`)
         }
         return { ok: result.ok, error: result.error }
       },
-      [club],
-    ),
 
-    executeRound: useCallback(() => {
-      // Simulate execution: transition funding → executed
-      const result = transition(club.activeRound.status, 'execute')
-      if (result.ok && result.newStatus) {
-        const updatedMembers = club.members.map((m) =>
-          m.state === 'accepted' || m.state === 'pledged'
-            ? { ...m, state: 'executed' as const }
-            : m,
-        )
-        setClub((c) => ({
-          ...c,
-          activeRound: { ...c.activeRound, status: result.newStatus! },
-          members: updatedMembers,
-        }))
-        setToastMessage('Trade executed successfully (simulated)')
-        setModal(null)
-        return { ok: true }
-      }
-      // Also support from confirmed → funding → executed in one click for demo
-      if (club.activeRound.status === 'confirmed') {
-        setClub((c) => ({
-          ...c,
-          activeRound: { ...c.activeRound, status: 'executed' },
-          members: c.members.map((m) =>
-            m.state === 'accepted' || m.state === 'pledged'
-              ? { ...m, state: 'executed' as const }
-              : m,
-          ),
-        }))
-        setToastMessage('Trade executed (simulated)')
-        setModal(null)
-        return { ok: true }
-      }
-      return { ok: false, error: result.error }
-    }, [club]),
+      executeRound: () => {
+        // Support from confirmed or funding
+        if (club.activeRound.status === 'confirmed' || club.activeRound.status === 'funding') {
+          store.updateClub((c) => ({
+            ...c,
+            activeRound: { ...c.activeRound, status: 'executed' },
+            members: c.members.map((m) =>
+              m.state === 'accepted' || m.state === 'pledged'
+                ? { ...m, state: 'executed' as const }
+                : m,
+            ),
+          }))
+          store.setToast('Trade executed (simulated)')
+          store.setModal(null)
+          return { ok: true }
+        }
+        const result = transition(club.activeRound.status, 'execute')
+        if (result.ok && result.newStatus) {
+          store.updateClub((c) => ({
+            ...c,
+            activeRound: { ...c.activeRound, status: result.newStatus! },
+            members: c.members.map((m) =>
+              m.state === 'accepted' || m.state === 'pledged'
+                ? { ...m, state: 'executed' as const }
+                : m,
+            ),
+          }))
+          store.setToast('Trade executed (simulated)')
+          store.setModal(null)
+          return { ok: true }
+        }
+        return { ok: false, error: result.error }
+      },
 
-    settleRound: useCallback(
-      (outcome: SettlementOutcome) => {
+      settleRound: (outcome: SettlementOutcome) => {
         const result = settleRound(club, outcome)
         if (result.ok && result.club) {
-          setClub(result.club)
-          setToastMessage(`Round settled: ${outcome.result}`)
+          store.setClub(result.club)
+          store.setToast(`Round settled: ${outcome.result}`)
         }
         return { ok: result.ok, error: result.error }
       },
-      [club],
-    ),
 
-    createEscrowOffer: useCallback(
-      (params: CreateEscrowParams) => {
+      createEscrowOffer: (params: CreateEscrowParams) => {
         const result = createEscrowOffer(club, params)
         if (result.ok && result.club) {
-          setClub(result.club)
-          setToastMessage('Escrow offer created')
-          setModal(null)
+          store.setClub(result.club)
+          store.setToast('Escrow offer created')
+          store.setModal(null)
         }
         return { ok: result.ok, error: result.error }
       },
-      [club],
-    ),
 
-    fillEscrowOffer: useCallback(
-      (offerId: string) => {
+      fillEscrowOffer: (offerId: string) => {
         const result = fillEscrowOffer(club, offerId)
         if (result.ok && result.club) {
-          setClub(result.club)
-          setToastMessage('Escrow offer filled')
-          setModal(null)
+          store.setClub(result.club)
+          store.setToast('Escrow filled')
+          store.setModal(null)
         }
         return { ok: result.ok, error: result.error }
       },
-      [club],
-    ),
 
-    cancelEscrowOffer: useCallback(
-      (offerId: string) => {
+      cancelEscrowOffer: (offerId: string) => {
         const result = cancelEscrowOffer(club, offerId)
         if (result.ok && result.club) {
-          setClub(result.club)
-          setToastMessage('Escrow offer cancelled')
+          store.setClub(result.club)
+          store.setToast('Escrow cancelled')
         }
         return { ok: result.ok, error: result.error }
       },
-      [club],
-    ),
-  }
+    }),
+    [club, round],
+  )
 
-  // ─── Primary Action Logic ───
-
+  // ─── Primary Action ───
   const primaryAction = useMemo(() => {
-    if (!context.isConnected && context.address === null) {
-      // Demo mode: show contextual action based on round status
-    }
-
     switch (round.status) {
       case 'draft':
         return { label: 'Publish Round', action: () => actions.publishRound() }
       case 'open':
-        if (isLeader) return { label: 'Confirm Round', action: () => actions.confirmRound() }
-        return { label: 'Pledge to Join', action: () => setModal('fund-to-join') }
+        return { label: 'Confirm Round', action: () => actions.confirmRound() }
       case 'confirmed':
       case 'funding':
-        return { label: 'Execute Trade', action: () => setModal('execute-trade') }
+        return { label: 'Execute Trade', action: () => store.setModal('execute-trade') }
       case 'executed':
         return {
           label: 'Settle (Demo)',
@@ -319,23 +266,22 @@ export function PredictClubProvider({
             }),
         }
       case 'settled':
-        return { label: 'Claim Settlement', action: () => setModal('claim-settlement') }
+        return { label: 'Claim Settlement', action: () => store.setModal('claim-settlement') }
       case 'claimed':
-        return { label: 'New Round', action: () => setModal('create-round') }
+        return { label: 'New Round', action: () => store.setModal('create-round') }
       default:
         return { label: 'Accept Signal', action: () => updateRoundStatus('funding') }
     }
-  }, [round.status, isLeader, context.isConnected, actions])
+  }, [round.status, round.id, round.strike, actions, updateRoundStatus])
 
   const value: PredictClubContextValue = {
     club,
-    setClub,
-    context,
+    context: { address: null, isConnected: false },
     balances: demoBalances,
     modal,
-    setModal,
+    setModal: store.setModal,
     selectedOffer,
-    setSelectedOffer,
+    setSelectedOffer: store.setSelectedOffer,
     primaryAction,
     fundingRecommendation: { route: funding.route, label: funding.label },
     updateRoundStatus,
