@@ -20,6 +20,7 @@ candidate work slices, roadmap order, and implementation packets.
 | [10-interactive-predict-position-chart.md](10-interactive-predict-position-chart.md) | Interactive Predict chart for click-to-select binary strikes, drag-to-select ranges, and minted position overlays. |
 | [11-deepbook-suite-modular-refactor.md](11-deepbook-suite-modular-refactor.md) | Refactor plan for `deepbook.html`, reusable plugin modules, thin Predict plugin entry, clean architecture, and chart integration. |
 | [12-deepbook-predict-standalone-chart-trading.md](12-deepbook-predict-standalone-chart-trading.md) | Standalone `deepbook-predict.html` plan with BTC-chart-style host, wallet wiring, chart trade popup, DUSDC preview, and existing-position overlays. |
+| [13-predict-club-community.md](13-predict-club-community.md) | Predict Club community workflow plan with leader proposals, member self-sign execution, clean architecture, and future group vault boundary. |
 
 ## Recommended Build Order
 
@@ -35,3 +36,4 @@ candidate work slices, roadmap order, and implementation packets.
 10. Add interactive chart-based position picking and position overlays for binary and range Predict positions.
 11. Refactor the DeepBook Suite and Predict plugin into reusable clean-architecture modules before broader sub-plugin splitting.
 12. Add the standalone DeepBook Predict page with chart-click DUSDC trade popup and wallet-scoped position overlays.
+13. Add Predict Club as a community coordination page with leader-confirmed rounds, indicator consensus, and member self-sign execution.
