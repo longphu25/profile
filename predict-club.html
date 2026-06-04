@@ -1,0 +1,954 @@
+<!doctype html>
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Predict Club — Trading Cockpit</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'surface-container-high': '#232c28',
+              'inverse-surface': '#dbe5df',
+              'secondary-container': '#3a4a5f',
+              'on-error-container': '#ffdad6',
+              'secondary-fixed': '#d3e4fe',
+              outline: '#83958d',
+              'inverse-on-surface': '#29322f',
+              'on-primary-container': '#00725a',
+              'tertiary-container': '#ffe150',
+              primary: '#fdfffc',
+              background: '#0c1512',
+              'primary-fixed-dim': '#00e0b3',
+              'error-container': '#93000a',
+              'surface-dim': '#0c1512',
+              'tertiary-fixed-dim': '#e2c635',
+              'surface-bright': '#323b37',
+              'outline-variant': '#3a4a44',
+              'on-background': '#dbe5df',
+              'on-surface': '#dbe5df',
+              'surface-container-lowest': '#07100d',
+              'secondary-fixed-dim': '#b7c8e1',
+              'surface-tint': '#00e0b3',
+              'primary-container': '#00ffcc',
+              'tertiary-fixed': '#ffe257',
+              'surface-container-highest': '#2e3733',
+              'on-primary-fixed-variant': '#00513f',
+              tertiary: '#fffeff',
+              'on-secondary-fixed-variant': '#38485d',
+              surface: '#0c1512',
+              'surface-variant': '#2e3733',
+              'surface-container': '#19211e',
+              'on-secondary-container': '#a9bad3',
+              'on-secondary-fixed': '#0b1c30',
+              'on-primary': '#00382b',
+              'on-tertiary': '#393000',
+              'on-tertiary-fixed-variant': '#534600',
+              'inverse-primary': '#006b54',
+              'on-secondary': '#213145',
+              'on-primary-fixed': '#002118',
+              'on-tertiary-container': '#746300',
+              'on-error': '#690005',
+              'primary-fixed': '#24ffcd',
+              'surface-container-low': '#151d1a',
+              'on-surface-variant': '#b9cbc2',
+              'on-tertiary-fixed': '#211b00',
+              error: '#ffb4ab',
+              secondary: '#b7c8e1',
+            },
+            borderRadius: {
+              DEFAULT: '0.125rem',
+              lg: '0.25rem',
+              xl: '0.5rem',
+              full: '0.75rem',
+            },
+            spacing: {
+              sm: '0.5rem',
+              xl: '1.5rem',
+              md: '0.75rem',
+              lg: '1rem',
+              'panel-gutter': '1px',
+              xs: '0.25rem',
+            },
+            fontFamily: {
+              headline: ['Inter'],
+              data: ['JetBrains Mono'],
+              body: ['Inter'],
+              label: ['Inter'],
+            },
+            fontSize: {
+              'headline-md': [
+                '18px',
+                { lineHeight: '24px', letterSpacing: '-0.01em', fontWeight: '600' },
+              ],
+              'data-sm': ['12px', { lineHeight: '16px', fontWeight: '500' }],
+              'data-md': ['14px', { lineHeight: '20px', fontWeight: '500' }],
+              'headline-lg': [
+                '24px',
+                { lineHeight: '32px', letterSpacing: '-0.02em', fontWeight: '600' },
+              ],
+              'data-lg': ['16px', { lineHeight: '24px', fontWeight: '500' }],
+              'body-sm': ['12px', { lineHeight: '16px', fontWeight: '400' }],
+              'body-base': ['14px', { lineHeight: '20px', fontWeight: '400' }],
+              'label-caps': [
+                '10px',
+                { lineHeight: '12px', letterSpacing: '0.05em', fontWeight: '700' },
+              ],
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      .tabular-nums {
+        font-variant-numeric: tabular-nums;
+      }
+      .glow-mint {
+        box-shadow: 0 0 8px rgba(0, 224, 179, 0.3);
+      }
+      .glow-mint-active:focus-within {
+        box-shadow: 0 0 12px rgba(0, 224, 179, 0.4);
+        border-color: #00e0b3;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0c1512;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #3a4a44;
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #83958d;
+      }
+
+      /* Pulse animation for live indicator */
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+      .animate-pulse-dot {
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+
+      /* Subtle hover lift for cards */
+      .hover-lift {
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+      .hover-lift:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Flow connector line */
+      .flow-connector::after {
+        content: '';
+        position: absolute;
+        right: -12px;
+        top: 50%;
+        width: 12px;
+        height: 2px;
+        background: currentColor;
+      }
+
+      /* Chart grid background */
+      .chart-grid {
+        background-image:
+          linear-gradient(#2e3733 1px, transparent 1px),
+          linear-gradient(90deg, #2e3733 1px, transparent 1px);
+        background-size: 24px 24px;
+        opacity: 0.15;
+      }
+    </style>
+  </head>
+
+  <body
+    class="bg-background text-on-surface font-body text-body-base h-screen flex flex-col overflow-hidden"
+  >
+    <!-- ═══════════════════════ TOP NAV BAR ═══════════════════════ -->
+    <header
+      class="flex justify-between items-center w-full px-lg h-14 bg-surface-container-lowest border-b border-outline-variant shrink-0"
+    >
+      <div class="flex items-center gap-xl">
+        <div
+          class="font-headline text-headline-lg font-black text-primary-fixed tracking-tight cursor-pointer"
+        >
+          PREDICT CLUB
+        </div>
+        <nav class="hidden md:flex gap-lg" aria-label="Main navigation">
+          <a
+            class="text-primary border-b-2 border-primary-fixed pb-1 font-headline text-headline-md cursor-pointer hover:text-primary transition-colors duration-200"
+            href="#"
+            >Clubs</a
+          >
+          <a
+            class="text-on-surface-variant font-body text-body-base cursor-pointer hover:text-primary transition-colors duration-200 py-1"
+            href="#"
+            >Market</a
+          >
+          <a
+            class="text-on-surface-variant font-body text-body-base cursor-pointer hover:text-primary transition-colors duration-200 py-1"
+            href="#"
+            >History</a
+          >
+          <a
+            class="text-on-surface-variant font-body text-body-base cursor-pointer hover:text-primary transition-colors duration-200 py-1"
+            href="#"
+            >Leaderboard</a
+          >
+        </nav>
+      </div>
+      <div class="flex items-center gap-lg">
+        <!-- Balances -->
+        <div
+          class="hidden lg:flex items-center gap-md font-data text-data-sm text-on-surface-variant bg-surface-container-high px-sm py-xs rounded border border-outline-variant"
+        >
+          <span class="flex items-center gap-1"
+            ><span class="text-primary-fixed-dim">SUI:</span>
+            <span class="tabular-nums">1,240.50</span></span
+          >
+          <div class="w-px h-4 bg-outline-variant"></div>
+          <span class="flex items-center gap-1"
+            ><span class="text-primary-fixed-dim">USDC:</span>
+            <span class="tabular-nums">5,000.00</span></span
+          >
+          <div class="w-px h-4 bg-outline-variant"></div>
+          <span class="flex items-center gap-1"
+            ><span class="text-primary-fixed-dim">DUSDC:</span>
+            <span class="tabular-nums">2,500.00</span></span
+          >
+        </div>
+        <div class="flex items-center gap-sm text-primary-fixed-dim">
+          <button
+            class="p-xs hover:bg-surface-bright rounded transition-colors cursor-pointer"
+            aria-label="Wallet tools"
+          >
+            <span class="material-symbols-outlined">account_balance_wallet</span>
+          </button>
+          <button
+            class="p-xs hover:bg-surface-bright rounded transition-colors cursor-pointer"
+            aria-label="Oracle status"
+          >
+            <span class="material-symbols-outlined">sensors</span>
+          </button>
+        </div>
+        <button
+          class="bg-primary-fixed-dim text-on-primary-fixed px-md py-xs rounded font-data text-data-sm cursor-pointer hover:bg-primary-container transition-colors"
+        >
+          Connect Wallet
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══════════════════════ DECISION STRIP ═══════════════════════ -->
+    <div
+      class="w-full bg-surface-container border-b border-outline-variant px-lg py-sm flex flex-wrap lg:flex-nowrap items-center justify-between gap-md shrink-0"
+    >
+      <div class="flex items-center gap-lg flex-wrap">
+        <!-- Asset -->
+        <div class="flex flex-col">
+          <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
+            >Asset</span
+          >
+          <div class="flex items-center gap-sm">
+            <span class="font-data text-data-lg font-bold">BTC</span>
+            <span class="font-data text-data-md text-on-surface-variant tabular-nums"
+              >$64,231.50</span
+            >
+          </div>
+        </div>
+        <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
+        <!-- Direction -->
+        <div class="flex flex-col">
+          <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
+            >Direction</span
+          >
+          <span
+            class="font-data text-data-md text-primary-fixed-dim font-bold flex items-center gap-1"
+          >
+            <span class="material-symbols-outlined text-sm">trending_up</span> UP
+          </span>
+        </div>
+        <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
+        <!-- Strike -->
+        <div class="flex flex-col">
+          <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
+            >Strike</span
+          >
+          <span class="font-data text-data-md tabular-nums">65,000</span>
+        </div>
+        <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
+        <!-- Expiry -->
+        <div class="flex flex-col">
+          <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
+            >Expiry</span
+          >
+          <span
+            class="font-data text-data-md tabular-nums text-tertiary-fixed-dim"
+            id="expiry-timer"
+            >02:14:55</span
+          >
+        </div>
+        <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
+        <!-- Pledged -->
+        <div class="flex flex-col">
+          <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
+            >Pledged</span
+          >
+          <span class="font-data text-data-md tabular-nums"
+            >45,000 <span class="text-on-surface-variant text-body-sm">DUSDC</span></span
+          >
+        </div>
+      </div>
+      <!-- Status + CTA -->
+      <div class="flex items-center gap-md">
+        <div
+          class="flex items-center gap-2 border border-primary-fixed-dim rounded-full px-sm py-1 bg-[#00e0b31a]"
+        >
+          <div class="w-2 h-2 rounded-full bg-primary-fixed-dim glow-mint animate-pulse-dot"></div>
+          <span class="font-data text-data-sm text-primary-fixed-dim uppercase tracking-widest"
+            >Ready</span
+          >
+        </div>
+        <button
+          class="bg-primary-fixed-dim text-on-primary-fixed px-lg py-sm rounded font-headline text-headline-md cursor-pointer hover:bg-primary-container transition-colors glow-mint"
+        >
+          Accept Signal
+        </button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════ MAIN VIEWPORT ═══════════════════════ -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden bg-background gap-[1px]">
+      <!-- LEFT COLUMN: Club Details -->
+      <aside class="w-full lg:w-72 bg-surface-container flex flex-col shrink-0 overflow-hidden">
+        <div class="p-md border-b border-outline-variant bg-surface-container-high">
+          <h2 class="font-headline text-headline-md text-primary">Alpha Sui Predictors</h2>
+          <div class="flex items-center gap-sm mt-1 text-on-surface-variant">
+            <span class="material-symbols-outlined text-[16px]">military_tech</span>
+            <span class="font-data text-data-sm"
+              >Leader: <span class="text-secondary-fixed">@SuiWhale</span></span
+            >
+          </div>
+        </div>
+        <!-- Member list header -->
+        <div
+          class="p-xs bg-surface-container-highest border-b border-outline-variant flex justify-between items-center px-md"
+        >
+          <span class="font-label text-label-caps text-on-surface-variant">Members (12)</span>
+          <span class="font-label text-label-caps text-on-surface-variant">Status</span>
+        </div>
+        <!-- Member list -->
+        <div class="flex-1 overflow-y-auto">
+          <ul class="flex flex-col" role="list">
+            <li
+              class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+            >
+              <div class="flex items-center gap-sm">
+                <div
+                  class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data text-data-sm text-on-surface-variant border border-outline-variant"
+                >
+                  T
+                </div>
+                <span class="font-data text-data-sm">TraderX</span>
+              </div>
+              <span class="font-data text-data-sm text-primary-fixed-dim">Pledged</span>
+            </li>
+            <li
+              class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+            >
+              <div class="flex items-center gap-sm">
+                <div
+                  class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data text-data-sm text-on-surface-variant border border-outline-variant"
+                >
+                  N
+                </div>
+                <span class="font-data text-data-sm">NovaNode</span>
+              </div>
+              <span class="font-data text-data-sm text-on-surface-variant">Watching</span>
+            </li>
+            <li
+              class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+            >
+              <div class="flex items-center gap-sm">
+                <div
+                  class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data text-data-sm text-on-surface-variant border border-outline-variant"
+                >
+                  Z
+                </div>
+                <span class="font-data text-data-sm">ZeroSum</span>
+              </div>
+              <span class="font-data text-data-sm text-primary-fixed-dim">Pledged</span>
+            </li>
+            <li
+              class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+            >
+              <div class="flex items-center gap-sm">
+                <div
+                  class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data text-data-sm text-on-surface-variant border border-outline-variant"
+                >
+                  B
+                </div>
+                <span class="font-data text-data-sm">BlockHead</span>
+              </div>
+              <span class="font-data text-data-sm text-on-surface-variant">Watching</span>
+            </li>
+            <li
+              class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+            >
+              <div class="flex items-center gap-sm">
+                <div
+                  class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data text-data-sm text-on-surface-variant border border-outline-variant"
+                >
+                  S
+                </div>
+                <span class="font-data text-data-sm">SuiMaxi</span>
+              </div>
+              <span class="font-data text-data-sm text-primary-fixed-dim">Pledged</span>
+            </li>
+            <li
+              class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+            >
+              <div class="flex items-center gap-sm">
+                <div
+                  class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data text-data-sm text-on-surface-variant border border-outline-variant"
+                >
+                  M
+                </div>
+                <span class="font-data text-data-sm">MoonDev</span>
+              </div>
+              <span class="font-data text-data-sm text-on-surface-variant">Watching</span>
+            </li>
+            <li
+              class="flex items-center justify-between p-md border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+            >
+              <div class="flex items-center gap-sm">
+                <div
+                  class="w-6 h-6 rounded bg-surface-container-highest flex items-center justify-center font-data text-data-sm text-on-surface-variant border border-outline-variant"
+                >
+                  D
+                </div>
+                <span class="font-data text-data-sm">DeFiDegen</span>
+              </div>
+              <span class="font-data text-data-sm text-primary-fixed-dim">Pledged</span>
+            </li>
+          </ul>
+        </div>
+        <!-- Club stats footer -->
+        <div
+          class="p-sm border-t border-outline-variant bg-surface-container-high flex justify-between items-center"
+        >
+          <span class="font-data text-data-sm text-on-surface-variant">Win Rate</span>
+          <span class="font-data text-data-sm text-primary-fixed-dim tabular-nums">68.2%</span>
+        </div>
+      </aside>
+
+      <!-- CENTER COLUMN: Prediction Room -->
+      <main class="flex-1 bg-surface-container flex flex-col overflow-hidden">
+        <div
+          class="p-md border-b border-outline-variant bg-surface-container-high flex justify-between items-center"
+        >
+          <h2 class="font-headline text-headline-md text-primary flex items-center gap-2">
+            <span class="material-symbols-outlined">analytics</span> Prediction Room
+          </h2>
+          <div class="flex items-center gap-sm">
+            <div
+              class="px-sm py-1 bg-surface-container border border-outline-variant rounded font-label text-label-caps text-on-surface-variant"
+            >
+              Phase: FUNDING
+            </div>
+            <div
+              class="px-sm py-1 bg-surface-container border border-outline-variant rounded font-label text-label-caps text-tertiary-fixed-dim"
+            >
+              Round #4093
+            </div>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto p-md flex flex-col gap-md">
+          <!-- Thesis Panel -->
+          <div
+            class="bg-surface-container-lowest border border-outline-variant p-md rounded-xl relative overflow-hidden hover-lift cursor-pointer"
+          >
+            <div class="absolute top-0 left-0 w-1 h-full bg-secondary-fixed"></div>
+            <div class="flex justify-between items-start mb-2 ml-3">
+              <span class="font-label text-label-caps text-secondary-fixed uppercase tracking-wider"
+                >Leader Thesis</span
+              >
+              <span class="font-data text-data-sm text-on-surface-variant">12m ago</span>
+            </div>
+            <p class="font-body text-body-base text-on-surface ml-3 leading-relaxed">
+              "BTC consolidating above support at 63.8k, expecting breakout past 65k within next 2
+              hours based on increasing order book depth on bid side."
+            </p>
+            <div class="flex gap-md mt-3 ml-3">
+              <span class="font-data text-data-sm text-on-surface-variant flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">thumb_up</span> 8
+              </span>
+              <span class="font-data text-data-sm text-on-surface-variant flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">chat_bubble</span> 3
+              </span>
+            </div>
+          </div>
+
+          <!-- Indicator Panel (Bento grid) -->
+          <div
+            class="grid grid-cols-2 md:grid-cols-4 gap-[1px] bg-outline-variant rounded-xl overflow-hidden border border-outline-variant"
+          >
+            <div
+              class="bg-surface-container p-sm flex flex-col justify-center items-center gap-1 hover:bg-surface-bright transition-colors cursor-pointer"
+            >
+              <span class="font-label text-label-caps text-on-surface-variant uppercase"
+                >Box Flip</span
+              >
+              <span class="font-data text-data-md text-primary-fixed-dim font-bold">Bullish</span>
+            </div>
+            <div
+              class="bg-surface-container p-sm flex flex-col justify-center items-center gap-1 hover:bg-surface-bright transition-colors cursor-pointer"
+            >
+              <span class="font-label text-label-caps text-on-surface-variant uppercase"
+                >RSI (15m)</span
+              >
+              <span class="font-data text-data-md text-on-surface-variant font-bold"
+                >Neutral (52)</span
+              >
+            </div>
+            <div
+              class="bg-surface-container p-sm flex flex-col justify-center items-center gap-1 hover:bg-surface-bright transition-colors cursor-pointer"
+            >
+              <span class="font-label text-label-caps text-on-surface-variant uppercase"
+                >Vol Profile</span
+              >
+              <span class="font-data text-data-md text-primary-fixed-dim font-bold">Bullish</span>
+            </div>
+            <div
+              class="bg-surface-container p-sm flex flex-col justify-center items-center gap-1 hover:bg-surface-bright transition-colors cursor-pointer"
+            >
+              <span class="font-label text-label-caps text-on-surface-variant uppercase"
+                >OB Imbalance</span
+              >
+              <span class="font-data text-data-md text-primary-fixed-dim font-bold">+12.4%</span>
+            </div>
+          </div>
+
+          <!-- Chart Area -->
+          <div
+            class="flex-1 min-h-[220px] border border-outline-variant bg-surface-container-lowest rounded-xl flex items-center justify-center relative overflow-hidden"
+          >
+            <div class="absolute inset-0 chart-grid"></div>
+            <!-- Simulated price line -->
+            <svg
+              class="absolute inset-0 w-full h-full"
+              preserveAspectRatio="none"
+              viewBox="0 0 400 200"
+            >
+              <polyline
+                fill="none"
+                stroke="#00e0b3"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                opacity="0.6"
+                points="0,140 30,135 60,130 90,145 120,120 150,125 180,110 210,115 240,100 270,95 300,105 330,90 360,85 400,80"
+              />
+              <polyline fill="none" stroke="#00e0b3" stroke-width="0" opacity="0.1"></polyline>
+              <!-- Fill area under line -->
+              <polygon
+                fill="url(#mintGradient)"
+                opacity="0.15"
+                points="0,140 30,135 60,130 90,145 120,120 150,125 180,110 210,115 240,100 270,95 300,105 330,90 360,85 400,80 400,200 0,200"
+              />
+              <defs>
+                <linearGradient id="mintGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#00e0b3" stop-opacity="0.4" />
+                  <stop offset="100%" stop-color="#00e0b3" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <!-- Strike line -->
+            <div
+              class="absolute left-0 right-0 top-[35%] border-t border-dashed border-tertiary-fixed-dim/40 z-10"
+            ></div>
+            <span
+              class="absolute top-[33%] right-3 font-data text-data-sm text-tertiary-fixed-dim z-10 tabular-nums"
+              >65,000</span
+            >
+            <!-- Current price -->
+            <div
+              class="absolute left-0 right-0 top-[60%] border-t border-primary-fixed-dim/30 z-10"
+            ></div>
+            <span
+              class="absolute top-[58%] right-3 font-data text-data-sm text-primary-fixed-dim z-10 tabular-nums"
+              >64,231</span
+            >
+            <!-- Label -->
+            <span
+              class="font-data text-data-sm text-on-surface-variant relative z-10 flex flex-col items-center gap-2 opacity-60"
+            >
+              <span class="material-symbols-outlined text-3xl">candlestick_chart</span>
+              DeepBook Order Flow
+            </span>
+          </div>
+        </div>
+      </main>
+
+      <!-- RIGHT COLUMN: Risk & Execution -->
+      <aside class="w-full lg:w-80 bg-surface-container flex flex-col shrink-0 overflow-hidden">
+        <div class="p-md border-b border-outline-variant bg-surface-container-high">
+          <h2 class="font-headline text-headline-md text-primary flex items-center gap-2">
+            <span class="material-symbols-outlined text-error">gpp_maybe</span> Risk & Execution
+          </h2>
+        </div>
+        <div class="p-md flex flex-col gap-lg flex-1 overflow-y-auto">
+          <!-- Readiness Checklist -->
+          <div>
+            <div class="flex justify-between items-center mb-sm">
+              <span class="font-label text-label-caps text-on-surface-variant uppercase"
+                >Execution Readiness</span
+              >
+              <span class="font-data text-data-sm text-primary-fixed-dim">4/6</span>
+            </div>
+            <!-- Progress bar -->
+            <div class="w-full h-1 bg-surface-container-highest rounded-full mb-sm overflow-hidden">
+              <div class="h-full bg-primary-fixed-dim rounded-full" style="width: 66%"></div>
+            </div>
+            <div class="flex flex-col gap-xs">
+              <div class="flex items-center gap-sm font-data text-data-sm">
+                <span class="material-symbols-outlined text-[16px] text-primary-fixed-dim"
+                  >check_circle</span
+                >
+                <span class="text-on-surface">Signal Received</span>
+              </div>
+              <div class="flex items-center gap-sm font-data text-data-sm">
+                <span class="material-symbols-outlined text-[16px] text-primary-fixed-dim"
+                  >check_circle</span
+                >
+                <span class="text-on-surface">Club Consensus</span>
+              </div>
+              <div class="flex items-center gap-sm font-data text-data-sm">
+                <span class="material-symbols-outlined text-[16px] text-primary-fixed-dim"
+                  >check_circle</span
+                >
+                <span class="text-on-surface">Wallet Connected</span>
+              </div>
+              <div class="flex items-center gap-sm font-data text-data-sm">
+                <span class="material-symbols-outlined text-[16px] text-primary-fixed-dim"
+                  >check_circle</span
+                >
+                <span class="text-on-surface">Liquidity Sourced</span>
+              </div>
+              <div class="flex items-center gap-sm font-data text-data-sm opacity-50">
+                <span class="material-symbols-outlined text-[16px] text-outline"
+                  >radio_button_unchecked</span
+                >
+                <span class="text-on-surface-variant">Funds Escrowed</span>
+              </div>
+              <div class="flex items-center gap-sm font-data text-data-sm opacity-50">
+                <span class="material-symbols-outlined text-[16px] text-outline"
+                  >radio_button_unchecked</span
+                >
+                <span class="text-on-surface-variant">Contract Signed</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Exposure Panel -->
+          <div
+            class="bg-surface-container-highest border border-outline-variant p-md rounded-xl flex flex-col gap-sm"
+          >
+            <span class="font-label text-label-caps text-on-surface-variant uppercase mb-1"
+              >Your Exposure</span
+            >
+            <div class="flex justify-between items-center">
+              <span class="font-data text-data-sm text-on-surface-variant">Max Loss</span>
+              <span class="font-data text-data-md text-error tabular-nums font-bold"
+                >-500 DUSDC</span
+              >
+            </div>
+            <div class="w-full h-px bg-outline-variant"></div>
+            <div class="flex justify-between items-center">
+              <span class="font-data text-data-sm text-on-surface-variant">Est. Payout</span>
+              <span class="font-data text-data-md text-primary-fixed-dim tabular-nums font-bold"
+                >+1,250 DUSDC</span
+              >
+            </div>
+            <div class="w-full h-px bg-outline-variant"></div>
+            <div class="flex justify-between items-center">
+              <span class="font-data text-data-sm text-on-surface-variant">Risk/Reward</span>
+              <span class="font-data text-data-md text-primary-fixed-dim tabular-nums">1:2.5</span>
+            </div>
+          </div>
+
+          <!-- Pledge Input -->
+          <div>
+            <label class="font-label text-label-caps text-on-surface-variant uppercase block mb-xs"
+              >Your Pledge Amount</label
+            >
+            <div class="relative glow-mint-active rounded-xl overflow-hidden">
+              <input
+                type="text"
+                value="500"
+                class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-md py-sm font-data text-data-md text-on-surface tabular-nums focus:outline-none"
+              />
+              <span
+                class="absolute right-3 top-1/2 -translate-y-1/2 font-data text-data-sm text-on-surface-variant"
+                >DUSDC</span
+              >
+            </div>
+          </div>
+
+          <!-- Execute Button -->
+          <div class="mt-auto">
+            <button
+              class="w-full bg-surface-variant text-on-surface-variant border border-outline px-md py-sm rounded-xl font-headline text-headline-md opacity-50 cursor-not-allowed flex justify-center items-center gap-2"
+            >
+              <span class="material-symbols-outlined">lock</span> Execute Trade
+            </button>
+            <p class="font-data text-data-sm text-center text-on-surface-variant mt-2">
+              Awaiting full escrow funding
+            </p>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ═══════════════════════ BOTTOM SECTION ═══════════════════════ -->
+    <div
+      class="h-56 lg:h-60 bg-surface-container border-t border-outline-variant shrink-0 flex flex-col lg:flex-row gap-[1px] overflow-hidden"
+    >
+      <!-- Funding Router -->
+      <div class="flex-1 flex flex-col">
+        <div
+          class="p-xs bg-surface-container-high border-b border-outline-variant px-md flex items-center gap-2"
+        >
+          <span class="material-symbols-outlined text-[16px] text-secondary-fixed">route</span>
+          <span class="font-label text-label-caps text-on-surface-variant uppercase"
+            >Funding Router</span
+          >
+        </div>
+        <div class="flex-1 p-sm flex gap-md overflow-x-auto items-center">
+          <!-- Node: Direct Wallet -->
+          <div
+            class="min-w-[130px] h-20 bg-surface-container-highest border border-primary-fixed-dim rounded-xl p-sm flex flex-col justify-between glow-mint relative hover-lift cursor-pointer flow-connector text-primary-fixed-dim"
+          >
+            <span class="font-label text-label-caps text-primary-fixed-dim">Active</span>
+            <span class="font-data text-data-sm text-on-surface">Direct Wallet</span>
+            <span class="font-data text-data-md text-on-surface font-bold tabular-nums"
+              >500 DUSDC</span
+            >
+          </div>
+          <!-- Node: Swap -->
+          <div
+            class="min-w-[130px] h-20 bg-surface-container-highest border border-outline-variant rounded-xl p-sm flex flex-col justify-between relative opacity-60 hover-lift cursor-pointer flow-connector text-outline-variant"
+          >
+            <span class="font-label text-label-caps text-on-surface-variant">Standby</span>
+            <span class="font-data text-data-sm text-on-surface">Swap</span>
+            <span class="font-data text-data-md text-on-surface font-bold">DeepBook</span>
+          </div>
+          <!-- Node: Borrow -->
+          <div
+            class="min-w-[130px] h-20 bg-surface-container-highest border border-outline-variant rounded-xl p-sm flex flex-col justify-between relative opacity-60 hover-lift cursor-pointer flow-connector text-outline-variant"
+          >
+            <span class="font-label text-label-caps text-on-surface-variant">Standby</span>
+            <span class="font-data text-data-sm text-on-surface">Borrow</span>
+            <span class="font-data text-data-md text-on-surface font-bold">Scallop</span>
+          </div>
+          <!-- Node: Escrow -->
+          <div
+            class="min-w-[130px] h-20 bg-surface-container-highest border border-outline-variant rounded-xl p-sm flex flex-col justify-between relative opacity-60 hover-lift cursor-pointer"
+          >
+            <span class="font-label text-label-caps text-on-surface-variant">Pending</span>
+            <span class="font-data text-data-sm text-on-surface">Escrow</span>
+            <span class="font-data text-data-md text-on-surface font-bold">Predict P2P</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tables Container -->
+      <div
+        class="flex-[1.5] flex flex-col lg:flex-row gap-[1px] bg-outline-variant overflow-hidden"
+      >
+        <!-- P2P Escrow Offers -->
+        <div class="flex-1 bg-surface-container flex flex-col overflow-hidden">
+          <div
+            class="p-xs bg-surface-container-high border-b border-outline-variant px-md flex items-center justify-between"
+          >
+            <span class="font-label text-label-caps text-on-surface-variant uppercase"
+              >P2P Escrow Offers</span
+            >
+            <span class="font-data text-data-sm text-on-surface-variant">3 available</span>
+          </div>
+          <div class="flex-1 overflow-y-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr
+                  class="bg-surface-container-highest font-label text-label-caps text-on-surface-variant uppercase sticky top-0"
+                >
+                  <th class="p-2 font-normal">Provider</th>
+                  <th class="p-2 font-normal text-right">Amount</th>
+                  <th class="p-2 font-normal text-right">Rate</th>
+                </tr>
+              </thead>
+              <tbody class="font-data text-data-sm">
+                <tr
+                  class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+                >
+                  <td class="p-2 text-on-surface">@YieldMax</td>
+                  <td class="p-2 text-right tabular-nums">1,000 USDC</td>
+                  <td class="p-2 text-right tabular-nums text-secondary-fixed">0.05%</td>
+                </tr>
+                <tr
+                  class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+                >
+                  <td class="p-2 text-on-surface">@SuiLend</td>
+                  <td class="p-2 text-right tabular-nums">5,000 USDC</td>
+                  <td class="p-2 text-right tabular-nums text-secondary-fixed">0.08%</td>
+                </tr>
+                <tr
+                  class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+                >
+                  <td class="p-2 text-on-surface">@DeepLiq</td>
+                  <td class="p-2 text-right tabular-nums">500 USDC</td>
+                  <td class="p-2 text-right tabular-nums text-secondary-fixed">0.04%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Club Round History -->
+        <div class="flex-1 bg-surface-container flex flex-col overflow-hidden">
+          <div
+            class="p-xs bg-surface-container-high border-b border-outline-variant px-md flex items-center justify-between"
+          >
+            <span class="font-label text-label-caps text-on-surface-variant uppercase"
+              >Club Round History</span
+            >
+            <span class="font-data text-data-sm text-primary-fixed-dim tabular-nums"
+              >+1,219.75</span
+            >
+          </div>
+          <div class="flex-1 overflow-y-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr
+                  class="bg-surface-container-highest font-label text-label-caps text-on-surface-variant uppercase sticky top-0"
+                >
+                  <th class="p-2 font-normal">Round</th>
+                  <th class="p-2 font-normal">Asset</th>
+                  <th class="p-2 font-normal text-right">PnL</th>
+                </tr>
+              </thead>
+              <tbody class="font-data text-data-sm">
+                <tr
+                  class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+                >
+                  <td class="p-2 text-on-surface-variant">#4092</td>
+                  <td class="p-2 font-bold text-on-surface">SUI/USDC</td>
+                  <td class="p-2 text-right tabular-nums text-primary-fixed-dim">+450.00</td>
+                </tr>
+                <tr
+                  class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+                >
+                  <td class="p-2 text-on-surface-variant">#4091</td>
+                  <td class="p-2 font-bold text-on-surface">BTC/USDC</td>
+                  <td class="p-2 text-right tabular-nums text-error">-120.50</td>
+                </tr>
+                <tr
+                  class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+                >
+                  <td class="p-2 text-on-surface-variant">#4090</td>
+                  <td class="p-2 font-bold text-on-surface">ETH/USDC</td>
+                  <td class="p-2 text-right tabular-nums text-primary-fixed-dim">+890.25</td>
+                </tr>
+                <tr
+                  class="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors cursor-pointer"
+                >
+                  <td class="p-2 text-on-surface-variant">#4089</td>
+                  <td class="p-2 font-bold text-on-surface">SOL/USDC</td>
+                  <td class="p-2 text-right tabular-nums text-primary-fixed-dim">+220.00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════ MOBILE BOTTOM NAV ═══════════════════════ -->
+    <nav
+      class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-md pb-4 pt-2 bg-surface-container-high md:hidden border-t border-outline-variant shadow-lg rounded-t-xl"
+      aria-label="Mobile navigation"
+    >
+      <a
+        class="flex flex-col items-center justify-center bg-secondary-container text-primary-fixed rounded-full px-md py-xs cursor-pointer"
+        href="#"
+      >
+        <span class="material-symbols-outlined mb-1">groups</span>
+        <span class="font-label text-label-caps">Clubs</span>
+      </a>
+      <a
+        class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-bright px-md py-xs rounded-full transition-colors cursor-pointer"
+        href="#"
+      >
+        <span class="material-symbols-outlined mb-1">query_stats</span>
+        <span class="font-label text-label-caps">Predict</span>
+      </a>
+      <a
+        class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-bright px-md py-xs rounded-full transition-colors cursor-pointer"
+        href="#"
+      >
+        <span class="material-symbols-outlined mb-1">bolt</span>
+        <span class="font-label text-label-caps">Execute</span>
+      </a>
+      <a
+        class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-bright px-md py-xs rounded-full transition-colors cursor-pointer"
+        href="#"
+      >
+        <span class="material-symbols-outlined mb-1">person</span>
+        <span class="font-label text-label-caps">Account</span>
+      </a>
+    </nav>
+
+    <!-- Countdown timer script -->
+    <script>
+      ;(function () {
+        let total = 2 * 3600 + 14 * 60 + 55
+        const el = document.getElementById('expiry-timer')
+        function tick() {
+          if (total <= 0) {
+            el.textContent = '00:00:00'
+            return
+          }
+          total--
+          const h = String(Math.floor(total / 3600)).padStart(2, '0')
+          const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0')
+          const s = String(total % 60).padStart(2, '0')
+          el.textContent = h + ':' + m + ':' + s
+        }
+        setInterval(tick, 1000)
+      })()
+    </script>
+  </body>
+</html>
