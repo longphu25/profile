@@ -10,6 +10,7 @@ new reliable checks.
 | React UI | `bun run build`; add browser smoke check for user-visible pages. |
 | Plugin runtime | `bun run build`; smoke load the affected dashboard entry. |
 | Sui wallet/signing | Build plus manual or scripted wallet-flow review; do not claim network success without running it. |
+| Predict Club | `bun run build`; smoke load `predict-club.html`; verify Shadow DOM plugin load, responsive layout, stale-oracle blocking, and member self-sign wallet-flow review. |
 | WASM | Build plus verify generated/copied `.wasm` and loader paths. |
 | Move contracts | `sui move build` in the affected package. |
 

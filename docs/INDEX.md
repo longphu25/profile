@@ -14,8 +14,14 @@
 - [[HARNESS_BACKLOG]] — Missing harness improvements
 - [[QMD]] — Local docs search setup without local LLM models
 - [[product/README]] — Product contract map
+- [[product/predict-club]] — Predict Club product contract and round lifecycle
+- [[product/predict-club-architecture]] — Predict Club diagrams, runtime boundaries, and planned file structure
+- [[product/predict-club-escrow-contract]] — Time-locked escrow and generic USDC/DUSDC exchange contract plan
+- [[product/predict-club-funding]] — Funding Router, Scallop borrow risk, bridge handoff, and DUSDC escrow
 - [[stories/README]] — Story packet and plan folder
 - [[decisions/README]] — Durable decision records
+- [[decisions/predict-club-architecture]] — Hybrid custody and future vault decision
+- [[decisions/predict-club-funding-escrow]] — P2P escrow exchange decision for USDC to DUSDC funding
 - [[templates/story]] — Story template
 - [[templates/decision]] — Decision template
 - [[templates/validation]] — Validation report template
@@ -109,6 +115,7 @@
 
 - [[stories/plans/README]] — DeepBook Predict / TaskOS planning index
 - [[stories/plans/12-deepbook-predict-standalone-chart-trading]] — Standalone `deepbook-predict.html` plan with chart-click DUSDC trade popup and wallet-scoped position overlays
+- [[stories/plans/13-predict-club-community]] — Predict Club community workflow, clean architecture, plugin plan, and future group vault boundary
 
 ## Walrus Storage (3 plugins)
 

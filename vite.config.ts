@@ -71,6 +71,7 @@ export default defineConfig({
       'marketplace.html',
       'btc-chart.html',
       'deepbook-predict.html',
+      'predict-club.html',
     ],
   },
   server: {
@@ -134,6 +135,7 @@ export default defineConfig({
         'polymarket-dashboard': resolve(__dirname, 'polymarket-dashboard.html'),
         'btc-chart': resolve(__dirname, 'btc-chart.html'),
         'deepbook-predict': resolve(__dirname, 'deepbook-predict.html'),
+        'predict-club': resolve(__dirname, 'predict-club.html'),
         // Build plugins as separate entry points
         'plugins/hello-plugin': resolve(__dirname, 'plugins/hello-plugin/plugin.tsx'),
         'plugins/hello-world-sui': resolve(__dirname, 'plugins/hello-world-sui/plugin.tsx'),
@@ -200,6 +202,7 @@ export default defineConfig({
         'plugins/polymarket-wallet': resolve(__dirname, 'plugins/polymarket-wallet/plugin.tsx'),
         'plugins/polymarket': resolve(__dirname, 'plugins/polymarket/plugin.tsx'),
         'plugins/btc-chart': resolve(__dirname, 'plugins/btc-chart/plugin.tsx'),
+        'plugins/predict-club': resolve(__dirname, 'plugins/predict-club/plugin.tsx'),
       },
       external: ['gsap', 'motion'],
       checks: {

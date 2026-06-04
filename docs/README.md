@@ -36,6 +36,19 @@ Do not replace domain docs with a monolithic spec. Use `product/` for stable
 product truth, `stories/` for scoped work, `decisions/` for why a direction was
 chosen, and the existing domain folders for technical depth.
 
+## Active Product Contracts
+
+- `product/predict-club.md`: community DeepBook Predict coordination with
+  leader-confirmed rounds, member self-sign execution, indicator consensus, and
+  a future group-vault boundary.
+- `product/predict-club-architecture.md`: architecture diagrams, runtime
+  boundaries, planned file structure, and future Move package structure.
+- `product/predict-club-escrow-contract.md`: Move package plan for time-locked
+  SUI escrow and generic USDC/DUSDC exchange escrow.
+- `product/predict-club-funding.md`: funding routes for members without DUSDC,
+  including DeepBook SUI to USDC, Scallop borrowing, bridge handoff, and club
+  escrow exchange.
+
 ## Recent Setup Updates
 
 - Harness docs were added using `harness-experimental` as the organizing
