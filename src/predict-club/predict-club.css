@@ -1,0 +1,365 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+:root {
+  --pc-surface: #0c1512;
+  --pc-surface-container-lowest: #07100d;
+  --pc-surface-container-low: #151d1a;
+  --pc-surface-container: #19211e;
+  --pc-surface-container-high: #232c28;
+  --pc-surface-container-highest: #2e3733;
+  --pc-surface-bright: #323b37;
+  --pc-on-surface: #dbe5df;
+  --pc-on-surface-variant: #b9cbc2;
+  --pc-outline: #83958d;
+  --pc-outline-variant: #3a4a44;
+  --pc-primary: #fdfffc;
+  --pc-primary-fixed: #24ffcd;
+  --pc-primary-fixed-dim: #00e0b3;
+  --pc-on-primary-fixed: #002118;
+  --pc-secondary-fixed: #d3e4fe;
+  --pc-error: #ffb4ab;
+  --pc-font-ui: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --pc-font-data: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: var(--pc-surface);
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--pc-font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+select,
+input,
+textarea {
+  font: inherit;
+}
+
+.predict-club-page {
+  height: 100dvh;
+  color: var(--pc-on-surface);
+  background: var(--pc-surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* === Top Navigation Bar === */
+.predict-club-page__topbar {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 56px;
+  padding: 0 1rem;
+  background: var(--pc-surface-container-lowest);
+  border-bottom: 1px solid var(--pc-outline-variant);
+}
+
+.predict-club-page__brand {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.predict-club-page__brand strong {
+  display: block;
+  font-family: var(--pc-font-ui);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 32px;
+  letter-spacing: -0.02em;
+  color: var(--pc-primary-fixed);
+}
+
+.predict-club-page__nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.predict-club-page__nav a {
+  color: var(--pc-on-surface-variant);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  text-decoration: none;
+}
+
+.predict-club-page__nav a:hover,
+.predict-club-page__nav .predict-club-page__nav-active {
+  color: var(--pc-primary);
+}
+
+.predict-club-page__nav-active {
+  border-bottom: 2px solid var(--pc-primary-fixed);
+  padding-bottom: 0.25rem;
+}
+
+.predict-club-page__top-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.predict-club-page__balances {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  height: 32px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--pc-outline-variant);
+  border-radius: 0.25rem;
+  background: var(--pc-surface-container-high);
+}
+
+.predict-club-page__balances span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.5rem;
+  color: var(--pc-on-surface-variant);
+  font-family: var(--pc-font-data);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  border-right: 1px solid var(--pc-outline-variant);
+}
+
+.predict-club-page__balances span:last-child {
+  border-right: none;
+}
+
+.predict-club-page__balances b {
+  color: var(--pc-on-surface);
+  font-weight: 500;
+}
+
+.predict-club-page__tool,
+.predict-club-page__oracle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--pc-primary-fixed-dim);
+}
+
+.predict-club-page__tool {
+  border: 1px solid var(--pc-primary-fixed-dim);
+  border-radius: 0.125rem;
+  cursor: pointer;
+}
+
+.predict-club-page__tool:hover {
+  background: rgba(0, 224, 179, 0.1);
+}
+
+.predict-club-page__tool .material-symbols-outlined,
+.predict-club-page__oracle .material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-size: 22px;
+  line-height: 1;
+}
+
+.predict-club-page__wallet {
+  height: 32px;
+  padding: 0 0.75rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: var(--pc-primary-fixed-dim);
+  color: var(--pc-on-primary-fixed);
+  font-family: var(--pc-font-data);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 150ms,
+    box-shadow 150ms;
+}
+
+.predict-club-page__wallet:hover {
+  background: var(--pc-primary-fixed);
+  box-shadow: 0 0 8px rgba(0, 224, 179, 0.3);
+}
+
+.predict-club-page__wallet--connected {
+  background: var(--pc-surface-container-high);
+  border: 1px solid var(--pc-outline-variant);
+  color: var(--pc-on-surface);
+}
+
+.predict-club-page__wallet--connected:hover {
+  background: var(--pc-surface-bright);
+  box-shadow: none;
+}
+
+/* === Workspace === */
+.predict-club-page__workspace {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.predict-club-page__workspace > div {
+  height: 100%;
+}
+
+/* === Loading & Error === */
+.predict-club-page__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--pc-on-surface-variant);
+  font-family: var(--pc-font-data);
+  font-size: 14px;
+}
+
+.predict-club-page__error {
+  margin: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(255, 180, 171, 0.4);
+  border-radius: 0.25rem;
+  background: rgba(255, 180, 171, 0.08);
+  color: var(--pc-error);
+  font-family: var(--pc-font-data);
+  font-size: 12px;
+}
+
+/* === Wallet Modal === */
+.predict-club-page__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(12, 21, 18, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.predict-club-page__wallet-panel {
+  width: min(24rem, calc(100vw - 2rem));
+  padding: 1.5rem;
+  border: 1px solid var(--pc-outline-variant);
+  border-radius: 0.75rem;
+  background: var(--pc-surface-container);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+}
+
+.predict-club-page__wallet-panel h2 {
+  margin: 0 0 1rem;
+  font-family: var(--pc-font-ui);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: -0.01em;
+  color: var(--pc-on-surface);
+}
+
+.predict-club-page__wallet-panel p {
+  color: var(--pc-on-surface-variant);
+  font-size: 14px;
+}
+
+.predict-club-page__wallet-panel button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  height: 44px;
+  margin-bottom: 0.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--pc-outline-variant);
+  border-radius: 0.25rem;
+  background: var(--pc-surface-container-lowest);
+  color: var(--pc-on-surface);
+  font-family: var(--pc-font-data);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 150ms,
+    background 150ms;
+}
+
+.predict-club-page__wallet-panel button:hover {
+  border-color: var(--pc-outline);
+  background: var(--pc-surface-bright);
+}
+
+.predict-club-page__wallet-panel img {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.25rem;
+}
+
+.predict-club-page__wallet-panel .predict-club-page__ghost {
+  justify-content: center;
+  margin-top: 0.5rem;
+  color: var(--pc-on-surface-variant);
+  background: transparent;
+  border-color: transparent;
+}
+
+.predict-club-page__wallet-panel .predict-club-page__ghost:hover {
+  color: var(--pc-primary-fixed-dim);
+}
+
+/* === Responsive === */
+@media (max-width: 980px) {
+  .predict-club-page__topbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .predict-club-page__top-actions {
+    order: 11;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .predict-club-page__balances {
+    flex: 1;
+  }
+}
+
+@media (max-width: 680px) {
+  .predict-club-page__topbar {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .predict-club-page__brand strong {
+    font-size: 18px;
+  }
+
+  .predict-club-page__nav {
+    display: none;
+  }
+
+  .predict-club-page__balances,
+  .predict-club-page__tool,
+  .predict-club-page__oracle {
+    display: none;
+  }
+}
