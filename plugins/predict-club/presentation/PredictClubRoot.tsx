@@ -16,12 +16,6 @@ interface PredictClubRootProps {
   host: SuiHostAPI | null
 }
 
-const demoBalances: AssetBalances = {
-  sui: 1240.5,
-  usdc: 5000,
-  dusdc: 2500,
-}
-
 const defaultContext: SuiContext = {
   address: null,
   network: 'testnet',
@@ -38,13 +32,25 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
   const [selectedOffer, setSelectedOffer] = useState<EscrowOfferView | null>(null)
   const [context, setContext] = useState<SuiContext>(() => host?.getSuiContext() ?? defaultContext)
   const [mobileTab, setMobileTab] = useState<MobileTab>('clubs')
+  const [balances, setBalances] = useState<AssetBalances>({ sui: 0, usdc: 0, dusdc: 0 })
 
   const oracleSnapshot = useSyncExternalStore(subscribeOracle, getSnapshot)
 
   useEffect(() => {
     if (!host) return undefined
     setContext(host.getSuiContext())
-    return host.onSuiContextChange(setContext)
+    return host.onSuiContextChange((ctx) => {
+      setContext(ctx)
+      if (ctx.isConnected && ctx.address) {
+        import('../infrastructure/walletBalanceService').then(({ fetchWalletBalances }) => {
+          fetchWalletBalances(ctx.address!)
+            .then(setBalances)
+            .catch(() => {})
+        })
+      } else {
+        setBalances({ sui: 0, usdc: 0, dusdc: 0 })
+      }
+    })
   }, [host])
 
   useEffect(() => {
@@ -52,8 +58,15 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
   }, [club])
 
   const round = club.activeRound
-  const funding = useMemo(() => recommendFundingRoute(demoBalances, round), [round])
-  const isLeader = context.address ? context.address.toLowerCase().endsWith('7c') : false
+  const funding = useMemo(() => recommendFundingRoute(balances, round), [balances, round])
+  const isLeader =
+    context.isConnected && context.address
+      ? club.members.some(
+          (m) =>
+            m.role === 'leader' &&
+            m.wallet.toLowerCase().includes(context.address!.slice(-6).toLowerCase()),
+        )
+      : false
 
   const primary = useMemo(() => {
     if (!context.isConnected)
@@ -61,14 +74,14 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
     if (round.status === 'settled')
       return { label: 'Claim Settlement', action: () => setModal('claim-settlement') }
     if (round.status === 'confirmed' || round.status === 'funding') {
-      if (demoBalances.dusdc < round.suggestedDusdc) {
+      if (balances.dusdc < round.suggestedDusdc) {
         return { label: 'Fund to Join', action: () => setModal('fund-to-join') }
       }
       return { label: 'Execute Trade', action: () => setModal('execute-trade') }
     }
     if (isLeader) return { label: 'Leader Confirm', action: () => updateRoundStatus('confirmed') }
     return { label: 'Accept Signal', action: () => updateRoundStatus('funding') }
-  }, [context.isConnected, host, isLeader, round.status, round.suggestedDusdc])
+  }, [context.isConnected, host, isLeader, round.status, round.suggestedDusdc, balances.dusdc])
 
   function updateRoundStatus(status: RoundStatus) {
     setClub((current) => ({ ...current, activeRound: { ...current.activeRound, status } }))
@@ -120,7 +133,7 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
       {modal ? (
         <PredictClubModal modal={modal} onClose={() => setModal(null)}>
           <ModalContent
-            balances={demoBalances}
+            balances={balances}
             club={club}
             modal={modal}
             offer={selectedOffer}

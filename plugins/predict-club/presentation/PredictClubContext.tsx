@@ -97,6 +97,16 @@ export function PredictClubProvider({
   const selectedOffer = storeState.selectedOffer
   const toastMessage = storeState.toastMessage
 
+  // Track wallet context
+  const [suiContext, setSuiContext] = useState(
+    () => host?.getSuiContext() ?? { address: null as string | null, isConnected: false },
+  )
+  useEffect(() => {
+    if (!host) return
+    setSuiContext(host.getSuiContext())
+    return host.onSuiContextChange(setSuiContext)
+  }, [host])
+
   // Subscribe to oracle stream
   const oracleSnapshot = useSyncExternalStore(subscribeOracle, getSnapshot)
 
@@ -411,7 +421,7 @@ export function PredictClubProvider({
 
   const value: PredictClubContextValue = {
     club,
-    context: { address: null, isConnected: false },
+    context: { address: suiContext.address, isConnected: suiContext.isConnected },
     balances: balances,
     modal,
     setModal: store.setModal,
