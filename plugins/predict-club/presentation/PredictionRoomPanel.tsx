@@ -24,7 +24,7 @@ export function PredictionRoomPanel() {
           </div>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-md flex flex-col gap-md">
+      <div className="flex-1 overflow-y-auto p-md flex flex-col gap-sm">
         {/* Indicators */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-[1px] bg-outline-variant rounded-xl overflow-hidden border border-outline-variant">
           {round.indicators.slice(0, 4).map((ind) => (
@@ -79,10 +79,7 @@ export function PredictionRoomPanel() {
         </div>
 
         {/* Chart */}
-        <div
-          style={{ height: '320px' }}
-          className="border border-outline-variant bg-surface-container-lowest rounded-xl overflow-hidden flex flex-col shrink-0"
-        >
+        <div className="flex-1 min-h-[200px] border border-outline-variant bg-surface-container-lowest rounded-xl overflow-hidden flex flex-col">
           <OrderFlowChart prices={oracleSnapshot.prices} />
         </div>
       </div>
