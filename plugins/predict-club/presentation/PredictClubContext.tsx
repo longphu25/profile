@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useState,
   useSyncExternalStore,
   type ReactNode,
 } from 'react'
@@ -20,6 +21,7 @@ import {
 import { settleRound, type SettlementOutcome } from '../application/settleRound'
 import { executeTradeplan } from '../application/executeTradeplan'
 import { createSuiPredictGateway } from '../infrastructure/suiPredictGateway'
+import { fetchWalletBalances } from '../infrastructure/walletBalanceService'
 import { transition } from '../domain/roundLifecycle'
 import { evaluateRiskGate, type RiskEvaluation } from '../domain/riskGate'
 import { computeConsensus, type ConsensusResult } from '../domain/indicatorConsensus'
@@ -40,7 +42,7 @@ import type {
 import type { CreateRoundParams } from '../domain/policies'
 import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
 
-const demoBalances: AssetBalances = { sui: 1240.5, usdc: 5000, dusdc: 2500 }
+const ZERO_BALANCES: AssetBalances = { sui: 0, usdc: 0, dusdc: 0 }
 
 export interface PredictClubContextValue {
   club: ClubState
@@ -98,6 +100,42 @@ export function PredictClubProvider({
   // Subscribe to oracle stream
   const oracleSnapshot = useSyncExternalStore(subscribeOracle, getSnapshot)
 
+  // Wallet balances — fetch on connect, poll every 30s
+  const [balances, setBalances] = useState<AssetBalances>(ZERO_BALANCES)
+
+  useEffect(() => {
+    if (!host) return
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    const fetchAndSet = (address: string) => {
+      fetchWalletBalances(address)
+        .then(setBalances)
+        .catch(() => {})
+    }
+
+    const handleCtxChange = (ctx: { address: string | null; isConnected: boolean }) => {
+      if (intervalId) {
+        clearInterval(intervalId)
+        intervalId = null
+      }
+      if (ctx.isConnected && ctx.address) {
+        fetchAndSet(ctx.address)
+        intervalId = setInterval(() => fetchAndSet(ctx.address!), 30_000)
+      } else {
+        setBalances(ZERO_BALANCES)
+      }
+    }
+
+    // Initial check
+    handleCtxChange(host.getSuiContext())
+    const unsub = host.onSuiContextChange(handleCtxChange)
+
+    return () => {
+      unsub()
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [host])
+
   // Real-time: update btcSpot, indicators, and auto-detect settlement
   useEffect(() => {
     return subscribeOracle((snap) => {
@@ -153,7 +191,7 @@ export function PredictClubProvider({
   }, [])
 
   const round = club.activeRound
-  const funding = useMemo(() => recommendFundingRoute(demoBalances, round), [round])
+  const funding = useMemo(() => recommendFundingRoute(balances, round), [balances, round])
 
   const riskEvaluation = useMemo(
     () =>
@@ -162,12 +200,12 @@ export function PredictClubProvider({
         oracleStaleThresholdMs: 60000,
         expiryMinutes: round.expiryMinutes,
         minSafeExpiryMinutes: 5,
-        memberDusdc: demoBalances.dusdc,
+        memberDusdc: balances.dusdc,
         suggestedDusdc: round.suggestedDusdc,
         signalBias: round.signalBias,
         indicators: round.indicators,
       }),
-    [round, oracleSnapshot.lastUpdateMs],
+    [balances, round, oracleSnapshot.lastUpdateMs],
   )
 
   const consensus = useMemo(() => computeConsensus(round.indicators), [round.indicators])
@@ -195,7 +233,7 @@ export function PredictClubProvider({
           oracleStaleThresholdMs: 60000,
           expiryMinutes: round.expiryMinutes,
           minSafeExpiryMinutes: 5,
-          memberDusdc: demoBalances.dusdc,
+          memberDusdc: balances.dusdc,
           suggestedDusdc: round.suggestedDusdc,
           signalBias: round.signalBias,
           indicators: round.indicators,
@@ -227,7 +265,7 @@ export function PredictClubProvider({
         const result = pledgeToRound(club, {
           memberId,
           amountDusdc: amount,
-          walletBalance: demoBalances.dusdc,
+          walletBalance: balances.dusdc,
         })
         if (result.ok && result.club) {
           store.setClub(result.club)
@@ -338,7 +376,7 @@ export function PredictClubProvider({
         return { ok: result.ok, error: result.error }
       },
     }),
-    [club, round, oracleSnapshot.lastUpdateMs],
+    [balances, club, round, oracleSnapshot.lastUpdateMs],
   )
 
   // ─── Primary Action ───
@@ -374,7 +412,7 @@ export function PredictClubProvider({
   const value: PredictClubContextValue = {
     club,
     context: { address: null, isConnected: false },
-    balances: demoBalances,
+    balances: balances,
     modal,
     setModal: store.setModal,
     selectedOffer,

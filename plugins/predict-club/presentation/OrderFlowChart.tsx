@@ -49,27 +49,36 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
     return { spotData: spot, fwdData: fwd, basisData: basis }
   }, [prices])
 
-  // Create chart
+  // Create chart — useLayoutEffect ensures DOM is measured before paint
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
 
-    // Wait for container to have layout dimensions
-    const tryCreate = () => {
-      if (!el.clientWidth || !el.clientHeight) {
-        const raf = requestAnimationFrame(tryCreate)
-        return () => cancelAnimationFrame(raf)
+    // Try immediately, then retry once via setTimeout if dimensions not ready
+    const tryInit = () => {
+      const w = el.offsetWidth
+      const h = el.offsetHeight
+      if (w > 0 && h > 0 && !chartRef.current) {
+        return initChart(el, w, h)
       }
-      return initChart(el)
+      return undefined
     }
 
-    const cleanup = tryCreate()
+    let cleanup = tryInit()
+    let timer: ReturnType<typeof setTimeout> | undefined
+    if (!cleanup) {
+      timer = setTimeout(() => {
+        cleanup = tryInit()
+      }, 50)
+    }
+
     return () => {
-      if (typeof cleanup === 'function') cleanup()
+      clearTimeout(timer)
+      cleanup?.()
     }
   }, [])
 
-  function initChart(el: HTMLElement) {
+  function initChart(el: HTMLElement, width: number, height: number) {
     const chartOptions: DeepPartial<ChartOptions> = {
       layout: {
         background: { color: '#07100d' },
@@ -106,9 +115,8 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
 
     const chart = createChart(el, {
       ...chartOptions,
-      width: el.clientWidth,
-      height: el.clientHeight,
-      autoSize: true,
+      width,
+      height,
     })
     chartRef.current = chart
 
@@ -233,7 +241,7 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
       </div>
 
       {/* Chart container */}
-      <div ref={containerRef} className="flex-1" style={{ minHeight: '240px', height: '100%' }} />
+      <div ref={containerRef} style={{ height: '280px', width: '100%' }} />
     </div>
   )
 }
