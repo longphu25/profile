@@ -31,6 +31,12 @@ export function settleRound(
     thesis: club.activeRound.thesis,
     participants: club.members.filter((m) => m.state === 'executed').length,
     claimStatus: outcome.result === 'won' ? 'claimable' : 'none',
+    risk: club.activeRound.risk,
+    signalBias: club.activeRound.signalBias,
+    confidence: club.activeRound.confidence,
+    indicatorReasons: club.activeRound.indicatorReasons,
+    riskChecks: club.activeRound.riskChecks,
+    confirmedAt: club.activeRound.confirmedAt,
   }
 
   return {

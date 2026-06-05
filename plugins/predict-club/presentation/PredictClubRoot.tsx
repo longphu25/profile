@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { recommendFundingRoute } from '../application/recommendFundingRoute'
 import { loadClubState, saveClubState } from '../data/localClubStore'
+import { fetchWalletBalances } from '../infrastructure/walletBalanceService'
 import { subscribeOracle, getSnapshot } from '../infrastructure/deepbookOracleService'
 import { OrderFlowChart } from './OrderFlowChart'
 import type {
@@ -42,11 +43,9 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
     return host.onSuiContextChange((ctx) => {
       setContext(ctx)
       if (ctx.isConnected && ctx.address) {
-        import('../infrastructure/walletBalanceService').then(({ fetchWalletBalances }) => {
-          fetchWalletBalances(ctx.address!)
-            .then(setBalances)
-            .catch(() => {})
-        })
+        fetchWalletBalances(ctx.address)
+          .then(setBalances)
+          .catch(() => {})
       } else {
         setBalances({ sui: 0, usdc: 0, dusdc: 0 })
       }

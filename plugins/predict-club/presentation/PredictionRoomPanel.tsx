@@ -4,10 +4,13 @@ import { computeConsensus } from '../domain/indicatorConsensus'
 import { labelize } from './shared'
 import { OrderFlowChart } from './OrderFlowChart'
 export function PredictionRoomPanel() {
-  const { club, oracleSnapshot } = usePredictClub()
+  const { club, oracleSnapshot, riskEvaluation } = usePredictClub()
   const round = club.activeRound
 
   const consensus = useMemo(() => computeConsensus(round.indicators), [round.indicators])
+  const topReasons = consensus.reasons.slice(0, 3)
+  const firstRiskNote =
+    riskEvaluation.blockingReasons[0]?.message ?? riskEvaluation.warningReasons[0]?.message
 
   return (
     <>
@@ -75,6 +78,55 @@ export function PredictionRoomPanel() {
             {consensus.blockedCount > 0 && (
               <span className="text-error">{consensus.blockedCount}✕</span>
             )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.85fr] gap-sm">
+          <div className="bg-surface-container-highest border border-outline-variant rounded-xl p-sm">
+            <div className="flex items-center justify-between gap-sm mb-xs">
+              <span className="font-label text-label-caps text-on-surface-variant uppercase">
+                Signal Evidence
+              </span>
+              <span className="font-data text-[11px] text-on-surface-variant">
+                Top {topReasons.length}
+              </span>
+            </div>
+            <div className="flex flex-col gap-xs">
+              {topReasons.map((reason) => (
+                <div
+                  key={reason}
+                  className="font-data text-[11px] leading-4 text-on-surface-variant bg-surface-container rounded px-xs py-[3px]"
+                >
+                  {reason}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div
+            className={`border rounded-xl p-sm ${
+              riskEvaluation.state === 'ready'
+                ? 'border-primary-fixed-dim/40 bg-primary-fixed-dim/10'
+                : riskEvaluation.state === 'warning'
+                  ? 'border-tertiary-fixed-dim/40 bg-tertiary-fixed-dim/10'
+                  : 'border-error/40 bg-error/10'
+            }`}
+          >
+            <span
+              className={`font-label text-label-caps uppercase ${
+                riskEvaluation.state === 'ready'
+                  ? 'text-primary-fixed-dim'
+                  : riskEvaluation.state === 'warning'
+                    ? 'text-tertiary-fixed-dim'
+                    : 'text-error'
+              }`}
+            >
+              {labelize(riskEvaluation.state)}
+            </span>
+            <p className="font-data text-[11px] leading-4 text-on-surface-variant mt-px">
+              {riskEvaluation.state === 'ready'
+                ? 'Risk gate accepts this round for execution.'
+                : (firstRiskNote ?? 'Review risk checks before continuing.')}
+            </p>
           </div>
         </div>
 

@@ -120,6 +120,12 @@ export interface HistoryRow {
   thesis: string
   participants: number
   claimStatus: 'claimed' | 'claimable' | 'none'
+  risk?: RiskState
+  signalBias?: SignalBias
+  confidence?: 'Low' | 'Medium' | 'High'
+  indicatorReasons?: string[]
+  riskChecks?: RoundRiskCheckSnapshot[]
+  confirmedAt?: number
 }
 
 export interface ClaimItem {
