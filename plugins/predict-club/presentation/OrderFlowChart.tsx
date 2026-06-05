@@ -189,7 +189,7 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
   const lastBasis = lastFwd && lastSpot ? lastFwd - lastSpot : 0
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
       {/* Legend bar */}
       <div className="flex items-center gap-md px-md py-xs shrink-0 flex-wrap gap-y-1 bg-[#07100d] border-b border-[rgba(58,74,68,0.4)]">
         <span className="font-label text-label-caps text-on-surface-variant uppercase tracking-wider">
@@ -229,16 +229,18 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
         </div>
       </div>
 
-      {/* Chart container — flex-1 fills remaining block height */}
-      <div ref={containerRef} style={{ flex: 1, minHeight: 0, width: '100%' }}>
-        {prices.length < 2 && (
-          <div className="flex items-center justify-center h-full bg-[#07100d]">
-            <span className="font-data text-[12px] text-[#83958d] opacity-60 flex flex-col items-center gap-2">
-              <span className="material-symbols-outlined text-3xl">candlestick_chart</span>
-              Waiting for oracle data…
-            </span>
-          </div>
-        )}
+      {/* Chart — position relative wrapper so chart fills remaining space */}
+      <div style={{ position: 'relative', flex: 1, minHeight: '200px' }}>
+        <div ref={containerRef} style={{ position: 'absolute', inset: 0 }}>
+          {prices.length < 2 && !chartRef.current && (
+            <div className="flex items-center justify-center h-full bg-[#07100d]">
+              <span className="font-data text-[12px] text-[#83958d] opacity-60 flex flex-col items-center gap-2">
+                <span className="material-symbols-outlined text-3xl">candlestick_chart</span>
+                Waiting for oracle data…
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
