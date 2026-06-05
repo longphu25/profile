@@ -14,7 +14,7 @@ export type RoundStatus =
 export type MemberRoundState = 'watching' | 'pledged' | 'accepted' | 'executed' | 'claimed'
 export type SignalBias = 'bullish' | 'bearish' | 'neutral' | 'no-trade'
 export type IndicatorState = 'bullish' | 'bearish' | 'neutral' | 'blocked'
-export type RiskState = 'ready' | 'warning' | 'blocked'
+export type RiskState = 'ready' | 'warning' | 'blocked' | 'unknown'
 export type ModalKind =
   | 'create-round'
   | 'fund-to-join'
@@ -57,6 +57,14 @@ export interface IndicatorSignal {
   confidence: number
 }
 
+export interface RoundRiskCheckSnapshot {
+  id: string
+  label: string
+  passed: boolean
+  severity: 'blocking' | 'warning'
+  message?: string
+}
+
 export interface PredictionRound {
   id: string
   market: string
@@ -78,6 +86,9 @@ export interface PredictionRound {
   signalBias: SignalBias
   confidence: 'Low' | 'Medium' | 'High'
   indicators: IndicatorSignal[]
+  indicatorReasons?: string[]
+  riskChecks?: RoundRiskCheckSnapshot[]
+  confirmedAt?: number
 }
 
 export interface FundingCard {

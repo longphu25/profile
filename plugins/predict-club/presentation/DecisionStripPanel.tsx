@@ -2,9 +2,25 @@ import { usePredictClub } from './PredictClubContext'
 import { formatUsd, labelize } from './shared'
 
 export function DecisionStripPanel() {
-  const { club, primaryAction, toastMessage, oracleSnapshot } = usePredictClub()
+  const { club, primaryAction, toastMessage, oracleSnapshot, riskEvaluation, setModal } =
+    usePredictClub()
   const round = club.activeRound
   const spot = oracleSnapshot.oracleState?.latest_price?.spot
+  const blocked = riskEvaluation.state === 'blocked' || riskEvaluation.state === 'unknown'
+  const firstReason =
+    riskEvaluation.blockingReasons[0]?.message ??
+    riskEvaluation.warningReasons[0]?.message ??
+    'Review risk checks before continuing'
+
+  function handlePrimary() {
+    if (blocked) {
+      if (riskEvaluation.blockingReasons.some((check) => check.actionTarget === 'funding')) {
+        setModal('fund-to-join')
+      }
+      return
+    }
+    primaryAction.action()
+  }
 
   return (
     <>
@@ -69,16 +85,26 @@ export function DecisionStripPanel() {
         <div className="flex items-center gap-2 border border-primary-fixed-dim rounded-full px-sm py-1 bg-[#00e0b31a]">
           <div className="w-2 h-2 rounded-full bg-primary-fixed-dim glow-mint animate-pulse-dot" />
           <span className="font-data text-data-sm text-primary-fixed-dim uppercase tracking-widest">
-            {labelize(round.risk)}
+            {labelize(riskEvaluation.state)}
           </span>
         </div>
         <button
-          className="bg-primary-fixed-dim text-on-primary-fixed px-lg py-sm rounded font-headline text-headline-md cursor-pointer hover:bg-primary-container transition-colors glow-mint"
+          className={`px-lg py-sm rounded font-headline text-headline-md transition-colors ${
+            blocked
+              ? 'bg-surface-variant text-on-surface-variant border border-outline cursor-not-allowed'
+              : 'bg-primary-fixed-dim text-on-primary-fixed cursor-pointer hover:bg-primary-container glow-mint'
+          }`}
           type="button"
-          onClick={primaryAction.action}
+          disabled={blocked}
+          onClick={handlePrimary}
         >
-          {primaryAction.label}
+          {blocked ? 'Review Risk' : primaryAction.label}
         </button>
+        {blocked && (
+          <span className="font-data text-data-sm text-error max-w-[220px] truncate">
+            {firstReason}
+          </span>
+        )}
       </div>
       {toastMessage && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-md py-xs bg-surface-container-highest border border-primary-fixed-dim/50 rounded text-data-sm font-data text-primary-fixed-dim z-50 whitespace-nowrap">

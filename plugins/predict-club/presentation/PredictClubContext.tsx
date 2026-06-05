@@ -23,8 +23,9 @@ import { executeTradeplan } from '../application/executeTradeplan'
 import { createSuiPredictGateway } from '../infrastructure/suiPredictGateway'
 import { fetchWalletBalances } from '../infrastructure/walletBalanceService'
 import { transition } from '../domain/roundLifecycle'
-import { evaluateRiskGate, type RiskEvaluation } from '../domain/riskGate'
+import { evaluateRiskGate, type RiskEvaluation, type RiskGateInput } from '../domain/riskGate'
 import { computeConsensus, type ConsensusResult } from '../domain/indicatorConsensus'
+import { MIN_SAFE_EXPIRY_MINUTES, ORACLE_STALE_THRESHOLD_MS } from '../domain/policies'
 import * as store from '../data/clubStore'
 import {
   subscribeOracle,
@@ -203,22 +204,24 @@ export function PredictClubProvider({
   const round = club.activeRound
   const funding = useMemo(() => recommendFundingRoute(balances, round), [balances, round])
 
-  const riskEvaluation = useMemo(
-    () =>
-      evaluateRiskGate({
-        oracleLastUpdate: oracleSnapshot.lastUpdateMs || Date.now() - 15000,
-        oracleStaleThresholdMs: 60000,
-        expiryMinutes: round.expiryMinutes,
-        minSafeExpiryMinutes: 5,
-        memberDusdc: balances.dusdc,
-        suggestedDusdc: round.suggestedDusdc,
-        signalBias: round.signalBias,
-        indicators: round.indicators,
-      }),
-    [balances, round, oracleSnapshot.lastUpdateMs],
+  const consensus = useMemo(() => computeConsensus(round.indicators), [round.indicators])
+
+  const buildRiskInput = useCallback(
+    (overrides: Partial<RiskGateInput> = {}): RiskGateInput => ({
+      oracleLastUpdate: oracleSnapshot.lastUpdateMs || null,
+      oracleStaleThresholdMs: ORACLE_STALE_THRESHOLD_MS,
+      expiryMinutes: round.expiryMinutes,
+      minSafeExpiryMinutes: MIN_SAFE_EXPIRY_MINUTES,
+      memberDusdc: balances.dusdc,
+      suggestedDusdc: round.suggestedDusdc,
+      signalBias: consensus.bias,
+      indicators: round.indicators,
+      ...overrides,
+    }),
+    [balances.dusdc, consensus.bias, oracleSnapshot.lastUpdateMs, round],
   )
 
-  const consensus = useMemo(() => computeConsensus(round.indicators), [round.indicators])
+  const riskEvaluation = useMemo(() => evaluateRiskGate(buildRiskInput()), [buildRiskInput])
 
   const updateRoundStatus = useCallback((status: RoundStatus) => {
     store.updateClub((c) => ({ ...c, activeRound: { ...c.activeRound, status } }))
@@ -238,19 +241,12 @@ export function PredictClubProvider({
       },
 
       confirmRound: () => {
-        const result = confirmRound(club, {
-          oracleLastUpdate: oracleSnapshot.lastUpdateMs || Date.now() - 15000,
-          oracleStaleThresholdMs: 60000,
-          expiryMinutes: round.expiryMinutes,
-          minSafeExpiryMinutes: 5,
-          memberDusdc: balances.dusdc,
-          suggestedDusdc: round.suggestedDusdc,
-          signalBias: round.signalBias,
-          indicators: round.indicators,
-        })
+        const result = confirmRound(club, buildRiskInput())
         if (result.ok && result.club) {
           store.setClub(result.club)
-          store.setToast('Round confirmed')
+          const warningCount =
+            result.club.activeRound.riskChecks?.filter((c) => !c.passed).length ?? 0
+          store.setToast(warningCount > 0 ? 'Round confirmed with warnings' : 'Round confirmed')
         } else if (result.error) {
           store.setToast(result.error)
         }
@@ -298,7 +294,31 @@ export function PredictClubProvider({
         const gateway = createSuiPredictGateway()
         const managerId = await gateway.fetchManagerId(address)
         if (!managerId) {
+          store.setModal('fund-to-join')
+          store.setToast('No PredictManager found — create one first')
           return { ok: false, error: 'No predict manager found — create one first' }
+        }
+
+        if (balances.dusdc < round.suggestedDusdc) {
+          store.setModal('fund-to-join')
+          store.setToast(`Need ${round.suggestedDusdc} DUSDC before executing`)
+          return { ok: false, error: 'Insufficient DUSDC for execution' }
+        }
+
+        const executionRiskInput = buildRiskInput({
+          walletConnected: true,
+          predictManagerReady: true,
+        })
+        const executionRisk = evaluateRiskGate(executionRiskInput)
+        if (!executionRisk.canExecute) {
+          const fundingBlocked = executionRisk.warningReasons.some((c) => c.category === 'funding')
+          if (fundingBlocked) store.setModal('fund-to-join')
+          store.setToast(
+            executionRisk.blockingReasons[0]?.message ??
+              executionRisk.warningReasons[0]?.message ??
+              'Resolve risk checks before executing',
+          )
+          return { ok: false, error: 'Risk gate blocked execution' }
         }
 
         // Find member ID from wallet address
@@ -327,6 +347,7 @@ export function PredictClubProvider({
             tickSize: (oracleEntry as any)?.tick_size ?? 1_000_000_000,
             minStrike: (oracleEntry as any)?.min_strike ?? 50_000_000_000_000,
           },
+          executionRiskInput,
           gateway,
           async (tx) => {
             const txResult = await host!.signAndExecuteTransaction(tx)
@@ -386,7 +407,7 @@ export function PredictClubProvider({
         return { ok: result.ok, error: result.error }
       },
     }),
-    [balances, club, round, oracleSnapshot.lastUpdateMs],
+    [balances, club, round, oracleSnapshot, buildRiskInput, host],
   )
 
   // ─── Primary Action ───
@@ -398,6 +419,24 @@ export function PredictClubProvider({
         return { label: 'Confirm Round', action: () => actions.confirmRound() }
       case 'confirmed':
       case 'funding':
+        if (!riskEvaluation.canExecute) {
+          return {
+            label: riskEvaluation.warningReasons.some((c) => c.category === 'funding')
+              ? 'Fund to Join'
+              : 'Review Risk',
+            action: () => {
+              if (riskEvaluation.warningReasons.some((c) => c.category === 'funding')) {
+                store.setModal('fund-to-join')
+              } else {
+                store.setToast(
+                  riskEvaluation.blockingReasons[0]?.message ??
+                    riskEvaluation.warningReasons[0]?.message ??
+                    'Review risk checks before executing',
+                )
+              }
+            },
+          }
+        }
         return { label: 'Execute Trade', action: () => store.setModal('execute-trade') }
       case 'executed':
         return {
@@ -417,7 +456,7 @@ export function PredictClubProvider({
       default:
         return { label: 'Accept Signal', action: () => updateRoundStatus('funding') }
     }
-  }, [round.status, round.id, round.strike, actions, updateRoundStatus])
+  }, [round.status, round.id, round.strike, actions, updateRoundStatus, riskEvaluation])
 
   const value: PredictClubContextValue = {
     club,

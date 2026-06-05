@@ -3,6 +3,7 @@ import type { IndicatorSignal, SignalBias } from './types'
 export interface ConsensusResult {
   bias: SignalBias
   confidence: 'Low' | 'Medium' | 'High'
+  reasons: string[]
   bullishCount: number
   bearishCount: number
   neutralCount: number
@@ -29,10 +30,16 @@ export function computeConsensus(indicators: IndicatorSignal[]): ConsensusResult
   const maxCount = Math.max(counts.bullish, counts.bearish, counts.neutral, counts.blocked)
   const ratio = maxCount / total
   const confidence = ratio >= 0.7 ? 'High' : ratio >= 0.5 ? 'Medium' : 'Low'
+  const reasons = indicators
+    .slice()
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 5)
+    .map((ind) => `${ind.name}: ${ind.value} (${ind.state}, ${ind.confidence}%)`)
 
   return {
     bias,
     confidence,
+    reasons,
     bullishCount: counts.bullish,
     bearishCount: counts.bearish,
     neutralCount: counts.neutral,

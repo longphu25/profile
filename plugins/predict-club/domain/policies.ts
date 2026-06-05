@@ -1,5 +1,8 @@
 import type { Direction, IndicatorSignal, MemberRoundState, PredictionRound } from './types'
 
+export const ORACLE_STALE_THRESHOLD_MS = 60_000
+export const MIN_SAFE_EXPIRY_MINUTES = 5
+
 export interface CreateRoundParams {
   oracle: string
   market: string

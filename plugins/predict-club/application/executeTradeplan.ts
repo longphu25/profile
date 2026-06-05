@@ -1,7 +1,6 @@
 import type { ClubState, Direction } from '../domain/types'
 import type { RiskGateInput } from '../domain/riskGate'
 import { evaluateRiskGate } from '../domain/riskGate'
-import { computeConsensus } from '../domain/indicatorConsensus'
 import type { Transaction } from '@mysten/sui/transactions'
 
 export interface TradePlan {
@@ -63,25 +62,13 @@ export async function executeTradeplan(
   club: ClubState,
   memberId: string,
   plan: TradePlan,
+  riskInput: RiskGateInput,
   gateway: SuiPredictGateway,
   signer: (tx: Transaction) => Promise<TransactionResult>,
 ): Promise<ExecuteResult> {
   // 1. Risk gate
-  const consensus = computeConsensus(club.activeRound.indicators)
-  const member = club.members.find((m) => m.id === memberId)
-
-  const riskInput: RiskGateInput = {
-    oracleLastUpdate: Date.now(),
-    oracleStaleThresholdMs: 60_000,
-    expiryMinutes: plan.expiryMinutes,
-    minSafeExpiryMinutes: 5,
-    memberDusdc: member?.pledgedDusdc ?? 0,
-    suggestedDusdc: plan.amountDusdc,
-    signalBias: consensus.bias,
-    indicators: club.activeRound.indicators,
-  }
   const riskEval = evaluateRiskGate(riskInput)
-  if (riskEval.state === 'blocked') {
+  if (!riskEval.canExecute) {
     const reasons = riskEval.checks.filter((c) => !c.passed).map((c) => c.message ?? c.label)
     return { ok: false, error: `Risk gate blocked: ${reasons.join('; ')}` }
   }
