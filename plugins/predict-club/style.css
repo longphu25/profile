@@ -324,6 +324,11 @@ select {
   flex-shrink: 0;
 }
 
+.pc-club-column > .pc-thesis-card {
+  margin: var(--md);
+  flex-shrink: 0;
+}
+
 .pc-risk-column {
   width: clamp(300px, 18vw, 340px);
   flex-shrink: 0;
@@ -545,9 +550,9 @@ select {
 .pc-chart-shell {
   position: relative;
   flex: 1;
-  min-height: 112px;
-  display: grid;
-  place-items: center;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--outline-variant);
   border-radius: var(--radius-lg);

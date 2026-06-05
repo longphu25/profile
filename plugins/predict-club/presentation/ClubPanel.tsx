@@ -78,6 +78,21 @@ export function ClubPanel() {
         <span className="font-data text-data-sm text-on-surface-variant">Win Rate</span>
         <span className="font-data text-data-sm text-primary-fixed-dim tabular-nums">68.2%</span>
       </div>
+      {/* Leader Thesis */}
+      <div className="p-md border-t border-outline-variant">
+        <div className="bg-surface-container-lowest border border-outline-variant p-sm rounded-lg relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-secondary-fixed" />
+          <div className="flex justify-between items-start mb-1 ml-3">
+            <span className="font-label text-label-caps text-secondary-fixed uppercase tracking-wider">
+              Leader Thesis
+            </span>
+            <span className="font-data text-[10px] text-on-surface-variant">12m ago</span>
+          </div>
+          <p className="font-body text-body-sm text-on-surface ml-3 leading-relaxed m-0">
+            {club.activeRound.thesis}
+          </p>
+        </div>
+      </div>
     </>
   )
 }

@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { recommendFundingRoute } from '../application/recommendFundingRoute'
 import { loadClubState, saveClubState } from '../data/localClubStore'
+import { subscribeOracle, getSnapshot } from '../infrastructure/deepbookOracleService'
+import { OrderFlowChart } from './OrderFlowChart'
 import type {
   AssetBalances,
   ClubState,
@@ -36,6 +38,8 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
   const [selectedOffer, setSelectedOffer] = useState<EscrowOfferView | null>(null)
   const [context, setContext] = useState<SuiContext>(() => host?.getSuiContext() ?? defaultContext)
   const [mobileTab, setMobileTab] = useState<MobileTab>('clubs')
+
+  const oracleSnapshot = useSyncExternalStore(subscribeOracle, getSnapshot)
 
   useEffect(() => {
     if (!host) return undefined
@@ -90,7 +94,7 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
           mobileTab={mobileTab}
           onCreateRound={() => setModal('create-round')}
         />
-        <PredictionRoom club={club} mobileTab={mobileTab} />
+        <PredictionRoom club={club} mobileTab={mobileTab} oraclePrices={oracleSnapshot.prices} />
         <RiskExecutionColumn
           club={club}
           connected={context.isConnected}
@@ -220,11 +224,24 @@ function ClubColumn({
           </li>
         ))}
       </ul>
+      <article className="pc-thesis-card">
+        <span>Leader Thesis</span>
+        <time>12m ago</time>
+        <p>{club.activeRound.thesis}</p>
+      </article>
     </aside>
   )
 }
 
-function PredictionRoom({ club, mobileTab }: { club: ClubState; mobileTab: MobileTab }) {
+function PredictionRoom({
+  club,
+  mobileTab,
+  oraclePrices,
+}: {
+  club: ClubState
+  mobileTab: MobileTab
+  oraclePrices: import('../infrastructure/deepbookOracleService').OraclePrice[]
+}) {
   const round = club.activeRound
   const visible = mobileTab === 'predict'
   return (
@@ -236,11 +253,6 @@ function PredictionRoom({ club, mobileTab }: { club: ClubState; mobileTab: Mobil
         <span>Phase: {round.status}</span>
       </header>
       <div className="pc-room-body">
-        <article className="pc-thesis-card">
-          <span>Leader Thesis</span>
-          <time>12m ago</time>
-          <p>{round.thesis}</p>
-        </article>
         <div className="pc-indicator-grid">
           {round.indicators.slice(0, 6).map((indicator) => (
             <article key={indicator.id}>
@@ -250,11 +262,7 @@ function PredictionRoom({ club, mobileTab }: { club: ClubState; mobileTab: Mobil
           ))}
         </div>
         <div className="pc-chart-shell">
-          <div className="pc-chart-grid" />
-          <div className="pc-chart-label">
-            <Icon name="candlestick_chart" />
-            <span>[ DeepBook Order Flow Visualization ]</span>
-          </div>
+          <OrderFlowChart prices={oraclePrices} />
         </div>
       </div>
     </section>
