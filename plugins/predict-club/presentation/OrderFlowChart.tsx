@@ -93,6 +93,7 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
       rightPriceScale: {
         borderColor: 'rgba(58, 74, 68, 0.6)',
         textColor: '#83958d',
+        scaleMargins: { top: 0.05, bottom: 0.2 },
       },
       timeScale: {
         borderColor: 'rgba(58, 74, 68, 0.6)',
