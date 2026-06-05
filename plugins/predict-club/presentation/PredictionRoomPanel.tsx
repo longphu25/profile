@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { usePredictClub } from './PredictClubContext'
 import { computeConsensus } from '../domain/indicatorConsensus'
 import { labelize } from './shared'
@@ -6,18 +6,34 @@ import { OrderFlowChart } from './OrderFlowChart'
 export function PredictionRoomPanel() {
   const { club, oracleSnapshot, riskEvaluation } = usePredictClub()
   const round = club.activeRound
+  const [evidenceOpen, setEvidenceOpen] = useState(false)
 
   const consensus = useMemo(() => computeConsensus(round.indicators), [round.indicators])
-  const topReasons = consensus.reasons.slice(0, 3)
+  const topReasons = consensus.reasons.slice(0, 6)
   const firstRiskNote =
     riskEvaluation.blockingReasons[0]?.message ?? riskEvaluation.warningReasons[0]?.message
 
   return (
     <>
       <div className="p-md border-b border-outline-variant bg-surface-container-high flex justify-between items-center">
-        <h2 className="font-headline text-headline-md text-primary flex items-center gap-2">
-          <span className="material-symbols-outlined">analytics</span> Prediction Room
-        </h2>
+        <div className="flex items-center gap-sm min-w-0">
+          <h2 className="font-headline text-headline-md text-primary flex items-center gap-2">
+            <span className="material-symbols-outlined">analytics</span> Prediction Room
+          </h2>
+          <div
+            className={`px-sm py-1 rounded font-label text-label-caps uppercase shrink-0 ${
+              consensus.bias === 'bullish'
+                ? 'bg-primary-fixed-dim/20 text-primary-fixed-dim'
+                : consensus.bias === 'bearish'
+                  ? 'bg-error/20 text-error'
+                  : consensus.bias === 'no-trade'
+                    ? 'bg-error/20 text-error'
+                    : 'bg-surface-container text-on-surface-variant border border-outline-variant'
+            }`}
+          >
+            {labelize(consensus.bias)} · {consensus.confidence}
+          </div>
+        </div>
         <div className="flex items-center gap-sm">
           <div className="px-sm py-1 bg-surface-container border border-outline-variant rounded font-label text-label-caps text-on-surface-variant">
             Phase: {round.status.toUpperCase()}
@@ -55,22 +71,19 @@ export function PredictionRoomPanel() {
 
         {/* Consensus Summary */}
         <div className="flex items-center gap-md p-sm bg-surface-container-highest rounded-xl border border-outline-variant">
-          <div
-            className={`px-sm py-1 rounded font-label text-label-caps uppercase ${
-              consensus.bias === 'bullish'
-                ? 'bg-primary-fixed-dim/20 text-primary-fixed-dim'
-                : consensus.bias === 'bearish'
-                  ? 'bg-error/20 text-error'
-                  : consensus.bias === 'no-trade'
-                    ? 'bg-error/20 text-error'
-                    : 'bg-surface-container text-on-surface-variant'
-            }`}
+          <button
+            type="button"
+            onClick={() => setEvidenceOpen((open) => !open)}
+            className="flex items-center gap-1 font-label text-label-caps text-on-surface-variant uppercase hover:text-on-surface transition-colors"
           >
-            {labelize(consensus.bias)}
-          </div>
-          <span className="font-data text-data-sm text-on-surface-variant">
-            Confidence: <span className="text-on-surface">{consensus.confidence}</span>
-          </span>
+            <span
+              className="material-symbols-outlined text-[16px] transition-transform"
+              style={{ transform: evidenceOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            >
+              expand_more
+            </span>
+            Signal Evidence
+          </button>
           <div className="ml-auto flex items-center gap-sm font-data text-data-sm">
             <span className="text-primary-fixed-dim">{consensus.bullishCount}↑</span>
             <span className="text-error">{consensus.bearishCount}↓</span>
@@ -81,54 +94,39 @@ export function PredictionRoomPanel() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.85fr] gap-sm">
-          <div className="bg-surface-container-highest border border-outline-variant rounded-xl p-sm">
-            <div className="flex items-center justify-between gap-sm mb-xs">
-              <span className="font-label text-label-caps text-on-surface-variant uppercase">
-                Signal Evidence
-              </span>
-              <span className="font-data text-[11px] text-on-surface-variant">
-                Top {topReasons.length}
-              </span>
-            </div>
-            <div className="flex flex-col gap-xs">
-              {topReasons.map((reason) => (
-                <div
-                  key={reason}
-                  className="font-data text-[11px] leading-4 text-on-surface-variant bg-surface-container rounded px-xs py-[3px]"
-                >
-                  {reason}
+        {(evidenceOpen || riskEvaluation.state !== 'ready') && (
+          <div className="grid grid-cols-1 gap-sm">
+            {evidenceOpen && (
+              <div className="bg-surface-container-highest border border-outline-variant rounded-xl p-sm">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-xs">
+                  {topReasons.slice(0, 3).map((reason) => (
+                    <EvidenceReason key={reason} reason={reason} />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+            {riskEvaluation.state !== 'ready' && (
+              <div
+                className={`border rounded-xl p-sm ${
+                  riskEvaluation.state === 'warning'
+                    ? 'border-tertiary-fixed-dim/40 bg-tertiary-fixed-dim/10'
+                    : 'border-error/40 bg-error/10'
+                }`}
+              >
+                <span
+                  className={`font-label text-label-caps uppercase ${
+                    riskEvaluation.state === 'warning' ? 'text-tertiary-fixed-dim' : 'text-error'
+                  }`}
+                >
+                  Risk: {labelize(riskEvaluation.state)}
+                </span>
+                <p className="font-data text-[11px] leading-4 text-on-surface-variant mt-px">
+                  {firstRiskNote ?? 'Review risk checks before continuing.'}
+                </p>
+              </div>
+            )}
           </div>
-          <div
-            className={`border rounded-xl p-sm ${
-              riskEvaluation.state === 'ready'
-                ? 'border-primary-fixed-dim/40 bg-primary-fixed-dim/10'
-                : riskEvaluation.state === 'warning'
-                  ? 'border-tertiary-fixed-dim/40 bg-tertiary-fixed-dim/10'
-                  : 'border-error/40 bg-error/10'
-            }`}
-          >
-            <span
-              className={`font-label text-label-caps uppercase ${
-                riskEvaluation.state === 'ready'
-                  ? 'text-primary-fixed-dim'
-                  : riskEvaluation.state === 'warning'
-                    ? 'text-tertiary-fixed-dim'
-                    : 'text-error'
-              }`}
-            >
-              {labelize(riskEvaluation.state)}
-            </span>
-            <p className="font-data text-[11px] leading-4 text-on-surface-variant mt-px">
-              {riskEvaluation.state === 'ready'
-                ? 'Risk gate accepts this round for execution.'
-                : (firstRiskNote ?? 'Review risk checks before continuing.')}
-            </p>
-          </div>
-        </div>
+        )}
 
         {/* Chart */}
         <div className="flex-1 min-h-[200px] border border-outline-variant bg-surface-container-lowest rounded-xl overflow-hidden flex flex-col">
@@ -136,5 +134,19 @@ export function PredictionRoomPanel() {
         </div>
       </div>
     </>
+  )
+}
+
+function EvidenceReason({ reason }: { reason: string }) {
+  const [name, detail = ''] = reason.split(': ')
+  return (
+    <div className="min-w-0 bg-surface-container rounded-lg border border-outline-variant/60 px-xs py-xs">
+      <span className="font-label text-label-caps text-on-surface-variant uppercase block truncate">
+        {name}
+      </span>
+      <span className="font-data text-[11px] leading-4 text-on-surface truncate block">
+        {detail}
+      </span>
+    </div>
   )
 }
