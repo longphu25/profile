@@ -10,7 +10,9 @@ export interface CreateEscrowParams {
   maker: string
 }
 
-let escrowCounter = 9183
+// Start counter well above fixture max (9183) and use timestamp to avoid
+// collisions with persisted localStorage state across sessions.
+let escrowCounter = 9200 + Math.floor((Date.now() % 100000) / 10)
 
 export function createEscrowOffer(
   club: ClubState,
