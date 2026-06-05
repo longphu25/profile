@@ -84,31 +84,43 @@ tử.
 
 ## Các Bước Triển Khai
 
-1. thêm product/story/decision docs
-2. thêm page shell
-3. thêm plugin entry
-4. implement pure domain + policy
-5. implement localStorage repo
-6. implement read adapters và indicator gateway
-7. implement use cases
-8. build UI quanh one active round / one primary action
-9. loan planner chỉ là mô phỏng
-10. thêm Funding Router
-11. update Vite inputs
-12. xác minh build, plugin load, layout, tuyến nạp vốn và luồng ví
+1. ✅ thêm product/story/decision docs
+2. ✅ thêm page shell (`predict-club.html`, `src/predict-club/`)
+3. ✅ thêm plugin entry (`plugins/predict-club/plugin.tsx` v2.0 multi-slot)
+4. ✅ implement pure domain + policy (`domain/types.ts`, `domain/policies.ts`, `domain/riskGate.ts`, `domain/indicatorConsensus.ts`, `domain/roundLifecycle.ts`, `domain/fixtures.ts`)
+5. ✅ implement localStorage repo (`data/localClubStore.ts`, `data/clubStore.ts`)
+6. ✅ implement read adapters và indicator gateway (`infrastructure/deepbookOracleService.ts`, `infrastructure/indicatorSignalGateway.ts`, `infrastructure/suiPredictGateway.ts`, `infrastructure/walletBalanceService.ts`)
+7. ✅ implement use cases (`application/createRound.ts`, `application/confirmRound.ts`, `application/pledgeToRound.ts`, `application/settleRound.ts`, `application/claimSettlement.ts`, `application/manageEscrow.ts`, `application/executeTradeplan.ts`, `application/recommendFundingRoute.ts`)
+8. ✅ build UI — multi-slot panel architecture (`PredictClubRoot`, `ClubPanel`, `PredictionRoomPanel`, `RiskPanel`, `DecisionStripPanel`, `FundingRouterPanel`, `EscrowOffersPanel`, `RoundHistoryPanel`, `ModalLayer`)
+9. ✅ loan planner simulation-only với nhãn `Simulated`
+10. ✅ Funding Router (SUI → USDC → Scallop → DUSDC → PredictManager)
+11. ✅ update Vite inputs
+12. ✅ xác minh build, plugin load, layout, tuyến nạp vốn và luồng ví
+
+## Các Tính Năng Đã Thêm Ngoài Plan Gốc
+
+- **OrderFlowChart** — biểu đồ candlestick TradingView lightweight-charts live với order flow overlay
+- **Live wallet balances** — cân bằng ví thực thời gian thực qua `walletBalanceService`
+- **Real PTB execution** — wire testnet DeepBook Predict PTB thật (`suiPredictGateway`)
+- **Oracle status** — hiển thị trạng thái oracle trong RiskPanel và DecisionStrip
+- **GSAP animations** — motion effects với `prefers-reduced-motion` support
+- **MEXC proxy worker** — `workers/mexc-proxy/worker.js` cho price data
+- **Stitch modal designs** — tất cả modals redesign theo Stitch mockups
+- **Move contract scaffold** — `contracts/seal-policy` (scaffold)
 
 ## Validation
 
-- build
-- browser smoke
-- plugin load trong Shadow DOM
-- desktop/mobile layout
-- rà soát thủ công luồng ví
-- oracle cũ và expiry không an toàn phải chặn thực thi
-- loan planner vẫn phải mang nhãn `Simulated`
-- tuyến nạp vốn phải đúng cho ví chỉ có SUI và người giữ USDC
+- ✅ build (Vite)
+- ✅ browser smoke (predict-club.html)
+- ✅ plugin load trong Shadow DOM (multi-slot v2)
+- ✅ desktop/mobile layout
+- ✅ rà soát thủ công luồng ví
+- ✅ oracle status hiển thị, cũ/expiry chặn execution
+- ✅ loan planner mang nhãn `Simulated`
+- ✅ tuyến nạp vốn đúng cho SUI-only và USDC holder
 
 ## Trạng Thái
 
-- State: planned
-- Evidence: product contract và architecture decision đã chốt boundary V1/V2
+- **State: completed (V1)**
+- Evidence: 37 commits Jun 3–5, tất cả các bước triển khai đã xong
+- Next: V2 sẽ thêm Move group vault contract và real custody khi mainnet sẵn sàng

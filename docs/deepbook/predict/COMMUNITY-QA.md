@@ -213,3 +213,181 @@ DUSDC:            0xe95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba7
 | Need authorized cap to set ask_bounds before mint | ❌ Not needed for minting |
 | abort code 1 = oracle config validation complex | ✅ But most common cause = **argument order swap** (expiry↔strike) |
 | iron_bank available on testnet | ❌ Mainnet only (USDSUI asset) |
+
+## Q5: Multi-venue router architecture for hackathon demo
+
+### Context
+
+Building a multi-venue trading system that routes across DeepBook Predict, Cetus, NAVI, Suilend.
+
+### Advice (from mentor)
+
+**Pattern: Venue-agnostic adapter**
+
+```
+Common interface: quote() / route() / execute()
+├── Adapter: DeepBook Predict  (testnet ✅ live)
+├── Adapter: Cetus            (testnet ✅ live)
+├── Adapter: NAVI             (testnet stub, labeled)
+└── Adapter: Suilend          (testnet stub, labeled)
+```
+
+- Đặt mỗi venue sau common adapter → router treats all venues the same
+- Thêm mainnet venue = chỉ viết adapter mới, không rewrite
+- **Demo strategy**: 2 venue live + 2 venue stub với clear labels
+- Lead với architecture → show real execution → mainnet roadmap slide
+
+**Judging tip**: "One thing working end-to-end beats a big half-built idea. They want a real demo, not a roadmap."
+
+---
+
+## Q6: Risk Guardian Agent — Agentic Web sub-track
+
+### Concept (confirmed competitive by mentors)
+
+Off-chain agent watches Pyth (price, confidence, staleness) + DeepBook mid price, scores divergence 0-100, fires signal to on-chain Move policy object when threshold breached.
+
+```
+Architecture:
+┌─────────────────────────────────────────────┐
+│  Off-chain Agent                             │
+│  - Watch Pyth price feeds                    │
+│  - Watch DeepBook mid price                  │
+│  - Score divergence 0-100                    │
+│  - Fire signal when threshold crossed        │
+└──────────────────┬──────────────────────────┘
+                   │ signal (tx)
+                   ▼
+┌─────────────────────────────────────────────┐
+│  On-chain Move Policy Object                 │
+│  - RE-CHECK breach from on-chain data        │
+│  - If confirmed → pause/tighten vault        │
+│  - One-way ratchet: only push safer          │
+│  - Governance cap (DAO) required to unfreeze │
+└─────────────────────────────────────────────┘
+```
+
+### Mentor feedback
+
+- ✅ "Competitive for Agentic Web track — 50% judging = real-world impact"
+- ✅ "One-way ratchet design alone sets it apart from most agentic DeFi submissions"
+- ⚠️ **Critical**: Move object MUST confirm breach from on-chain data — not just trust agent's word
+- ⚠️ Pattern itself isn't new → edge is **execution and clean demo**
+- Enforce "agent can only push safer" rule **in the contract**
+
+### Relevance cho Predict
+
+Pattern reusable cho PredictManager risk:
+- Agent monitor oracle staleness / SVI age / price lag
+- Khi divergence cao → signal contract tighten exposure
+- Chỉ DAO/owner mới widen lại
+
+---
+
+## Q7: PTB = single wallet confirmation (confirmed)
+
+### Câu hỏi
+
+> Có thể dùng PTB để run nhiều on-chain interactions với 1 wallet confirmation?
+
+### Trả lời (mentor)
+
+> "Exactly. PTBs can bundle multiple actions into a single transaction (pay → swap → deposit) so it's one signature and a seamless UX."
+
+Confirms: deposit + mint trong 1 PTB = 1 user confirmation. Đây là pattern chúng ta đã implement.
+
+---
+
+## Q8: Autonomous track = agent manages independently
+
+### Clarification
+
+- "Autonomous" = agent manages trades/actions **independently** based on upfront guidelines
+- Connect wallet 1 lần → set capital caps → system handles the rest
+- Không cần manually approve mỗi transaction
+- Cho DeFi: PTB giúp reduce manual steps
+
+---
+
+## Q9: USDsui + Testnet USDC coin type
+
+### USDsui
+
+**Mainnet only. Không có testnet faucet.**
+
+Confirm: Three-Protocol Loop (iron_bank + margin + predict) không testable trên testnet.
+
+### Testnet USDC (Circle)
+
+```
+Type: 0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC
+```
+
+**Common failures:**
+1. Dùng mainnet coin type trên testnet → `getCoins` trả empty → tx fail silently
+2. Circle faucet chỉ cho USDC, vẫn cần testnet SUI cho gas (faucet.sui.io)
+
+---
+
+## Q10: Solana Keychain concept — relevance cho DeepBook
+
+### Hai "Keychain" khác nhau
+
+| Name | What | Relevance |
+|------|------|-----------|
+| `solana-foundation/solana-keychain` | Signing infra library (Rust/TS), multi-backend (AWS KMS, Vault, etc.) | ❌ Solana-only, Sui đã có wallet adapters |
+| Stache Keychain (on-chain program) | On-chain account linking, delegated session keys, multi-wallet identity | ✅ Concept hay cho delegated trading |
+
+### Stache Keychain concept
+
+```
+KeychainID (on-chain PDA)
+├── Main Wallet (cold storage)
+├── Session Key 1 (mobile, time-limited, scoped)
+├── Session Key 2 (bot, budget-capped)
+└── Session Key 3 (game client, auto-approve)
+```
+
+### Sui equivalents (đã có)
+
+| Keychain concept | Sui equivalent |
+|-----------------|----------------|
+| Session key | zkLogin ephemeral keys |
+| Delegated signing | TradeCap / DepositCap / WithdrawalCap (DeepBook spot) |
+| Scoped permissions | Capability-based auth (Sui object model) |
+| Program-owned account | `new_with_custom_owner_caps<App>()` (WIP — PR #1042) |
+| Multi-wallet identity | Native Multisig / Enoki sessions |
+
+### Kết luận
+
+- DeepBook spot **đã có** Cap delegation (TradeCap, DepositCap, WithdrawalCap)
+- DeepBook **Predict chưa có** — PredictManager owner-gated only
+- Concept đáng theo dõi nhưng chưa actionable cho Predict hiện tại
+
+---
+
+## Resources & Tools mới
+
+| Resource | URL | Relevance |
+|----------|-----|-----------|
+| Pawtato (Sui trading bot) | https://pawtato.finance/ | Reference bot architecture |
+| t2000 Agent Stack & SDK | https://t2000.ai | Agent infra cho Agentic track |
+| Workshop recording | https://go.sui.io/db-predict-workshop | Full walkthrough |
+| Workshop FAQ | https://mystenlabs.notion.site/db-predict-workshop-faq | All Q&A |
+| Workshop scripts | github.com/MystenLabs/deepbookv3/tree/tlee/predict-workshop/scripts/transactions/predict_workshop | PTB examples |
+| Keyless vault PR | github.com/MystenLabs/deepbookv3/pull/1042 | App authorization |
+| DUSDC faucet | https://tally.so/r/Xx102L | Testnet tokens |
+| Circle testnet USDC faucet | (Circle) | Type: `0xa1ec7fc...::usdc::USDC` |
+| Sui testnet SUI faucet | https://faucet.sui.io | Gas |
+
+---
+
+## Hackathon Tracks (Sui Overflow 2025)
+
+| Track | Focus |
+|-------|-------|
+| AI Agents / Agentic Web | Autonomous agents, risk guardians, trading bots |
+| Payments / Financial Primitives | PTB-based payment flows, subscriptions |
+| Builder Tooling | SDKs, dev tools, indexers |
+| Walrus | Decentralized data, storage |
+| DeepBook | Trading, prediction markets, margin |

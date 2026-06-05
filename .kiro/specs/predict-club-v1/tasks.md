@@ -250,7 +250,7 @@ Implement the Predict Club V1 feature following a 5-layer clean architecture: Do
     - Handle wallet errors (rejected, failed, network mismatch) with user-visible messages
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 5.5, 5.6_
 
-- [~] 9. Checkpoint - Full integration complete
+- [ ] 9. Checkpoint - Full integration complete
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 10. Integration tests
@@ -264,7 +264,7 @@ Implement the Predict Club V1 feature following a 5-layer clean architecture: Do
     - Test overpayment handling returns excess
     - _Requirements: 10.1, 10.2, 10.3, 10.6_
 
-- [~] 11. Final checkpoint
+- [ ] 11. Final checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

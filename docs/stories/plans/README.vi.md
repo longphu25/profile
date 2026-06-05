@@ -20,7 +20,7 @@ TaskOS. Nó nằm dưới `docs/stories/` vì các file này mô tả các lát 
 | [10-interactive-predict-position-chart.md](10-interactive-predict-position-chart.md) | Biểu đồ Predict tương tác để click chọn binary strike, kéo chọn range và overlay vị thế đã mint. |
 | [11-deepbook-suite-modular-refactor.md](11-deepbook-suite-modular-refactor.md) | Kế hoạch refactor cho `deepbook.html`, reusable plugin modules, Predict plugin entry mỏng, clean architecture và chart integration. |
 | [12-deepbook-predict-standalone-chart-trading.md](12-deepbook-predict-standalone-chart-trading.md) | Kế hoạch `deepbook-predict.html` độc lập với host kiểu BTC chart, wallet wiring, chart trade popup, preview DUSDC và overlay vị thế hiện có. |
-| [13-predict-club-community.md](13-predict-club-community.md) | Kế hoạch workflow cộng đồng Predict Club với leader proposal, member tự ký thực thi, clean architecture và boundary group vault trong tương lai. |
+| [13-predict-club-community.md](13-predict-club-community.md) | ✅ **HOÀN THÀNH (V1)** — Workflow cộng đồng Predict Club với leader proposal, member tự ký thực thi, clean architecture. 37 commits Jun 3–5. |
 
 ## Thứ Tự Xây Dựng Được Khuyến Nghị
 

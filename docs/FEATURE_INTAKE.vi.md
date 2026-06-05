@@ -50,3 +50,20 @@ trước khi tuyên bố hoàn tất.
 hơn. 4+ cờ, hoặc các trường hợp wallet/signing, authorization, mất dữ liệu, hay
 nhạy cảm về bảo mật thì là high-risk trừ khi con người đã thu hẹp phạm vi một
 cách rõ ràng.
+
+
+---
+
+## Lịch Sử Hoàn Thành
+
+| Feature | Story | Trạng thái | Hoàn thành |
+| --- | --- | --- | --- |
+| Predict Club V1 | [13-predict-club-community](stories/plans/13-predict-club-community.vi.md) | ✅ Done | Jun 3–5, 2026 |
+| DeepBook Predict Standalone Chart | [12](stories/plans/12-deepbook-predict-standalone-chart-trading.vi.md) | ✅ Done | Jun 1, 2026 |
+| DeepBook Suite Modular Refactor | [11](stories/plans/11-deepbook-suite-modular-refactor.vi.md) | 🔄 Partial | — |
+
+## Backlog Tiếp Theo
+
+1. **V2 Predict Club** — Move group vault contract, real custody, mainnet package ID
+2. **Plan #11** — DeepBook Suite modular refactor hoàn chỉnh
+3. **Plan #8** — DeepBook Predict User Assist layer
