@@ -93,8 +93,15 @@ Kiro workspace MCP config is stored in:
 Kiro steering files:
 
 ```text
+.kiro/steering/harness-factory.md
 .kiro/steering/qmd.md
 .kiro/steering/rtk.md
+```
+
+Project-local Harness Factory skill:
+
+```text
+.agents/skills/harness-factory/SKILL.md
 ```
 
 ## QMD Model Policy

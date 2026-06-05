@@ -10,6 +10,7 @@
 - [[REFERENCE]] — External references and repo reference docs
 - [[SETUP]] — Harness, RTK, QMD, and MCP setup notes
 - [[HARNESS]] — Human-agent collaboration model for this repo
+- [[HARNESS_FACTORY]] — Repo-native port of `revfactory/harness` skill logic
 - [[FEATURE_INTAKE]] — Tiny / normal / high-risk classification before work
 - [[ARCHITECTURE]] — Architecture boundaries and source docs
 - [[TEST_MATRIX]] — Validation expectations by work type

@@ -43,3 +43,18 @@ hoặc ghi lại phần ngữ cảnh còn thiếu vào `HARNESS_BACKLOG.md`.
 
 Một thay đổi harness tốt là thay đổi nhỏ, bền vững và hữu ích cho agent tiếp
 theo.
+
+## Port Harness Factory
+
+Với yêu cầu thiết kế agent team, tạo project-local skill, xây workflow
+orchestrator, hoặc chuyển logic `revfactory/harness`, hãy dùng skill đã port:
+
+```text
+.agents/skills/harness-factory/SKILL.md
+```
+
+Bản port repo-native này mặc định ghi vào `.agents/skills/`,
+`.kiro/steering/`, và `docs/`. Nó không giả định Claude Code Agent Teams trừ
+khi người dùng yêu cầu rõ output `.claude/agents/` hoặc `.claude/skills/`.
+
+Xem `docs/HARNESS_FACTORY.md` để biết boundary của phần port.

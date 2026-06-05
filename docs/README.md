@@ -12,6 +12,7 @@ and domain deep dives.
 - `ROOT_DOC_AUDIT.md`: classification of root-level docs and candidate moves.
 - `SETUP.md`: harness, RTK, QMD, and MCP setup.
 - `HARNESS.md`: how humans and agents should use these docs during work.
+- `HARNESS_FACTORY.md`: repo-native port of `revfactory/harness` skill logic.
 - `FEATURE_INTAKE.md`: how to classify requests before implementation.
 - `ARCHITECTURE.md`: architecture source-of-truth and boundary rules.
 - `TEST_MATRIX.md`: validation expectations by work type.

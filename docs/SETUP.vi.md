@@ -95,8 +95,15 @@ Cấu hình MCP workspace của Kiro nằm ở:
 Các file steering của Kiro:
 
 ```text
+.kiro/steering/harness-factory.md
 .kiro/steering/qmd.md
 .kiro/steering/rtk.md
+```
+
+Skill Harness Factory project-local:
+
+```text
+.agents/skills/harness-factory/SKILL.md
 ```
 
 ## Chính Sách Mô Hình QMD

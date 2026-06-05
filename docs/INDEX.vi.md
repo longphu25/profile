@@ -10,6 +10,7 @@
 - [[REFERENCE]] — Tài liệu tham chiếu bên ngoài và tài liệu tham chiếu cấp repo
 - [[SETUP]] — Ghi chú thiết lập harness, RTK, QMD và MCP
 - [[HARNESS]] — Mô hình cộng tác giữa con người và agent cho repo này
+- [[HARNESS_FACTORY]] — Bản port repo-native của logic skill `revfactory/harness`
 - [[FEATURE_INTAKE]] — Phân loại tiny / normal / high-risk trước khi làm việc
 - [[ARCHITECTURE]] — Boundary kiến trúc và tài liệu nguồn
 - [[TEST_MATRIX]] — Kỳ vọng validation theo loại công việc

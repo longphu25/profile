@@ -15,6 +15,7 @@ hiện có và các phần đào sâu theo domain.
   `*.vi.md`.
 - `SETUP.md`: thiết lập harness, RTK, QMD và MCP.
 - `HARNESS.md`: cách con người và agent nên dùng bộ tài liệu này khi làm việc.
+- `HARNESS_FACTORY.md`: bản port repo-native của logic skill `revfactory/harness`.
 - `FEATURE_INTAKE.md`: cách phân loại yêu cầu trước khi triển khai.
 - `ARCHITECTURE.md`: nguồn sự thật kiến trúc và các quy tắc boundary.
 - `TEST_MATRIX.md`: kỳ vọng xác minh theo từng loại công việc.

@@ -41,3 +41,19 @@ When an agent gets stuck because project context is missing, improve the harness
 directly or record the missing context in `HARNESS_BACKLOG.md`.
 
 Good harness changes are small, durable, and useful to the next agent.
+
+## Harness Factory Port
+
+For requests that ask to design an agent team, create project-local skills,
+build an orchestrator workflow, or adapt `revfactory/harness` logic, use the
+ported project skill:
+
+```text
+.agents/skills/harness-factory/SKILL.md
+```
+
+This repo-native port writes to `.agents/skills/`, `.kiro/steering/`, and
+`docs/` by default. It does not assume Claude Code Agent Teams unless the user
+explicitly asks for `.claude/agents/` or `.claude/skills/` output.
+
+See `docs/HARNESS_FACTORY.md` for the porting boundary.
