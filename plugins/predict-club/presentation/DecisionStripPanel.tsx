@@ -2,8 +2,9 @@ import { usePredictClub } from './PredictClubContext'
 import { formatUsd, labelize } from './shared'
 
 export function DecisionStripPanel() {
-  const { club, primaryAction, toastMessage } = usePredictClub()
+  const { club, primaryAction, toastMessage, oracleSnapshot } = usePredictClub()
   const round = club.activeRound
+  const spot = oracleSnapshot.oracleState?.latest_price?.spot
 
   return (
     <>
@@ -12,7 +13,28 @@ export function DecisionStripPanel() {
           <div className="flex items-center gap-sm">
             <span className="font-data text-data-lg font-bold">BTC</span>
             <span className="font-data text-data-md text-on-surface-variant tabular-nums">
-              ${formatUsd(round.btcSpot)}
+              ${formatUsd(spot ?? round.btcSpot)}
+            </span>
+          </div>
+        </StripItem>
+        <Divider />
+        <StripItem label="Oracle">
+          <div className="flex items-center gap-1">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                oracleSnapshot.isHealthy ? 'bg-primary-fixed-dim animate-pulse' : 'bg-error'
+              }`}
+            />
+            <span
+              className={`font-data text-data-sm ${
+                oracleSnapshot.isHealthy ? 'text-primary-fixed-dim' : 'text-error'
+              }`}
+            >
+              {oracleSnapshot.isHealthy
+                ? 'Live'
+                : oracleSnapshot.lastUpdateMs
+                  ? 'Stale'
+                  : 'Connecting…'}
             </span>
           </div>
         </StripItem>
