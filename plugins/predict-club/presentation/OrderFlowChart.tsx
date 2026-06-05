@@ -49,32 +49,32 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
     return { spotData: spot, fwdData: fwd, basisData: basis }
   }, [prices])
 
-  // Create chart — useLayoutEffect ensures DOM is measured before paint
+  // Create chart — retry until container has dimensions (Shadow DOM may delay layout)
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
 
-    // Try immediately, then retry once via setTimeout if dimensions not ready
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let attempts = 0
+
     const tryInit = () => {
-      const w = el.offsetWidth
-      const h = el.offsetHeight
+      const w = el.offsetWidth || el.getBoundingClientRect().width
+      const h = el.offsetHeight || el.getBoundingClientRect().height
       if (w > 0 && h > 0 && !chartRef.current) {
-        return initChart(el, w, h)
+        initChart(el, w, h)
+        return
       }
-      return undefined
+      if (attempts++ < 20) {
+        timer = setTimeout(tryInit, 100)
+      }
     }
 
-    let cleanup = tryInit()
-    let timer: ReturnType<typeof setTimeout> | undefined
-    if (!cleanup) {
-      timer = setTimeout(() => {
-        cleanup = tryInit()
-      }, 50)
-    }
+    tryInit()
 
     return () => {
       clearTimeout(timer)
-      cleanup?.()
+      chartRef.current?.remove()
+      chartRef.current = null
     }
   }, [])
 
@@ -172,8 +172,6 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
 
     return () => {
       ro.disconnect()
-      chart.remove()
-      chartRef.current = null
     }
   }
 
@@ -190,17 +188,6 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
   const lastFwd = prices[prices.length - 1]?.forward
   const lastBasis = lastFwd && lastSpot ? lastFwd - lastSpot : 0
 
-  if (prices.length < 2) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-[260px] bg-[#07100d]">
-        <span className="font-data text-data-sm text-on-surface-variant opacity-60 flex flex-col items-center gap-2">
-          <span className="material-symbols-outlined text-3xl">candlestick_chart</span>
-          Waiting for oracle data…
-        </span>
-      </div>
-    )
-  }
-
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Legend bar */}
@@ -211,13 +198,13 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
         <div className="flex items-center gap-1">
           <span className="w-3 h-[2px] rounded bg-[#00e0b3] inline-block" />
           <span className="font-data text-[11px] text-[#00e0b3] tabular-nums">
-            Spot {lastSpot?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            Spot {lastSpot?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—'}
           </span>
         </div>
         <div className="flex items-center gap-1">
           <span className="w-3 h-[2px] rounded bg-[#b7c8e1] inline-block opacity-70" />
           <span className="font-data text-[11px] text-[#b7c8e1] tabular-nums">
-            Forward {lastFwd?.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            Forward {lastFwd?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—'}
           </span>
         </div>
         <div className="ml-auto flex items-center gap-xs">
@@ -234,14 +221,25 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
             {lastBasis >= 0 ? '+' : ''}
             {lastBasis.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </span>
-          <span className="font-data text-[10px] text-on-surface-variant tabular-nums">
-            ({lastSpot ? ((lastBasis / lastSpot) * 100).toFixed(3) : 0}%)
-          </span>
+          {lastSpot ? (
+            <span className="font-data text-[10px] text-on-surface-variant tabular-nums">
+              ({((lastBasis / lastSpot) * 100).toFixed(3)}%)
+            </span>
+          ) : null}
         </div>
       </div>
 
-      {/* Chart container */}
-      <div ref={containerRef} style={{ height: '280px', width: '100%' }} />
+      {/* Chart container — always mounted so useEffect fires once */}
+      <div ref={containerRef} style={{ height: '280px', width: '100%' }}>
+        {prices.length < 2 && (
+          <div className="flex items-center justify-center h-full bg-[#07100d]">
+            <span className="font-data text-[12px] text-[#83958d] opacity-60 flex flex-col items-center gap-2">
+              <span className="material-symbols-outlined text-3xl">candlestick_chart</span>
+              Waiting for oracle data…
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
