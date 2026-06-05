@@ -79,7 +79,10 @@ export function PredictionRoomPanel() {
         </div>
 
         {/* Chart */}
-        <div className="flex-1 min-h-[260px] border border-outline-variant bg-surface-container-lowest rounded-xl overflow-hidden flex flex-col">
+        <div
+          style={{ height: '320px' }}
+          className="border border-outline-variant bg-surface-container-lowest rounded-xl overflow-hidden flex flex-col shrink-0"
+        >
           <OrderFlowChart prices={oracleSnapshot.prices} />
         </div>
       </div>

@@ -229,8 +229,8 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
         </div>
       </div>
 
-      {/* Chart container — always mounted so useEffect fires once */}
-      <div ref={containerRef} style={{ height: '280px', width: '100%' }}>
+      {/* Chart container — flex-1 fills remaining block height */}
+      <div ref={containerRef} style={{ flex: 1, minHeight: 0, width: '100%' }}>
         {prices.length < 2 && (
           <div className="flex items-center justify-center h-full bg-[#07100d]">
             <span className="font-data text-[12px] text-[#83958d] opacity-60 flex flex-col items-center gap-2">
