@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useSyncExternalStore,
   type ReactNode,
@@ -21,6 +22,12 @@ import { transition } from '../domain/roundLifecycle'
 import { evaluateRiskGate, type RiskEvaluation } from '../domain/riskGate'
 import { computeConsensus, type ConsensusResult } from '../domain/indicatorConsensus'
 import * as store from '../data/clubStore'
+import {
+  subscribeOracle,
+  getSnapshot,
+  type ClubOracleSnapshot,
+} from '../infrastructure/deepbookOracleService'
+import { deriveSignalsFromPrices } from '../infrastructure/indicatorSignalGateway'
 import type {
   AssetBalances,
   ClubState,
@@ -49,6 +56,7 @@ export interface PredictClubContextValue {
   riskEvaluation: RiskEvaluation
   consensus: ConsensusResult
   toastMessage: string | null
+  oracleSnapshot: ClubOracleSnapshot
 }
 
 export interface PredictClubActions {
@@ -85,13 +93,70 @@ export function PredictClubProvider({
   const selectedOffer = storeState.selectedOffer
   const toastMessage = storeState.toastMessage
 
+  // Subscribe to oracle stream
+  const oracleSnapshot = useSyncExternalStore(subscribeOracle, getSnapshot)
+
+  // Real-time: update btcSpot, indicators, and auto-detect settlement
+  useEffect(() => {
+    return subscribeOracle((snap) => {
+      const spot = snap.oracleState?.latest_price?.spot
+      if (spot && spot > 0) {
+        // Update live BTC spot in active round
+        store.updateClub((c) => ({
+          ...c,
+          activeRound: { ...c.activeRound, btcSpot: spot },
+        }))
+      }
+
+      // Derive live indicators from price history
+      if (snap.prices.length >= 3) {
+        const liveSignals = deriveSignalsFromPrices(snap.prices)
+        store.updateClub((c) => ({
+          ...c,
+          activeRound: { ...c.activeRound, indicators: liveSignals },
+        }))
+      }
+
+      // Auto-settle when oracle status becomes 'settled'
+      const currentClub = store.getStoreState().club
+      if (
+        snap.oracleState?.status === 'settled' &&
+        snap.oracleState.settlement_price !== null &&
+        currentClub.activeRound.status === 'executed'
+      ) {
+        const settledPrice = snap.oracleState.settlement_price
+        const { direction, strike, lowerStrike, upperStrike } = currentClub.activeRound
+        let result: 'won' | 'lost' | 'void' = 'void'
+        if (direction === 'UP') result = settledPrice > strike ? 'won' : 'lost'
+        else if (direction === 'DOWN') result = settledPrice < strike ? 'won' : 'lost'
+        else if (direction === 'RANGE')
+          result =
+            settledPrice >= (lowerStrike ?? 0) && settledPrice <= (upperStrike ?? Infinity)
+              ? 'won'
+              : 'lost'
+
+        const outcome: SettlementOutcome = {
+          roundId: currentClub.activeRound.id,
+          result,
+          settledPrice,
+          settledAt: Date.now(),
+        }
+        const settled = settleRound(currentClub, outcome)
+        if (settled.ok && settled.club) {
+          store.setClub(settled.club)
+          store.setToast(`Oracle settled: ${result} @ ${settledPrice.toFixed(0)}`)
+        }
+      }
+    })
+  }, [])
+
   const round = club.activeRound
   const funding = useMemo(() => recommendFundingRoute(demoBalances, round), [round])
 
   const riskEvaluation = useMemo(
     () =>
       evaluateRiskGate({
-        oracleLastUpdate: Date.now() - 15000,
+        oracleLastUpdate: oracleSnapshot.lastUpdateMs || Date.now() - 15000,
         oracleStaleThresholdMs: 60000,
         expiryMinutes: round.expiryMinutes,
         minSafeExpiryMinutes: 5,
@@ -100,7 +165,7 @@ export function PredictClubProvider({
         signalBias: round.signalBias,
         indicators: round.indicators,
       }),
-    [round],
+    [round, oracleSnapshot.lastUpdateMs],
   )
 
   const consensus = useMemo(() => computeConsensus(round.indicators), [round.indicators])
@@ -124,7 +189,7 @@ export function PredictClubProvider({
 
       confirmRound: () => {
         const result = confirmRound(club, {
-          oracleLastUpdate: Date.now() - 15000,
+          oracleLastUpdate: oracleSnapshot.lastUpdateMs || Date.now() - 15000,
           oracleStaleThresholdMs: 60000,
           expiryMinutes: round.expiryMinutes,
           minSafeExpiryMinutes: 5,
@@ -241,7 +306,7 @@ export function PredictClubProvider({
         return { ok: result.ok, error: result.error }
       },
     }),
-    [club, round],
+    [club, round, oracleSnapshot.lastUpdateMs],
   )
 
   // ─── Primary Action ───
@@ -290,6 +355,7 @@ export function PredictClubProvider({
     riskEvaluation,
     consensus,
     toastMessage,
+    oracleSnapshot,
   }
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
