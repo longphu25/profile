@@ -462,7 +462,16 @@ select {
   color: var(--primary-fixed-dim);
 }
 
-.pc-room-body,
+.pc-room-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--md);
+  overflow: hidden;
+  padding: var(--md);
+}
+
 .pc-risk-body {
   flex: 1;
   min-height: 0;
@@ -518,6 +527,7 @@ select {
   border: 1px solid var(--outline-variant);
   border-radius: var(--radius-lg);
   background: var(--outline-variant);
+  flex-shrink: 0;
 }
 
 .pc-indicator-grid article {
@@ -550,7 +560,7 @@ select {
 .pc-chart-shell {
   position: relative;
   flex: 1;
-  min-height: 260px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
