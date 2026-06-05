@@ -3,6 +3,7 @@ import { recommendFundingRoute } from '../application/recommendFundingRoute'
 import { loadClubState, saveClubState } from '../data/localClubStore'
 import { fetchWalletBalances } from '../infrastructure/walletBalanceService'
 import { subscribeOracle, getSnapshot } from '../infrastructure/deepbookOracleService'
+import { computePayoutPreview } from '../domain/payoutPreview'
 import { OrderFlowChart } from './OrderFlowChart'
 import type {
   AssetBalances,
@@ -11,6 +12,7 @@ import type {
   ModalKind,
   RoundStatus,
 } from '../domain/types'
+import type { ClubOracleSnapshot, OraclePrice } from '../infrastructure/deepbookOracleService'
 import type { SuiContext, SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
 
 interface PredictClubRootProps {
@@ -112,6 +114,7 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
           connected={context.isConnected}
           fundingRoute={funding.route}
           mobileTab={mobileTab}
+          oracleSnapshot={oracleSnapshot}
           onPrimary={primary.action}
           primaryLabel={primary.label}
         />
@@ -136,6 +139,7 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
             club={club}
             modal={modal}
             offer={selectedOffer}
+            oracleSnapshot={oracleSnapshot}
             onClose={() => setModal(null)}
             onCreateRound={() => {
               updateRoundStatus('open')
@@ -252,7 +256,7 @@ function PredictionRoom({
 }: {
   club: ClubState
   mobileTab: MobileTab
-  oraclePrices: import('../infrastructure/deepbookOracleService').OraclePrice[]
+  oraclePrices: OraclePrice[]
 }) {
   const round = club.activeRound
   const visible = mobileTab === 'predict'
@@ -286,6 +290,7 @@ function RiskExecutionColumn({
   connected,
   fundingRoute,
   mobileTab,
+  oracleSnapshot,
   onPrimary,
   primaryLabel,
 }: {
@@ -293,10 +298,24 @@ function RiskExecutionColumn({
   connected: boolean
   fundingRoute: string
   mobileTab: MobileTab
+  oracleSnapshot: ClubOracleSnapshot
   onPrimary: () => void
   primaryLabel: string
 }) {
   const round = club.activeRound
+  const payoutPreview = computePayoutPreview({
+    direction: round.direction,
+    strike: round.strike,
+    lowerStrike: round.lowerStrike,
+    upperStrike: round.upperStrike,
+    amountDusdc: round.suggestedDusdc,
+    forward: oracleSnapshot.oracleState?.latest_price?.forward,
+    expiry: oracleSnapshot.oracleState?.expiry,
+    svi: oracleSnapshot.oracleState?.latest_svi,
+  })
+  const payoutValue = payoutPreview.indicativePayout
+    ? `+${formatUsd(payoutPreview.indicativePayout)} DUSDC`
+    : (payoutPreview.reason ?? 'Pricing preview unavailable')
   const visible = mobileTab === 'execution'
   const items = [
     ['Signal Received', true],
@@ -331,11 +350,7 @@ function RiskExecutionColumn({
         </section>
         <section className="pc-exposure-card">
           <DataRow label="Your Max Loss" value={`-${round.suggestedDusdc} DUSDC`} tone="error" />
-          <DataRow
-            label="Est. Payout"
-            value={`+${formatUsd(round.suggestedDusdc * 2.5)} DUSDC`}
-            tone="mint"
-          />
+          <DataRow label="Indicative Payout" value={payoutValue} tone="mint" />
         </section>
         <div className="pc-execute-box">
           <button
@@ -526,6 +541,7 @@ function ModalContent({
   club,
   balances,
   offer,
+  oracleSnapshot,
   onClose,
   onCreateRound,
 }: {
@@ -533,6 +549,7 @@ function ModalContent({
   club: ClubState
   balances: AssetBalances
   offer: EscrowOfferView | null
+  oracleSnapshot: ClubOracleSnapshot
   onClose: () => void
   onCreateRound: () => void
 }) {
@@ -546,7 +563,7 @@ function ModalContent({
     return <CreateEscrowModal club={club} onClose={onClose} />
   }
   if (modal === 'execute-trade') {
-    return <ExecuteTradeModal club={club} onClose={onClose} />
+    return <ExecuteTradeModal club={club} oracleSnapshot={oracleSnapshot} onClose={onClose} />
   }
   if (modal === 'scallop-borrow') {
     return <ScallopBorrowModal onClose={onClose} />
@@ -729,8 +746,29 @@ function CreateEscrowModal({ club, onClose }: { club: ClubState; onClose: () => 
   )
 }
 
-function ExecuteTradeModal({ club, onClose }: { club: ClubState; onClose: () => void }) {
+function ExecuteTradeModal({
+  club,
+  oracleSnapshot,
+  onClose,
+}: {
+  club: ClubState
+  oracleSnapshot: ClubOracleSnapshot
+  onClose: () => void
+}) {
   const round = club.activeRound
+  const payoutPreview = computePayoutPreview({
+    direction: round.direction,
+    strike: round.strike,
+    lowerStrike: round.lowerStrike,
+    upperStrike: round.upperStrike,
+    amountDusdc: round.suggestedDusdc,
+    forward: oracleSnapshot.oracleState?.latest_price?.forward,
+    expiry: oracleSnapshot.oracleState?.expiry,
+    svi: oracleSnapshot.oracleState?.latest_svi,
+  })
+  const payoutValue = payoutPreview.indicativePayout
+    ? `+${formatUsd(payoutPreview.indicativePayout)} DUSDC`
+    : (payoutPreview.reason ?? 'Pricing preview unavailable')
   return (
     <ModalBody
       footer={
@@ -764,11 +802,7 @@ function ExecuteTradeModal({ club, onClose }: { club: ClubState; onClose: () => 
       </div>
       <div className="pc-form-row pc-two-col">
         <MetricBox label="Max Loss" value={`-${round.suggestedDusdc} DUSDC`} tone="error" />
-        <MetricBox
-          label="Potential Payout"
-          value={`+${formatUsd(round.suggestedDusdc * 2.5)} DUSDC`}
-          tone="mint"
-        />
+        <MetricBox label="Indicative Payout" value={payoutValue} tone="mint" />
       </div>
       <div className="pc-info-card pc-wide">
         {['Wallet Connected', 'Sufficient DUSDC Balance', 'Oracle Validated', 'Expiry Safe'].map(

@@ -1,5 +1,6 @@
 import { usePredictClub } from './PredictClubContext'
 import { formatUsd } from './shared'
+import { computePayoutPreview } from '../domain/payoutPreview'
 import type { ModalKind } from '../domain/types'
 import { demoClubState } from '../domain/fixtures'
 
@@ -293,8 +294,18 @@ function FundToJoinBody() {
 
 /* ─── Execute My Trade ─── */
 function ExecuteTradeBody() {
-  const { club } = usePredictClub()
+  const { club, oracleSnapshot } = usePredictClub()
   const round = club.activeRound
+  const payoutPreview = computePayoutPreview({
+    direction: round.direction,
+    strike: round.strike,
+    lowerStrike: round.lowerStrike,
+    upperStrike: round.upperStrike,
+    amountDusdc: round.suggestedDusdc,
+    forward: oracleSnapshot.oracleState?.latest_price?.forward,
+    expiry: oracleSnapshot.oracleState?.expiry,
+    svi: oracleSnapshot.oracleState?.latest_svi,
+  })
   return (
     <>
       {/* Round Summary */}
@@ -361,11 +372,17 @@ function ExecuteTradeBody() {
         </div>
         <div className="flex-1 border border-primary-fixed-dim/30 bg-primary-fixed-dim/5 p-sm flex flex-col">
           <div className="font-label text-label-caps text-primary-fixed-dim mb-xs">
-            Potential Payout
+            Indicative Payout
           </div>
-          <div className="font-data text-data-lg text-primary-fixed-dim">
-            +{formatUsd(round.suggestedDusdc * 2.5)} DUSDC
-          </div>
+          {payoutPreview.indicativePayout ? (
+            <div className="font-data text-data-lg text-primary-fixed-dim">
+              +{formatUsd(payoutPreview.indicativePayout)} DUSDC
+            </div>
+          ) : (
+            <div className="font-data text-data-sm text-on-surface-variant">
+              {payoutPreview.reason ?? 'Pricing preview unavailable'}
+            </div>
+          )}
         </div>
       </div>
       {/* Checklist */}
@@ -573,13 +590,14 @@ function ScallopBorrowBody() {
 function ClaimSettlementBody() {
   const { club } = usePredictClub()
   const round = club.activeRound
+  const claimable = club.claims.find((claim) => claim.roundId === round.id)
   return (
     <>
       <Row label="Round" value={round.id} />
       <Row label="Result" value="Won" tone="mint" />
       <Row
         label="Claimable Amount"
-        value={`${formatUsd(round.suggestedDusdc * 2.5)} DUSDC`}
+        value={claimable ? `${formatUsd(claimable.amountDusdc)} DUSDC` : 'Pending settlement'}
         tone="mint"
       />
       <Row label="Keeper Option" value="Available" />
