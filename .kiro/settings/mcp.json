@@ -4,6 +4,10 @@
       "command": "/Users/longphu/.bun/bin/qmd",
       "args": ["mcp"],
       "disabled": false
+    },
+    "sui": {
+      "url": "https://sui.mcp.kapa.ai",
+      "disabled": false
     }
   }
 }
