@@ -18,6 +18,8 @@ import {
   type CreateEscrowParams,
 } from '../application/manageEscrow'
 import { settleRound, type SettlementOutcome } from '../application/settleRound'
+import { executeTradeplan } from '../application/executeTradeplan'
+import { createSuiPredictGateway } from '../infrastructure/suiPredictGateway'
 import { transition } from '../domain/roundLifecycle'
 import { evaluateRiskGate, type RiskEvaluation } from '../domain/riskGate'
 import { computeConsensus, type ConsensusResult } from '../domain/indicatorConsensus'
@@ -64,7 +66,7 @@ export interface PredictClubActions {
   confirmRound: () => ConfirmRoundResult
   pledgeToRound: (memberId: string, amount: number) => { ok: boolean; error?: string }
   publishRound: () => { ok: boolean; error?: string }
-  executeRound: () => { ok: boolean; error?: string }
+  executeRound: () => Promise<{ ok: boolean; error?: string }>
   settleRound: (outcome: SettlementOutcome) => { ok: boolean; error?: string }
   createEscrowOffer: (params: CreateEscrowParams) => { ok: boolean; error?: string }
   fillEscrowOffer: (offerId: string) => { ok: boolean; error?: string }
@@ -234,38 +236,68 @@ export function PredictClubProvider({
         return { ok: result.ok, error: result.error }
       },
 
-      executeRound: () => {
-        // Support from confirmed or funding
-        if (club.activeRound.status === 'confirmed' || club.activeRound.status === 'funding') {
+      executeRound: async () => {
+        const address = host?.getSuiContext().address
+        if (!address) return { ok: false, error: 'Wallet not connected' }
+
+        const oracle = oracleSnapshot.oracleState
+        const selectedOracleId = oracleSnapshot.selectedOracleId
+        if (!selectedOracleId || !oracle) {
+          return { ok: false, error: 'No active oracle available' }
+        }
+
+        // Find manager ID for this wallet
+        const gateway = createSuiPredictGateway()
+        const managerId = await gateway.fetchManagerId(address)
+        if (!managerId) {
+          return { ok: false, error: 'No predict manager found — create one first' }
+        }
+
+        // Find member ID from wallet address
+        const member =
+          club.members.find((m) =>
+            m.wallet.toLowerCase().includes(address.slice(-3).toLowerCase()),
+          ) ?? club.members[0]
+
+        // Fetch oracle entry for tickSize/minStrike
+        const oracleEntry = oracleSnapshot.oracles.find((o) => o.oracle_id === selectedOracleId)
+
+        const result = await executeTradeplan(
+          club,
+          member.id,
+          {
+            direction: round.direction,
+            strike: round.strike,
+            lowerStrike: round.lowerStrike,
+            upperStrike: round.upperStrike,
+            amountDusdc: round.suggestedDusdc,
+            oracleId: selectedOracleId,
+            expiryMs: oracleEntry?.expiry ?? round.expiryMinutes * 60_000 + Date.now(),
+            expiryMinutes: round.expiryMinutes,
+            managerId,
+            walletAddress: address,
+            tickSize: (oracleEntry as any)?.tick_size ?? 1_000_000_000,
+            minStrike: (oracleEntry as any)?.min_strike ?? 50_000_000_000_000,
+          },
+          gateway,
+          async (tx) => {
+            const txResult = await host!.signAndExecuteTransaction(tx)
+            return { digest: (txResult as any).digest ?? '' }
+          },
+        )
+
+        if (result.ok && result.club) {
+          store.setClub(result.club)
           store.updateClub((c) => ({
             ...c,
             activeRound: { ...c.activeRound, status: 'executed' },
-            members: c.members.map((m) =>
-              m.state === 'accepted' || m.state === 'pledged'
-                ? { ...m, state: 'executed' as const }
-                : m,
-            ),
           }))
-          store.setToast('Trade executed (simulated)')
+          store.setToast(`Trade executed — ${result.digest?.slice(0, 12)}…`)
           store.setModal(null)
-          return { ok: true }
+        } else {
+          store.setToast(result.error ?? 'Execution failed')
         }
-        const result = transition(club.activeRound.status, 'execute')
-        if (result.ok && result.newStatus) {
-          store.updateClub((c) => ({
-            ...c,
-            activeRound: { ...c.activeRound, status: result.newStatus! },
-            members: c.members.map((m) =>
-              m.state === 'accepted' || m.state === 'pledged'
-                ? { ...m, state: 'executed' as const }
-                : m,
-            ),
-          }))
-          store.setToast('Trade executed (simulated)')
-          store.setModal(null)
-          return { ok: true }
-        }
-        return { ok: false, error: result.error }
+        return { ok: result.ok, error: result.error }
       },
 
       settleRound: (outcome: SettlementOutcome) => {

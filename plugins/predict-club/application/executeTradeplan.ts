@@ -10,9 +10,15 @@ export interface TradePlan {
   lowerStrike?: number
   upperStrike?: number
   amountDusdc: number
-  oracle: string
+  oracleId: string
+  /** Oracle expiry timestamp in ms */
+  expiryMs: number
   expiryMinutes: number
-  predictManagerAddress: string
+  managerId: string
+  walletAddress: string
+  /** From oracle entry */
+  tickSize: number
+  minStrike: number
 }
 
 export interface ExecuteResult {
@@ -27,31 +33,32 @@ export interface TransactionResult {
   effects?: unknown
 }
 
-/** Gateway interface for PTB construction (implemented in infrastructure layer) */
 export interface SuiPredictGateway {
   buildMintTx(params: {
-    predictManagerId: string
+    walletAddress: string
+    managerId: string
     direction: Direction
     strike: number
     amountDusdc: number
     oracleId: string
     expiry: number
-  }): Transaction
+    tickSize: number
+    minStrike: number
+  }): Promise<Transaction>
 
   buildMintRangeTx(params: {
-    predictManagerId: string
+    walletAddress: string
+    managerId: string
     lowerStrike: number
     upperStrike: number
     amountDusdc: number
     oracleId: string
     expiry: number
-  }): Transaction
+    tickSize: number
+    minStrike: number
+  }): Promise<Transaction>
 }
 
-/**
- * Coordinates trade execution: risk gate → PTB construction → wallet sign → state update.
- * No private key handling at any point.
- */
 export async function executeTradeplan(
   club: ClubState,
   memberId: string,
@@ -59,12 +66,12 @@ export async function executeTradeplan(
   gateway: SuiPredictGateway,
   signer: (tx: Transaction) => Promise<TransactionResult>,
 ): Promise<ExecuteResult> {
-  // 1. Build RiskGateInput from club state and evaluate
+  // 1. Risk gate
   const consensus = computeConsensus(club.activeRound.indicators)
   const member = club.members.find((m) => m.id === memberId)
 
   const riskInput: RiskGateInput = {
-    oracleLastUpdate: Date.now(), // assume fresh for execution context
+    oracleLastUpdate: Date.now(),
     oracleStaleThresholdMs: 60_000,
     expiryMinutes: plan.expiryMinutes,
     minSafeExpiryMinutes: 5,
@@ -73,54 +80,58 @@ export async function executeTradeplan(
     signalBias: consensus.bias,
     indicators: club.activeRound.indicators,
   }
-
   const riskEval = evaluateRiskGate(riskInput)
-
-  // 2. If risk state is 'blocked', return error with blocking reasons
   if (riskEval.state === 'blocked') {
     const reasons = riskEval.checks.filter((c) => !c.passed).map((c) => c.message ?? c.label)
     return { ok: false, error: `Risk gate blocked: ${reasons.join('; ')}` }
   }
 
-  // 3. Build PTB via gateway based on direction
+  // 2. Build PTB
   let transaction: Transaction
-  if (plan.direction === 'RANGE') {
-    transaction = gateway.buildMintRangeTx({
-      predictManagerId: plan.predictManagerAddress,
-      lowerStrike: plan.lowerStrike!,
-      upperStrike: plan.upperStrike!,
-      amountDusdc: plan.amountDusdc,
-      oracleId: plan.oracle,
-      expiry: plan.expiryMinutes,
-    })
-  } else {
-    transaction = gateway.buildMintTx({
-      predictManagerId: plan.predictManagerAddress,
-      direction: plan.direction,
-      strike: plan.strike,
-      amountDusdc: plan.amountDusdc,
-      oracleId: plan.oracle,
-      expiry: plan.expiryMinutes,
-    })
+  try {
+    if (plan.direction === 'RANGE') {
+      transaction = await gateway.buildMintRangeTx({
+        walletAddress: plan.walletAddress,
+        managerId: plan.managerId,
+        lowerStrike: plan.lowerStrike!,
+        upperStrike: plan.upperStrike!,
+        amountDusdc: plan.amountDusdc,
+        oracleId: plan.oracleId,
+        expiry: plan.expiryMs,
+        tickSize: plan.tickSize,
+        minStrike: plan.minStrike,
+      })
+    } else {
+      transaction = await gateway.buildMintTx({
+        walletAddress: plan.walletAddress,
+        managerId: plan.managerId,
+        direction: plan.direction,
+        strike: plan.strike,
+        amountDusdc: plan.amountDusdc,
+        oracleId: plan.oracleId,
+        expiry: plan.expiryMs,
+        tickSize: plan.tickSize,
+        minStrike: plan.minStrike,
+      })
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'PTB build failed'
+    return { ok: false, error: message }
   }
 
-  // 4. Call signer to get wallet signature
+  // 3. Sign & execute
   try {
     const result = await signer(transaction)
 
-    // 5. On success: transition member state to 'executed', store digest
     const updatedMembers = club.members.map((m) =>
       m.id === memberId ? { ...m, state: 'executed' as const } : m,
     )
-
-    const updatedClub: ClubState = {
-      ...club,
-      members: updatedMembers,
+    return {
+      ok: true,
+      digest: result.digest,
+      club: { ...club, members: updatedMembers },
     }
-
-    return { ok: true, digest: result.digest, club: updatedClub }
   } catch (error) {
-    // 6. On failure: keep member state as 'accepted', return error
     const message = error instanceof Error ? error.message : 'Transaction failed'
     return { ok: false, error: message }
   }

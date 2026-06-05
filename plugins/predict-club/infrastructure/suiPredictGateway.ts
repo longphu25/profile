@@ -1,116 +1,254 @@
 import { Transaction } from '@mysten/sui/transactions'
 import type { Direction } from '../domain/types'
 
-/**
- * DeepBook Predict package address on Sui Testnet.
- * This is the move package containing mint, mint_range, and claim entry functions.
- */
-const PREDICT_PACKAGE_ID = '0x0000000000000000000000000000000000000000000000000000000000000001' // placeholder — replace with deployed testnet package
-
-/**
- * DeepBook pool address used for SUI→USDC swap on testnet.
- */
-const DEEPBOOK_POOL_ID = '0x0000000000000000000000000000000000000000000000000000000000000002' // placeholder — replace with testnet pool
-
-/**
- * Module names within the predict package.
- */
-const PREDICT_MODULE = 'predict'
-const DEEPBOOK_SWAP_MODULE = 'pool'
+const PREDICT_SERVER = 'https://predict-server.testnet.mystenlabs.com'
+const PREDICT_ID = '0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a38028a'
+const PREDICT_PACKAGE = '0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138'
+const DUSDC_TYPE =
+  '0xe95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC'
+const DUSDC_DECIMALS = 6
+const STRIKE_SCALE = 1e9
 
 export interface SuiPredictGateway {
   buildMintTx(params: {
-    predictManagerId: string
+    walletAddress: string
+    managerId: string
     direction: Direction
     strike: number
     amountDusdc: number
     oracleId: string
     expiry: number
-  }): Transaction
+    tickSize: number
+    minStrike: number
+  }): Promise<Transaction>
 
   buildMintRangeTx(params: {
-    predictManagerId: string
+    walletAddress: string
+    managerId: string
     lowerStrike: number
     upperStrike: number
     amountDusdc: number
     oracleId: string
     expiry: number
-  }): Transaction
+    tickSize: number
+    minStrike: number
+  }): Promise<Transaction>
 
-  buildClaimTx(params: { predictManagerId: string; positionId: string }): Transaction
+  buildClaimTx(params: {
+    walletAddress: string
+    managerId: string
+    oracleId: string
+    expiry: number
+    strike: number
+    isUp: boolean
+    tickSize: number
+    minStrike: number
+  }): Promise<Transaction>
 
-  buildSwapSuiToUsdcTx(params: {
-    amountSui: number
-    minUsdcOut: number
-    preserveGasSui: number
-  }): Transaction
+  buildCreateManagerTx(walletAddress: string): Transaction
+
+  /** Fetch the manager ID owned by this wallet, or null if none. */
+  fetchManagerId(walletAddress: string): Promise<string | null>
 }
 
-/**
- * Creates a SuiPredictGateway that constructs Programmable Transaction Blocks
- * for DeepBook Predict operations. Does NOT sign — returns Transaction objects
- * ready for wallet signing.
- */
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+function snapStrike(usd: number, tickSize: number, minStrike: number): number {
+  const raw = Math.floor(usd * STRIKE_SCALE)
+  if (tickSize <= 0) return Math.max(raw, minStrike)
+  const offset = Math.max(raw - minStrike, 0)
+  return minStrike + Math.round(offset / tickSize) * tickSize
+}
+
+async function fetchDusdcCoins(
+  walletAddress: string,
+): Promise<{ coinObjectId: string; balance: string }[]> {
+  const res = await fetch('https://fullnode.testnet.sui.io:443', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'suix_getCoins',
+      params: [walletAddress, DUSDC_TYPE, null, 50],
+    }),
+  })
+  const data = (await res.json()) as {
+    result?: { data: { coinObjectId: string; balance: string }[] }
+  }
+  return data.result?.data ?? []
+}
+
+function mergeDusdcAndSplit(tx: Transaction, coins: { coinObjectId: string }[], amountRaw: number) {
+  const primary = coins[0].coinObjectId
+  if (coins.length > 1) {
+    tx.mergeCoins(
+      tx.object(primary),
+      coins.slice(1).map((c) => tx.object(c.coinObjectId)),
+    )
+  }
+  const [depositCoin] = tx.splitCoins(tx.object(primary), [tx.pure.u64(amountRaw)])
+  return depositCoin
+}
+
+// ── factory ───────────────────────────────────────────────────────────────────
+
 export function createSuiPredictGateway(): SuiPredictGateway {
   return {
-    buildMintTx(params) {
+    buildCreateManagerTx(walletAddress) {
       const tx = new Transaction()
+      tx.setSender(walletAddress)
+      tx.moveCall({ target: `${PREDICT_PACKAGE}::predict::create_manager` })
+      return tx
+    },
 
+    async fetchManagerId(walletAddress) {
+      try {
+        const res = await fetch(`${PREDICT_SERVER}/managers`)
+        const managers = await res.json()
+        if (!Array.isArray(managers)) return null
+        const found = managers.find(
+          (m: any) => m.owner?.toLowerCase() === walletAddress.toLowerCase(),
+        )
+        return found?.manager_id ?? null
+      } catch {
+        return null
+      }
+    },
+
+    async buildMintTx(params) {
+      const {
+        walletAddress,
+        managerId,
+        direction,
+        strike,
+        amountDusdc,
+        oracleId,
+        expiry,
+        tickSize,
+        minStrike,
+      } = params
+
+      const amountRaw = Math.floor(amountDusdc * 10 ** DUSDC_DECIMALS)
+      const strikeRaw = snapStrike(strike, tickSize, minStrike)
+      const coins = await fetchDusdcCoins(walletAddress)
+      if (coins.length === 0) throw new Error('No DUSDC coins found in wallet')
+
+      const tx = new Transaction()
+      tx.setSender(walletAddress)
+
+      const depositCoin = mergeDusdcAndSplit(tx, coins, amountRaw)
+
+      // Deposit into manager
       tx.moveCall({
-        target: `${PREDICT_PACKAGE_ID}::${PREDICT_MODULE}::mint`,
+        target: `${PREDICT_PACKAGE}::predict_manager::deposit`,
+        typeArguments: [DUSDC_TYPE],
+        arguments: [tx.object(managerId), depositCoin],
+      })
+
+      // Build market key
+      const isUp = direction === 'UP'
+      const [marketKey] = tx.moveCall({
+        target: `${PREDICT_PACKAGE}::market_key::${isUp ? 'up' : 'down'}`,
+        arguments: [tx.pure.id(oracleId), tx.pure.u64(expiry), tx.pure.u64(strikeRaw)],
+      })
+
+      // Mint
+      tx.moveCall({
+        target: `${PREDICT_PACKAGE}::predict::mint`,
+        typeArguments: [DUSDC_TYPE],
         arguments: [
-          tx.object(params.predictManagerId),
-          tx.pure.u8(params.direction === 'UP' ? 0 : 1),
-          tx.pure.u64(params.strike),
-          tx.pure.u64(params.amountDusdc),
-          tx.object(params.oracleId),
-          tx.pure.u64(params.expiry),
+          tx.object(PREDICT_ID),
+          tx.object(managerId),
+          tx.object(oracleId),
+          marketKey,
+          tx.pure.u64(amountRaw),
+          tx.object.clock(),
         ],
       })
 
       return tx
     },
 
-    buildMintRangeTx(params) {
+    async buildMintRangeTx(params) {
+      const {
+        walletAddress,
+        managerId,
+        lowerStrike,
+        upperStrike,
+        amountDusdc,
+        oracleId,
+        expiry,
+        tickSize,
+        minStrike,
+      } = params
+
+      const amountRaw = Math.floor(amountDusdc * 10 ** DUSDC_DECIMALS)
+      const lowerRaw = snapStrike(lowerStrike, tickSize, minStrike)
+      const upperRaw = snapStrike(upperStrike, tickSize, minStrike)
+      const coins = await fetchDusdcCoins(walletAddress)
+      if (coins.length === 0) throw new Error('No DUSDC coins found in wallet')
+
       const tx = new Transaction()
+      tx.setSender(walletAddress)
+
+      const depositCoin = mergeDusdcAndSplit(tx, coins, amountRaw)
 
       tx.moveCall({
-        target: `${PREDICT_PACKAGE_ID}::${PREDICT_MODULE}::mint_range`,
+        target: `${PREDICT_PACKAGE}::predict_manager::deposit`,
+        typeArguments: [DUSDC_TYPE],
+        arguments: [tx.object(managerId), depositCoin],
+      })
+
+      const [rangeKey] = tx.moveCall({
+        target: `${PREDICT_PACKAGE}::range_key::new`,
         arguments: [
-          tx.object(params.predictManagerId),
-          tx.pure.u64(params.lowerStrike),
-          tx.pure.u64(params.upperStrike),
-          tx.pure.u64(params.amountDusdc),
-          tx.object(params.oracleId),
-          tx.pure.u64(params.expiry),
+          tx.pure.id(oracleId),
+          tx.pure.u64(expiry),
+          tx.pure.u64(lowerRaw),
+          tx.pure.u64(upperRaw),
+        ],
+      })
+
+      tx.moveCall({
+        target: `${PREDICT_PACKAGE}::predict::mint_range`,
+        typeArguments: [DUSDC_TYPE],
+        arguments: [
+          tx.object(PREDICT_ID),
+          tx.object(managerId),
+          tx.object(oracleId),
+          rangeKey,
+          tx.pure.u64(amountRaw),
+          tx.object.clock(),
         ],
       })
 
       return tx
     },
 
-    buildClaimTx(params) {
-      const tx = new Transaction()
+    async buildClaimTx(params) {
+      const { walletAddress, managerId, oracleId, expiry, strike, isUp, tickSize, minStrike } =
+        params
 
-      tx.moveCall({
-        target: `${PREDICT_PACKAGE_ID}::${PREDICT_MODULE}::claim`,
-        arguments: [tx.object(params.predictManagerId), tx.object(params.positionId)],
+      const strikeRaw = snapStrike(strike, tickSize, minStrike)
+      const tx = new Transaction()
+      tx.setSender(walletAddress)
+
+      const [marketKey] = tx.moveCall({
+        target: `${PREDICT_PACKAGE}::market_key::${isUp ? 'up' : 'down'}`,
+        arguments: [tx.pure.id(oracleId), tx.pure.u64(expiry), tx.pure.u64(strikeRaw)],
       })
 
-      return tx
-    },
-
-    buildSwapSuiToUsdcTx(params) {
-      const tx = new Transaction()
-
-      // Split out the swap amount from gas coin, preserving gas
-      const swapAmountMist = params.amountSui * 1_000_000_000
-      const preserveMist = params.preserveGasSui * 1_000_000_000
-      const [swapCoin] = tx.splitCoins(tx.gas, [swapAmountMist - preserveMist])
-
       tx.moveCall({
-        target: `${PREDICT_PACKAGE_ID}::${DEEPBOOK_SWAP_MODULE}::swap_exact_base_for_quote`,
-        arguments: [tx.object(DEEPBOOK_POOL_ID), swapCoin, tx.pure.u64(params.minUsdcOut)],
+        target: `${PREDICT_PACKAGE}::predict::claim`,
+        typeArguments: [DUSDC_TYPE],
+        arguments: [
+          tx.object(PREDICT_ID),
+          tx.object(managerId),
+          tx.object(oracleId),
+          marketKey,
+          tx.object.clock(),
+        ],
       })
 
       return tx
