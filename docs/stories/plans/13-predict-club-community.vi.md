@@ -165,11 +165,36 @@ Ranh giới hiện tại:
 
 Kế hoạch tiếp theo:
 
-1. Thêm wallet-mocked Playwright route hoặc fixture để test nhánh connected
+1. Thêm `deepbookPredictPricingService` để load oracle state, SVI latest/history,
+   manager state và trả về quote model đã normalize cho round đang hoạt động.
+2. Thêm pricing Predict qua `devInspect`: ABOVE/BELOW dùng
+   `predict::get_trade_amounts`, RANGE dùng
+   `predict::get_range_trade_amounts`.
+3. Giữ fair-value SVI local làm fallback suy giảm cho `Win Probability` và UI
+   giải thích, kèm lý do `Preview unavailable` rõ ràng khi thiếu forward, SVI,
+   strike, quantity, wallet hoặc manager.
+4. Cập nhật nhãn kết quả từ payout-only sang `Estimated cost`, `Gross if win`,
+   `Potential profit` và `Risk/Reward`.
+5. Thêm unit test cho scale SVI và fair-value math, cộng với test mock
+   `devInspectTransactionBlock` cho ABOVE, BELOW, RANGE, stale SVI và quote
+   unavailable.
+6. Thêm wallet-mocked Playwright route hoặc fixture để test nhánh connected
    wallet mà không phụ thuộc browser extension.
-2. Thêm fixture API/contract cho PredictManager để test trạng thái `Create
+7. Thêm fixture API/contract cho PredictManager để test trạng thái `Create
    Manager` và manager-ready một cách deterministic.
-3. Thêm fixture số dư DUSDC và test luồng `Pledge DUSDC` trong funding modal.
-4. Thêm execution-preview test cho `Execute My Trade` khi có thể đặt round vào
+8. Thêm fixture số dư DUSDC và test luồng `Pledge DUSDC` trong funding modal.
+9. Thêm execution-preview test cho `Execute My Trade` khi có thể đặt round vào
    trạng thái executable ổn định.
-5. Viết manual wallet runbook cho giao dịch testnet khi có test wallet đã được nạp tiền.
+10. Thêm support portfolio cho manager-owned positions:
+   - bảng binary `positions`
+   - bảng RANGE `range_positions`
+   - live close preview qua `devInspect`
+   - hiển thị settled payout
+   - chart và table cho trạng thái mixed binary/range
+11. Thêm vault context vào execution UX:
+   - vault balance
+   - estimated open position payout / MTM
+   - max payout coverage
+   - available liquidity
+   - PLP wallet/share display tùy chọn cho club LP flow sau này
+12. Viết manual wallet runbook cho giao dịch testnet khi có test wallet đã được nạp tiền.

@@ -4,6 +4,13 @@ Tài liệu này ghi lại logic hiện tại cho `Win Probability`, `Indicative
 
 > Trạng thái hiện tại: đây là preview phía UI, không phải settlement rule on-chain. Con số dùng để định hướng rủi ro trước khi execute.
 
+> Cập nhật 2026-06-06: sau khi inspect UI public `predict.magicdima.xyz`,
+> pricing thực thi nên ưu tiên quote từ Move qua `devInspectTransactionBlock`
+> (`predict::get_trade_amounts` hoặc `predict::get_range_trade_amounts`). Công
+> thức SVI trong tài liệu này chỉ nên dùng làm fair-value fallback/giải thích
+> xác suất. Xem thêm
+> [`predict-club-devinspect-pricing.vi.md`](predict-club-devinspect-pricing.vi.md).
+
 ## Nguồn Dữ Liệu
 
 Predict Club lấy dữ liệu từ Predict Testnet server:
@@ -76,12 +83,16 @@ spotUsd = latest_price.spot / 1e9
 SVI params được normalize:
 
 ```text
-a = raw.a / 1e6
-b = raw.b / 1e6
+a = raw.a / 1e9
+b = raw.b / 1e9
 rho = (raw.rho_negative ? -1 : 1) * raw.rho / 1e9
-m = (raw.m_negative ? -1 : 1) * raw.m / 1e6
-sigma = raw.sigma / 1e6
+m = (raw.m_negative ? -1 : 1) * raw.m / 1e9
+sigma = raw.sigma / 1e9
 ```
+
+Scale `1e9` ở trên được rút ra từ bundle public của DeepBook Predict testnet.
+Nếu API hoặc contract đổi scale trong tương lai, phải xác nhận lại bằng dữ liệu
+server và quote `devInspect`.
 
 Time to expiry:
 

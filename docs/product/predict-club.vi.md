@@ -35,6 +35,11 @@ nạp vốn Predict Club và sàn trao đổi escrow P2P.
   sẵn sàng DUSDC trước khi thực thi giao dịch.
 - Oracle cũ, expiry không an toàn, thiếu DUSDC hoặc đồng thuận chỉ báo
   `no-trade` phải chặn hoặc cảnh báo trước khi thực thi.
+- Execution preview phải ưu tiên quote từ contract Predict qua `devInspect`.
+  Fair value SVI local có thể dùng để giải thích `Win Probability` hoặc làm
+  fallback suy giảm, nhưng không được trình bày như odds thực thi được đảm bảo.
+- Nhãn kết quả phải tách rõ `Estimated cost`, `Gross if win` và
+  `Potential profit`; không gọi net profit là gross payout.
 - Mọi thực thi dùng vốn gộp thuộc thiết kế vault V2 và phải bị ràng buộc bởi
   policy rõ ràng.
 
@@ -192,5 +197,6 @@ hành động kết nối ví ban đầu.
 - `docs/decisions/predict-club-architecture.md`
 - `docs/decisions/predict-club-funding-escrow.md`
 - `docs/deepbook/onchain-finance/deepbook-predict.md`
+- `docs/deepbook/predict-club-devinspect-pricing.vi.md`
 - `docs/stories/plans/09-predict-manager-bot-architecture.md`
 - `docs/stories/plans/08-deepbook-predict-user-assist.md`

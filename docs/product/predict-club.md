@@ -35,6 +35,11 @@ Funding Router and P2P escrow exchange.
   readiness before trade execution.
 - Stale oracle, unsafe expiry, missing DUSDC, or `no-trade` indicator consensus
   must block or warn before execution.
+- Execution preview must prefer a contract quote from Predict `devInspect`.
+  Local SVI fair value may explain `Win Probability` or serve as degraded
+  fallback, but it must not be presented as guaranteed executable odds.
+- Potential outcome labels must distinguish `Estimated cost`, `Gross if win`,
+  and `Potential profit`; do not label net profit as gross payout.
 - Any pooled-capital execution belongs to the V2 vault design and must be
   bounded by explicit policy.
 
@@ -195,5 +200,6 @@ initial wallet connection action.
 - `docs/decisions/predict-club-architecture.md`
 - `docs/decisions/predict-club-funding-escrow.md`
 - `docs/deepbook/onchain-finance/deepbook-predict.md`
+- `docs/deepbook/predict-club-devinspect-pricing.md`
 - `docs/stories/plans/09-predict-manager-bot-architecture.md`
 - `docs/stories/plans/08-deepbook-predict-user-assist.md`

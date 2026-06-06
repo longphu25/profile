@@ -292,13 +292,38 @@ Known boundaries:
 
 Next plan:
 
-1. Add a wallet-mocked Playwright route or fixture so the test can cover the
+1. Add `deepbookPredictPricingService` to load oracle state, SVI latest/history,
+   manager state, and produce a normalized quote model for the active round.
+2. Add Predict `devInspect` pricing for ABOVE/BELOW via
+   `predict::get_trade_amounts` and RANGE via
+   `predict::get_range_trade_amounts`.
+3. Keep local SVI fair-value as a degraded fallback for `Win Probability` and
+   explanatory UI, with explicit `Preview unavailable` reasons when forward,
+   SVI, strike, quantity, wallet, or manager data is missing.
+4. Update outcome labels from payout-only wording to `Estimated cost`,
+   `Gross if win`, `Potential profit`, and `Risk/Reward`.
+5. Add unit tests for SVI scaling and fair-value math, plus mocked
+   `devInspectTransactionBlock` quote tests for ABOVE, BELOW, RANGE, stale SVI,
+   and unavailable quote.
+6. Add a wallet-mocked Playwright route or fixture so the test can cover the
    connected-wallet branch without relying on a browser extension.
-2. Add a PredictManager API/contract fixture so `Create Manager` and
+7. Add a PredictManager API/contract fixture so `Create Manager` and
    manager-ready states can be tested deterministically.
-3. Add a DUSDC balance fixture and exercise `Pledge DUSDC` through the funding
+8. Add a DUSDC balance fixture and exercise `Pledge DUSDC` through the funding
    modal.
-4. Add an execution-preview test for `Execute My Trade` once the round can be
+9. Add an execution-preview test for `Execute My Trade` once the round can be
    placed in a deterministic executable state.
-5. Document the exact manual wallet runbook for testnet transactions once a
+10. Add portfolio support for manager-owned positions:
+   - binary `positions` table
+   - RANGE `range_positions` table
+   - live close preview through `devInspect`
+   - settled payout display
+   - mixed binary/range chart and table states
+11. Add vault context to execution UX:
+   - vault balance
+   - estimated open position payout / MTM
+   - max payout coverage
+   - available liquidity
+   - optional PLP wallet/share display for future club LP flows
+12. Document the exact manual wallet runbook for testnet transactions once a
    known funded test wallet is available.
