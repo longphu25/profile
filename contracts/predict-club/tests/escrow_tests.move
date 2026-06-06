@@ -44,11 +44,12 @@ module predict_club::escrow_tests {
             assert!(e.balance_value() == 1000);
             test_scenario::return_shared(e);
         };
+        // Approve — note parameter order: escrow first, cap second
         scenario.next_tx(APPROVER);
         {
             let cap = test_scenario::take_from_address<ApproverCap>(&scenario, APPROVER);
             let mut e = test_scenario::take_shared<Escrow<SUI>>(&scenario);
-            escrow::approve_release(&cap, &mut e, scenario.ctx());
+            escrow::approve_release(&mut e, &cap, scenario.ctx());
             assert!(e.approved());
             test_scenario::return_shared(e);
             test_scenario::return_to_address(APPROVER, cap);
@@ -73,7 +74,7 @@ module predict_club::escrow_tests {
         {
             let cap = test_scenario::take_from_address<ApproverCap>(&scenario, APPROVER);
             let mut e = test_scenario::take_shared<Escrow<SUI>>(&scenario);
-            escrow::approve_release(&cap, &mut e, scenario.ctx());
+            escrow::approve_release(&mut e, &cap, scenario.ctx());
             test_scenario::return_shared(e);
             test_scenario::return_to_address(APPROVER, cap);
         };
@@ -82,22 +83,20 @@ module predict_club::escrow_tests {
         scenario.next_epoch(BENEFICIARY);
         {
             let mut e = test_scenario::take_shared<Escrow<SUI>>(&scenario);
-            escrow::release_funds(&mut e, scenario.ctx());
+            let (coin, receipt) = escrow::release_funds(&mut e, scenario.ctx());
             assert!(e.released());
+            assert!(receipt.receipt_released_to() == BENEFICIARY);
+            assert!(receipt.receipt_amount() == 500);
+            // Transfer to beneficiary (composable pattern)
+            transfer::public_transfer(coin, BENEFICIARY);
+            transfer::public_transfer(receipt, BENEFICIARY);
             test_scenario::return_shared(e);
-        };
-        scenario.next_tx(BENEFICIARY);
-        {
-            let r = test_scenario::take_from_address<ReleaseReceipt>(&scenario, BENEFICIARY);
-            assert!(r.receipt_released_to() == BENEFICIARY);
-            assert!(r.receipt_amount() == 500);
-            test_scenario::return_to_address(BENEFICIARY, r);
         };
         scenario.end();
     }
 
     #[test]
-    #[expected_failure(abort_code = 5)] // EStillLocked
+    #[expected_failure(abort_code = escrow::EStillLocked)]
     fun test_early_release_fails() {
         let mut scenario = test_scenario::begin(DEPOSITOR);
         {
@@ -113,7 +112,9 @@ module predict_club::escrow_tests {
         scenario.next_tx(BENEFICIARY);
         {
             let mut e = test_scenario::take_shared<Escrow<SUI>>(&scenario);
-            escrow::release_funds(&mut e, scenario.ctx());
+            let (coin, receipt) = escrow::release_funds(&mut e, scenario.ctx());
+            transfer::public_transfer(coin, BENEFICIARY);
+            transfer::public_transfer(receipt, BENEFICIARY);
             test_scenario::return_shared(e);
         };
         scenario.end();
@@ -130,16 +131,18 @@ module predict_club::escrow_tests {
             let mut e = test_scenario::take_shared<Escrow<SUI>>(&scenario);
             let coin = coin::mint_for_testing<SUI>(800, scenario.ctx());
             escrow::deposit(&mut e, coin, scenario.ctx());
-            escrow::cancel_escrow(&mut e, scenario.ctx());
+            let refund = escrow::cancel_escrow(&mut e, scenario.ctx());
             assert!(e.released());
             assert!(e.balance_value() == 0);
+            assert!(refund.value() == 800);
+            transfer::public_transfer(refund, DEPOSITOR);
             test_scenario::return_shared(e);
         };
         scenario.end();
     }
 
     #[test]
-    #[expected_failure(abort_code = 6)] // ENotApproved
+    #[expected_failure(abort_code = escrow::ENotApproved)]
     fun test_release_without_approval_fails() {
         let mut scenario = test_scenario::begin(DEPOSITOR);
         {
@@ -157,7 +160,9 @@ module predict_club::escrow_tests {
         scenario.next_epoch(BENEFICIARY);
         {
             let mut e = test_scenario::take_shared<Escrow<SUI>>(&scenario);
-            escrow::release_funds(&mut e, scenario.ctx());
+            let (coin, receipt) = escrow::release_funds(&mut e, scenario.ctx());
+            transfer::public_transfer(coin, BENEFICIARY);
+            transfer::public_transfer(receipt, BENEFICIARY);
             test_scenario::return_shared(e);
         };
         scenario.end();

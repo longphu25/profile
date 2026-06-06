@@ -1,17 +1,25 @@
 #[allow(lint(self_transfer, coin_field))]
 module predict_club::exchange {
-    use sui::coin::Coin;
+    use sui::coin::{Self, Coin};
     use sui::event;
 
     // === Errors ===
-    const ENotMaker: u64 = 100;
-    const EOfferExpired: u64 = 101;
-    const EWrongRecipient: u64 = 102;
-    const EMarketPaused: u64 = 103;
-    const EUnderpayment: u64 = 104;
-    const EZeroAmount: u64 = 105;
-    const EZeroExpiry: u64 = 106;
-    const ENotAdmin: u64 = 107;
+    #[error]
+    const ENotMaker: vector<u8> = b"Only the offer maker can cancel";
+    #[error]
+    const EOfferExpired: vector<u8> = b"Offer has expired";
+    #[error]
+    const EWrongRecipient: vector<u8> = b"Offer is restricted to a specific recipient";
+    #[error]
+    const EMarketPaused: vector<u8> = b"Market is paused";
+    #[error]
+    const EUnderpayment: vector<u8> = b"Payment is less than the required want_amount";
+    #[error]
+    const EZeroAmount: vector<u8> = b"Amount must be greater than zero";
+    #[error]
+    const EZeroExpiry: vector<u8> = b"Expiry must be at least 1 epoch";
+    #[error]
+    const ENotAdmin: vector<u8> = b"Only the market admin can perform this action";
 
     // === Types ===
 
@@ -35,7 +43,13 @@ module predict_club::exchange {
         offer_coin: Coin<OfferT>,
     }
 
-    // === Events ===
+    // === Events (past tense) ===
+
+    public struct MarketCreated has copy, drop {
+        market_id: ID,
+        club_id: ID,
+        admin: address,
+    }
 
     public struct OfferCreated has copy, drop {
         offer_id: ID,
@@ -59,9 +73,9 @@ module predict_club::exchange {
         refunded: u64,
     }
 
-    // === Public Functions ===
+    // === Public Composable Functions ===
 
-    /// Create a shared market for a club
+    /// Create a shared market for a club.
     public fun create_market(club_id: ID, ctx: &mut TxContext) {
         let market = ClubEscrowMarket {
             id: object::new(ctx),
@@ -69,16 +83,27 @@ module predict_club::exchange {
             admin: ctx.sender(),
             paused: false,
         };
+
+        event::emit(MarketCreated {
+            market_id: object::id(&market),
+            club_id,
+            admin: ctx.sender(),
+        });
+
         transfer::share_object(market);
     }
 
-    /// Pause/unpause market (admin only)
-    public fun set_paused(market: &mut ClubEscrowMarket, paused: bool, ctx: &TxContext) {
+    /// Pause/unpause market (admin only).
+    public fun set_paused(
+        market: &mut ClubEscrowMarket,
+        paused: bool,
+        ctx: &TxContext,
+    ) {
         assert!(ctx.sender() == market.admin, ENotAdmin);
         market.paused = paused;
     }
 
-    /// Create a P2P offer
+    /// Create a P2P offer — returns the offer object (composable).
     public fun create_offer<OfferT, WantT>(
         market: &ClubEscrowMarket,
         offer_coin: Coin<OfferT>,
@@ -119,14 +144,14 @@ module predict_club::exchange {
         offer
     }
 
-    /// Fill an offer. Filler pays want_amount, receives the offered coin.
-    /// Overpayment returns change to filler.
+    /// Fill an offer — returns (offered_coin, change_or_zero) to caller (composable).
+    /// Overpayment returns change as second element.
     public fun fill_offer<OfferT, WantT>(
         market: &ClubEscrowMarket,
         offer: EscrowOffer<OfferT, WantT>,
         mut payment: Coin<WantT>,
         ctx: &mut TxContext,
-    ) {
+    ): (Coin<OfferT>, Coin<WantT>) {
         assert!(!market.paused, EMarketPaused);
         assert!(ctx.epoch() <= offer.expires_at_epoch, EOfferExpired);
 
@@ -138,33 +163,41 @@ module predict_club::exchange {
 
         let offer_id = object::id(&offer);
         let maker = offer.maker;
-        let filler = ctx.sender();
         let offer_amount = offer.offer_amount;
         let want_amount = offer.want_amount;
 
-        // Split exact payment for maker
-        if (payment.value() > want_amount) {
+        // Split exact payment for maker, keep change
+        let change = if (payment.value() > want_amount) {
             let change_amount = payment.value() - want_amount;
-            let change = payment.split(change_amount, ctx);
-            transfer::public_transfer(change, filler);
+            payment.split(change_amount, ctx)
+        } else {
+            coin::zero<WantT>(ctx)
         };
 
         // Destroy offer, extract coin
         let EscrowOffer { id, maker: _, recipient: _, round_id: _, offer_amount: _, want_amount: _, expires_at_epoch: _, offer_coin } = offer;
-        object::delete(id);
+        id.delete();
 
-        transfer::public_transfer(offer_coin, filler);
+        // Transfer payment to maker
         transfer::public_transfer(payment, maker);
 
-        event::emit(OfferFilled { offer_id, maker, filler, offer_amount, want_amount });
+        event::emit(OfferFilled {
+            offer_id,
+            maker,
+            filler: ctx.sender(),
+            offer_amount,
+            want_amount,
+        });
+
+        (offer_coin, change)
     }
 
-    /// Cancel an offer. Only maker can cancel.
+    /// Cancel an offer — returns the offered coin (composable).
     public fun cancel_offer<OfferT, WantT>(
         _market: &ClubEscrowMarket,
         offer: EscrowOffer<OfferT, WantT>,
         ctx: &TxContext,
-    ) {
+    ): Coin<OfferT> {
         assert!(ctx.sender() == offer.maker, ENotMaker);
 
         let offer_id = object::id(&offer);
@@ -172,10 +205,40 @@ module predict_club::exchange {
         let refunded = offer.offer_amount;
 
         let EscrowOffer { id, maker: _, recipient: _, round_id: _, offer_amount: _, want_amount: _, expires_at_epoch: _, offer_coin } = offer;
-        object::delete(id);
+        id.delete();
 
-        transfer::public_transfer(offer_coin, maker);
         event::emit(OfferCancelled { offer_id, maker, refunded });
+        offer_coin
+    }
+
+    // === Entry Wrappers ===
+
+    /// Fill offer and transfer results to filler/maker.
+    entry fun fill_and_transfer<OfferT, WantT>(
+        market: &ClubEscrowMarket,
+        offer: EscrowOffer<OfferT, WantT>,
+        payment: Coin<WantT>,
+        ctx: &mut TxContext,
+    ) {
+        let filler = ctx.sender();
+        let (offer_coin, change) = fill_offer(market, offer, payment, ctx);
+        transfer::public_transfer(offer_coin, filler);
+        if (change.value() > 0) {
+            transfer::public_transfer(change, filler);
+        } else {
+            change.destroy_zero();
+        };
+    }
+
+    /// Cancel offer and transfer refund to maker.
+    entry fun cancel_and_refund<OfferT, WantT>(
+        market: &ClubEscrowMarket,
+        offer: EscrowOffer<OfferT, WantT>,
+        ctx: &TxContext,
+    ) {
+        let maker = ctx.sender();
+        let coin = cancel_offer(market, offer, ctx);
+        transfer::public_transfer(coin, maker);
     }
 
     // === View Functions ===
@@ -192,11 +255,15 @@ module predict_club::exchange {
         true
     }
 
-    // === Accessors ===
+    // === Accessors (field name, no get_ prefix) ===
 
+    public fun market_club_id(m: &ClubEscrowMarket): ID { m.club_id }
+    public fun market_admin(m: &ClubEscrowMarket): address { m.admin }
     public fun market_paused(m: &ClubEscrowMarket): bool { m.paused }
-    public fun offer_maker<OfferT, WantT>(o: &EscrowOffer<OfferT, WantT>): address { o.maker }
+
+    public fun maker<OfferT, WantT>(o: &EscrowOffer<OfferT, WantT>): address { o.maker }
+    public fun recipient<OfferT, WantT>(o: &EscrowOffer<OfferT, WantT>): &Option<address> { &o.recipient }
     public fun offer_amount<OfferT, WantT>(o: &EscrowOffer<OfferT, WantT>): u64 { o.offer_amount }
-    public fun offer_want_amount<OfferT, WantT>(o: &EscrowOffer<OfferT, WantT>): u64 { o.want_amount }
-    public fun offer_expires_at<OfferT, WantT>(o: &EscrowOffer<OfferT, WantT>): u64 { o.expires_at_epoch }
+    public fun want_amount<OfferT, WantT>(o: &EscrowOffer<OfferT, WantT>): u64 { o.want_amount }
+    public fun expires_at_epoch<OfferT, WantT>(o: &EscrowOffer<OfferT, WantT>): u64 { o.expires_at_epoch }
 }

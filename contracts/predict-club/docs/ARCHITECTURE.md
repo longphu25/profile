@@ -138,24 +138,28 @@ public fun deposit<T>(
     ctx: &TxContext,
 )
 
-// Approve release (approver with cap only)
+// Approve release (object first, cap second — per Sui param ordering)
 public fun approve_release<T>(
-    cap: &ApproverCap,
     escrow: &mut Escrow<T>,
+    cap: &ApproverCap,
     ctx: &TxContext,
 )
 
-// Release to beneficiary (after time + optional approval)
+// Release — COMPOSABLE: returns (Coin<T>, ReleaseReceipt)
 public fun release_funds<T>(
     escrow: &mut Escrow<T>,
     ctx: &mut TxContext,
-)
+): (Coin<T>, ReleaseReceipt)
 
-// Cancel and refund (depositor only, > 1 epoch before unlock)
+// Cancel — COMPOSABLE: returns Coin<T>
 public fun cancel_escrow<T>(
     escrow: &mut Escrow<T>,
     ctx: &mut TxContext,
-)
+): Coin<T>
+
+// Entry wrappers for CLI convenience:
+entry fun release_and_transfer<T>(escrow, ctx)
+entry fun cancel_and_refund<T>(escrow, ctx)
 ```
 
 ### Sequence Diagram: Full Lifecycle
@@ -281,7 +285,7 @@ public fun create_market(club_id: ID, ctx: &mut TxContext)
 // Pause/unpause (admin only)
 public fun set_paused(market: &mut ClubEscrowMarket, paused: bool, ctx: &TxContext)
 
-// Create P2P offer
+// Create P2P offer — COMPOSABLE: returns EscrowOffer
 public fun create_offer<OfferT, WantT>(
     market: &ClubEscrowMarket,
     offer_coin: Coin<OfferT>,
@@ -292,20 +296,24 @@ public fun create_offer<OfferT, WantT>(
     ctx: &mut TxContext,
 ): EscrowOffer<OfferT, WantT>
 
-// Fill an offer (exact or overpay with change returned)
+// Fill — COMPOSABLE: returns (Coin<OfferT>, Coin<WantT> change)
 public fun fill_offer<OfferT, WantT>(
     market: &ClubEscrowMarket,
     offer: EscrowOffer<OfferT, WantT>,
     payment: Coin<WantT>,
     ctx: &mut TxContext,
-)
+): (Coin<OfferT>, Coin<WantT>)
 
-// Cancel (maker only)
+// Cancel — COMPOSABLE: returns Coin<OfferT>
 public fun cancel_offer<OfferT, WantT>(
     market: &ClubEscrowMarket,
     offer: EscrowOffer<OfferT, WantT>,
     ctx: &TxContext,
-)
+): Coin<OfferT>
+
+// Entry wrappers for CLI convenience:
+entry fun fill_and_transfer<OfferT, WantT>(market, offer, payment, ctx)
+entry fun cancel_and_refund<OfferT, WantT>(market, offer, ctx)
 ```
 
 ### Error Codes
@@ -444,3 +452,14 @@ sui move build
 - Partial fill for exchange offers
 - Fee collection on exchange fills
 - Oracle-price-linked exchange rates
+
+---
+
+## Applied Sui Skills (docs.sui.io/skills)
+
+| Skill | What was applied |
+|-------|-----------------|
+| **modern-move-syntax** | Method syntax (`coin.value()`, `ctx.sender()`, `id.delete()`), vector/option macros |
+| **naming-conventions** | `#[error]` attributes with messages, past-tense events (`FundsReleased`), `Cap` suffix, field-name getters |
+| **composable-move-functions** | Public functions return values (not transfer internally), separate `entry` wrappers, object-first param order |
+| **object-model** | `key` without `store` on Escrow (custom transfer rules), `key + store` on ApproverCap/Receipt (freely transferable) |

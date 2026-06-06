@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+test-results/
+playwright-report/
 
 # Editor directories and files
 .vscode/*
@@ -30,5 +32,6 @@ __pycache__/
 
 # Rust/WASM build artifacts
 **/wasm/target/
+contracts/**/build/
 .kiro/sui-pilot-docs
 .main-agent/

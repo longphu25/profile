@@ -5,14 +5,25 @@ module predict_club::escrow {
     use sui::event;
 
     // === Errors ===
-    const ENotDepositor: u64 = 1;
-    const EAlreadyReleased: u64 = 2;
-    const ENotApprover: u64 = 3;
-    const EAlreadyApproved: u64 = 4;
-    const EStillLocked: u64 = 5;
-    const ENotApproved: u64 = 6;
-    const ETooLateToCancel: u64 = 7;
-    const EZeroAmount: u64 = 8;
+    #[error]
+    const ENotDepositor: vector<u8> = b"Only the depositor can perform this action";
+    #[error]
+    const EAlreadyReleased: vector<u8> = b"Escrow has already been released or cancelled";
+    #[error]
+    const ENotApprover: vector<u8> = b"Caller is not the designated approver or cap mismatch";
+    #[error]
+    const EAlreadyApproved: vector<u8> = b"Escrow has already been approved";
+    #[error]
+    const EStillLocked: vector<u8> = b"Time lock has not expired yet";
+    #[error]
+    const ENotApproved: vector<u8> = b"Approval required but not granted";
+    #[error]
+    const ETooLateToCancel: vector<u8> = b"Cannot cancel within last epoch before unlock";
+    #[error]
+    const EZeroAmount: vector<u8> = b"Deposit amount must be greater than zero";
+
+    // === Constants ===
+    const RELEASE_TIME_AND_APPROVAL: u8 = 1;
 
     // === Types ===
 
@@ -26,11 +37,17 @@ module predict_club::escrow {
         locked_until_epoch: u64,
         created_at_epoch: u64,
         created_at_timestamp: u64,
-        release_conditions: u8, // 0: Time only, 1: Time + Approval
+        release_conditions: u8,
         approver: address,
         approved: bool,
         released: bool,
         balance: Balance<T>,
+    }
+
+    /// Capability for the designated approver
+    public struct ApproverCap has key, store {
+        id: UID,
+        escrow_id: address,
     }
 
     /// Audit receipt after release
@@ -43,13 +60,7 @@ module predict_club::escrow {
         released_at_timestamp: u64,
     }
 
-    /// Capability for the designated approver
-    public struct ApproverCap has key, store {
-        id: UID,
-        escrow_id: address,
-    }
-
-    // === Events ===
+    // === Events (past tense) ===
 
     public struct EscrowCreated has copy, drop {
         escrow_id: address,
@@ -59,7 +70,18 @@ module predict_club::escrow {
         release_conditions: u8,
     }
 
-    public struct EscrowReleased has copy, drop {
+    public struct FundsDeposited has copy, drop {
+        escrow_id: address,
+        amount: u64,
+        total: u64,
+    }
+
+    public struct EscrowApproved has copy, drop {
+        escrow_id: address,
+        approver: address,
+    }
+
+    public struct FundsReleased has copy, drop {
         escrow_id: address,
         beneficiary: address,
         amount: u64,
@@ -72,10 +94,10 @@ module predict_club::escrow {
         refunded: u64,
     }
 
-    // === Public Functions ===
+    // === Public Composable Functions ===
 
     /// Create a time-locked escrow for any coin type T.
-    /// release_conditions: 0 = time only, 1 = time + approval
+    /// Returns nothing — shares the Escrow object and optionally transfers ApproverCap.
     public fun create_escrow<T>(
         beneficiary: address,
         lock_duration_epochs: u64,
@@ -112,7 +134,7 @@ module predict_club::escrow {
             release_conditions,
         });
 
-        if (release_conditions == 1) {
+        if (release_conditions == RELEASE_TIME_AND_APPROVAL) {
             let cap = ApproverCap { id: object::new(ctx), escrow_id: escrow_address };
             transfer::transfer(cap, approver);
         };
@@ -133,12 +155,18 @@ module predict_club::escrow {
 
         escrow.balance.join(coin.into_balance());
         escrow.amount = escrow.amount + value;
+
+        event::emit(FundsDeposited {
+            escrow_id: escrow.escrow_address,
+            amount: value,
+            total: escrow.amount,
+        });
     }
 
     /// Approve the escrow release. Requires ApproverCap.
     public fun approve_release<T>(
-        cap: &ApproverCap,
         escrow: &mut Escrow<T>,
+        cap: &ApproverCap,
         ctx: &TxContext,
     ) {
         assert!(ctx.sender() == escrow.approver, ENotApprover);
@@ -146,17 +174,23 @@ module predict_club::escrow {
         assert!(!escrow.approved, EAlreadyApproved);
         assert!(!escrow.released, EAlreadyReleased);
         escrow.approved = true;
+
+        event::emit(EscrowApproved {
+            escrow_id: escrow.escrow_address,
+            approver: escrow.approver,
+        });
     }
 
-    /// Release funds to beneficiary once conditions are met.
+    /// Release funds — returns the Coin to the caller (composable).
+    /// Caller is responsible for transferring to beneficiary.
     public fun release_funds<T>(
         escrow: &mut Escrow<T>,
         ctx: &mut TxContext,
-    ) {
+    ): (Coin<T>, ReleaseReceipt) {
         let current_epoch = ctx.epoch();
         assert!(!escrow.released, EAlreadyReleased);
         assert!(current_epoch >= escrow.locked_until_epoch, EStillLocked);
-        if (escrow.release_conditions == 1) {
+        if (escrow.release_conditions == RELEASE_TIME_AND_APPROVAL) {
             assert!(escrow.approved, ENotApproved);
         };
 
@@ -173,38 +207,60 @@ module predict_club::escrow {
             released_at_timestamp: ctx.epoch_timestamp_ms(),
         };
 
-        transfer::public_transfer(coin, escrow.beneficiary);
-        transfer::public_transfer(receipt, escrow.beneficiary);
-
-        event::emit(EscrowReleased {
+        event::emit(FundsReleased {
             escrow_id: escrow.escrow_address,
             beneficiary: escrow.beneficiary,
             amount,
             epoch: current_epoch,
         });
+
+        (coin, receipt)
     }
 
-    /// Emergency cancellation by depositor (at least 1 epoch before unlock).
+    /// Cancel escrow — returns the Coin to the caller (composable).
+    /// Depositor must cancel at least 1 epoch before unlock.
     public fun cancel_escrow<T>(
         escrow: &mut Escrow<T>,
         ctx: &mut TxContext,
-    ) {
+    ): Coin<T> {
         let current_epoch = ctx.epoch();
-        let depositor = ctx.sender();
-
-        assert!(depositor == escrow.depositor, ENotDepositor);
+        assert!(ctx.sender() == escrow.depositor, ENotDepositor);
         assert!(!escrow.released, EAlreadyReleased);
         assert!(current_epoch + 1 < escrow.locked_until_epoch, ETooLateToCancel);
 
         let amount = escrow.balance.value();
         escrow.released = true;
 
-        if (amount > 0) {
-            let coin = coin::from_balance(escrow.balance.split(amount), ctx);
-            transfer::public_transfer(coin, depositor);
-        };
+        event::emit(EscrowCancelled {
+            escrow_id: escrow.escrow_address,
+            depositor: escrow.depositor,
+            refunded: amount,
+        });
 
-        event::emit(EscrowCancelled { escrow_id: escrow.escrow_address, depositor, refunded: amount });
+        coin::from_balance(escrow.balance.split(amount), ctx)
+    }
+
+    // === Entry Wrappers (convenience for CLI / direct wallet calls) ===
+
+    /// Release and transfer to beneficiary in one call.
+    entry fun release_and_transfer<T>(
+        escrow: &mut Escrow<T>,
+        ctx: &mut TxContext,
+    ) {
+        let beneficiary = escrow.beneficiary;
+        let (coin, receipt) = release_funds(escrow, ctx);
+        transfer::public_transfer(coin, beneficiary);
+        transfer::public_transfer(receipt, beneficiary);
+    }
+
+    /// Cancel and return funds to depositor in one call.
+    entry fun cancel_and_refund<T>(
+        escrow: &mut Escrow<T>,
+        ctx: &mut TxContext,
+    ) {
+        let depositor = escrow.depositor;
+        let coin = cancel_escrow(escrow, ctx);
+        transfer::public_transfer(coin, depositor);
     }
 
     // === View Functions ===
@@ -212,7 +268,7 @@ module predict_club::escrow {
     public fun is_ready_to_release<T>(escrow: &Escrow<T>, current_epoch: u64): bool {
         if (escrow.released) return false;
         if (current_epoch < escrow.locked_until_epoch) return false;
-        if (escrow.release_conditions == 1 && !escrow.approved) return false;
+        if (escrow.release_conditions == RELEASE_TIME_AND_APPROVAL && !escrow.approved) return false;
         true
     }
 
@@ -221,7 +277,7 @@ module predict_club::escrow {
         else escrow.locked_until_epoch - current_epoch
     }
 
-    // === Accessors ===
+    // === Accessors (field name, no get_ prefix) ===
 
     public fun escrow_address<T>(e: &Escrow<T>): address { e.escrow_address }
     public fun depositor<T>(e: &Escrow<T>): address { e.depositor }
@@ -233,6 +289,9 @@ module predict_club::escrow {
     public fun approved<T>(e: &Escrow<T>): bool { e.approved }
     public fun released<T>(e: &Escrow<T>): bool { e.released }
     public fun balance_value<T>(e: &Escrow<T>): u64 { e.balance.value() }
-    public fun receipt_amount(r: &ReleaseReceipt): u64 { r.amount }
+
+    public fun receipt_escrow_id(r: &ReleaseReceipt): address { r.escrow_id }
     public fun receipt_released_to(r: &ReleaseReceipt): address { r.released_to }
+    public fun receipt_amount(r: &ReleaseReceipt): u64 { r.amount }
+    public fun receipt_released_at_epoch(r: &ReleaseReceipt): u64 { r.released_at_epoch }
 }
