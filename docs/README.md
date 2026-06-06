@@ -80,3 +80,5 @@ chosen, and the existing domain folders for technical depth.
   normal lookup.
 - RTK was configured for Codex with `rtk init -g --codex`.
 - Kiro steering now includes RTK and QMD policies.
+- Predict Club member wallet flow, funding gate, and Playwright E2E smoke test
+  were logged in `docs/stories/plans/13-predict-club-community.md`.

@@ -84,3 +84,5 @@ cho chiều sâu kỹ thuật.
   cho nhu cầu tra cứu thông thường.
 - RTK đã được cấu hình cho Codex bằng `rtk init -g --codex`.
 - Kiro steering hiện có policy cho RTK và QMD.
+- Luồng ví member Predict Club, funding gate và Playwright E2E smoke test đã
+  được ghi log trong `docs/stories/plans/13-predict-club-community.md`.

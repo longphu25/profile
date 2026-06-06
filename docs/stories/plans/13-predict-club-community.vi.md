@@ -111,6 +111,7 @@ tử.
 ## Validation
 
 - ✅ build (Vite)
+- ✅ Playwright E2E smoke (`bun run test:e2e`)
 - ✅ browser smoke (predict-club.html)
 - ✅ plugin load trong Shadow DOM (multi-slot v2)
 - ✅ desktop/mobile layout
@@ -121,6 +122,54 @@ tử.
 
 ## Trạng Thái
 
-- **State: completed (V1)**
+- **State: implemented V1, đang harden luồng wallet/member**
 - Evidence: 37 commits Jun 3–5, tất cả các bước triển khai đã xong
 - Next: V2 sẽ thêm Move group vault contract và real custody khi mainnet sẵn sàng
+
+## Log Triển Khai - 2026-06-06
+
+Đã triển khai trong session hiện tại:
+
+- Thêm connect/disconnect ví từ header Predict Club và primary CTA.
+- Xác định current member từ ví đang kết nối. Nếu ví chưa có trong demo club,
+  app thêm một dòng local `You`.
+- Thêm lookup PredictManager cho ví đang kết nối và action `Create Manager` khi
+  chưa có manager.
+- Sửa Decision Strip để `Connect Wallet` không bị risk gate chặn sai.
+- Cập nhật `Fund to Join` để hiển thị wallet, club member, PredictManager, số dư
+  DUSDC và các route funding preview-only.
+- Cập nhật modal `Execute My Trade` để hiển thị stake của member, trạng thái
+  manager/oracle, nhãn capped payout và checklist theo điều kiện thực.
+- Sửa pledge accounting để pledge lặp lại cập nhật theo delta thay vì cộng lại
+  toàn bộ số pledge.
+- Thêm hạ tầng Playwright E2E:
+  - `playwright.config.ts`
+  - `tests/e2e/predict-club.spec.ts`
+  - script `test:e2e` và `test:e2e:report` trong `package.json`
+  - ignore `test-results/` và `playwright-report/`
+- Cài Chromium browser binary cho Playwright để E2E chạy được.
+
+Bằng chứng đã chạy:
+
+- `rtk bun run build` pass.
+- `rtk bun run test:e2e` pass với Chromium.
+- Targeted ESLint pass cho các file Predict Club, Playwright config và E2E test mới.
+
+Ranh giới hiện tại:
+
+- Các funding route ngoài Direct DUSDC vẫn là preview-only trong UI hiện tại.
+- Ví thật vẫn phải ký khi tạo PredictManager và khi execute Predict.
+- Không được tuyên bố transaction Predict thành công trên network nếu chưa chạy
+  giao dịch thật bằng ví trên Sui network mục tiêu.
+- `bun run lint` toàn repo vẫn fail vì các lỗi lint tồn tại sẵn ngoài phạm vi story này.
+
+Kế hoạch tiếp theo:
+
+1. Thêm wallet-mocked Playwright route hoặc fixture để test nhánh connected
+   wallet mà không phụ thuộc browser extension.
+2. Thêm fixture API/contract cho PredictManager để test trạng thái `Create
+   Manager` và manager-ready một cách deterministic.
+3. Thêm fixture số dư DUSDC và test luồng `Pledge DUSDC` trong funding modal.
+4. Thêm execution-preview test cho `Execute My Trade` khi có thể đặt round vào
+   trạng thái executable ổn định.
+5. Viết manual wallet runbook cho giao dịch testnet khi có test wallet đã được nạp tiền.

@@ -81,6 +81,27 @@ flowchart LR
 6. Club theo dõi vị thế, trạng thái quyết toán và kết quả có thể nhận.
 7. Các round đã được quyết toán được lưu trữ cùng PnL, mức tham gia và bằng chứng luận điểm.
 
+## Luồng Ví Của Member
+
+Luồng V1 hiện tại đặt ví ở bước đầu:
+
+1. Member chưa kết nối sẽ thấy `Connect Wallet` là hành động chính. Hành động
+   này phải luôn bấm được ngay cả khi risk checks đang blocked.
+2. Sau khi kết nối, app xác định current member từ địa chỉ ví. Nếu không có demo
+   member nào khớp, app tạo một dòng local `You` cho session.
+3. App kiểm tra ví đang kết nối đã có PredictManager hay chưa.
+4. Nếu chưa có PredictManager, `Fund to Join` hiển thị `Create Manager` trước
+   bước pledge DUSDC hoặc execute Predict.
+5. Khi ví, PredictManager và DUSDC đã đủ điều kiện, member có thể pledge ý định
+   DUSDC vào state local và sau đó tự ký giao dịch Predict.
+
+Ranh giới triển khai hiện tại:
+
+- Tạo PredictManager và execute Predict là hành động thật do ví ký.
+- Direct DUSDC pledge là state local V1 của club.
+- Swap, bridge, borrow và escrow vẫn là preview hoặc local offer flow cho tới
+  khi tích hợp wallet-signed được chứng minh.
+
 ## Luồng Nạp Vốn
 
 Thành viên chưa nắm giữ DUSDC sẽ dùng `Fund to Join`:
@@ -94,6 +115,15 @@ Thành viên chưa nắm giữ DUSDC sẽ dùng `Fund to Join`:
 4. Khi thành viên đã có USDC trên Sui, họ điền vào một club escrow offer hoặc
    leader reserve quote để nhận DUSDC.
 5. Thành viên nạp DUSDC vào PredictManager của mình và tự ký giao dịch Predict.
+
+Trong UI hiện tại, `Fund to Join` phải hiển thị:
+
+- trạng thái ví
+- club member đã được resolve
+- trạng thái PredictManager
+- số dư SUI, USDC và DUSDC
+- funding route được khuyến nghị
+- nhãn preview-only rõ ràng cho các route không phải Direct DUSDC
 
 ## Interface Contract
 
@@ -143,6 +173,16 @@ marketing:
 - Không gian mobile:
   - tab: Room, Risk, Members, History
   - hành động chính tiếp theo ở thanh đáy dạng sticky
+
+Decision strip chỉ nên hiển thị một hành động chính. Với member mới, chuỗi hành
+động là:
+
+```text
+Connect Wallet -> Create Manager -> Fund/Pledge DUSDC -> Review Risk -> Sign & Execute
+```
+
+Risk checks có thể giải thích vì sao execution bị blocked, nhưng không được chặn
+hành động kết nối ví ban đầu.
 
 ## Tài Liệu Liên Quan
 

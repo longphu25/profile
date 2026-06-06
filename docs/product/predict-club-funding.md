@@ -19,6 +19,27 @@ testnet integration. SUI and USDC are intermediate funding assets.
 | Has only SUI and wants to keep SUI exposure | Scallop borrow USDC against SUI, then escrow USDC to DUSDC | Requires liquidation-risk warning. |
 | Has external assets | Bridge assets to Sui first | Use documented bridge handoff; do not custody bridge assets in Predict Club. |
 
+## Current UI State
+
+As of 2026-06-06, the funding modal is implemented as a member-readiness gate:
+
+- Direct DUSDC is the only route that can lead to local pledge in the current
+  UI.
+- SUI to USDC, Scallop borrow, bridge, and escrow are shown as preview or local
+  offer flows.
+- The modal surfaces wallet, club member, PredictManager, and balance state
+  before showing the next action.
+- If the wallet is disconnected, the primary action is `Connect Wallet`.
+- If the wallet is connected but no PredictManager exists, the primary action is
+  `Create Manager`.
+- If PredictManager exists and DUSDC is sufficient, the primary action is
+  `Pledge DUSDC`.
+- If DUSDC is insufficient, the primary action is disabled as `Need DUSDC` until
+  a real funding route is integrated.
+
+This keeps the UI honest: funding routes can educate and preview, but execution
+still requires DUSDC and a user-owned PredictManager.
+
 ## Route Graph
 
 ```mermaid
@@ -142,5 +163,6 @@ interface FundingRecommendation {
 - `docs/product/predict-club.md`
 - `docs/decisions/predict-club-funding-escrow.md`
 - `docs/stories/plans/13-predict-club-community.md`
+- `docs/stories/plans/13-predict-club-community.md#implementation-log---2026-06-06`
 - `plugins/sui-swap/plugin.tsx`
 - `docs/deepbook/onchain-finance/deepbook-predict.md`

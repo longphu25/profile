@@ -231,6 +231,7 @@ sequenceDiagram
 ## Validation
 
 - `rtk bun run build`
+- `rtk bun run test:e2e`
 - Browser smoke for `predict-club.html`
 - Plugin load check inside Shadow DOM
 - Desktop and mobile layout check
@@ -243,6 +244,61 @@ sequenceDiagram
 
 ## Status
 
-- State: planned
+- State: implemented V1, wallet/member flow hardening in progress
 - Evidence: product contract and architecture decision docs define the V1/V2
-  boundary before implementation.
+  boundary; build and Playwright smoke coverage validate the current member
+  funding gate.
+
+## Implementation Log - 2026-06-06
+
+Implemented in the current session:
+
+- Added wallet connect/disconnect from the Predict Club header and primary CTA.
+- Added current-member resolution from the connected wallet. If the wallet is
+  not already in the demo club, the app adds a local `You` member row.
+- Added PredictManager lookup for the connected wallet and a `Create Manager`
+  action when the manager is missing.
+- Updated the decision strip so `Connect Wallet` is not blocked by risk-gate
+  state.
+- Updated `Fund to Join` to show wallet, club member, PredictManager, DUSDC
+  balance, and preview-only funding routes.
+- Updated `Execute My Trade` modal to show member stake, live manager/oracle
+  status, capped payout label, and condition-based checklist state.
+- Fixed pledge accounting so repeat pledges update by delta instead of adding
+  the full pledged amount repeatedly.
+- Added Playwright E2E infrastructure:
+  - `playwright.config.ts`
+  - `tests/e2e/predict-club.spec.ts`
+  - `package.json` scripts `test:e2e` and `test:e2e:report`
+  - ignored `test-results/` and `playwright-report/`
+- Installed the Playwright Chromium browser binary locally so E2E can run.
+
+Validation performed:
+
+- `rtk bun run build` passed.
+- `rtk bun run test:e2e` passed with Chromium.
+- Targeted ESLint passed for Predict Club files, Playwright config, and the new
+  E2E test.
+
+Known boundaries:
+
+- Funding routes other than Direct DUSDC are still preview-only in the current
+  UI.
+- A real wallet must still sign PredictManager creation and Predict execution.
+- Network success for Predict PTBs should not be claimed unless a real wallet
+  transaction is executed on the target Sui network.
+- Repo-wide `bun run lint` still fails because of pre-existing lint issues
+  outside this story scope.
+
+Next plan:
+
+1. Add a wallet-mocked Playwright route or fixture so the test can cover the
+   connected-wallet branch without relying on a browser extension.
+2. Add a PredictManager API/contract fixture so `Create Manager` and
+   manager-ready states can be tested deterministically.
+3. Add a DUSDC balance fixture and exercise `Pledge DUSDC` through the funding
+   modal.
+4. Add an execution-preview test for `Execute My Trade` once the round can be
+   placed in a deterministic executable state.
+5. Document the exact manual wallet runbook for testnet transactions once a
+   known funded test wallet is available.

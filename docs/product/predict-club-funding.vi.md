@@ -19,6 +19,25 @@ làm quote asset. SUI và USDC chỉ là tài sản trung gian để nạp vốn
 | Chỉ có SUI và muốn giữ exposure với SUI | Vay USDC qua Scallop bằng thế chấp SUI, rồi đổi USDC sang DUSDC qua escrow | Cần cảnh báo rủi ro liquidation. |
 | Có tài sản bên ngoài | Bridge tài sản sang Sui trước | Dùng bridge handoff đã được ghi lại; Predict Club không custody tài sản bridge. |
 
+## Trạng Thái UI Hiện Tại
+
+Tính đến 2026-06-06, funding modal được triển khai như một gate kiểm tra mức
+sẵn sàng của member:
+
+- Direct DUSDC là route duy nhất có thể dẫn tới local pledge trong UI hiện tại.
+- SUI sang USDC, Scallop borrow, bridge và escrow đang được hiển thị như preview
+  hoặc local offer flow.
+- Modal hiển thị trạng thái ví, club member, PredictManager và số dư trước khi
+  hiển thị hành động tiếp theo.
+- Nếu ví chưa kết nối, hành động chính là `Connect Wallet`.
+- Nếu ví đã kết nối nhưng chưa có PredictManager, hành động chính là `Create Manager`.
+- Nếu đã có PredictManager và đủ DUSDC, hành động chính là `Pledge DUSDC`.
+- Nếu thiếu DUSDC, hành động chính bị disable dưới nhãn `Need DUSDC` cho tới khi
+  tích hợp route nạp vốn thật.
+
+Cách này giữ UI trung thực: funding routes có thể giải thích và preview, nhưng
+execution vẫn yêu cầu DUSDC và PredictManager thuộc sở hữu của người dùng.
+
 ## Đồ Thị Tuyến
 
 ```mermaid
@@ -141,5 +160,6 @@ interface FundingRecommendation {
 - `docs/product/predict-club.md`
 - `docs/decisions/predict-club-funding-escrow.md`
 - `docs/stories/plans/13-predict-club-community.md`
+- `docs/stories/plans/13-predict-club-community.md#implementation-log---2026-06-06`
 - `plugins/sui-swap/plugin.tsx`
 - `docs/deepbook/onchain-finance/deepbook-predict.md`

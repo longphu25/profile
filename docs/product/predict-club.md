@@ -82,6 +82,29 @@ flowchart LR
 6. The club monitors positions, settlement state, and claimable outcomes.
 7. Settled rounds are archived with PnL, participation, and thesis evidence.
 
+## Member Wallet Flow
+
+The current V1 member flow is wallet-first:
+
+1. A disconnected member sees `Connect Wallet` as the primary action. This
+   action must remain available even when risk checks are blocked.
+2. After connection, the app resolves the current member from the wallet
+   address. If no demo member matches, it creates a local `You` member row for
+   the session.
+3. The app checks whether the connected wallet already has a PredictManager.
+4. If no PredictManager is found, `Fund to Join` shows `Create Manager` before
+   DUSDC pledge or Predict execution.
+5. Once the wallet, PredictManager, and DUSDC conditions are satisfied, the
+   member can pledge DUSDC intent locally and later self-sign the Predict
+   transaction.
+
+Current implementation boundary:
+
+- Creating PredictManager and executing Predict are real wallet-signed actions.
+- Direct DUSDC pledge is local V1 club state.
+- Swap, bridge, borrow, and escrow paths are preview or local offer flows until
+  their wallet-signed integrations are proven.
+
 ## Funding Flow
 
 Members who do not hold DUSDC use `Fund to Join`:
@@ -96,6 +119,15 @@ Members who do not hold DUSDC use `Fund to Join`:
    reserve quote to receive DUSDC.
 5. The member deposits DUSDC into their PredictManager and self-signs the
    Predict trade.
+
+In the current UI, `Fund to Join` must show:
+
+- wallet status
+- resolved club member
+- PredictManager status
+- available SUI, USDC, and DUSDC balances
+- recommended funding route
+- explicit preview-only labeling for non-Direct-DUSDC routes
 
 ## Interface Contract
 
@@ -144,6 +176,16 @@ The first screen is an operational cockpit, not a marketing page:
 - Mobile workspace:
   - tabs: Room, Risk, Members, History
   - sticky bottom action for the next primary step
+
+The decision strip should expose exactly one primary action. For a new member,
+that action sequence is:
+
+```text
+Connect Wallet -> Create Manager -> Fund/Pledge DUSDC -> Review Risk -> Sign & Execute
+```
+
+Risk checks may explain why execution is blocked, but they must not prevent the
+initial wallet connection action.
 
 ## Related Docs
 
