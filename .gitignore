@@ -35,3 +35,6 @@ __pycache__/
 contracts/**/build/
 .kiro/sui-pilot-docs
 .main-agent/
+
+# Codegen artifacts
+package_summaries/

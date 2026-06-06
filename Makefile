@@ -18,9 +18,10 @@ skills-list:
 
 # === Contracts ===
 
-.PHONY: move-build move-test move-clean
+.PHONY: move-build move-test move-clean codegen
 
 MOVE_DIR := contracts/predict-club
+CODEGEN_OUT := src/generated/predict-club
 
 ## Build Move contracts
 move-build:
@@ -33,6 +34,10 @@ move-test:
 ## Clean Move build artifacts
 move-clean:
 	rm -rf $(MOVE_DIR)/build
+
+## Generate TypeScript bindings from Move contracts
+codegen:
+	npx sui-ts-codegen generate --outputDir $(CODEGEN_OUT) --private all --importExtension .ts $(MOVE_DIR)
 
 # === Frontend ===
 
@@ -58,4 +63,4 @@ lint:
 check: lint move-test build
 
 ## Full setup from scratch
-all: skills-install move-build build
+all: skills-install move-build codegen build
