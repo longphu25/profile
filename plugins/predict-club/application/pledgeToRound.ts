@@ -28,11 +28,13 @@ export function pledgeToRound(
     }
   }
 
+  const previousPledge = member.pledgedDusdc
   const updatedMembers = club.members.map((m) =>
     m.id === params.memberId
       ? { ...m, state: 'pledged' as const, pledgedDusdc: params.amountDusdc }
       : m,
   )
+  const pledgeDelta = params.amountDusdc - previousPledge
 
   return {
     ok: true,
@@ -41,7 +43,7 @@ export function pledgeToRound(
       members: updatedMembers,
       activeRound: {
         ...club.activeRound,
-        totalPledgedDusdc: club.activeRound.totalPledgedDusdc + params.amountDusdc,
+        totalPledgedDusdc: club.activeRound.totalPledgedDusdc + pledgeDelta,
       },
     },
   }

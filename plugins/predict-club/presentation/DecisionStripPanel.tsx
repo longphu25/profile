@@ -2,11 +2,13 @@ import { usePredictClub } from './PredictClubContext'
 import { formatUsd, labelize } from './shared'
 
 export function DecisionStripPanel() {
-  const { club, primaryAction, toastMessage, oracleSnapshot, riskEvaluation, setModal } =
+  const { club, context, primaryAction, toastMessage, oracleSnapshot, riskEvaluation, setModal } =
     usePredictClub()
   const round = club.activeRound
   const spot = oracleSnapshot.oracleState?.latest_price?.spot
-  const blocked = riskEvaluation.state === 'blocked' || riskEvaluation.state === 'unknown'
+  const isConnectAction = !context.isConnected
+  const blocked =
+    !isConnectAction && (riskEvaluation.state === 'blocked' || riskEvaluation.state === 'unknown')
   const firstReason =
     riskEvaluation.blockingReasons[0]?.message ??
     riskEvaluation.warningReasons[0]?.message ??

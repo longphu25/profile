@@ -35,6 +35,7 @@ import {
 import { deriveSignalsFromPrices } from '../infrastructure/indicatorSignalGateway'
 import type {
   AssetBalances,
+  ClubMember,
   ClubState,
   EscrowOfferView,
   ModalKind,
@@ -44,6 +45,10 @@ import type { CreateRoundParams } from '../domain/policies'
 import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
 
 const ZERO_BALANCES: AssetBalances = { sui: 0, usdc: 0, dusdc: 0 }
+
+function memberIdForWallet(address: string): string {
+  return `member-${address.slice(2, 10).toLowerCase()}`
+}
 
 export interface PredictClubContextValue {
   club: ClubState
@@ -62,10 +67,14 @@ export interface PredictClubContextValue {
   consensus: ConsensusResult
   toastMessage: string | null
   oracleSnapshot: ClubOracleSnapshot
+  currentMember: ClubMember | null
+  predictManagerId: string | null
+  predictManagerLoading: boolean
 }
 
 export interface PredictClubActions {
   createRound: (params: CreateRoundParams) => CreateRoundResult
+  createPredictManager: () => Promise<{ ok: boolean; digest?: string; error?: string }>
   confirmRound: () => ConfirmRoundResult
   pledgeToRound: (memberId: string, amount: number) => { ok: boolean; error?: string }
   publishRound: () => { ok: boolean; error?: string }
@@ -102,11 +111,60 @@ export function PredictClubProvider({
   const [suiContext, setSuiContext] = useState(
     () => host?.getSuiContext() ?? { address: null as string | null, isConnected: false },
   )
+  const [predictManagerId, setPredictManagerId] = useState<string | null>(null)
+  const [predictManagerLoading, setPredictManagerLoading] = useState(false)
   useEffect(() => {
     if (!host) return
     setSuiContext(host.getSuiContext())
     return host.onSuiContextChange(setSuiContext)
   }, [host])
+
+  useEffect(() => {
+    const address = suiContext.address
+    if (!suiContext.isConnected || !address) return
+    const exactMember = store
+      .getStoreState()
+      .club.members.find((member) => member.wallet.toLowerCase() === address.toLowerCase())
+    if (exactMember) return
+
+    const member: ClubMember = {
+      id: memberIdForWallet(address),
+      name: 'You',
+      wallet: address,
+      role: 'member',
+      state: 'watching',
+      pledgedDusdc: 0,
+      accepted: false,
+    }
+    store.updateClub((current) => ({ ...current, members: [...current.members, member] }))
+  }, [suiContext.address, suiContext.isConnected])
+
+  useEffect(() => {
+    const address = suiContext.address
+    if (!suiContext.isConnected || !address) {
+      setPredictManagerId(null)
+      setPredictManagerLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setPredictManagerLoading(true)
+    createSuiPredictGateway()
+      .fetchManagerId(address)
+      .then((managerId) => {
+        if (!cancelled) setPredictManagerId(managerId)
+      })
+      .catch(() => {
+        if (!cancelled) setPredictManagerId(null)
+      })
+      .finally(() => {
+        if (!cancelled) setPredictManagerLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [suiContext.address, suiContext.isConnected])
 
   // Subscribe to oracle stream
   const oracleSnapshot = useSyncExternalStore(subscribeOracle, getSnapshot)
@@ -203,6 +261,18 @@ export function PredictClubProvider({
 
   const round = club.activeRound
   const funding = useMemo(() => recommendFundingRoute(balances, round), [balances, round])
+  const currentMember = useMemo(() => {
+    const address = suiContext.address
+    if (!address) return null
+    const normalizedAddress = address.toLowerCase()
+    return (
+      club.members.find((member) => member.wallet.toLowerCase() === normalizedAddress) ??
+      club.members.find((member) =>
+        member.wallet.toLowerCase().includes(address.slice(-6).toLowerCase()),
+      ) ??
+      null
+    )
+  }, [club.members, suiContext.address])
 
   const consensus = useMemo(() => computeConsensus(round.indicators), [round.indicators])
 
@@ -216,9 +286,23 @@ export function PredictClubProvider({
       suggestedDusdc: round.suggestedDusdc,
       signalBias: consensus.bias,
       indicators: round.indicators,
+      walletConnected: suiContext.isConnected,
+      predictManagerReady: suiContext.isConnected
+        ? predictManagerLoading
+          ? null
+          : Boolean(predictManagerId)
+        : null,
       ...overrides,
     }),
-    [balances.dusdc, consensus.bias, oracleSnapshot.lastUpdateMs, round],
+    [
+      balances.dusdc,
+      consensus.bias,
+      oracleSnapshot.lastUpdateMs,
+      predictManagerId,
+      predictManagerLoading,
+      round,
+      suiContext.isConnected,
+    ],
   )
 
   const riskEvaluation = useMemo(() => evaluateRiskGate(buildRiskInput()), [buildRiskInput])
@@ -238,6 +322,32 @@ export function PredictClubProvider({
           store.setModal(null)
         }
         return result
+      },
+
+      createPredictManager: async () => {
+        const address = host?.getSuiContext().address
+        if (!host || !address) {
+          const error = 'Wallet not connected'
+          store.setToast(error)
+          return { ok: false, error }
+        }
+
+        try {
+          const gateway = createSuiPredictGateway()
+          const tx = gateway.buildCreateManagerTx(address)
+          const result = await host.signAndExecuteTransaction(tx)
+          setPredictManagerLoading(true)
+          const managerId = await gateway.fetchManagerId(address)
+          setPredictManagerId(managerId)
+          setPredictManagerLoading(false)
+          store.setToast(`PredictManager created — ${result.digest.slice(0, 12)}…`)
+          return { ok: true, digest: result.digest }
+        } catch (error) {
+          setPredictManagerLoading(false)
+          const message = error instanceof Error ? error.message : 'Create PredictManager failed'
+          store.setToast(message)
+          return { ok: false, error: message }
+        }
       },
 
       confirmRound: () => {
@@ -292,7 +402,7 @@ export function PredictClubProvider({
 
         // Find manager ID for this wallet
         const gateway = createSuiPredictGateway()
-        const managerId = await gateway.fetchManagerId(address)
+        const managerId = predictManagerId ?? (await gateway.fetchManagerId(address))
         if (!managerId) {
           store.setModal('fund-to-join')
           store.setToast('No PredictManager found — create one first')
@@ -322,10 +432,12 @@ export function PredictClubProvider({
         }
 
         // Find member ID from wallet address
-        const member =
-          club.members.find((m) =>
-            m.wallet.toLowerCase().includes(address.slice(-3).toLowerCase()),
-          ) ?? club.members[0]
+        const member = currentMember
+        if (!member) {
+          const error = 'Connected wallet is not a club member yet'
+          store.setToast(error)
+          return { ok: false, error }
+        }
 
         // Fetch oracle entry for tickSize/minStrike
         const oracleEntry = oracleSnapshot.oracles.find((o) => o.oracle_id === selectedOracleId)
@@ -407,11 +519,15 @@ export function PredictClubProvider({
         return { ok: result.ok, error: result.error }
       },
     }),
-    [balances, club, round, oracleSnapshot, buildRiskInput, host],
+    [balances, club, currentMember, round, oracleSnapshot, buildRiskInput, host, predictManagerId],
   )
 
   // ─── Primary Action ───
   const primaryAction = useMemo(() => {
+    if (!suiContext.isConnected) {
+      return { label: 'Connect Wallet', action: () => host?.requestConnect() }
+    }
+
     switch (round.status) {
       case 'draft':
         return { label: 'Publish Round', action: () => actions.publishRound() }
@@ -421,11 +537,18 @@ export function PredictClubProvider({
       case 'funding':
         if (!riskEvaluation.canExecute) {
           return {
-            label: riskEvaluation.warningReasons.some((c) => c.category === 'funding')
-              ? 'Fund to Join'
-              : 'Review Risk',
+            label:
+              !predictManagerLoading && !predictManagerId
+                ? 'Create Manager'
+                : riskEvaluation.warningReasons.some((c) => c.category === 'funding')
+                  ? 'Fund to Join'
+                  : 'Review Risk',
             action: () => {
-              if (riskEvaluation.warningReasons.some((c) => c.category === 'funding')) {
+              const fundingIssue = [
+                ...riskEvaluation.blockingReasons,
+                ...riskEvaluation.warningReasons,
+              ].some((c) => c.category === 'funding')
+              if (fundingIssue) {
                 store.setModal('fund-to-join')
               } else {
                 store.setToast(
@@ -456,7 +579,18 @@ export function PredictClubProvider({
       default:
         return { label: 'Accept Signal', action: () => updateRoundStatus('funding') }
     }
-  }, [round.status, round.id, round.strike, actions, updateRoundStatus, riskEvaluation])
+  }, [
+    actions,
+    host,
+    predictManagerId,
+    predictManagerLoading,
+    riskEvaluation,
+    round.id,
+    round.status,
+    round.strike,
+    suiContext.isConnected,
+    updateRoundStatus,
+  ])
 
   const value: PredictClubContextValue = {
     club,
@@ -475,6 +609,9 @@ export function PredictClubProvider({
     consensus,
     toastMessage,
     oracleSnapshot,
+    currentMember,
+    predictManagerId,
+    predictManagerLoading,
   }
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

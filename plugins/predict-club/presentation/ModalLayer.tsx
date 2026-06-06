@@ -185,7 +185,25 @@ function CreateRoundBody() {
 
 /* ─── Fund to Join ─── */
 function FundToJoinBody() {
-  const { balances, club } = usePredictClub()
+  const {
+    balances,
+    club,
+    context,
+    currentMember,
+    fundingRecommendation,
+    predictManagerId,
+    predictManagerLoading,
+  } = usePredictClub()
+  const round = club.activeRound
+  const hasEnoughDusdc = balances.dusdc >= round.suggestedDusdc
+  const managerStatus = !context.isConnected
+    ? 'Connect wallet'
+    : predictManagerLoading
+      ? 'Checking...'
+      : predictManagerId
+        ? 'Ready'
+        : 'Required'
+  const route = fundingRecommendation.route
   return (
     <>
       {/* Balances */}
@@ -201,6 +219,18 @@ function FundToJoinBody() {
           />
         </div>
       </div>
+      <div className="border border-outline-variant bg-surface-container-low p-md rounded flex flex-col gap-sm">
+        <Row
+          label="Wallet"
+          value={context.address ? shortAddress(context.address) : 'Not connected'}
+        />
+        <Row label="Club Member" value={currentMember?.name ?? 'Will join as You'} />
+        <Row
+          label="PredictManager"
+          value={managerStatus}
+          tone={predictManagerId ? 'mint' : 'amber'}
+        />
+      </div>
       {/* Funding Route */}
       <div className="flex flex-col gap-sm">
         <div className="flex justify-between items-baseline">
@@ -210,41 +240,62 @@ function FundToJoinBody() {
           </span>
         </div>
         <div className="grid grid-cols-2 gap-sm">
-          <RouteCard icon="swap_horiz" title="Native Swap" note="DeepBook V3" active />
-          <RouteCard icon="account_balance" title="Borrow" note="via Scallop" />
-          <RouteCard icon="route" title="Bridge" note="Wormhole" />
-          <RouteCard icon="lock" title="Escrow" note="Club P2P" />
+          <RouteCard
+            icon="payments"
+            title="Direct DUSDC"
+            note={hasEnoughDusdc ? 'Ready to pledge' : 'Need DUSDC balance'}
+            active={route === 'ready-with-dusdc'}
+          />
+          <RouteCard
+            icon="swap_horiz"
+            title="SUI to USDC"
+            note="Preview only"
+            active={route === 'deepbook-sui-to-usdc'}
+          />
+          <RouteCard
+            icon="account_balance"
+            title="Bridge"
+            note="Preview only"
+            active={route === 'bridge-assets-to-sui'}
+          />
+          <RouteCard
+            icon="lock"
+            title="Escrow"
+            note="Local offer flow"
+            active={route === 'club-escrow-usdc-to-dusdc'}
+          />
         </div>
       </div>
       {/* Amount Input */}
       <div className="flex flex-col gap-sm">
         <div className="flex justify-between items-baseline">
-          <Label>Amount to Fund</Label>
+          <Label>Suggested Stake</Label>
           <span className="font-data text-data-sm text-on-surface-variant">
-            Target: <span className="text-primary">{club.activeRound.suggestedDusdc}.00 USDC</span>
+            Target: <span className="text-primary">{round.suggestedDusdc}.00 DUSDC</span>
           </span>
         </div>
         <div className="flex items-center bg-background border border-outline-variant rounded px-md py-sm focus-within:border-primary-fixed-dim focus-within:ring-1 focus-within:ring-primary-fixed-dim/30">
           <div className="flex items-center gap-sm pr-md border-r border-outline-variant mr-md">
-            <span className="w-6 h-6 rounded-full bg-[#3898FF] flex items-center justify-center text-[10px] font-bold text-white">
-              SUI
+            <span className="w-6 h-6 rounded-full bg-primary-fixed-dim flex items-center justify-center text-[10px] font-bold text-on-primary-fixed">
+              D
             </span>
-            <span className="font-label text-label-caps text-on-surface">SUI</span>
+            <span className="font-label text-label-caps text-on-surface">DUSDC</span>
           </div>
           <input
             className="w-full bg-transparent border-none outline-none font-data text-data-lg text-primary text-right"
             type="number"
-            defaultValue="45.2"
+            readOnly
+            value={round.suggestedDusdc}
           />
           <button
             className="ml-md font-label text-label-caps text-primary-fixed-dim hover:text-primary-fixed"
             type="button"
           >
-            MAX
+            SET
           </button>
         </div>
         <div className="flex justify-end font-data text-data-sm text-on-surface-variant">
-          ≈ $98.45 USD
+          Routes other than Direct DUSDC are preview-only in this build.
         </div>
       </div>
       {/* Settings */}
@@ -294,9 +345,17 @@ function FundToJoinBody() {
 
 /* ─── Execute My Trade ─── */
 function ExecuteTradeBody() {
-  const { club, oracleSnapshot } = usePredictClub()
+  const {
+    balances,
+    club,
+    context,
+    oracleSnapshot,
+    predictManagerId,
+    predictManagerLoading,
+    riskEvaluation,
+  } = usePredictClub()
   const round = club.activeRound
-  const payoutPreview = computePayoutPreview({
+  const modalPayoutPreview = computePayoutPreview({
     direction: round.direction,
     strike: round.strike,
     lowerStrike: round.lowerStrike,
@@ -306,6 +365,18 @@ function ExecuteTradeBody() {
     expiry: oracleSnapshot.oracleState?.expiry,
     svi: oracleSnapshot.oracleState?.latest_svi,
   })
+  const expiryCheck = riskEvaluation.checks.find((check) => check.id === 'expiry-safe')
+  const checklist = [
+    { label: 'Wallet Connected', passed: context.isConnected },
+    { label: 'Sufficient DUSDC Balance', passed: balances.dusdc >= round.suggestedDusdc },
+    { label: 'PredictManager Ready', passed: Boolean(predictManagerId) },
+    { label: 'Oracle Validated', passed: oracleSnapshot.isHealthy },
+    { label: 'Expiry Safe', passed: expiryCheck?.passed === true },
+  ]
+  const payoutLabel =
+    modalPayoutPreview.reason === 'Probability floored for display'
+      ? 'Capped Payout'
+      : 'Indicative Payout'
   return (
     <>
       {/* Round Summary */}
@@ -346,21 +417,41 @@ function ExecuteTradeBody() {
         <div className="font-label text-label-caps text-on-surface-variant mb-xs">
           Position Details
         </div>
-        <Row label="Amount" value={`${formatUsd(round.totalPledgedDusdc)} DUSDC`} />
+        <Row label="Amount" value={`${formatUsd(round.suggestedDusdc)} DUSDC`} />
         <Row label="PredictManager Status">
-          <div className="flex items-center gap-xs border border-primary-fixed-dim/30 bg-primary-fixed-dim/10 px-xs py-[2px] rounded">
-            <div className="w-2 h-2 rounded-full bg-primary-fixed-dim animate-pulse" />
-            <span className="font-data text-data-sm text-primary-fixed-dim uppercase">
-              Active/Ready
+          <div
+            className={`flex items-center gap-xs border px-xs py-[2px] rounded ${
+              predictManagerId
+                ? 'border-primary-fixed-dim/30 bg-primary-fixed-dim/10'
+                : 'border-tertiary-fixed/30 bg-tertiary-fixed/10'
+            }`}
+          >
+            <div
+              className={`w-2 h-2 rounded-full ${
+                predictManagerId ? 'bg-primary-fixed-dim animate-pulse' : 'bg-tertiary-fixed'
+              }`}
+            />
+            <span
+              className={`font-data text-data-sm uppercase ${
+                predictManagerId ? 'text-primary-fixed-dim' : 'text-tertiary-fixed'
+              }`}
+            >
+              {predictManagerLoading ? 'Checking' : predictManagerId ? 'Ready' : 'Required'}
             </span>
           </div>
         </Row>
         <Row label="Oracle Health">
           <div className="flex items-center gap-xs">
-            <span className="material-symbols-outlined text-[14px] text-primary-fixed-dim">
-              verified
+            <span
+              className={`material-symbols-outlined text-[14px] ${
+                oracleSnapshot.isHealthy ? 'text-primary-fixed-dim' : 'text-error'
+              }`}
+            >
+              {oracleSnapshot.isHealthy ? 'verified' : 'warning'}
             </span>
-            <span className="font-data text-data-sm uppercase text-on-surface">Healthy</span>
+            <span className="font-data text-data-sm uppercase text-on-surface">
+              {oracleSnapshot.isHealthy ? 'Healthy' : 'Stale'}
+            </span>
           </div>
         </Row>
       </div>
@@ -372,15 +463,16 @@ function ExecuteTradeBody() {
         </div>
         <div className="flex-1 border border-primary-fixed-dim/30 bg-primary-fixed-dim/5 p-sm flex flex-col">
           <div className="font-label text-label-caps text-primary-fixed-dim mb-xs">
-            Indicative Payout
+            {payoutLabel}
           </div>
-          {payoutPreview.indicativePayout ? (
+          {modalPayoutPreview.indicativePayout ? (
             <div className="font-data text-data-lg text-primary-fixed-dim">
-              +{formatUsd(payoutPreview.indicativePayout)} DUSDC
+              {payoutLabel === 'Capped Payout' ? '<= ' : '+'}
+              {formatUsd(modalPayoutPreview.indicativePayout)} DUSDC
             </div>
           ) : (
             <div className="font-data text-data-sm text-on-surface-variant">
-              {payoutPreview.reason ?? 'Pricing preview unavailable'}
+              {modalPayoutPreview.reason ?? 'Pricing preview unavailable'}
             </div>
           )}
         </div>
@@ -390,19 +482,23 @@ function ExecuteTradeBody() {
         <div className="font-label text-label-caps text-on-surface-variant mb-xs">
           Transaction Checklist
         </div>
-        {['Wallet Connected', 'Sufficient DUSDC Balance', 'Oracle Validated', 'Expiry Safe'].map(
-          (item) => (
-            <div
-              key={item}
-              className="flex items-center gap-sm font-data text-data-sm text-on-surface"
+        {checklist.map((item) => (
+          <div
+            key={item.label}
+            className={`flex items-center gap-sm font-data text-data-sm ${
+              item.passed ? 'text-on-surface' : 'text-on-surface-variant'
+            }`}
+          >
+            <span
+              className={`material-symbols-outlined text-[16px] ${
+                item.passed ? 'text-primary-fixed-dim' : 'text-tertiary-fixed'
+              }`}
             >
-              <span className="material-symbols-outlined text-[16px] text-primary-fixed-dim">
-                check_circle
-              </span>
-              {item}
-            </div>
-          ),
-        )}
+              {item.passed ? 'check_circle' : 'radio_button_unchecked'}
+            </span>
+            {item.label}
+          </div>
+        ))}
       </div>
     </>
   )
@@ -608,7 +704,19 @@ function ClaimSettlementBody() {
 /* ═══════════════════════ MODAL FOOTERS ═══════════════════════ */
 
 function ModalFooterContent({ modal }: { modal: ModalKind }) {
-  const { setModal, actions, club, selectedOffer, updateRoundStatus } = usePredictClub()
+  const {
+    actions,
+    balances,
+    club,
+    context,
+    currentMember,
+    host,
+    predictManagerId,
+    predictManagerLoading,
+    selectedOffer,
+    setModal,
+    updateRoundStatus,
+  } = usePredictClub()
 
   switch (modal) {
     case 'create-round':
@@ -637,16 +745,61 @@ function ModalFooterContent({ modal }: { modal: ModalKind }) {
         </>
       )
     case 'fund-to-join':
+      if (!context.isConnected) {
+        return (
+          <>
+            <SecondaryBtn label="Close" onClick={() => setModal(null)} />
+            <PrimaryBtn
+              label="Connect Wallet"
+              onClick={() => host?.requestConnect()}
+              icon="wallet"
+            />
+          </>
+        )
+      }
+      if (predictManagerLoading) {
+        return (
+          <>
+            <SecondaryBtn label="Close" onClick={() => setModal(null)} />
+            <PrimaryBtn label="Checking Manager" onClick={() => {}} disabled icon="sync" />
+          </>
+        )
+      }
+      if (!predictManagerId) {
+        return (
+          <>
+            <SecondaryBtn label="Close" onClick={() => setModal(null)} />
+            <PrimaryBtn
+              label="Create Manager"
+              onClick={() => {
+                void actions.createPredictManager()
+              }}
+              icon="add_circle"
+            />
+          </>
+        )
+      }
+      if (!currentMember || balances.dusdc < club.activeRound.suggestedDusdc) {
+        return (
+          <>
+            <SecondaryBtn label="Close" onClick={() => setModal(null)} />
+            <PrimaryBtn label="Need DUSDC" onClick={() => {}} disabled icon="payments" />
+          </>
+        )
+      }
       return (
         <>
-          <SecondaryBtn label="Preview Route" onClick={() => setModal(null)} />
+          <SecondaryBtn label="Close" onClick={() => setModal(null)} />
           <PrimaryBtn
-            label="Continue"
+            label="Pledge DUSDC"
             onClick={() => {
-              actions.pledgeToRound('m2', club.activeRound.suggestedDusdc)
-              setModal(null)
+              const result = actions.pledgeToRound(
+                currentMember.id,
+                club.activeRound.suggestedDusdc,
+              )
+              if (result.ok) setModal(null)
             }}
-            icon="arrow_forward"
+            icon="check_circle"
           />
         </>
       )
@@ -927,21 +1080,32 @@ function PrimaryBtn({
   label,
   onClick,
   icon,
+  disabled,
 }: {
   label: string
   onClick: () => void
   icon?: string
+  disabled?: boolean
 }) {
   return (
     <button
-      className="px-lg py-sm bg-primary-fixed-dim text-on-primary-fixed font-data text-data-md rounded hover:bg-primary-container transition-colors shadow-[0_0_10px_rgba(0,224,179,0.2)] cursor-pointer flex items-center gap-sm"
+      className={`px-lg py-sm font-data text-data-md rounded transition-colors flex items-center gap-sm ${
+        disabled
+          ? 'bg-surface-variant text-on-surface-variant border border-outline cursor-not-allowed'
+          : 'bg-primary-fixed-dim text-on-primary-fixed hover:bg-primary-container shadow-[0_0_10px_rgba(0,224,179,0.2)] cursor-pointer'
+      }`}
       type="button"
+      disabled={disabled}
       onClick={onClick}
     >
       {icon && <span className="material-symbols-outlined text-[18px]">{icon}</span>}
       {label}
     </button>
   )
+}
+
+function shortAddress(address: string): string {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
 
 function modalTitle(modal: ModalKind): string {

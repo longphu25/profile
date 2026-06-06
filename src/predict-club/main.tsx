@@ -56,7 +56,7 @@ const pluginPath = import.meta.env.DEV
  * Loads the plugin, then replaces static HTML content inside each
  * [data-pc-panel] container with a live React panel component.
  */
-function PredictClubOrchestrator() {
+export function PredictClubOrchestrator() {
   const [, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const rootsRef = useRef<Root[]>([])
@@ -187,11 +187,29 @@ function PredictClubOrchestrator() {
     if (connection.isConnected && account) {
       btn.textContent = `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
       btn.classList.add('connected')
+      btn.setAttribute('title', 'Disconnect wallet')
     } else {
       btn.textContent = 'Connect Wallet'
       btn.classList.remove('connected')
+      btn.setAttribute('title', 'Connect wallet')
     }
   }, [connection.isConnected, account])
+
+  useEffect(() => {
+    const btn = document.querySelector('[data-wallet-btn]') as HTMLButtonElement | null
+    if (!btn) return undefined
+
+    const handleClick = () => {
+      if (connection.isConnected) {
+        dAppKitInstance.disconnectWallet()
+      } else if (wallets.length > 0) {
+        dAppKitInstance.connectWallet({ wallet: wallets[0] })
+      }
+    }
+
+    btn.addEventListener('click', handleClick)
+    return () => btn.removeEventListener('click', handleClick)
+  }, [connection.isConnected, dAppKitInstance, wallets])
 
   if (error) {
     console.error('[PredictClub] Mount error:', error)

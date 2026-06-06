@@ -45,7 +45,10 @@ export function validateRoundParams(params: CreateRoundParams): ValidationResult
 }
 
 export function canMemberPledge(round: PredictionRound, memberState: MemberRoundState): boolean {
-  return round.status === 'open' && memberState === 'watching'
+  return (
+    (round.status === 'open' || round.status === 'confirmed' || round.status === 'funding') &&
+    (memberState === 'watching' || memberState === 'pledged')
+  )
 }
 
 export function canMemberAccept(round: PredictionRound, memberState: MemberRoundState): boolean {
