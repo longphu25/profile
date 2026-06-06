@@ -27,7 +27,7 @@
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "composable-move-functions/SKILL.md",
-      "computedHash": "6941d2d36c92aa44cc69198d87fd5c27608c0ac8fb99bb24d23a756f72f98fc1"
+      "computedHash": "8171bf260befb0c9fe2f5c4670d198cf695841c673c17357161d6936d1e8d7c4"
     },
     "design-taste-frontend": {
       "source": "Leonxlnx/taste-skill",
@@ -45,7 +45,7 @@
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "frontend-apps/SKILL.md",
-      "computedHash": "8cef1b026d7150653b0f1c0162ffbbf550ab79f0b882d25130960b14040239c7"
+      "computedHash": "b4ecc791f2d333e8df4b5f84dffe96af8dd1baa50dc697a635dc227db9e28181"
     },
     "frontend-design": {
       "source": "anthropics/skills",
@@ -150,25 +150,25 @@
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "modern-move-syntax/SKILL.md",
-      "computedHash": "e43e08d1141c80973e0c1c14f90255d186d8158f2cda40f57e0dcb3ff3557494"
+      "computedHash": "6cd154f3bea6a08c279633aa6b3459cb47d44a329f70b49c50cf18b05cf78e1a"
     },
     "move-unit-testing": {
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "move-unit-testing/SKILL.md",
-      "computedHash": "ac8a8fa9142953d002ec423e126b2fea2b35284967f6c84b4a7f1655d823911b"
+      "computedHash": "7edb13ce3bdd1f0153792aa0e9fcfddd16d74f8625bcb46ef06ec373fdf99605"
     },
     "naming-conventions": {
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "naming-conventions/SKILL.md",
-      "computedHash": "010a3d3108bcf4dd8362fac08e4edb86e41a46389bdb59ac8ac83330432e8e83"
+      "computedHash": "f719a5f6d23cfef9f8482d96c2233f3458e756e0954a99aff22e3fefd6a5eedb"
     },
     "ptbs": {
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "ptbs/SKILL.md",
-      "computedHash": "e6fb42472ca94fa4ea56aea658bdce3a337836da91431dadf544124584ed8b6c"
+      "computedHash": "7bf868ee7a8ef35b9e7b998ff00de8780a70ec0c9a635edf596974709f45e70b"
     },
     "redesign-existing-projects": {
       "source": "Leonxlnx/taste-skill",
@@ -196,7 +196,7 @@
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "sui-build-test/SKILL.md",
-      "computedHash": "8020ad57bb833fb68106eb6de1dd7d53152a76cad13e4a65584d8844ac4dfc1d"
+      "computedHash": "a4d1bc03de38fb2eec18236c4b6413e04a8dbe0c6f0272812e0b8dd4bfc73521"
     },
     "sui-cli": {
       "source": "mystenlabs/skills",
@@ -220,7 +220,7 @@
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "sui-move/SKILL.md",
-      "computedHash": "3091c8e482d76b823405c462d7798fd28c4fa805c7884a66675cba83b12fa4f6"
+      "computedHash": "8cab7232c524e0c798716d87f3dd73747f502af47ebb48333334d6b3297bf8d0"
     },
     "sui-move-blockchain": {
       "source": "local",
@@ -231,19 +231,19 @@
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "sui-move-project/SKILL.md",
-      "computedHash": "db220d3ee8c7b6e85557692c175dce8e885761a57ad8c9ad3f84627db59d2406"
+      "computedHash": "7df18d4a0d5250edf6928a700cd3152625bb8186b298bfa052ce5545db111a68"
     },
     "sui-object-model": {
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "object-model/SKILL.md",
-      "computedHash": "02321a7c3c12c6d50ee72cd7a38d87ba6fb2b7dd37d318a55e48dbdcd343446f"
+      "computedHash": "3d472f997ee7df2bd4565b38227bb9175cce86a1105b429d8c67bf10ab62a14a"
     },
     "sui-overview": {
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "sui-overview/SKILL.md",
-      "computedHash": "add0beec8b0ed75573e215824fc4549fb99816fa9bb6d3f74930c27a9c364797"
+      "computedHash": "b33f574d3eb27d910e02e9bdcc4009642a149133e4034b3842c11104e0ae44b5"
     },
     "sui-publish": {
       "source": "mystenlabs/skills",
@@ -286,7 +286,7 @@
       "source": "mystenlabs/skills",
       "sourceType": "github",
       "skillPath": "walrus-sites/SKILL.md",
-      "computedHash": "ff2f1ba245b7bed5061dfe918158deb74422de8ebfe81d122f1df8dfea51dbd0"
+      "computedHash": "e3ab2e09bafeb835b5b52a7ee3e732a4c98e1e0ca1bdefee6e338c76883fcb4e"
     },
     "your-skill-name": {
       "source": "mystenlabs/skills",

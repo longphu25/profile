@@ -1,60 +1,61 @@
-.PHONY: dev build preview lint format format-check typecheck check audit clean help
+# Predict Club — Development Makefile
 
-# ─── Development ───
-dev: ## Start dev server
+# === Skills ===
+
+.PHONY: skills-install skills-update skills-list
+
+## Install all Sui skills from mystenlabs/skills
+skills-install:
+	npx skills add mystenlabs/skills --all -y
+
+## Update all installed skills to latest
+skills-update:
+	npx skills update -y
+
+## List installed skills
+skills-list:
+	npx skills ls
+
+# === Contracts ===
+
+.PHONY: move-build move-test move-clean
+
+MOVE_DIR := contracts/predict-club
+
+## Build Move contracts
+move-build:
+	cd $(MOVE_DIR) && sui move build
+
+## Run Move unit tests
+move-test:
+	cd $(MOVE_DIR) && sui move test
+
+## Clean Move build artifacts
+move-clean:
+	rm -rf $(MOVE_DIR)/build
+
+# === Frontend ===
+
+.PHONY: dev build lint
+
+## Start dev server
+dev:
 	bun run dev
 
-build: ## Type-check then production build (includes WASM)
+## Production build
+build:
 	bun run build
 
-wasm: ## Build all Rust WASM crates
-	@for dir in plugins/*/wasm; do \
-		[ -f "$$dir/Cargo.toml" ] || continue; \
-		echo "[wasm] Building $$(basename $$(dirname $$dir))..."; \
-		(cd "$$dir" && wasm-pack build --target web --release --out-dir ../pkg); \
-	done
-
-preview: ## Preview production build
-	bun run preview
-
-# ─── Code Quality ───
-lint: ## Run ESLint
+## Lint
+lint:
 	bun run lint
 
-format: ## Format code with Biome
-	bun run format
+# === Combined ===
 
-format-check: ## Check formatting without writing
-	bun run format:check
+.PHONY: check all
 
-typecheck: ## Run TypeScript type checking
-	bunx tsc --noEmit
+## Run all checks (lint + move tests + build)
+check: lint move-test build
 
-check: lint format-check typecheck ## Run all checks (lint + format + types)
-
-# ─── Security ───
-audit: ## Check dependencies for known vulnerabilities
-	bun audit 2>/dev/null || bunx npm-audit --json 2>/dev/null || echo "Run: bun pm ls to inspect deps manually"
-
-audit-fix: ## Attempt to fix vulnerable dependencies
-	bun update
-
-# ─── Misc ───
-codegen: ## Generate Sui TypeScript bindings
-	bun run codegen
-
-plugin: ## Create a new plugin (usage: make plugin name=my-plugin)
-	@test -n "$(name)" || (echo "Usage: make plugin name=my-plugin" && exit 1)
-	node scripts/create-plugin.mjs $(name)
-
-sui-plugin: ## Create a new SUI plugin with dual-mode (usage: make sui-plugin name=token-swap)
-	@test -n "$(name)" || (echo "Usage: make sui-plugin name=token-swap" && exit 1)
-	node scripts/create-sui-plugin.mjs $(name)
-
-clean: ## Remove build artifacts
-	rm -rf dist node_modules/.vite
-
-help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
-
-.DEFAULT_GOAL := help
+## Full setup from scratch
+all: skills-install move-build build
