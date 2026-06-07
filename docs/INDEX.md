@@ -86,6 +86,7 @@
 ### Predict Club Frontend Integration (v0.43.0)
 - [[stories/plans/14-predict-club-contract-integration]] — Master integration plan (P0-P3 ✅, P4-P5 remaining)
 - [[stories/plans/15-swap-scallop-integration]] — Swap + Scallop assessment and implementation status
+- [[stories/plans/17-scallop-plugin-extraction]] — Extract Scallop into standalone plugin, mount via Host Component Registry
 - **Gateways:** `escrowGateway`, `fundingGateway`, `scallopGateway`, `suiPredictGateway`, `escrowQueryService`
 - **Use Cases:** `escrowOnChain`, `swapSuiToUsdc`, `borrowUsdc`, `claimWinnings`, `executeTradeplan`
 - **Domain:** `canBorrowSafely` policy, `MIN_HEALTH_FACTOR = 1.5`
