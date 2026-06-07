@@ -18,6 +18,11 @@ import {
   cancelEscrowOffer,
   type CreateEscrowParams,
 } from '../application/manageEscrow'
+import {
+  createOfferOnChain,
+  fillOfferOnChain,
+  cancelOfferOnChain,
+} from '../application/escrowOnChain'
 import { settleRound, type SettlementOutcome } from '../application/settleRound'
 import { executeTradeplan } from '../application/executeTradeplan'
 import { createSuiPredictGateway } from '../infrastructure/suiPredictGateway'
@@ -32,6 +37,12 @@ import {
   getSnapshot,
   type ClubOracleSnapshot,
 } from '../infrastructure/deepbookOracleService'
+import {
+  EMPTY_CONTRACT_QUOTE,
+  computeFairValuePreview,
+  fetchPredictPricingSnapshot,
+  type PredictPricingSnapshot,
+} from '../infrastructure/deepbookPredictPricingService'
 import { deriveSignalsFromPrices } from '../infrastructure/indicatorSignalGateway'
 import type {
   AssetBalances,
@@ -45,6 +56,17 @@ import type { CreateRoundParams } from '../domain/policies'
 import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
 
 const ZERO_BALANCES: AssetBalances = { sui: 0, usdc: 0, dusdc: 0 }
+
+function createPricingSnapshot(round: ClubState['activeRound']): PredictPricingSnapshot {
+  return {
+    fairValue: computeFairValuePreview(round, null),
+    quote: EMPTY_CONTRACT_QUOTE,
+    manager: null,
+    vault: null,
+    loading: false,
+    updatedAt: 0,
+  }
+}
 
 function memberIdForWallet(address: string): string {
   return `member-${address.slice(2, 10).toLowerCase()}`
@@ -67,6 +89,7 @@ export interface PredictClubContextValue {
   consensus: ConsensusResult
   toastMessage: string | null
   oracleSnapshot: ClubOracleSnapshot
+  pricingSnapshot: PredictPricingSnapshot
   currentMember: ClubMember | null
   predictManagerId: string | null
   predictManagerLoading: boolean
@@ -83,6 +106,17 @@ export interface PredictClubActions {
   createEscrowOffer: (params: CreateEscrowParams) => { ok: boolean; error?: string }
   fillEscrowOffer: (offerId: string) => { ok: boolean; error?: string }
   cancelEscrowOffer: (offerId: string) => { ok: boolean; error?: string }
+  createEscrowOfferOnChain: (params: {
+    offerCoinId: string
+    offerAsset: 'DUSDC' | 'USDC' | 'SUI'
+    wantAsset: 'DUSDC' | 'USDC' | 'SUI'
+    wantAmount: bigint
+    expiresInEpochs: number
+    recipient?: string
+    roundId?: string
+  }) => Promise<{ ok: boolean; digest?: string; error?: string }>
+  fillEscrowOfferOnChain: (offer: EscrowOfferView, paymentCoinId: string) => Promise<{ ok: boolean; digest?: string; error?: string }>
+  cancelEscrowOfferOnChain: (offer: EscrowOfferView) => Promise<{ ok: boolean; digest?: string; error?: string }>
 }
 
 const Ctx = createContext<PredictClubContextValue | null>(null)
@@ -113,6 +147,9 @@ export function PredictClubProvider({
   )
   const [predictManagerId, setPredictManagerId] = useState<string | null>(null)
   const [predictManagerLoading, setPredictManagerLoading] = useState(false)
+  const [pricingSnapshot, setPricingSnapshot] = useState<PredictPricingSnapshot>(() =>
+    createPricingSnapshot(club.activeRound),
+  )
   useEffect(() => {
     if (!host) return
     setSuiContext(host.getSuiContext())
@@ -168,6 +205,54 @@ export function PredictClubProvider({
 
   // Subscribe to oracle stream
   const oracleSnapshot = useSyncExternalStore(subscribeOracle, getSnapshot)
+
+  useEffect(() => {
+    const address = suiContext.isConnected ? suiContext.address : null
+    let cancelled = false
+
+    setPricingSnapshot((current) => ({
+      ...current,
+      fairValue: computeFairValuePreview(club.activeRound, oracleSnapshot.oracleState),
+      loading: true,
+    }))
+
+    fetchPredictPricingSnapshot({
+      walletAddress: address,
+      managerId: predictManagerId,
+      oracle: oracleSnapshot.oracleState,
+      round: club.activeRound,
+    })
+      .then((snapshot) => {
+        if (!cancelled) setPricingSnapshot(snapshot)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPricingSnapshot({
+            fairValue: computeFairValuePreview(club.activeRound, oracleSnapshot.oracleState),
+            quote: { ...EMPTY_CONTRACT_QUOTE, reason: 'Contract quote unavailable' },
+            manager: null,
+            vault: null,
+            loading: false,
+            updatedAt: Date.now(),
+          })
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    club.activeRound.direction,
+    club.activeRound.expiryMinutes,
+    club.activeRound.lowerStrike,
+    club.activeRound.strike,
+    club.activeRound.suggestedDusdc,
+    club.activeRound.upperStrike,
+    oracleSnapshot.oracleState,
+    predictManagerId,
+    suiContext.address,
+    suiContext.isConnected,
+  ])
 
   // Wallet balances — fetch on connect, poll every 30s
   const [balances, setBalances] = useState<AssetBalances>(ZERO_BALANCES)
@@ -494,7 +579,7 @@ export function PredictClubProvider({
         const result = createEscrowOffer(club, params)
         if (result.ok && result.club) {
           store.setClub(result.club)
-          store.setToast('Escrow offer created')
+          store.setToast('Escrow offer created (local)')
           store.setModal(null)
         }
         return { ok: result.ok, error: result.error }
@@ -504,7 +589,7 @@ export function PredictClubProvider({
         const result = fillEscrowOffer(club, offerId)
         if (result.ok && result.club) {
           store.setClub(result.club)
-          store.setToast('Escrow filled')
+          store.setToast('Escrow filled (local)')
           store.setModal(null)
         }
         return { ok: result.ok, error: result.error }
@@ -514,9 +599,63 @@ export function PredictClubProvider({
         const result = cancelEscrowOffer(club, offerId)
         if (result.ok && result.club) {
           store.setClub(result.club)
-          store.setToast('Escrow cancelled')
+          store.setToast('Escrow cancelled (local)')
         }
         return { ok: result.ok, error: result.error }
+      },
+
+      createEscrowOfferOnChain: async (params) => {
+        const address = host?.getSuiContext().address
+        if (!host || !address) return { ok: false, error: 'Wallet not connected' }
+        try {
+          const result = await createOfferOnChain(
+            { sender: address, signAndExecute: (tx) => host.signAndExecuteTransaction(tx) },
+            params,
+          )
+          store.setToast(`Offer created on-chain — ${result.digest.slice(0, 12)}…`)
+          store.setModal(null)
+          return { ok: true, digest: result.digest }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Create offer failed'
+          store.setToast(msg)
+          return { ok: false, error: msg }
+        }
+      },
+
+      fillEscrowOfferOnChain: async (offer, paymentCoinId) => {
+        const address = host?.getSuiContext().address
+        if (!host || !address) return { ok: false, error: 'Wallet not connected' }
+        try {
+          const result = await fillOfferOnChain(
+            { sender: address, signAndExecute: (tx) => host.signAndExecuteTransaction(tx) },
+            offer,
+            paymentCoinId,
+          )
+          store.setToast(`Offer filled on-chain — ${result.digest.slice(0, 12)}…`)
+          store.setModal(null)
+          return { ok: true, digest: result.digest }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Fill offer failed'
+          store.setToast(msg)
+          return { ok: false, error: msg }
+        }
+      },
+
+      cancelEscrowOfferOnChain: async (offer) => {
+        const address = host?.getSuiContext().address
+        if (!host || !address) return { ok: false, error: 'Wallet not connected' }
+        try {
+          const result = await cancelOfferOnChain(
+            { sender: address, signAndExecute: (tx) => host.signAndExecuteTransaction(tx) },
+            offer,
+          )
+          store.setToast(`Offer cancelled on-chain — ${result.digest.slice(0, 12)}…`)
+          return { ok: true, digest: result.digest }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Cancel offer failed'
+          store.setToast(msg)
+          return { ok: false, error: msg }
+        }
       },
     }),
     [balances, club, currentMember, round, oracleSnapshot, buildRiskInput, host, predictManagerId],
@@ -609,6 +748,7 @@ export function PredictClubProvider({
     consensus,
     toastMessage,
     oracleSnapshot,
+    pricingSnapshot,
     currentMember,
     predictManagerId,
     predictManagerLoading,
