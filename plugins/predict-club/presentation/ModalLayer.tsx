@@ -1,6 +1,5 @@
 import { usePredictClub } from './PredictClubContext'
 import { formatUsd } from './shared'
-import { computePayoutPreview } from '../domain/payoutPreview'
 import type { ModalKind } from '../domain/types'
 import { demoClubState } from '../domain/fixtures'
 
@@ -249,7 +248,7 @@ function FundToJoinBody() {
           <RouteCard
             icon="swap_horiz"
             title="SUI to USDC"
-            note="Preview only"
+            note={balances.sui > 2 ? `${balances.sui.toFixed(1)} SUI available` : 'Insufficient SUI'}
             active={route === 'deepbook-sui-to-usdc'}
           />
           <RouteCard
@@ -261,7 +260,7 @@ function FundToJoinBody() {
           <RouteCard
             icon="lock"
             title="Escrow"
-            note="Local offer flow"
+            note="Fill DUSDC offer"
             active={route === 'club-escrow-usdc-to-dusdc'}
           />
         </div>
@@ -295,7 +294,7 @@ function FundToJoinBody() {
           </button>
         </div>
         <div className="flex justify-end font-data text-data-sm text-on-surface-variant">
-          Routes other than Direct DUSDC are preview-only in this build.
+          SUI→USDC swap via DeepBook v3. Escrow fills on-chain via predict-club contract.
         </div>
       </div>
       {/* Settings */}
@@ -350,21 +349,14 @@ function ExecuteTradeBody() {
     club,
     context,
     oracleSnapshot,
+    pricingSnapshot,
     predictManagerId,
     predictManagerLoading,
     riskEvaluation,
   } = usePredictClub()
   const round = club.activeRound
-  const modalPayoutPreview = computePayoutPreview({
-    direction: round.direction,
-    strike: round.strike,
-    lowerStrike: round.lowerStrike,
-    upperStrike: round.upperStrike,
-    amountDusdc: round.suggestedDusdc,
-    forward: oracleSnapshot.oracleState?.latest_price?.forward,
-    expiry: oracleSnapshot.oracleState?.expiry,
-    svi: oracleSnapshot.oracleState?.latest_svi,
-  })
+  const contractQuote = pricingSnapshot.quote
+  const fairValuePreview = pricingSnapshot.fairValue
   const expiryCheck = riskEvaluation.checks.find((check) => check.id === 'expiry-safe')
   const checklist = [
     { label: 'Wallet Connected', passed: context.isConnected },
@@ -373,10 +365,12 @@ function ExecuteTradeBody() {
     { label: 'Oracle Validated', passed: oracleSnapshot.isHealthy },
     { label: 'Expiry Safe', passed: expiryCheck?.passed === true },
   ]
-  const payoutLabel =
-    modalPayoutPreview.reason === 'Probability floored for display'
-      ? 'Capped Payout'
-      : 'Indicative Payout'
+  const winProbability =
+    fairValuePreview.reason === 'Probability floored for display'
+      ? '<0.1%'
+      : fairValuePreview.probability
+        ? `${(fairValuePreview.probability * 100).toFixed(1)}%`
+        : 'Preview unavailable'
   return (
     <>
       {/* Round Summary */}
@@ -458,24 +452,49 @@ function ExecuteTradeBody() {
       {/* Risk Assessment */}
       <div className="flex gap-sm">
         <div className="flex-1 border border-error/30 bg-error/5 p-sm flex flex-col">
-          <div className="font-label text-label-caps text-error mb-xs">Max Loss</div>
-          <div className="font-data text-data-lg text-error">-{round.suggestedDusdc} DUSDC</div>
+          <div className="font-label text-label-caps text-error mb-xs">Estimated Cost</div>
+          <div className="font-data text-data-lg text-error">
+            {contractQuote.estimatedCost != null
+              ? `${formatUsd(contractQuote.estimatedCost)} DUSDC`
+              : 'Preview unavailable'}
+          </div>
         </div>
         <div className="flex-1 border border-primary-fixed-dim/30 bg-primary-fixed-dim/5 p-sm flex flex-col">
-          <div className="font-label text-label-caps text-primary-fixed-dim mb-xs">
-            {payoutLabel}
+          <div className="font-label text-label-caps text-primary-fixed-dim mb-xs">Gross If Win</div>
+          <div className="font-data text-data-lg text-primary-fixed-dim">
+            {contractQuote.grossIfWin != null
+              ? `${formatUsd(contractQuote.grossIfWin)} DUSDC`
+              : 'Preview unavailable'}
           </div>
-          {modalPayoutPreview.indicativePayout ? (
-            <div className="font-data text-data-lg text-primary-fixed-dim">
-              {payoutLabel === 'Capped Payout' ? '<= ' : '+'}
-              {formatUsd(modalPayoutPreview.indicativePayout)} DUSDC
-            </div>
-          ) : (
-            <div className="font-data text-data-sm text-on-surface-variant">
-              {modalPayoutPreview.reason ?? 'Pricing preview unavailable'}
-            </div>
-          )}
         </div>
+      </div>
+      <div className="border border-outline-variant bg-surface-container p-sm flex flex-col gap-xs">
+        <div className="font-label text-label-caps text-on-surface-variant mb-xs">
+          Pricing Preview
+        </div>
+        <Row
+          label="Potential Profit"
+          value={
+            contractQuote.potentialProfit != null
+              ? `+${formatUsd(contractQuote.potentialProfit)} DUSDC`
+              : 'Preview unavailable'
+          }
+          tone={contractQuote.potentialProfit != null ? 'mint' : undefined}
+        />
+        <Row
+          label="Risk/Reward"
+          value={
+            contractQuote.riskReward != null
+              ? contractQuote.riskReward.toFixed(2)
+              : 'Preview unavailable'
+          }
+        />
+        <Row label="Win Probability" value={winProbability} />
+        {contractQuote.status !== 'ok' && (
+          <p className="font-data text-data-sm text-on-surface-variant">
+            {contractQuote.reason ?? 'Contract quote unavailable'}
+          </p>
+        )}
       </div>
       {/* Checklist */}
       <div className="border border-outline-variant bg-surface-container p-sm flex flex-col gap-xs">
