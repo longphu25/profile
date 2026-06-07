@@ -25,6 +25,7 @@ import {
 } from '../application/escrowOnChain'
 import { claimWinnings, type ClaimParams } from '../application/claimWinnings'
 import { swapSuiToUsdc } from '../application/swapSuiToUsdc'
+import { fetchOnChainOffers } from '../infrastructure/escrowQueryService'
 import { settleRound, type SettlementOutcome } from '../application/settleRound'
 import { executeTradeplan } from '../application/executeTradeplan'
 import { createSuiPredictGateway } from '../infrastructure/suiPredictGateway'
@@ -279,6 +280,15 @@ export function PredictClubProvider({
       if (ctx.isConnected && ctx.address) {
         fetchAndSet(ctx.address)
         intervalId = setInterval(() => fetchAndSet(ctx.address!), 30_000)
+        // Load on-chain offers
+        fetchOnChainOffers().then((offers) => {
+          if (offers.length > 0) {
+            store.updateClub((c) => {
+              const localOnly = c.escrowOffers.filter((o) => !o.id.startsWith('0x'))
+              return { ...c, escrowOffers: [...localOnly, ...offers] }
+            })
+          }
+        }).catch(() => {})
       } else {
         setBalances(ZERO_BALANCES)
       }
@@ -398,6 +408,20 @@ export function PredictClubProvider({
 
   const updateRoundStatus = useCallback((status: RoundStatus) => {
     store.updateClub((c) => ({ ...c, activeRound: { ...c.activeRound, status } }))
+  }, [])
+
+  const refreshOnChainOffers = useCallback(() => {
+    // Delay to let indexer catch up, then merge on-chain offers
+    setTimeout(() => {
+      fetchOnChainOffers().then((onChainOffers) => {
+        if (onChainOffers.length > 0) {
+          store.updateClub((c) => {
+            const localOnly = c.escrowOffers.filter((o) => !o.id.startsWith('0x'))
+            return { ...c, escrowOffers: [...localOnly, ...onChainOffers] }
+          })
+        }
+      }).catch(() => {})
+    }, 2000)
   }, [])
 
   // ─── Use Case Actions ───
@@ -618,6 +642,7 @@ export function PredictClubProvider({
           )
           store.setToast(`Offer created on-chain — ${result.digest.slice(0, 12)}…`)
           store.setModal(null)
+          refreshOnChainOffers()
           return { ok: true, digest: result.digest }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Create offer failed'
@@ -637,6 +662,7 @@ export function PredictClubProvider({
           )
           store.setToast(`Offer filled on-chain — ${result.digest.slice(0, 12)}…`)
           store.setModal(null)
+          refreshOnChainOffers()
           return { ok: true, digest: result.digest }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Fill offer failed'
@@ -654,6 +680,7 @@ export function PredictClubProvider({
             offer,
           )
           store.setToast(`Offer cancelled on-chain — ${result.digest.slice(0, 12)}…`)
+          refreshOnChainOffers()
           return { ok: true, digest: result.digest }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Cancel offer failed'
