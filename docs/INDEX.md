@@ -72,6 +72,13 @@
 ## Smart Contracts
 
 - [[contracts/SEAL-POLICY]] — **4 Seal policy contracts (Move): allowlist, timelock, private, token_gate**
+- [[contracts/Time-Locked_Escrow]] — Reference implementation: time-locked escrow with epoch-based release (teaching example)
+
+### Predict Club Contract (`contracts/predict-club/`)
+- `escrow.move` — Generic `Escrow<T>` for any coin type, time-lock + optional approval, composable release/cancel
+- `exchange_market.move` — P2P `EscrowOffer<OfferT, WantT>` market, create/fill/cancel with expiry and recipient restriction
+- `docs/ARCHITECTURE.md` — Object diagrams, state machine, sequence diagrams, API reference, security notes
+- TypeScript bindings: `src/generated/predict-club/` (via `@mysten/codegen`)
 
 ## Seal Encryption (9 plugins)
 
@@ -148,6 +155,8 @@
 - [[stories/plans/11-deepbook-suite-modular-refactor]] — DeepBook Suite modular refactor
 - [[stories/plans/12-deepbook-predict-standalone-chart-trading]] — Standalone `deepbook-predict.html` plan with chart-click DUSDC trade popup and wallet-scoped position overlays
 - [[stories/plans/13-predict-club-community]] — Predict Club community workflow, clean architecture, plugin plan, and future group vault boundary
+- [[stories/plans/14-predict-club-contract-integration]] — TODOs for deploying predict-club contracts, wiring codegen bindings, and completing escrow + exchange flow
+- [[stories/plans/15-swap-scallop-integration]] — Assessment of DeepBook swap and Scallop borrow integration for Predict Club funding routes
 
 ## Walrus Storage (3 plugins)
 
@@ -164,7 +173,7 @@
 - **NAVI plugins:** 4 (dashboard, advisor, chatbot, analysis)
 - **DeepBook plugins:** 10
 - **Walrus plugins:** 3
-- **Move contracts:** 4 modules in `contracts/seal-policy/`
+- **Move contracts:** 4 modules in `contracts/seal-policy/` + 2 modules in `contracts/predict-club/`
 - **WASM crates:** 2 (navi-analysis 128KB, zk-merkle 155KB)
 - **Runtime pages:** 6
 - **Tech stack:** React 19 · TypeScript · Vite · Shadow DOM · Sui SDK 2.x · Rust/WASM · Move
