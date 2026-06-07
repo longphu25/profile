@@ -24,6 +24,7 @@ import {
   cancelOfferOnChain,
 } from '../application/escrowOnChain'
 import { claimWinnings, type ClaimParams } from '../application/claimWinnings'
+import { swapSuiToUsdc } from '../application/swapSuiToUsdc'
 import { settleRound, type SettlementOutcome } from '../application/settleRound'
 import { executeTradeplan } from '../application/executeTradeplan'
 import { createSuiPredictGateway } from '../infrastructure/suiPredictGateway'
@@ -119,6 +120,7 @@ export interface PredictClubActions {
   fillEscrowOfferOnChain: (offer: EscrowOfferView, paymentCoinId: string) => Promise<{ ok: boolean; digest?: string; error?: string }>
   cancelEscrowOfferOnChain: (offer: EscrowOfferView) => Promise<{ ok: boolean; digest?: string; error?: string }>
   claimSettlementOnChain: (params: ClaimParams) => Promise<{ ok: boolean; digest?: string; error?: string }>
+  swapSuiToUsdc: (suiAmount: number, minUsdcOut: number) => Promise<{ ok: boolean; digest?: string; error?: string }>
 }
 
 const Ctx = createContext<PredictClubContextValue | null>(null)
@@ -687,6 +689,21 @@ export function PredictClubProvider({
           store.setToast(msg)
           return { ok: false, error: msg }
         }
+      },
+
+      swapSuiToUsdc: async (suiAmount, minUsdcOut) => {
+        const address = host?.getSuiContext().address
+        if (!host || !address) return { ok: false, error: 'Wallet not connected' }
+        const result = await swapSuiToUsdc(
+          { sender: address, signAndExecute: (tx) => host.signAndExecuteTransaction(tx) },
+          { suiAmount, minUsdcOut },
+        )
+        if (result.ok) {
+          store.setToast(`Swapped ${suiAmount} SUI → USDC — ${result.digest?.slice(0, 12)}…`)
+        } else {
+          store.setToast(result.error ?? 'Swap failed')
+        }
+        return result
       },
     }),
     [balances, club, currentMember, round, oracleSnapshot, buildRiskInput, host, predictManagerId],

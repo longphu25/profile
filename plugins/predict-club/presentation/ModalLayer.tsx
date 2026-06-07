@@ -800,10 +800,22 @@ function ModalFooterContent({ modal }: { modal: ModalKind }) {
         )
       }
       if (!currentMember || balances.dusdc < club.activeRound.suggestedDusdc) {
+        const canSwap = balances.sui > 2
         return (
           <>
             <SecondaryBtn label="Close" onClick={() => setModal(null)} />
-            <PrimaryBtn label="Need DUSDC" onClick={() => {}} disabled icon="payments" />
+            {canSwap ? (
+              <PrimaryBtn
+                label={`Swap ${Math.min(balances.sui - 1.5, 5).toFixed(1)} SUI → USDC`}
+                onClick={() => {
+                  const amount = Math.min(balances.sui - 1.5, 5)
+                  void actions.swapSuiToUsdc(amount, 0)
+                }}
+                icon="swap_horiz"
+              />
+            ) : (
+              <PrimaryBtn label="Need DUSDC" onClick={() => {}} disabled icon="payments" />
+            )}
           </>
         )
       }
