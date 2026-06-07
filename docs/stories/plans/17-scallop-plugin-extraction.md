@@ -1,5 +1,14 @@
 # Plan 17 — Scallop Plugin Extraction & Cross-Plugin Mount
 
+## Status: ✅ Phase 1 & 2 Complete (v0.44.0, commit `e7d63dc`)
+
+| Phase | Status |
+|-------|--------|
+| Phase 1: Create sui-scallop plugin skeleton | ✅ Done |
+| Phase 2: Wire into predict-club via host | ✅ Done |
+| Phase 3: Enhance standalone value | 🔲 TODO |
+| Phase 4: Test & document | 🔲 TODO |
+
 ## Goal
 
 Extract the Scallop borrow functionality from `predict-club` into a standalone
