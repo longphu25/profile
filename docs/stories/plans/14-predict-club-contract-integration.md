@@ -1,110 +1,109 @@
-# Predict Club Contract Integration — Next Steps
+# Predict Club Contract Integration — Status
 
 ## Goal
 
 Wire the published `predict-club` Move package into the frontend plugin,
-deploy to testnet, and complete the end-to-end escrow + exchange flow for
-member funding and trade execution.
+deploy to testnet, and complete the end-to-end escrow + exchange + funding flow.
 
 ## Status
 
-| Phase | Status |
-|-------|--------|
-| Contract code (escrow + exchange) | ✅ Done |
-| Unit tests (13/13) | ✅ Done |
-| TypeScript codegen bindings | ✅ Done |
-| Sui skills installed | ✅ Done |
-| Probe script + docs | ✅ Done |
-| Testnet deploy | 🔲 TODO |
-| Plugin integration | 🔲 TODO |
-| E2E tests | 🔲 TODO |
+| Phase | Status | Commit |
+|-------|--------|--------|
+| Contract code (escrow + exchange) | ✅ Done | `521b83c` |
+| Unit tests (13/13) | ✅ Done | `521b83c` |
+| TypeScript codegen bindings | ✅ Done | `64c8250` |
+| Testnet publish | ✅ Done | `01a65a7` |
+| ClubEscrowMarket created (shared) | ✅ Done | `01a65a7` |
+| Constants file + Published.toml | ✅ Done | `c477d78` |
+| Escrow gateway (build TX) | ✅ Done | `01a65a7` |
+| Funding gateway (DeepBook swap) | ✅ Done | `01a65a7` |
+| On-chain escrow use cases | ✅ Done | `bf2ae27` |
+| Context wiring (actions) | ✅ Done | `a42afb4` |
+| EscrowOffersPanel on-chain | ✅ Done | `e791301` |
+| Claim settlement on-chain | ✅ Done | `d6e0c38` |
+| DeepBook swap execution | ✅ Done | `8fba0a5` |
+| Scallop borrow gateway + use case | ✅ Done | `c4ff4d3` |
+| Auto-refresh on-chain offers | ✅ Done | `71d5548` |
+| Scallop borrow wired to modal | ✅ Done | `cc7bd93` |
+| E2E integration tests | 🔲 TODO | — |
 
-## TODO — Prioritized
+## On-Chain Deployments (Testnet)
 
-### P0: Contract → Testnet Deploy
+| Object | ID |
+|--------|-----|
+| Package | `0x269bdb57cbf02c46a7fe0a72e33c53b36203272d0e029557fca75d4462a96613` |
+| ClubEscrowMarket | `0xb6f225294072afd25255b3215e89876af6221e5e4a3b5c485180753dff04eb11` |
+| UpgradeCap | `0xa86e967ff1443d908b09214ca34c12d8e006c0229a2603d5edad3caec8ca7ce2` |
 
-- [ ] `sui client publish` the `contracts/predict-club` package to testnet
-- [ ] Record package ID in `contracts/predict-club/Published.toml`
-- [ ] Regenerate codegen with real package ID (`make codegen`)
-- [ ] Call `create_market` to create shared `ClubEscrowMarket` object on testnet
-- [ ] Record market object ID in a constants file (`src/constants/predict-club.ts`)
+## Architecture (Implemented)
 
-### P1: Plugin ↔ On-chain Wiring
+```
+┌─ Presentation ──────────────────────────────────────────┐
+│ EscrowOffersPanel  FundingRouterPanel  ModalLayer       │
+└───────────────────────────┬─────────────────────────────┘
+                            │
+┌─ Context Actions ─────────┴─────────────────────────────┐
+│ createEscrowOfferOnChain   swapSuiToUsdc               │
+│ fillEscrowOfferOnChain     borrowUsdc                  │
+│ cancelEscrowOfferOnChain   claimSettlementOnChain      │
+│ executeRound               (+ local-state variants)    │
+└───────────────────────────┬─────────────────────────────┘
+                            │
+┌─ Application (Use Cases) ─┴─────────────────────────────┐
+│ escrowOnChain.ts    swapSuiToUsdc.ts    borrowUsdc.ts  │
+│ claimWinnings.ts    executeTradeplan.ts  manageEscrow   │
+└───────────────────────────┬─────────────────────────────┘
+                            │
+┌─ Infrastructure ──────────┴─────────────────────────────┐
+│ escrowGateway.ts      → predict_club::exchange         │
+│ fundingGateway.ts     → DeepBook v3 SUI_USDC           │
+│ scallopGateway.ts     → Scallop deposit + borrow       │
+│ suiPredictGateway.ts  → Predict mint/claim             │
+│ escrowQueryService.ts → RPC market dynamic fields      │
+└─────────────────────────────────────────────────────────┘
+                            │
+┌─ Domain ──────────────────┴─────────────────────────────┐
+│ policies.ts (canBorrowSafely, MIN_HEALTH_FACTOR)       │
+│ types.ts, roundLifecycle.ts, riskGate.ts               │
+└─────────────────────────────────────────────────────────┘
+```
 
-- [ ] Wire `plugins/predict-club/application/manageEscrow.ts` to use generated
-      `createEscrow`, `deposit`, `releaseFunds`, `cancelEscrow` bindings
-- [ ] Wire `EscrowOffersPanel.tsx` to display live offers from on-chain
-      (`getObject` + event subscription)
-- [ ] Wire `FundingRouterPanel.tsx` to execute full funding flow:
-      DeepBook swap → USDC → `fillOffer` → DUSDC in wallet
-- [ ] Add PTB composition: merge coins, split exact amounts, chain calls
+## Remaining TODO
 
-### P2: Round Lifecycle On-chain
+### P4: Quality & Polish
 
-- [ ] Decide: round state on-chain (new `round.move`) vs off-chain (localStorage V1)
-- [ ] Wire `executeTradeplan.ts` to build member self-sign Predict PTB
-      (deposit DUSDC → mint/mint_range via PredictManager)
-- [ ] Wire `settleRound.ts` + `claimSettlement.ts` to query settlement
-      and claim payouts from DeepBook Predict
-- [ ] Add keeper-style auto-claim flow for settled positions
+- [ ] Write E2E test scenarios (`tests/e2e/predict-club.spec.ts`)
+- [ ] Display `#[error]` messages from contract aborts in UI toast
+- [ ] Subscribe to events (`OfferCreated`, `OfferFilled`, `OfferCancelled`) via WebSocket
+- [ ] Loading states and optimistic updates for escrow operations
+- [ ] Scallop health factor live display in borrow modal
+- [ ] Oracle freshness validation before trade execution
 
-### P3: Quality & UX
-
-- [ ] Write E2E test scenarios in `tests/e2e/predict-club.spec.ts`
-- [ ] Display `#[error]` messages from contract aborts in UI toast/modal
-- [ ] Subscribe to events (`EscrowCreated`, `OfferFilled`, `FundsReleased`)
-      for real-time UI updates
-- [ ] Add loading states and optimistic updates for escrow operations
-- [ ] Validate oracle health and expiry before allowing trade execution
-
-### P4: Future / V2
+### P5: Future / V2
 
 - [ ] `club_vault.move` — pooled DUSDC vault with LeaderCap policy guard
 - [ ] Multi-sig approval (`release_conditions == 2`)
 - [ ] Partial fill for exchange offers
 - [ ] Fee collection on exchange fills
-- [ ] Walrus Sites deploy for `predict-club.html`
-- [ ] Scallop borrow integration with liquidation monitor + oracle panel
+- [ ] Walrus Sites deploy for predict-club standalone
+- [ ] Scallop liquidation monitor + alert panel
 - [ ] Oracle-price-linked exchange rates
 
-## Affected Product Docs
+## Open Decisions (Resolved)
 
-- `docs/product/predict-club.md`
-- `docs/product/predict-club-architecture.md`
-- `docs/product/predict-club-escrow-contract.md`
-- `docs/product/predict-club-funding.md`
+1. ✅ Round state: **off-chain localStorage V1** (decided)
+2. ✅ Exchange offers: **owned objects + events for indexing** (decided)
+3. ✅ Funding execution: **per-route buttons in modal** (implemented)
 
-## Affected Architecture Boundaries
+## Affected Files
 
-- `contracts/predict-club/` — Move package
-- `src/generated/predict-club/` — codegen output
-- `plugins/predict-club/application/` — use cases
-- `plugins/predict-club/infrastructure/` — Sui gateway
-- `plugins/predict-club/presentation/` — UI panels
-
-## Validation Proof
-
-- P0: `sui client call --package <id> --module exchange --function create_market`
-      succeeds on testnet
-- P1: User can create offer and fill offer through the UI with wallet signature
-- P2: Member self-signs Predict trade and sees position in manager
-- P3: E2E tests green, error toasts visible on abort
-
-## Open Decisions
-
-1. Round state storage: on-chain `round.move` vs off-chain localStorage?
-   - On-chain = transparent history, costs gas
-   - Off-chain = free, fast, private, but no audit trail
-   - Recommendation: V1 off-chain, V2 on-chain
-
-2. Should exchange offers be stored as owned objects (current) or listed in a
-   dynamic field on ClubEscrowMarket?
-   - Current: owned by maker, transferred to fill
-   - Alternative: dynamic object field on market for discoverability
-   - Recommendation: keep owned for composability, use events for indexing
-
-## Related Stories
-
-- `docs/stories/plans/13-predict-club-community.md`
-- `docs/stories/plans/09-predict-manager-bot-architecture.md`
-- `docs/stories/plans/08-deepbook-predict-user-assist.md`
+| Layer | Path |
+|-------|------|
+| Contract | `contracts/predict-club/sources/` |
+| Constants | `src/constants/predict-club.ts` |
+| Codegen | `src/generated/predict-club/` |
+| Domain | `plugins/predict-club/domain/` |
+| Application | `plugins/predict-club/application/` |
+| Infrastructure | `plugins/predict-club/infrastructure/` |
+| Presentation | `plugins/predict-club/presentation/` |
+| Config | `contracts/predict-club/Published.toml` |

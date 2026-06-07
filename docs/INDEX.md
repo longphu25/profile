@@ -79,6 +79,16 @@
 - `exchange_market.move` — P2P `EscrowOffer<OfferT, WantT>` market, create/fill/cancel with expiry and recipient restriction
 - `docs/ARCHITECTURE.md` — Object diagrams, state machine, sequence diagrams, API reference, security notes
 - TypeScript bindings: `src/generated/predict-club/` (via `@mysten/codegen`)
+- **Testnet deployed:** Package `0x269bdb57...a96613`, Market `0xb6f22529...04eb11`
+- Constants: `src/constants/predict-club.ts`
+- Published.toml: `contracts/predict-club/Published.toml`
+
+### Predict Club Frontend Integration (v0.43.0)
+- [[stories/plans/14-predict-club-contract-integration]] — Master integration plan (P0-P3 ✅, P4-P5 remaining)
+- [[stories/plans/15-swap-scallop-integration]] — Swap + Scallop assessment and implementation status
+- **Gateways:** `escrowGateway`, `fundingGateway`, `scallopGateway`, `suiPredictGateway`, `escrowQueryService`
+- **Use Cases:** `escrowOnChain`, `swapSuiToUsdc`, `borrowUsdc`, `claimWinnings`, `executeTradeplan`
+- **Domain:** `canBorrowSafely` policy, `MIN_HEALTH_FACTOR = 1.5`
 
 ## Seal Encryption (9 plugins)
 
