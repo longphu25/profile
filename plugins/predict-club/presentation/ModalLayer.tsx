@@ -730,6 +730,7 @@ function ModalFooterContent({ modal }: { modal: ModalKind }) {
     context,
     currentMember,
     host,
+    oracleSnapshot,
     predictManagerId,
     predictManagerLoading,
     selectedOffer,
@@ -881,10 +882,23 @@ function ModalFooterContent({ modal }: { modal: ModalKind }) {
         <>
           <SecondaryBtn label="Close" onClick={() => setModal(null)} />
           <PrimaryBtn
-            label="Claim"
+            label="Claim On-Chain"
             onClick={() => {
-              updateRoundStatus('claimed')
-              setModal(null)
+              const history = club.history.find((h) => h.claimStatus === 'claimable')
+              if (!history) {
+                updateRoundStatus('claimed')
+                setModal(null)
+                return
+              }
+              void actions.claimSettlementOnChain({
+                historyId: history.id,
+                oracleId: oracleSnapshot.selectedOracleId ?? '',
+                expiry: 0,
+                strike: club.activeRound.strike,
+                isUp: club.activeRound.direction === 'UP',
+                tickSize: 1_000_000_000,
+                minStrike: 50_000_000_000_000,
+              })
             }}
           />
         </>

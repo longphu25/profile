@@ -23,6 +23,7 @@ import {
   fillOfferOnChain,
   cancelOfferOnChain,
 } from '../application/escrowOnChain'
+import { claimWinnings, type ClaimParams } from '../application/claimWinnings'
 import { settleRound, type SettlementOutcome } from '../application/settleRound'
 import { executeTradeplan } from '../application/executeTradeplan'
 import { createSuiPredictGateway } from '../infrastructure/suiPredictGateway'
@@ -117,6 +118,7 @@ export interface PredictClubActions {
   }) => Promise<{ ok: boolean; digest?: string; error?: string }>
   fillEscrowOfferOnChain: (offer: EscrowOfferView, paymentCoinId: string) => Promise<{ ok: boolean; digest?: string; error?: string }>
   cancelEscrowOfferOnChain: (offer: EscrowOfferView) => Promise<{ ok: boolean; digest?: string; error?: string }>
+  claimSettlementOnChain: (params: ClaimParams) => Promise<{ ok: boolean; digest?: string; error?: string }>
 }
 
 const Ctx = createContext<PredictClubContextValue | null>(null)
@@ -653,6 +655,35 @@ export function PredictClubProvider({
           return { ok: true, digest: result.digest }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Cancel offer failed'
+          store.setToast(msg)
+          return { ok: false, error: msg }
+        }
+      },
+
+      claimSettlementOnChain: async (params) => {
+        const address = host?.getSuiContext().address
+        if (!host || !address) return { ok: false, error: 'Wallet not connected' }
+        if (!predictManagerId) return { ok: false, error: 'No PredictManager found' }
+        try {
+          const result = await claimWinnings(
+            club,
+            {
+              walletAddress: address,
+              managerId: predictManagerId,
+              signAndExecute: (tx) => host.signAndExecuteTransaction(tx),
+            },
+            params,
+          )
+          if (result.ok && result.club) {
+            store.setClub(result.club)
+            store.setToast(`Claimed — ${result.digest?.slice(0, 12)}…`)
+            store.setModal(null)
+          } else {
+            store.setToast(result.error ?? 'Claim failed')
+          }
+          return { ok: result.ok, digest: result.digest, error: result.error }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Claim failed'
           store.setToast(msg)
           return { ok: false, error: msg }
         }
