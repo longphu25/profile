@@ -5,7 +5,15 @@ export function EscrowOffersPanel() {
   const { club, actions, setModal, setSelectedOffer, context } = usePredictClub()
 
   function handleCancel(offerId: string) {
-    actions.cancelEscrowOffer(offerId)
+    const offer = club.escrowOffers.find((o) => o.id === offerId)
+    if (!offer) return
+
+    // On-chain cancel if wallet connected and offer has on-chain ID format
+    if (context.isConnected && offer.id.startsWith('0x')) {
+      actions.cancelEscrowOfferOnChain(offer)
+    } else {
+      actions.cancelEscrowOffer(offerId)
+    }
   }
 
   function handleFill(offerId: string) {
@@ -29,6 +37,12 @@ export function EscrowOffersPanel() {
       default:
         return 'text-on-surface-variant'
     }
+  }
+
+  const isOwnOffer = (maker: string) => {
+    if (!context.address) return false
+    return maker.toLowerCase() === context.address.toLowerCase() ||
+      maker.toLowerCase().includes(context.address.slice(-4).toLowerCase())
   }
 
   return (
@@ -62,7 +76,12 @@ export function EscrowOffersPanel() {
                 key={offer.id}
                 className="border-b border-outline-variant/50 hover:bg-surface-bright transition-colors"
               >
-                <td className="p-2 text-on-surface">{offer.maker}</td>
+                <td className="p-2 text-on-surface">
+                  {offer.maker}
+                  {offer.id.startsWith('0x') && (
+                    <span className="ml-1 text-[9px] text-primary-fixed-dim/60">on-chain</span>
+                  )}
+                </td>
                 <td className="p-2 text-right tabular-nums">
                   {formatUsd(offer.offerAmount)} {offer.offerAsset}
                 </td>
@@ -79,18 +98,15 @@ export function EscrowOffersPanel() {
                       >
                         Fill
                       </button>
-                      {context.address &&
-                        offer.maker
-                          .toLowerCase()
-                          .includes(context.address.slice(-4).toLowerCase()) && (
-                          <button
-                            type="button"
-                            onClick={() => handleCancel(offer.id)}
-                            className="px-2 py-0.5 rounded bg-error/20 text-error text-[11px] cursor-pointer hover:bg-error/30 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        )}
+                      {isOwnOffer(offer.maker) && (
+                        <button
+                          type="button"
+                          onClick={() => handleCancel(offer.id)}
+                          className="px-2 py-0.5 rounded bg-error/20 text-error text-[11px] cursor-pointer hover:bg-error/30 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      )}
                     </div>
                   )}
                 </td>
