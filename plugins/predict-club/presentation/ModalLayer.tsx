@@ -54,7 +54,7 @@ function ModalBodyContent({ modal }: { modal: ModalKind }) {
     case 'fill-escrow':
       return <FillEscrowBody />
     case 'scallop-borrow':
-      return <ScallopBorrowBody />
+      return <ScallopBorrowBodyWrapper />
     case 'claim-settlement':
       return <ClaimSettlementBody />
     default:
@@ -608,99 +608,29 @@ function FillEscrowBody() {
   )
 }
 
-/* ─── Scallop Borrow USDC ─── */
-function ScallopBorrowBody() {
+/* ─── Scallop Borrow USDC — delegates to sui-scallop plugin ─── */
+function ScallopBorrowBodyWrapper() {
+  const { host, balances, context } = usePredictClub()
+  const ScallopBorrow = host?.getComponent('ScallopBorrow') as
+    | React.ComponentType<import('../../sui-scallop/presentation/ScallopBorrowPanel').ScallopBorrowPanelProps>
+    | null | undefined
+
+  if (!ScallopBorrow) {
+    return (
+      <div className="p-md text-center text-on-surface-variant font-body text-body-sm">
+        SuiScallop plugin not loaded.
+      </div>
+    )
+  }
+
   return (
-    <>
-      {/* Collateral Input */}
-      <div className="flex flex-col gap-xs">
-        <div className="flex justify-between items-center px-xs">
-          <Label>Collateral Amount</Label>
-          <span className="font-data text-data-sm text-on-surface">Balance: 12,450.00 SUI</span>
-        </div>
-        <div className="flex items-center bg-surface-container-lowest border border-outline-variant rounded px-md py-sm focus-within:border-primary-fixed-dim focus-within:ring-1 focus-within:ring-primary-fixed-dim/30">
-          <input
-            className="bg-transparent w-full outline-none font-data text-data-lg text-primary"
-            defaultValue="5000.00"
-          />
-          <div className="flex items-center gap-sm ml-2 border-l border-outline-variant pl-sm">
-            <button className="font-label text-label-caps text-primary-fixed-dim" type="button">
-              MAX
-            </button>
-            <span className="font-body text-body-base text-on-surface">SUI</span>
-          </div>
-        </div>
-        <span className="font-data text-data-sm text-on-surface-variant px-xs">≈ $4,210.50</span>
-      </div>
-      {/* Arrow */}
-      <div className="flex justify-center -my-sm relative z-10">
-        <div className="bg-surface border border-outline-variant rounded-full p-xs text-outline">
-          <span className="material-symbols-outlined text-[16px]">arrow_downward</span>
-        </div>
-      </div>
-      {/* Borrow Input */}
-      <div className="flex flex-col gap-xs">
-        <div className="flex justify-between items-center px-xs">
-          <Label>Borrow Amount</Label>
-          <span className="font-data text-data-sm text-primary-fixed-dim">Max: 2,526.30 USDC</span>
-        </div>
-        <div className="flex items-center bg-surface-container-lowest border border-outline-variant rounded px-md py-sm focus-within:border-primary-fixed-dim">
-          <input
-            className="bg-transparent w-full outline-none font-data text-data-lg text-primary"
-            defaultValue="1500.00"
-          />
-          <span className="font-body text-body-base text-on-surface ml-2 border-l border-outline-variant pl-sm">
-            USDC
-          </span>
-        </div>
-      </div>
-      {/* Health Factor */}
-      <div className="flex flex-col gap-sm bg-surface-container-low border border-outline-variant rounded p-md">
-        <div className="flex justify-between items-end">
-          <div className="flex flex-col gap-xs">
-            <Label>Est. Health Factor</Label>
-            <span className="font-headline text-headline-md text-primary-fixed-dim">1.85</span>
-          </div>
-          <span className="font-label text-label-caps text-primary-fixed">Safe</span>
-        </div>
-        {/* Gauge */}
-        <div className="relative w-full h-[6px] rounded-full overflow-hidden flex mt-xs">
-          <div className="h-full bg-error" style={{ width: '25%' }} />
-          <div className="h-full bg-tertiary-container" style={{ width: '25%' }} />
-          <div className="h-full bg-primary-fixed-dim/40" style={{ width: '50%' }} />
-          <div
-            className="absolute top-0 bottom-0 w-[2px] bg-primary shadow-[0_0_8px_rgba(253,255,252,0.8)]"
-            style={{ left: '65%' }}
-          />
-        </div>
-        <div className="flex justify-between font-data text-data-sm text-on-surface-variant/50 text-[10px]">
-          <span>0.0</span>
-          <span>1.0</span>
-          <span>1.5</span>
-          <span>3.0+</span>
-        </div>
-      </div>
-      {/* Metrics */}
-      <div className="grid grid-cols-3 gap-[1px] bg-outline-variant border border-outline-variant rounded overflow-hidden">
-        <MetricCell label="Oracle Status" value="Healthy" tone="mint" pulse />
-        <MetricCell label="Liq. Price" value="≈ $0.42 SUI" tone="amber" />
-        <MetricCell label="Borrow APY" value="6.45%" />
-      </div>
-      {/* Warning */}
-      <label className="flex items-start gap-sm p-sm border border-tertiary-fixed/30 bg-tertiary-fixed/5 rounded cursor-pointer group">
-        <input
-          type="checkbox"
-          className="mt-[2px] w-4 h-4 border border-tertiary-fixed rounded-sm bg-transparent accent-tertiary-fixed"
-        />
-        <p className="font-body text-body-sm text-on-surface/90 leading-relaxed">
-          I understand that my SUI collateral may be liquidated by the protocol if the health factor
-          drops below 1.0.
-        </p>
-      </label>
-    </>
+    <ScallopBorrow
+      walletAddress={context.address ?? ''}
+      signAndExecute={(tx) => host!.signAndExecuteTransaction(tx)}
+      maxCollateralSui={Math.max(0, balances.sui - 1.5)}
+    />
   )
 }
-
 /* ─── Claim Settlement ─── */
 function ClaimSettlementBody() {
   const { club } = usePredictClub()
@@ -882,18 +812,6 @@ function ModalFooterContent({ modal }: { modal: ModalKind }) {
       return (
         <>
           <SecondaryBtn label="Close" onClick={() => setModal(null)} />
-          <PrimaryBtn
-            label="Borrow USDC"
-            onClick={() => {
-              const collateral = Math.min(balances.sui - 1.5, 10)
-              if (collateral <= 0) return
-              // Rough estimate: borrow 50% of collateral value
-              const borrowAmount = Math.floor(collateral * 2)
-              void actions.borrowUsdc(collateral, borrowAmount)
-            }}
-            icon="account_balance"
-            disabled={balances.sui <= 2}
-          />
         </>
       )
     case 'claim-settlement':
@@ -1087,32 +1005,6 @@ function RouteCard({
       </span>
       <span className="font-data text-data-sm text-on-surface-variant mt-xs">{note}</span>
     </label>
-  )
-}
-
-function MetricCell({
-  label,
-  value,
-  tone,
-  pulse,
-}: {
-  label: string
-  value: string
-  tone?: 'mint' | 'amber'
-  pulse?: boolean
-}) {
-  return (
-    <div className="bg-surface-container-low p-sm flex flex-col gap-xs">
-      <span className="font-label text-label-caps text-on-surface-variant uppercase">{label}</span>
-      <div className="flex items-center gap-xs">
-        {pulse && <div className="w-2 h-2 rounded-full bg-primary-fixed-dim animate-pulse" />}
-        <span
-          className={`font-data text-data-sm ${tone === 'mint' ? 'text-primary-fixed-dim' : tone === 'amber' ? 'text-tertiary-fixed' : 'text-primary'}`}
-        >
-          {value}
-        </span>
-      </div>
-    </div>
   )
 }
 

@@ -143,6 +143,7 @@ export default defineConfig({
         'plugins/sui-link': resolve(__dirname, 'plugins/sui-link/plugin.tsx'),
         'plugins/sui-dual-wallet': resolve(__dirname, 'plugins/sui-dual-wallet/plugin.tsx'),
         'plugins/sui-lending': resolve(__dirname, 'plugins/sui-lending/plugin.tsx'),
+        'plugins/sui-scallop': resolve(__dirname, 'plugins/sui-scallop/plugin.tsx'),
         'plugins/sui-create-wallet': resolve(__dirname, 'plugins/sui-create-wallet/plugin.tsx'),
         'plugins/sui-pool-explorer': resolve(__dirname, 'plugins/sui-pool-explorer/plugin.tsx'),
         'plugins/sui-price-feed': resolve(__dirname, 'plugins/sui-price-feed/plugin.tsx'),

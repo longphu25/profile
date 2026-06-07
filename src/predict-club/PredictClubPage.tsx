@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import {
   DAppKitProvider,
   useCurrentAccount,
@@ -43,7 +43,7 @@ const pluginPath = (name: string) =>
     ? `${import.meta.env.BASE_URL}plugins/${name}/plugin.tsx`
     : `${import.meta.env.BASE_URL}assets/plugins/${name}.js`
 
-const PLUGIN: PluginEntry = {
+const PREDICT_PLUGIN: PluginEntry = {
   id: 'predict-club',
   name: 'PredictClub',
   label: 'Predict Club',
@@ -51,10 +51,27 @@ const PLUGIN: PluginEntry = {
   styleUrl: '/plugins/predict-club/style.css',
 }
 
+const SCALLOP_PLUGIN: PluginEntry = {
+  id: 'sui-scallop',
+  name: 'SuiScallop',
+  label: 'Scallop Borrow',
+  src: pluginPath('sui-scallop'),
+  styleUrl: '/plugins/sui-scallop/style.css',
+}
+
+const WALLET_PLUGIN: PluginEntry = {
+  id: 'sui-wallet-profile',
+  name: 'SuiWalletProfile',
+  label: 'Sui Wallet Profile',
+  src: pluginPath('sui-wallet-profile'),
+  styleUrl: '/plugins/sui-wallet-profile/style.css',
+}
+
 function PredictClubInner() {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showWallets, setShowWallets] = useState(false)
+  const [showWalletProfile, setShowWalletProfile] = useState(false)
   const initRef = useRef(false)
 
   const wallets = useWallets()
@@ -68,13 +85,28 @@ function PredictClubInner() {
       address: account?.address ?? null,
       network,
       isConnected: connection.isConnected,
-      accounts: [],
+      accounts: account
+        ? [
+            {
+              address: account.address,
+              walletName: connection.wallet?.name ?? 'Wallet',
+              walletIcon: connection.wallet?.icon,
+            },
+          ]
+        : [],
     })
     suiHostAPI.setSharedData(
       'walletProfile',
-      account?.address ? { address: account.address } : null,
+      account?.address
+        ? {
+            address: account.address,
+            network,
+            walletName: connection.wallet?.name,
+            walletIcon: connection.wallet?.icon,
+          }
+        : null,
     )
-  }, [account?.address, network, connection.isConnected])
+  }, [account?.address, network, connection.isConnected, connection.wallet?.name, connection.wallet?.icon])
 
   useEffect(() => {
     registerActions({
@@ -99,14 +131,17 @@ function PredictClubInner() {
 
   const loadPlugin = useCallback(async () => {
     try {
-      const bustUrl = `${PLUGIN.src}${PLUGIN.src.includes('?') ? '&' : '?'}t=${Date.now()}`
-      const module = await import(/* @vite-ignore */ bustUrl)
-      const plugin = module.default
-      if (!plugin?.name || !plugin?.init) throw new Error('Invalid plugin')
-      plugin.init(suiHostAPI)
-      plugin.mount?.()
-      if (!suiHostAPI.getComponent(PLUGIN.name)) {
-        throw new Error(`Component ${PLUGIN.name} not registered`)
+      for (const entry of [WALLET_PLUGIN, SCALLOP_PLUGIN, PREDICT_PLUGIN]) {
+        const bustUrl = `${entry.src}${entry.src.includes('?') ? '&' : '?'}t=${Date.now()}`
+        const module = await import(/* @vite-ignore */ bustUrl)
+        const plugin = module.default
+        if (!plugin?.name || !plugin?.init) throw new Error(`Invalid plugin: ${entry.id}`)
+        plugin.init(suiHostAPI)
+        plugin.mount?.()
+        // Scallop registers sub-components (ScallopBorrow), not a top-level component
+        if (entry.id !== 'sui-scallop' && !suiHostAPI.getComponent(entry.name)) {
+          throw new Error(`Component ${entry.name} not registered`)
+        }
       }
       setLoaded(true)
     } catch (err) {
@@ -139,7 +174,17 @@ function PredictClubInner() {
     }
   }
 
-  const Component = loaded ? suiHostAPI.getComponent(PLUGIN.name) : null
+  const Component = loaded ? suiHostAPI.getComponent(PREDICT_PLUGIN.name) : null
+  const WalletProfilePopup = loaded
+    ? (suiHostAPI.getComponent('SuiWalletProfile.Popup') as
+        | ComponentType<{ open: boolean; onClose: () => void }>
+        | undefined)
+    : null
+
+  const openWalletControl = () => {
+    if (connection.isConnected) setShowWalletProfile(true)
+    else setShowWallets(true)
+  }
 
   return (
     <div className="predict-club-page">
@@ -161,7 +206,12 @@ function PredictClubInner() {
               </span>
             ))}
           </div>
-          <button className="predict-club-page__tool" type="button" aria-label="Wallet tools">
+          <button
+            className="predict-club-page__tool"
+            type="button"
+            aria-label="Wallet tools"
+            onClick={openWalletControl}
+          >
             <span className="material-symbols-outlined">account_balance_wallet</span>
           </button>
           <span className="predict-club-page__oracle" aria-label="Oracle health">
@@ -171,7 +221,7 @@ function PredictClubInner() {
             <button
               type="button"
               className="predict-club-page__wallet predict-club-page__wallet--connected"
-              onClick={() => dAppKitInstance.disconnectWallet()}
+              onClick={openWalletControl}
             >
               {account.address.slice(0, 6)}...{account.address.slice(-4)}
             </button>
@@ -179,7 +229,7 @@ function PredictClubInner() {
             <button
               type="button"
               className="predict-club-page__wallet"
-              onClick={() => setShowWallets(true)}
+              onClick={openWalletControl}
             >
               Connect Wallet
             </button>
@@ -212,15 +262,19 @@ function PredictClubInner() {
         </div>
       )}
 
+      {WalletProfilePopup ? (
+        <WalletProfilePopup open={showWalletProfile} onClose={() => setShowWalletProfile(false)} />
+      ) : null}
+
       {error && <div className="predict-club-page__error">{error}</div>}
 
       <main className="predict-club-page__workspace">
         {Component ? (
-          <ShadowContainer styleUrls={[PLUGIN.styleUrl]}>
+          <ShadowContainer styleUrls={[PREDICT_PLUGIN.styleUrl]}>
             <Component />
           </ShadowContainer>
         ) : (
-          <div className="predict-club-page__loading">Loading {PLUGIN.label}...</div>
+          <div className="predict-club-page__loading">Loading {PREDICT_PLUGIN.label}...</div>
         )}
       </main>
     </div>

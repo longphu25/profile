@@ -25,7 +25,6 @@ import {
 } from '../application/escrowOnChain'
 import { claimWinnings, type ClaimParams } from '../application/claimWinnings'
 import { swapSuiToUsdc } from '../application/swapSuiToUsdc'
-import { borrowUsdc } from '../application/borrowUsdc'
 import { fetchOnChainOffers } from '../infrastructure/escrowQueryService'
 import { settleRound, type SettlementOutcome } from '../application/settleRound'
 import { executeTradeplan } from '../application/executeTradeplan'
@@ -124,7 +123,6 @@ export interface PredictClubActions {
   cancelEscrowOfferOnChain: (offer: EscrowOfferView) => Promise<{ ok: boolean; digest?: string; error?: string }>
   claimSettlementOnChain: (params: ClaimParams) => Promise<{ ok: boolean; digest?: string; error?: string }>
   swapSuiToUsdc: (suiAmount: number, minUsdcOut: number) => Promise<{ ok: boolean; digest?: string; error?: string }>
-  borrowUsdc: (collateralSui: number, borrowAmount: number) => Promise<{ ok: boolean; digest?: string; error?: string }>
 }
 
 const Ctx = createContext<PredictClubContextValue | null>(null)
@@ -776,21 +774,6 @@ export function PredictClubProvider({
           store.setToast(`Swapped ${suiAmount} SUI → USDC — ${result.digest?.slice(0, 12)}…`)
         } else {
           store.setToast(result.error ?? 'Swap failed')
-        }
-        return result
-      },
-
-      borrowUsdc: async (collateralSui, borrowAmount) => {
-        const address = host?.getSuiContext().address
-        if (!host || !address) return { ok: false, error: 'Wallet not connected' }
-        const result = await borrowUsdc(
-          { walletAddress: address, signAndExecute: (tx) => host.signAndExecuteTransaction(tx) },
-          { collateralSui, borrowUsdc: borrowAmount },
-        )
-        if (result.ok) {
-          store.setToast(`Borrowed ${borrowAmount} USDC — ${result.digest?.slice(0, 12)}…`)
-        } else {
-          store.setToast(result.error ?? 'Borrow failed')
         }
         return result
       },

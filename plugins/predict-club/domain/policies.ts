@@ -62,10 +62,3 @@ export function isOracleStale(lastUpdateMs: number, thresholdMs: number): boolea
 export function isExpirySafe(expiryMinutes: number, minSafe: number): boolean {
   return expiryMinutes >= minSafe
 }
-
-// Scallop health factor safety threshold
-export const MIN_HEALTH_FACTOR = 1.5
-
-export function canBorrowSafely(healthFactor: number): boolean {
-  return healthFactor >= MIN_HEALTH_FACTOR
-}
