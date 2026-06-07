@@ -881,11 +881,18 @@ function ModalFooterContent({ modal }: { modal: ModalKind }) {
     case 'scallop-borrow':
       return (
         <>
-          <SecondaryBtn label="Preview Borrow" onClick={() => setModal(null)} />
+          <SecondaryBtn label="Close" onClick={() => setModal(null)} />
           <PrimaryBtn
-            label="Continue to Wallet"
-            onClick={() => setModal(null)}
-            icon="arrow_forward"
+            label="Borrow USDC"
+            onClick={() => {
+              const collateral = Math.min(balances.sui - 1.5, 10)
+              if (collateral <= 0) return
+              // Rough estimate: borrow 50% of collateral value
+              const borrowAmount = Math.floor(collateral * 2)
+              void actions.borrowUsdc(collateral, borrowAmount)
+            }}
+            icon="account_balance"
+            disabled={balances.sui <= 2}
           />
         </>
       )

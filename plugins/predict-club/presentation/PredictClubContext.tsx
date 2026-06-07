@@ -25,6 +25,7 @@ import {
 } from '../application/escrowOnChain'
 import { claimWinnings, type ClaimParams } from '../application/claimWinnings'
 import { swapSuiToUsdc } from '../application/swapSuiToUsdc'
+import { borrowUsdc } from '../application/borrowUsdc'
 import { fetchOnChainOffers } from '../infrastructure/escrowQueryService'
 import { settleRound, type SettlementOutcome } from '../application/settleRound'
 import { executeTradeplan } from '../application/executeTradeplan'
@@ -57,6 +58,7 @@ import type {
 } from '../domain/types'
 import type { CreateRoundParams } from '../domain/policies'
 import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
+import { PREDICT_CLUB_WALLET_PROFILE_KEY } from '../../sui-wallet-profile/types'
 
 const ZERO_BALANCES: AssetBalances = { sui: 0, usdc: 0, dusdc: 0 }
 
@@ -122,6 +124,7 @@ export interface PredictClubActions {
   cancelEscrowOfferOnChain: (offer: EscrowOfferView) => Promise<{ ok: boolean; digest?: string; error?: string }>
   claimSettlementOnChain: (params: ClaimParams) => Promise<{ ok: boolean; digest?: string; error?: string }>
   swapSuiToUsdc: (suiAmount: number, minUsdcOut: number) => Promise<{ ok: boolean; digest?: string; error?: string }>
+  borrowUsdc: (collateralSui: number, borrowAmount: number) => Promise<{ ok: boolean; digest?: string; error?: string }>
 }
 
 const Ctx = createContext<PredictClubContextValue | null>(null)
@@ -405,6 +408,50 @@ export function PredictClubProvider({
   )
 
   const riskEvaluation = useMemo(() => evaluateRiskGate(buildRiskInput()), [buildRiskInput])
+
+  useEffect(() => {
+    if (!host) return
+    if (!suiContext.isConnected || !suiContext.address) {
+      host.setSharedData(PREDICT_CLUB_WALLET_PROFILE_KEY, null)
+      return
+    }
+
+    const manager = pricingSnapshot.manager
+    const positions = manager?.positions ?? []
+    host.setSharedData(PREDICT_CLUB_WALLET_PROFILE_KEY, {
+      manager: {
+        id: predictManagerId ?? manager?.id ?? null,
+        status: predictManagerLoading
+          ? 'Loading'
+          : predictManagerId || manager?.id
+            ? 'Ready'
+            : 'Unavailable',
+        quoteBalance: manager?.quoteBalance ?? null,
+      },
+      balances,
+      binaryPositions:
+        manager?.positionsSize ?? positions.filter((position) => position.kind === 'binary').length,
+      rangePositions:
+        manager?.rangePositionsSize ??
+        positions.filter((position) => position.kind === 'range').length,
+      positions: positions.slice(0, 6).map((position) => ({
+        id: position.id,
+        kind: position.kind,
+        oracleId: position.oracleId,
+        quantity: position.quantity,
+      })),
+      vault: pricingSnapshot.vault,
+    })
+  }, [
+    balances,
+    host,
+    predictManagerId,
+    predictManagerLoading,
+    pricingSnapshot.manager,
+    pricingSnapshot.vault,
+    suiContext.address,
+    suiContext.isConnected,
+  ])
 
   const updateRoundStatus = useCallback((status: RoundStatus) => {
     store.updateClub((c) => ({ ...c, activeRound: { ...c.activeRound, status } }))
@@ -729,6 +776,21 @@ export function PredictClubProvider({
           store.setToast(`Swapped ${suiAmount} SUI → USDC — ${result.digest?.slice(0, 12)}…`)
         } else {
           store.setToast(result.error ?? 'Swap failed')
+        }
+        return result
+      },
+
+      borrowUsdc: async (collateralSui, borrowAmount) => {
+        const address = host?.getSuiContext().address
+        if (!host || !address) return { ok: false, error: 'Wallet not connected' }
+        const result = await borrowUsdc(
+          { walletAddress: address, signAndExecute: (tx) => host.signAndExecuteTransaction(tx) },
+          { collateralSui, borrowUsdc: borrowAmount },
+        )
+        if (result.ok) {
+          store.setToast(`Borrowed ${borrowAmount} USDC — ${result.digest?.slice(0, 12)}…`)
+        } else {
+          store.setToast(result.error ?? 'Borrow failed')
         }
         return result
       },
