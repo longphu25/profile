@@ -147,6 +147,11 @@ function WalletProfileContent({
   const hostContext = useHostSuiContext()
   const predictProfile = usePredictClubWalletProfile()
 
+  // Determine effective connection state:
+  // Prefer dApp Kit hooks, fall back to host context for cross-bundle scenarios
+  const effectiveConnected = connection.isConnected || (hostContext?.isConnected ?? false)
+  const effectiveAddress = account?.address ?? hostContext?.address ?? null
+
   const [showPopup, setShowPopup] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [balances, setBalances] = useState<TokenBalance[]>([])
@@ -156,13 +161,14 @@ function WalletProfileContent({
 
   // Fetch balances + SuiNS
   const fetchProfile = useCallback(async () => {
-    if (!account?.address || !client) return
+    const addr = effectiveAddress
+    if (!addr || !client) return
     setLoading(true)
     setError(null)
 
     try {
       // Balances
-      const { balances: raw } = await client.core.listBalances({ owner: account.address })
+      const { balances: raw } = await client.core.listBalances({ owner: addr })
       const tokens: TokenBalance[] = raw
         .map((b) => {
           const symbol = b.coinType.split('::').pop() ?? 'Unknown'
@@ -182,7 +188,7 @@ function WalletProfileContent({
 
       // SuiNS name
       try {
-        const { data } = await client.core.defaultNameServiceName({ address: account.address })
+        const { data } = await client.core.defaultNameServiceName({ address: addr })
         setSuinsName(data.name)
       } catch {
         setSuinsName(null)
@@ -191,7 +197,7 @@ function WalletProfileContent({
       // Share profile via host API
       if (sharedHost) {
         const profile: WalletProfile = {
-          address: account.address,
+          address: addr,
           suinsName: suinsName,
           network: normalizeNetwork(network),
           balances: tokens,
@@ -205,7 +211,7 @@ function WalletProfileContent({
               }))
             : [
                 {
-                  address: account.address,
+                  address: addr,
                   walletName: connection.wallet?.name,
                   walletIcon: connection.wallet?.icon,
                 },
@@ -234,9 +240,9 @@ function WalletProfileContent({
 
   // Sync to SuiHostAPI context
   useEffect(() => {
-    if (!sharedHost || !account?.address) return
+    if (!sharedHost || !effectiveAddress) return
     sharedHost.setSharedData(SHARED_KEY, {
-      address: account.address,
+      address: effectiveAddress,
       suinsName,
       network: normalizeNetwork(network),
       balances,
@@ -250,7 +256,7 @@ function WalletProfileContent({
           }))
         : [
             {
-              address: account.address,
+              address: effectiveAddress,
               walletName: connection.wallet?.name,
               walletIcon: connection.wallet?.icon,
             },
@@ -268,7 +274,7 @@ function WalletProfileContent({
 
   // Register transaction signer so other plugins can sign via host API
   useEffect(() => {
-    if (!sharedHost || !connection.isConnected) return
+    if (!sharedHost || !effectiveConnected) return
     sharedHost.registerSigner(async (transaction) => {
       const result = await dAppKit.signAndExecuteTransaction({ transaction })
       const tx = result.Transaction ?? result.FailedTransaction
@@ -318,28 +324,28 @@ function WalletProfileContent({
     if (sharedHost) sharedHost.requestNetworkSwitch(n)
   }
 
-  const explorerUrl = account?.address
-    ? getSuiScanAccountUrl(account.address, normalizeNetwork(network))
+  const explorerUrl = effectiveAddress
+    ? getSuiScanAccountUrl(effectiveAddress, normalizeNetwork(network))
     : null
 
   const accounts: WalletAccount[] =
-    hostContext?.accounts?.length && account?.address
+    hostContext?.accounts?.length && effectiveAddress
       ? hostContext.accounts.map((a) => ({
           address: a.address,
           walletName: a.walletName,
           walletIcon: a.walletIcon,
         }))
-      : account?.address
+      : effectiveAddress
         ? [
             {
-              address: account.address,
+              address: effectiveAddress,
               walletName: connection.wallet?.name,
               walletIcon: connection.wallet?.icon,
             },
           ]
         : []
 
-  const body = !connection.isConnected ? (
+  const body = !effectiveConnected ? (
     <div className="swp">
       <div className="swp__header">
         <h3 className="swp__title">Wallet Profile</h3>

@@ -142,6 +142,13 @@ function PredictClubInner() {
         if (entry.id !== 'sui-scallop' && !suiHostAPI.getComponent(entry.name)) {
           throw new Error(`Component ${entry.name} not registered`)
         }
+        // Inject plugin CSS into light DOM for overlay/popup components
+        if (entry.styleUrl && !document.querySelector(`link[href*="${entry.id}"]`)) {
+          const link = document.createElement('link')
+          link.rel = 'stylesheet'
+          link.href = entry.styleUrl
+          document.head.appendChild(link)
+        }
       }
       setLoaded(true)
     } catch (err) {
