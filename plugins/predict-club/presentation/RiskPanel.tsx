@@ -1,56 +1,36 @@
 import { useState } from 'react'
 import { usePredictClub } from './PredictClubContext'
-import { selectAutoOracle, selectOracle } from '../infrastructure/deepbookOracleService'
-import { computePayoutPreview } from '../domain/payoutPreview'
 import type { RiskActionTarget, RiskCheckCategory } from '../domain/riskGate'
 import { formatUsd } from './shared'
 
-function formatAge(ms: number): string {
-  const s = Math.floor((Date.now() - ms) / 1000)
-  if (s < 60) return `${s}s ago`
-  return `${Math.floor(s / 60)}m ago`
-}
-
-function formatExpiry(ms: number): string {
-  const diff = ms - Date.now()
-  if (diff <= 0) return 'Expired'
-  const h = Math.floor(diff / 3_600_000)
-  const m = Math.floor((diff % 3_600_000) / 60_000)
-  return h > 0 ? `${h}h ${m}m` : `${m}m`
-}
-
 export function RiskPanel() {
-  const { club, context, primaryAction, oracleSnapshot, riskEvaluation, setModal } =
+  const { club, context, primaryAction, pricingSnapshot, riskEvaluation, setModal } =
     usePredictClub()
   const round = club.activeRound
-  const [oraclesOpen, setOraclesOpen] = useState(false)
-
-  const activeOracles = oracleSnapshot.oracles.filter(
-    (o) => o.status === 'active' && o.expiry > Date.now(),
-  )
-  const selectedOracle = oracleSnapshot.oracles.find(
-    (oracle) => oracle.oracle_id === oracleSnapshot.selectedOracleId,
-  )
-  const oracleSelectionNote =
-    oracleSnapshot.selectionMode === 'manual'
-      ? 'Manually selected oracle'
-      : 'Auto-selected nearest active oracle with safe expiry'
-  const maxLossDusdc = round.suggestedDusdc
-  const payoutPreview = computePayoutPreview({
-    direction: round.direction,
-    strike: round.strike,
-    lowerStrike: round.lowerStrike,
-    upperStrike: round.upperStrike,
-    amountDusdc: round.suggestedDusdc,
-    forward: oracleSnapshot.oracleState?.latest_price?.forward,
-    expiry: selectedOracle?.expiry ?? oracleSnapshot.oracleState?.expiry,
-    svi: oracleSnapshot.oracleState?.latest_svi,
-  })
-  const pricingPreviewUnavailable = payoutPreview.degraded || !payoutPreview.indicativePayout
-  const isFlooredProbability = payoutPreview.reason === 'Probability floored for display'
+  const [exposureOpen, setExposureOpen] = useState(false)
+  const fairValuePreview = pricingSnapshot.fairValue
+  const contractQuote = pricingSnapshot.quote
+  const maxLossDusdc = contractQuote.estimatedCost ?? round.suggestedDusdc
+  const quoteUnavailable = contractQuote.status !== 'ok'
+  const hasIndicativeQuote =
+    contractQuote.grossIfWin !== null ||
+    contractQuote.potentialProfit !== null ||
+    contractQuote.riskReward !== null
+  const probabilityUnavailable = fairValuePreview.degraded || !fairValuePreview.probability
+  const isFlooredProbability = fairValuePreview.reason === 'Probability floored for display'
   const probabilityLabel = isFlooredProbability
     ? '<0.1%'
-    : `${((payoutPreview.probability ?? 0) * 100).toFixed(1)}%`
+    : probabilityUnavailable
+      ? '—'
+      : `${((fairValuePreview.probability ?? 0) * 100).toFixed(1)}%`
+  const profitLabel =
+    contractQuote.potentialProfit !== null ? `+${formatUsd(contractQuote.potentialProfit)}` : '—'
+  const riskRewardLabel = contractQuote.riskReward ? contractQuote.riskReward.toFixed(2) : '—'
+  const exposureStatusLabel = quoteUnavailable
+    ? hasIndicativeQuote
+      ? 'SVI estimate'
+      : 'Preview unavailable'
+    : 'Contract quote'
   const riskEval = riskEvaluation
   const categoryLabels: Record<RiskCheckCategory, string> = {
     funding: 'Funding',
@@ -59,17 +39,11 @@ export function RiskPanel() {
   }
 
   function canRunRiskAction(target?: RiskActionTarget) {
-    return target === 'funding' || target === 'oracle'
+    return target === 'funding'
   }
 
   function handleRiskAction(target: RiskActionTarget = 'none') {
     if (target === 'funding') setModal('fund-to-join')
-    if (target === 'oracle') setOraclesOpen(true)
-  }
-
-  function handleOracleSelect(oracleId: string) {
-    selectOracle(oracleId)
-    setOraclesOpen(false)
   }
 
   return (
@@ -90,174 +64,7 @@ export function RiskPanel() {
           Risk &amp; Execution
         </h2>
       </div>
-      <div className="p-sm flex flex-col gap-sm flex-1 min-h-0 overflow-hidden">
-        {/* Oracle Status */}
-        <div className="bg-surface-container-highest border border-outline-variant rounded-lg p-sm flex flex-col gap-xs">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <span className="font-label text-label-caps text-on-surface-variant uppercase block">
-                DeepBook Oracle
-              </span>
-              <span className="font-data text-[10px] leading-4 text-on-surface-variant block truncate">
-                {oracleSelectionNote}
-              </span>
-            </div>
-            <div className="flex items-center gap-xs shrink-0">
-              {oracleSnapshot.selectionMode === 'manual' && (
-                <button
-                  type="button"
-                  onClick={selectAutoOracle}
-                  className="font-label text-label-caps text-primary-fixed-dim uppercase border border-primary-fixed-dim/40 rounded px-xs py-[2px]"
-                >
-                  Auto
-                </button>
-              )}
-              <span
-                className={`flex items-center gap-1 font-label text-label-caps uppercase ${
-                  oracleSnapshot.isHealthy ? 'text-primary-fixed-dim' : 'text-error'
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    oracleSnapshot.isHealthy ? 'bg-primary-fixed-dim animate-pulse' : 'bg-error'
-                  }`}
-                />
-                {oracleSnapshot.isHealthy ? 'Live' : 'Stale'}
-              </span>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-x-sm gap-y-xs">
-            <Metric
-              label="Spot"
-              value={
-                oracleSnapshot.oracleState?.latest_price?.spot
-                  ? `$${formatUsd(oracleSnapshot.oracleState.latest_price.spot)}`
-                  : '—'
-              }
-            />
-            <Metric
-              label="Fwd"
-              value={
-                oracleSnapshot.oracleState?.latest_price?.forward
-                  ? `$${formatUsd(oracleSnapshot.oracleState.latest_price.forward)}`
-                  : '—'
-              }
-            />
-            <Metric
-              label="Updated"
-              muted
-              value={
-                oracleSnapshot.lastUpdateMs ? formatAge(oracleSnapshot.lastUpdateMs) : 'Pending…'
-              }
-            />
-            <Metric
-              label="Expiry"
-              muted
-              value={selectedOracle ? formatExpiry(selectedOracle.expiry) : '—'}
-            />
-          </div>
-          {oracleSnapshot.prices.length > 0 && (
-            <div>
-              <span className="font-label text-label-caps text-on-surface-variant uppercase block mb-px">
-                Price ticks ({oracleSnapshot.prices.length})
-              </span>
-              <div className="flex items-end gap-px h-5">
-                {oracleSnapshot.prices.slice(-24).map((p, i) => {
-                  const all = oracleSnapshot.prices.slice(-24).map((x) => x.spot)
-                  const min = Math.min(...all)
-                  const max = Math.max(...all)
-                  const range = max - min || 1
-                  const pct = ((p.spot - min) / range) * 100
-                  return (
-                    <div
-                      key={i}
-                      className="flex-1 bg-primary-fixed-dim/40 rounded-sm"
-                      style={{ height: `${Math.max(10, pct)}%` }}
-                    />
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          {activeOracles.length > 0 && (
-            <div className="border-t border-outline-variant pt-xs">
-              <button
-                type="button"
-                onClick={() => setOraclesOpen((v) => !v)}
-                className="flex items-center justify-between w-full cursor-pointer group"
-              >
-                <span className="font-label text-label-caps text-on-surface-variant uppercase">
-                  Active Oracles ({activeOracles.length})
-                </span>
-                <span
-                  className="material-symbols-outlined text-[14px] text-on-surface-variant transition-transform group-hover:text-on-surface"
-                  style={{ transform: oraclesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                >
-                  expand_more
-                </span>
-              </button>
-              {oraclesOpen && (
-                <div className="flex flex-col gap-xs mt-xs max-h-28 overflow-y-auto">
-                  {activeOracles.map((o) => (
-                    <div
-                      key={o.oracle_id}
-                      className={`flex flex-col gap-px p-xs rounded-lg border ${
-                        o.oracle_id === oracleSnapshot.selectedOracleId
-                          ? 'border-primary-fixed-dim/50 bg-primary-fixed-dim/5'
-                          : 'border-outline-variant bg-surface-container'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-sm">
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim animate-pulse shrink-0" />
-                          <span className="font-data text-data-sm text-on-surface font-bold truncate">
-                            {o.underlying_asset}
-                          </span>
-                          {o.oracle_id === oracleSnapshot.selectedOracleId && (
-                            <span className="font-label text-label-caps text-primary-fixed-dim uppercase shrink-0">
-                              Selected
-                            </span>
-                          )}
-                        </div>
-                        <span className="font-label text-label-caps text-on-surface-variant uppercase shrink-0">
-                          {formatExpiry(o.expiry)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-sm">
-                        <span className="font-label text-label-caps text-on-surface-variant uppercase">
-                          ID
-                        </span>
-                        <span className="font-data text-[10px] text-on-surface-variant truncate">
-                          {o.oracle_id.slice(0, 10)}…{o.oracle_id.slice(-6)}
-                        </span>
-                        {o.oracle_id !== oracleSnapshot.selectedOracleId && (
-                          <button
-                            type="button"
-                            onClick={() => handleOracleSelect(o.oracle_id)}
-                            className="ml-auto font-label text-label-caps text-primary-fixed-dim uppercase border border-primary-fixed-dim/40 rounded px-xs py-[2px] shrink-0"
-                          >
-                            Select
-                          </button>
-                        )}
-                      </div>
-                      {o.settlement_price !== null && (
-                        <div className="flex items-center gap-sm">
-                          <span className="font-label text-label-caps text-on-surface-variant uppercase">
-                            Settle
-                          </span>
-                          <span className="font-data text-data-sm tabular-nums text-tertiary-fixed-dim">
-                            ${formatUsd(o.settlement_price)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
+      <div className="p-sm flex flex-col gap-sm flex-1 min-h-0 overflow-y-auto overscroll-contain pr-2">
         {/* Risk Checks */}
         <div className="min-h-0 flex flex-col">
           <div className="flex justify-between items-center mb-sm">
@@ -299,7 +106,7 @@ export function RiskPanel() {
               }}
             />
           </div>
-          <div className="flex flex-col gap-xs min-h-0 max-h-[34vh] overflow-y-auto pr-1">
+          <div className="flex flex-col gap-xs min-h-0 max-h-[28vh] overflow-y-auto pr-1">
             {riskEval.checks.map((check) => (
               <div
                 key={check.id}
@@ -342,11 +149,6 @@ export function RiskPanel() {
                       {check.message}
                     </p>
                   )}
-                  {!check.passed && check.actionHint && (
-                    <p className="text-on-surface-variant text-[10px] mt-px line-clamp-2">
-                      {check.actionHint}
-                    </p>
-                  )}
                 </div>
                 {!check.passed && canRunRiskAction(check.actionTarget) && (
                   <button
@@ -362,87 +164,137 @@ export function RiskPanel() {
           </div>
         </div>
 
-        {/* Blocking reasons */}
-        {riskEval.blockingReasons.length > 0 && (
-          <div className="bg-error/10 border border-error/30 rounded-xl p-sm">
-            <span className="font-label text-label-caps text-error uppercase block mb-1">
-              Blocked
-            </span>
-            {riskEval.blockingReasons.map((reason) => (
-              <p key={reason.id} className="font-data text-data-sm text-error/80">
-                • {reason.message ?? reason.label}
-              </p>
-            ))}
-          </div>
-        )}
-
         {/* Exposure */}
-        <div className="bg-surface-container-highest border border-primary-fixed-dim/30 p-md rounded-lg flex flex-col gap-sm shadow-[0_0_24px_rgba(0,224,179,0.08)]">
-          <div className="flex items-start justify-between gap-sm">
+        <div className="bg-surface-container-highest border border-primary-fixed-dim/30 p-md rounded-lg flex flex-col gap-sm shadow-[0_0_24px_rgba(0,224,179,0.08)] shrink-0 min-w-0">
+          <button
+            type="button"
+            className="flex items-start justify-between gap-sm text-left w-full cursor-pointer"
+            onClick={() => setExposureOpen((open) => !open)}
+            aria-expanded={exposureOpen}
+          >
             <div className="min-w-0">
               <span className="font-label text-label-caps text-primary-fixed-dim uppercase block">
                 Your Exposure
               </span>
-              <span className="font-data text-[10px] leading-4 text-on-surface-variant block">
-                Indicative, based on suggested stake
+              <span className="font-data text-[10px] leading-4 text-on-surface-variant block truncate">
+                {exposureStatusLabel}
               </span>
             </div>
-            <span className="font-data text-[11px] text-on-surface-variant tabular-nums shrink-0">
-              {payoutPreview.rewardMultiple ? `${payoutPreview.rewardMultiple.toFixed(1)}x` : '—'}
+            <span
+              className="material-symbols-outlined text-[18px] text-on-surface-variant shrink-0 transition-transform"
+              style={{ transform: exposureOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            >
+              expand_more
             </span>
+          </button>
+
+          <div className="grid grid-cols-3 gap-[1px] bg-outline-variant border border-outline-variant rounded overflow-hidden">
+            <CompactMetric label="Cost" tone="loss" value={`-${formatUsd(maxLossDusdc)}`} />
+            <CompactMetric label="Profit" tone="gain" value={profitLabel} />
+            <CompactMetric label="R/R" tone="gain" value={riskRewardLabel} />
           </div>
 
-          <div className="grid grid-cols-[1fr_auto] gap-x-sm gap-y-xs items-end">
-            <span className="font-data text-[11px] text-on-surface-variant">Max Loss</span>
-            <span className="font-data text-[20px] leading-6 text-error tabular-nums font-bold">
-              -{formatUsd(maxLossDusdc)}
-              <span className="text-[10px] leading-none ml-1 text-on-surface-variant">DUSDC</span>
-            </span>
-
-            <div className="col-span-2 h-px bg-outline-variant" />
-
-            {pricingPreviewUnavailable ? (
-              <div className="col-span-2 rounded-md border border-outline-variant bg-surface-container px-sm py-xs">
-                <div className="flex items-center justify-between gap-sm">
-                  <span className="font-label text-label-caps text-on-surface-variant uppercase">
-                    Pricing preview unavailable
-                  </span>
-                  <span className="material-symbols-outlined text-[16px] text-tertiary-fixed-dim">
-                    info
-                  </span>
+          {exposureOpen && (
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,auto)] gap-x-sm gap-y-xs items-end min-w-0 border-t border-outline-variant pt-sm">
+              {quoteUnavailable && !hasIndicativeQuote ? (
+                <div className="col-span-2 rounded-md border border-outline-variant bg-surface-container px-sm py-xs">
+                  <div className="flex items-center justify-between gap-sm">
+                    <span className="font-label text-label-caps text-on-surface-variant uppercase">
+                      Contract quote unavailable
+                    </span>
+                    <span className="material-symbols-outlined text-[16px] text-tertiary-fixed-dim">
+                      info
+                    </span>
+                  </div>
+                  <p className="font-data text-[11px] leading-4 text-on-surface-variant mt-1">
+                    {contractQuote.reason ?? 'Waiting for oracle, manager, or contract quote data.'}
+                  </p>
                 </div>
-                <p className="font-data text-[11px] leading-4 text-on-surface-variant mt-1">
-                  {payoutPreview.reason ?? 'Waiting for SVI, forward price, and expiry data.'}
-                </p>
-              </div>
-            ) : (
-              <>
-                <span className="font-data text-[11px] text-on-surface-variant">
-                  {isFlooredProbability ? 'Capped Payout' : 'Indicative Payout'}
-                </span>
-                <span className="font-data text-[20px] leading-6 text-primary-fixed-dim tabular-nums font-bold">
-                  {isFlooredProbability ? '≤' : '+'}
-                  {formatUsd(payoutPreview.indicativePayout!)}
-                  <span className="text-[10px] leading-none ml-1 text-on-surface-variant">
-                    DUSDC
+              ) : (
+                <>
+                  {quoteUnavailable && (
+                    <div className="col-span-2 rounded-md border border-tertiary-fixed-dim/30 bg-tertiary-fixed-dim/5 px-sm py-xs">
+                      <div className="flex items-center justify-between gap-sm">
+                        <span className="font-label text-label-caps text-tertiary-fixed-dim uppercase">
+                          SVI-only estimate
+                        </span>
+                        <span className="material-symbols-outlined text-[16px] text-tertiary-fixed-dim">
+                          info
+                        </span>
+                      </div>
+                      <p className="font-data text-[11px] leading-4 text-on-surface-variant mt-1">
+                        {contractQuote.reason ?? 'Contract quote unavailable; showing SVI preview.'}
+                      </p>
+                    </div>
+                  )}
+
+                  <span className="font-data text-[11px] text-on-surface-variant">
+                    Contract Price
                   </span>
-                </span>
+                  <span className="font-data text-data-md text-on-surface tabular-nums font-bold text-right min-w-0 break-words">
+                    {contractQuote.contractPrice ? formatUsd(contractQuote.contractPrice) : '—'}
+                    <span className="text-[10px] leading-none ml-1 text-on-surface-variant">
+                      DUSDC
+                    </span>
+                  </span>
 
-                <div className="col-span-2 h-px bg-outline-variant" />
+                  <span className="font-data text-[11px] text-on-surface-variant">
+                    Gross If Win
+                  </span>
+                  <span className="font-data text-data-md text-primary-fixed-dim tabular-nums font-bold text-right min-w-0 break-words">
+                    {formatUsd(contractQuote.grossIfWin ?? 0)}
+                    <span className="text-[10px] leading-none ml-1 text-on-surface-variant">
+                      DUSDC
+                    </span>
+                  </span>
 
-                <span className="font-data text-[11px] text-on-surface-variant">
-                  Win Probability
-                </span>
-                <span className="font-data text-data-md text-primary-fixed-dim tabular-nums font-bold">
-                  {probabilityLabel}
-                </span>
-              </>
-            )}
+                  <span className="font-data text-[11px] text-on-surface-variant">
+                    {isFlooredProbability ? 'Capped Win Probability' : 'Win Probability'}
+                  </span>
+                  <span className="font-data text-data-md text-primary-fixed-dim tabular-nums font-bold text-right min-w-0 break-words">
+                    {probabilityLabel}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-xs">
+          <div className="bg-surface-container-highest border border-outline-variant rounded-lg p-sm min-w-0">
+            <span className="font-label text-label-caps text-on-surface-variant uppercase block">
+              Portfolio
+            </span>
+            <span className="font-data text-data-md text-on-surface tabular-nums block mt-1">
+              {pricingSnapshot.manager
+                ? `${pricingSnapshot.manager.positions.length} open`
+                : context.isConnected
+                  ? 'No manager'
+                  : 'Connect wallet'}
+            </span>
+            <span className="font-data text-[10px] leading-4 text-on-surface-variant block truncate">
+              {pricingSnapshot.manager
+                ? `${formatUsd(pricingSnapshot.manager.quoteBalance)} DUSDC manager balance`
+                : 'Manager-owned positions'}
+            </span>
+          </div>
+          <div className="bg-surface-container-highest border border-outline-variant rounded-lg p-sm min-w-0">
+            <span className="font-label text-label-caps text-on-surface-variant uppercase block">
+              Vault
+            </span>
+            <span className="font-data text-data-md text-on-surface tabular-nums block mt-1">
+              {pricingSnapshot.vault
+                ? `${formatUsd(pricingSnapshot.vault.availableLiquidity)} DUSDC`
+                : 'Unavailable'}
+            </span>
+            <span className="font-data text-[10px] leading-4 text-on-surface-variant block truncate">
+              Available liquidity
+            </span>
           </div>
         </div>
 
         {/* Execute */}
-        <div className="mt-auto shrink-0">
+        <div className="shrink-0">
           <button
             className={`w-full px-md py-sm rounded-lg font-headline text-headline-md flex justify-center items-center gap-2 ${
               riskEval.canExecute && context.isConnected
@@ -472,26 +324,29 @@ export function RiskPanel() {
   )
 }
 
-function Metric({
+function CompactMetric({
   label,
   value,
-  muted,
-  className = '',
+  tone,
 }: {
   label: string
   value: string
-  muted?: boolean
-  className?: string
+  tone?: 'gain' | 'loss'
 }) {
   return (
-    <div className="min-w-0">
-      <span className="font-label text-label-caps text-on-surface-variant uppercase block">
+    <div className="bg-surface-container p-xs min-w-0">
+      <span className="font-label text-[9px] leading-3 text-on-surface-variant uppercase block">
         {label}
       </span>
       <span
-        className={`font-data text-data-sm tabular-nums truncate block ${
-          muted ? 'text-on-surface-variant' : 'text-on-surface'
-        } ${className}`}
+        className={`font-data text-[12px] leading-4 tabular-nums font-bold block truncate ${
+          tone === 'gain'
+            ? 'text-primary-fixed-dim'
+            : tone === 'loss'
+              ? 'text-error'
+              : 'text-on-surface'
+        }`}
+        title={value}
       >
         {value}
       </span>

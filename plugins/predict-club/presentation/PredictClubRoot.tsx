@@ -314,7 +314,7 @@ function RiskExecutionColumn({
     svi: oracleSnapshot.oracleState?.latest_svi,
   })
   const payoutValue = payoutPreview.indicativePayout
-    ? `+${formatUsd(payoutPreview.indicativePayout)} DUSDC`
+    ? `+${formatUsd(payoutPreview.potentialProfit ?? payoutPreview.indicativePayout)} DUSDC`
     : (payoutPreview.reason ?? 'Pricing preview unavailable')
   const visible = mobileTab === 'execution'
   const items = [
@@ -349,8 +349,8 @@ function RiskExecutionColumn({
           </div>
         </section>
         <section className="pc-exposure-card">
-          <DataRow label="Your Max Loss" value={`-${round.suggestedDusdc} DUSDC`} tone="error" />
-          <DataRow label="Indicative Payout" value={payoutValue} tone="mint" />
+          <DataRow label="Estimated Cost" value={`${round.suggestedDusdc} DUSDC`} tone="error" />
+          <DataRow label="Potential Profit" value={payoutValue} tone="mint" />
         </section>
         <div className="pc-execute-box">
           <button
@@ -767,7 +767,7 @@ function ExecuteTradeModal({
     svi: oracleSnapshot.oracleState?.latest_svi,
   })
   const payoutValue = payoutPreview.indicativePayout
-    ? `+${formatUsd(payoutPreview.indicativePayout)} DUSDC`
+    ? `+${formatUsd(payoutPreview.potentialProfit ?? payoutPreview.indicativePayout)} DUSDC`
     : (payoutPreview.reason ?? 'Pricing preview unavailable')
   return (
     <ModalBody
@@ -801,8 +801,8 @@ function ExecuteTradeModal({
         <DataRow label="Oracle Health" value="Healthy" tone="mint" />
       </div>
       <div className="pc-form-row pc-two-col">
-        <MetricBox label="Max Loss" value={`-${round.suggestedDusdc} DUSDC`} tone="error" />
-        <MetricBox label="Indicative Payout" value={payoutValue} tone="mint" />
+        <MetricBox label="Estimated Cost" value={`${round.suggestedDusdc} DUSDC`} tone="error" />
+        <MetricBox label="Potential Profit" value={payoutValue} tone="mint" />
       </div>
       <div className="pc-info-card pc-wide">
         {['Wallet Connected', 'Sufficient DUSDC Balance', 'Oracle Validated', 'Expiry Safe'].map(

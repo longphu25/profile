@@ -16,9 +16,10 @@ test.describe('Predict Club member flow', () => {
     await expect(page.getByText('Prediction Room').first()).toBeVisible()
     await expect(page.locator('[data-pc-panel="decision-strip"]')).toBeVisible()
     await expect(page.locator('[data-pc-panel="club-panel"]')).toContainText('Members')
-    await expect(page.locator('[data-pc-panel="risk-panel"]')).toContainText('DeepBook Oracle')
     await expect(page.locator('[data-pc-panel="risk-panel"]')).toContainText('Risk Checks')
+    await expect(page.locator('[data-pc-panel="risk-panel"]')).toContainText('Your Exposure')
     await expect(page.locator('[data-pc-panel="funding-router"]')).toContainText('Direct DUSDC')
+    await expect(page.locator('[data-wallet-btn]')).toHaveAttribute('title', 'Connect wallet')
 
     await page.locator('[data-pc-panel="funding-router"] button').first().click()
 
@@ -30,7 +31,7 @@ test.describe('Predict Club member flow', () => {
     await expect(dialog.getByText('PredictManager', { exact: true })).toBeVisible()
     await expect(dialog.getByText('Direct DUSDC', { exact: true })).toBeVisible()
     await expect(dialog.getByText('Suggested Stake', { exact: true })).toBeVisible()
-    await expect(dialog.getByText('Routes other than Direct DUSDC are preview-only')).toBeVisible()
+    await expect(dialog.getByText('SUI→USDC swap via DeepBook v3')).toBeVisible()
 
     await expect(pageErrors).toEqual([])
   })
