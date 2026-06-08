@@ -23,6 +23,8 @@ export interface OracleState {
   underlying_asset: string
   expiry: number
   status: string
+  min_strike?: number
+  tick_size?: number
   settlement_price: number | null
   latest_price: OraclePrice | null
   latest_svi?: SVIParams | null
@@ -33,6 +35,8 @@ export interface OracleEntry {
   underlying_asset: string
   expiry: number
   status: string
+  min_strike?: number
+  tick_size?: number
   settlement_price: number | null
 }
 
@@ -88,6 +92,8 @@ async function fetchActiveOracle(): Promise<{ oracle: OracleState; all: OracleEn
       underlying_asset: o.underlying_asset ?? 'BTC/USD',
       expiry: o.expiry,
       status: o.status,
+      min_strike: o.min_strike != null ? Number(o.min_strike) : undefined,
+      tick_size: o.tick_size != null ? Number(o.tick_size) : undefined,
       settlement_price:
         o.settlement_price != null ? Number(o.settlement_price) / PRICE_SCALE : null,
     }))
@@ -98,6 +104,8 @@ async function fetchActiveOracle(): Promise<{ oracle: OracleState; all: OracleEn
         underlying_asset: target.underlying_asset ?? 'BTC/USD',
         expiry: target.expiry,
         status: target.status,
+        min_strike: target.min_strike,
+        tick_size: target.tick_size,
         settlement_price:
           target.settlement_price != null ? Number(target.settlement_price) / PRICE_SCALE : null,
         latest_price: null,
@@ -220,6 +228,8 @@ async function refresh() {
                 underlying_asset: selectedEntry.underlying_asset,
                 expiry: selectedEntry.expiry,
                 status: selectedEntry.status,
+                min_strike: selectedEntry.min_strike,
+                tick_size: selectedEntry.tick_size,
                 settlement_price: selectedEntry.settlement_price,
                 latest_price: null,
                 latest_svi: null,
@@ -256,6 +266,14 @@ async function refresh() {
         underlying_asset: stateOracle?.underlying_asset ?? snapshot.oracleState.underlying_asset,
         expiry: Number(stateOracle?.expiry ?? snapshot.oracleState.expiry),
         status: stateOracle?.status ?? snapshot.oracleState.status,
+        min_strike:
+          stateOracle?.min_strike != null
+            ? Number(stateOracle.min_strike)
+            : snapshot.oracleState.min_strike,
+        tick_size:
+          stateOracle?.tick_size != null
+            ? Number(stateOracle.tick_size)
+            : snapshot.oracleState.tick_size,
         settlement_price:
           stateOracle?.settlement_price != null
             ? Number(stateOracle.settlement_price) / PRICE_SCALE
@@ -385,6 +403,8 @@ export function selectOracle(oracleId: string): boolean {
       underlying_asset: selectedEntry.underlying_asset,
       expiry: selectedEntry.expiry,
       status: selectedEntry.status,
+      min_strike: selectedEntry.min_strike,
+      tick_size: selectedEntry.tick_size,
       settlement_price: selectedEntry.settlement_price,
       latest_price: null,
       latest_svi: null,

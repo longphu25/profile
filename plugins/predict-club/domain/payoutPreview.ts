@@ -1,7 +1,5 @@
 import type { Direction } from './types'
 
-const YEAR_MS = 365.25 * 24 * 3600 * 1000
-const MIN_TIME_TO_EXPIRY_YEARS = 1 / 365
 const MIN_DISPLAY_PROBABILITY = 0.001
 const MAX_REWARD_MULTIPLE = 1 / MIN_DISPLAY_PROBABILITY
 
@@ -30,6 +28,9 @@ export interface PayoutPreviewInput {
 export interface PayoutPreview {
   probability: number | null
   indicativePayout: number | null
+  estimatedCost: number | null
+  grossIfWin: number | null
+  potentialProfit: number | null
   rewardMultiple: number | null
   degraded: boolean
   reason?: string
@@ -39,6 +40,9 @@ function unavailable(reason: string): PayoutPreview {
   return {
     probability: null,
     indicativePayout: null,
+    estimatedCost: null,
+    grossIfWin: null,
+    potentialProfit: null,
     rewardMultiple: null,
     degraded: true,
     reason,
@@ -62,17 +66,13 @@ function hasValidSVI(svi: SVIParams | null | undefined): svi is SVIParams {
   )
 }
 
-function yearsToExpiry(expiryMs: number, nowMs = Date.now()): number {
-  return Math.max((expiryMs - nowMs) / YEAR_MS, MIN_TIME_TO_EXPIRY_YEARS)
-}
-
 function normalizeSVIParams(svi: SVIParams) {
   return {
-    a: svi.a / 1e6,
-    b: svi.b / 1e6,
+    a: svi.a / 1e9,
+    b: svi.b / 1e9,
     rho: ((svi.rho_negative ? -1 : 1) * svi.rho) / 1e9,
-    m: ((svi.m_negative ? -1 : 1) * svi.m) / 1e6,
-    sigma: svi.sigma / 1e6,
+    m: ((svi.m_negative ? -1 : 1) * svi.m) / 1e9,
+    sigma: svi.sigma / 1e9,
   }
 }
 
@@ -101,22 +101,21 @@ function normalCDF(x: number): number {
 export function computeFairValue(
   svi: SVIParams,
   forwardUsd: number,
-  expiry: number,
+  _expiry: number,
   strikeUsd: number,
   direction: 0 | 1,
-  nowMs = Date.now(),
+  _nowMs = Date.now(),
 ): number {
   const F = forwardUsd
   const K = strikeUsd
   if (K <= 0 || F <= 0) return 0
 
-  const T = yearsToExpiry(expiry, nowMs)
   const k = Math.log(K / F)
   const w = totalVarianceAtLogMoneyness(svi, k)
   if (w <= 0) return 0
 
-  const sqrtW = Math.sqrt(w / T)
-  const d2 = -k / sqrtW - sqrtW / 2
+  const sqrtW = Math.sqrt(w)
+  const d2 = -((k + w / 2) / sqrtW)
   const pUp = normalCDF(d2)
   return direction === 0 ? pUp : 1 - pUp
 }
@@ -176,6 +175,9 @@ export function computePayoutPreview(input: PayoutPreviewInput): PayoutPreview {
     return {
       probability: MIN_DISPLAY_PROBABILITY,
       indicativePayout: input.amountDusdc * rewardMultiple,
+      estimatedCost: null,
+      grossIfWin: input.amountDusdc * rewardMultiple,
+      potentialProfit: Math.max(0, input.amountDusdc * rewardMultiple - input.amountDusdc),
       rewardMultiple,
       degraded: false,
       reason: 'Probability floored for display',
@@ -187,6 +189,9 @@ export function computePayoutPreview(input: PayoutPreviewInput): PayoutPreview {
   return {
     probability: displayProbability,
     indicativePayout: input.amountDusdc * rewardMultiple,
+    estimatedCost: null,
+    grossIfWin: input.amountDusdc * rewardMultiple,
+    potentialProfit: Math.max(0, input.amountDusdc * rewardMultiple - input.amountDusdc),
     rewardMultiple,
     degraded: false,
     reason: probability < MIN_DISPLAY_PROBABILITY ? 'Probability floored for display' : undefined,
