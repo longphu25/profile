@@ -16,7 +16,7 @@ Danh mục bên dưới ưu tiên góc nhìn onboarding: plugin nào thuộc dom
 | `hello-plugin` | plugin mẫu generic, dùng để hiểu contract cơ bản |
 | `hello-world-sui` | faucet demo cho Sui |
 | `sui-wallet` | ví cơ bản: balances và transactions |
-| `sui-wallet-profile` | wallet profile, token list, network selector, SuiNS-oriented UI |
+| `sui-wallet-profile` | wallet profile standalone/embedded, token list, network selector, SuiNS, shared wallet data cho host như Predict Club |
 | `sui-link` | liên kết ví/cross-chain style flows |
 | `sui-dual-wallet` | kết nối và so sánh 2 ví cùng lúc |
 | `sui-create-wallet` | tạo ví Secp256k1, liên quan `@noble/*` |
@@ -96,7 +96,7 @@ Nếu muốn hiểu nhanh toàn repo:
 ## Plugin có dấu hiệu complexity cao
 
 - `sui-deepbook-hedging-bot`: có `components/`, `hooks/`, `services/`, `strategies/`, `ARCHITECTURE.md`
-- `sui-wallet-profile`: tách nhiều component con
+- `sui-wallet-profile`: tách nhiều component con, có hướng standalone/embedded popup và shared data integration cho host
 - `sui-walrus-upload`: nhiều step UI và config riêng
 - `sui-navi-analysis`: có Rust/WASM source tại `plugins/sui-navi-analysis/wasm/`
 - `sui-seal-voting`: có Move file `voting_seal.move`

@@ -290,40 +290,56 @@ Known boundaries:
 - Repo-wide `bun run lint` still fails because of pre-existing lint issues
   outside this story scope.
 
+## Implementation Log - 2026-06-07
+
+Implemented in requested order `1 -> 4 -> 2 -> 3 -> 5`:
+
+1. Replaced the local-only payout preview path with
+   `deepbookPredictPricingService` for the active round. It fetches Predict
+   server oracle state, latest SVI/history, manager tables, vault state, and a
+   read-only `devInspect` quote for a new position.
+2. Normalized outcome labels in the right panel and execute modal to
+   `Contract Price`, `Estimated Cost`, `Gross If Win`, `Potential Profit`,
+   `Risk/Reward`, and `Win Probability`.
+3. Connected manager-owned portfolio context to the execution surface:
+   manager id, DUSDC balance, binary `positions`, and RANGE `range_positions`
+   are loaded when a wallet is connected.
+4. Added vault context to the execution surface: vault balance, total MTM,
+   total max payout, available liquidity, available withdrawal, PLP supply, and
+   wallet PLP share.
+5. Added deterministic unit tests for SVI 1e9 scaling, binary fair-value math,
+   range fair-value math, and explicit `Preview unavailable` handling when SVI
+   is missing.
+
+Validation performed:
+
+- `rtk bun run build` passed.
+- `rtk bun run test:unit` passed.
+
+Known boundaries:
+
+- The contract quote is read-only `devInspect`; a real trade still requires a
+  connected wallet and signed transaction.
+- `Win Probability` is still SVI fair-value, while cost/profit/risk-reward come
+  from the Predict contract quote.
+- Mocked `devInspectTransactionBlock` tests are still pending because the
+  pricing service currently owns the SDK client directly. The next hardening
+  step should inject the client so ABOVE, BELOW, RANGE, stale SVI, and quote
+  unavailable branches can be tested without network.
+
 Next plan:
 
-1. Add `deepbookPredictPricingService` to load oracle state, SVI latest/history,
-   manager state, and produce a normalized quote model for the active round.
-2. Add Predict `devInspect` pricing for ABOVE/BELOW via
-   `predict::get_trade_amounts` and RANGE via
-   `predict::get_range_trade_amounts`.
-3. Keep local SVI fair-value as a degraded fallback for `Win Probability` and
-   explanatory UI, with explicit `Preview unavailable` reasons when forward,
-   SVI, strike, quantity, wallet, or manager data is missing.
-4. Update outcome labels from payout-only wording to `Estimated cost`,
-   `Gross if win`, `Potential profit`, and `Risk/Reward`.
-5. Add unit tests for SVI scaling and fair-value math, plus mocked
-   `devInspectTransactionBlock` quote tests for ABOVE, BELOW, RANGE, stale SVI,
-   and unavailable quote.
-6. Add a wallet-mocked Playwright route or fixture so the test can cover the
+1. Add a wallet-mocked Playwright route or fixture so the test can cover the
    connected-wallet branch without relying on a browser extension.
-7. Add a PredictManager API/contract fixture so `Create Manager` and
+2. Add a PredictManager API/contract fixture so `Create Manager` and
    manager-ready states can be tested deterministically.
-8. Add a DUSDC balance fixture and exercise `Pledge DUSDC` through the funding
+3. Add a DUSDC balance fixture and exercise `Pledge DUSDC` through the funding
    modal.
-9. Add an execution-preview test for `Execute My Trade` once the round can be
+4. Add an execution-preview test for `Execute My Trade` once the round can be
    placed in a deterministic executable state.
-10. Add portfolio support for manager-owned positions:
-   - binary `positions` table
-   - RANGE `range_positions` table
+5. Add portfolio support for close/settlement UX:
    - live close preview through `devInspect`
    - settled payout display
    - mixed binary/range chart and table states
-11. Add vault context to execution UX:
-   - vault balance
-   - estimated open position payout / MTM
-   - max payout coverage
-   - available liquidity
-   - optional PLP wallet/share display for future club LP flows
-12. Document the exact manual wallet runbook for testnet transactions once a
+6. Document the exact manual wallet runbook for testnet transactions once a
    known funded test wallet is available.

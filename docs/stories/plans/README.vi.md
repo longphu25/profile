@@ -21,6 +21,9 @@ TaskOS. Nó nằm dưới `docs/stories/` vì các file này mô tả các lát 
 | [11-deepbook-suite-modular-refactor.md](11-deepbook-suite-modular-refactor.md) | Kế hoạch refactor cho `deepbook.html`, reusable plugin modules, Predict plugin entry mỏng, clean architecture và chart integration. |
 | [12-deepbook-predict-standalone-chart-trading.md](12-deepbook-predict-standalone-chart-trading.md) | Kế hoạch `deepbook-predict.html` độc lập với host kiểu BTC chart, wallet wiring, chart trade popup, preview DUSDC và overlay vị thế hiện có. |
 | [13-predict-club-community.md](13-predict-club-community.md) | ✅ **HOÀN THÀNH (V1)** — Workflow cộng đồng Predict Club với leader proposal, member tự ký thực thi, clean architecture. 37 commits Jun 3–5. |
+| [14-predict-club-contract-integration.md](14-predict-club-contract-integration.md) | Kế hoạch deploy predict-club contracts lên testnet, nối codegen bindings và hoàn thiện luồng escrow + exchange end-to-end. |
+| [15-swap-scallop-integration.md](15-swap-scallop-integration.md) | Kế hoạch tích hợp swap và Scallop cho funding routes của Predict Club. |
+| [16-predict-club-wallet-profile-popup.vi.md](16-predict-club-wallet-profile-popup.vi.md) | Kế hoạch mount `sui-wallet-profile` vào Predict Club như embedded wallet profile popup, gồm copy address, link SuiScan, PredictManager, portfolio và vault context. |
 
 ## Thứ Tự Xây Dựng Được Khuyến Nghị
 
@@ -37,3 +40,6 @@ TaskOS. Nó nằm dưới `docs/stories/` vì các file này mô tả các lát 
 11. Refactor DeepBook Suite và Predict plugin thành các module reusable theo clean architecture trước khi tách rộng hơn thành sub-plugin.
 12. Thêm trang DeepBook Predict độc lập với chart-click DUSDC trade popup và overlay vị thế theo ví.
 13. Thêm Predict Club như một trang điều phối cộng đồng với leader-confirmed round, indicator consensus và member self-sign execution.
+14. Deploy predict-club contracts lên testnet, nối TypeScript bindings vào plugin và hoàn thiện escrow + exchange funding flow end-to-end.
+15. Tích hợp swap và Scallop funding routes khi đủ an toàn và vẫn do ví người dùng ký.
+16. Mount `sui-wallet-profile` vào Predict Club làm wallet profile popup với copy address, link SuiScan, PredictManager status, portfolio và vault context.

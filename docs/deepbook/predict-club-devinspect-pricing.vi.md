@@ -513,3 +513,55 @@ Quote chính xác thay đổi theo oracle price và SVI live.
   hỗ trợ group liquidity provision sau này.
 - Không trộn manager DUSDC balance với wallet DUSDC balance; wallet có thể có
   DUSDC nhưng manager vẫn cần deposit trước khi mint.
+
+### Triển Khai Hiện Tại Trong Predict Club - 2026-06-07
+
+UI hiện dùng một pricing snapshot duy nhất cho round đang hoạt động:
+
+- `deepbookPredictPricingService` đọc Predict server oracle state và latest SVI,
+  rồi build SVI fair-value preview local.
+- Cùng service gọi quote contract Predict dạng read-only qua
+  `devInspectTransactionBlock`:
+  - ABOVE/BELOW: `predict::get_trade_amounts`
+  - RANGE: `predict::get_range_trade_amounts`
+- `Win Probability` đến từ SVI fair value.
+- `Contract Price`, `Estimated Cost`, `Gross If Win`, `Potential Profit` và
+  `Risk/Reward` đến từ quote contract.
+- Nếu quote contract không có, UI hiển thị `Contract quote unavailable` kèm lý
+  do thay vì fallback sang multiplier hard-code.
+- Context portfolio manager-owned được đọc từ bảng binary `positions` và bảng
+  RANGE `range_positions` trong manager object.
+- Context vault được đọc từ shared Predict object và gồm total balance, MTM, max
+  payout, available liquidity, available withdrawal, total PLP supply, wallet
+  PLP balance và wallet LP share.
+
+Ghi chú công thức:
+
+```text
+estimatedCost = mintCost / 10^6
+grossIfWin = requestedContractQuantity / 10^6
+potentialProfit = max(grossIfWin - estimatedCost, 0)
+riskReward = potentialProfit / estimatedCost
+rewardMultiple = grossIfWin / estimatedCost
+```
+
+SVI parameters từ Predict server dùng scale 1e9:
+
+```text
+a = raw.a / 1e9
+b = raw.b / 1e9
+rho = sign(raw.rho_negative) * raw.rho / 1e9
+m = sign(raw.m_negative) * raw.m / 1e9
+sigma = raw.sigma / 1e9
+```
+
+Ranh giới hiện tại:
+
+- `devInspect` là quote, không phải execution. Ví thật vẫn phải ký transaction
+  và kết quả on-chain cuối có thể thay đổi nếu oracle price/SVI đổi trước khi
+  ký.
+- `Win Probability` và contract cost là hai nguồn liên quan nhưng không giống
+  nhau: SVI fair value ước tính xác suất, còn contract quote trả về mint cost và
+  payout amounts hiện tại.
+- Test mock contract-quote vẫn còn pending; unit test deterministic hiện cover
+  scale SVI, binary/range fair value và hành vi unavailable khi thiếu SVI.

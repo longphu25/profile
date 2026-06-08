@@ -1,6 +1,11 @@
 # Predict Club Payout Preview
 
-Tài liệu này ghi lại logic hiện tại cho `Win Probability`, `Indicative Payout` và `Capped Payout` trong giao diện Predict Club. Mục tiêu là có một điểm tham chiếu để tiếp tục nghiên cứu DeepBook Predict, SVI, payout/odds, và cách làm preview đáng tin cậy hơn.
+Tài liệu này ghi lại logic payout preview local trước khi Predict Club nối
+contract quote qua `devInspect`. Từ 2026-06-07, UI chính dùng
+`Contract Price`, `Estimated Cost`, `Gross If Win`, `Potential Profit` và
+`Risk/Reward` từ quote contract; `Win Probability` vẫn lấy từ SVI fair value.
+Chi tiết triển khai hiện tại nằm trong
+`docs/deepbook/predict-club-devinspect-pricing.vi.md`.
 
 > Trạng thái hiện tại: đây là preview phía UI, không phải settlement rule on-chain. Con số dùng để định hướng rủi ro trước khi execute.
 

@@ -163,38 +163,53 @@ Ranh giới hiện tại:
   giao dịch thật bằng ví trên Sui network mục tiêu.
 - `bun run lint` toàn repo vẫn fail vì các lỗi lint tồn tại sẵn ngoài phạm vi story này.
 
+## Log Triển Khai - 2026-06-07
+
+Đã triển khai theo thứ tự yêu cầu `1 -> 4 -> 2 -> 3 -> 5`:
+
+1. Thay luồng payout preview local-only bằng
+   `deepbookPredictPricingService` cho round đang hoạt động. Service này fetch
+   Predict server oracle state, latest SVI/history, bảng manager, vault state và
+   quote read-only `devInspect` cho New Position.
+2. Chuẩn hóa nhãn kết quả ở panel phải và modal execute thành
+   `Contract Price`, `Estimated Cost`, `Gross If Win`, `Potential Profit`,
+   `Risk/Reward` và `Win Probability`.
+3. Nối context portfolio manager-owned vào execution surface: manager id, DUSDC
+   balance, bảng binary `positions` và RANGE `range_positions` được load khi
+   người dùng đã kết nối ví.
+4. Thêm vault context vào execution surface: vault balance, total MTM, total max
+   payout, available liquidity, available withdrawal, PLP supply và wallet PLP
+   share.
+5. Thêm unit test deterministic cho scale SVI 1e9, binary fair-value math, range
+   fair-value math và xử lý `Preview unavailable` khi thiếu SVI.
+
+Bằng chứng đã chạy:
+
+- `rtk bun run build` pass.
+- `rtk bun run test:unit` pass.
+
+Ranh giới hiện tại:
+
+- Contract quote là `devInspect` read-only; trade thật vẫn cần ví kết nối và
+  transaction được ký.
+- `Win Probability` vẫn là fair-value từ SVI, còn cost/profit/risk-reward lấy
+  từ quote contract Predict.
+- Test mock `devInspectTransactionBlock` vẫn còn pending vì pricing service đang
+  sở hữu SDK client trực tiếp. Bước hardening tiếp theo nên inject client để
+  test ABOVE, BELOW, RANGE, stale SVI và quote unavailable mà không phụ thuộc
+  network.
+
 Kế hoạch tiếp theo:
 
-1. Thêm `deepbookPredictPricingService` để load oracle state, SVI latest/history,
-   manager state và trả về quote model đã normalize cho round đang hoạt động.
-2. Thêm pricing Predict qua `devInspect`: ABOVE/BELOW dùng
-   `predict::get_trade_amounts`, RANGE dùng
-   `predict::get_range_trade_amounts`.
-3. Giữ fair-value SVI local làm fallback suy giảm cho `Win Probability` và UI
-   giải thích, kèm lý do `Preview unavailable` rõ ràng khi thiếu forward, SVI,
-   strike, quantity, wallet hoặc manager.
-4. Cập nhật nhãn kết quả từ payout-only sang `Estimated cost`, `Gross if win`,
-   `Potential profit` và `Risk/Reward`.
-5. Thêm unit test cho scale SVI và fair-value math, cộng với test mock
-   `devInspectTransactionBlock` cho ABOVE, BELOW, RANGE, stale SVI và quote
-   unavailable.
-6. Thêm wallet-mocked Playwright route hoặc fixture để test nhánh connected
+1. Thêm wallet-mocked Playwright route hoặc fixture để test nhánh connected
    wallet mà không phụ thuộc browser extension.
-7. Thêm fixture API/contract cho PredictManager để test trạng thái `Create
+2. Thêm fixture API/contract cho PredictManager để test trạng thái `Create
    Manager` và manager-ready một cách deterministic.
-8. Thêm fixture số dư DUSDC và test luồng `Pledge DUSDC` trong funding modal.
-9. Thêm execution-preview test cho `Execute My Trade` khi có thể đặt round vào
+3. Thêm fixture số dư DUSDC và test luồng `Pledge DUSDC` trong funding modal.
+4. Thêm execution-preview test cho `Execute My Trade` khi có thể đặt round vào
    trạng thái executable ổn định.
-10. Thêm support portfolio cho manager-owned positions:
-   - bảng binary `positions`
-   - bảng RANGE `range_positions`
+5. Thêm support portfolio cho UX close/settlement:
    - live close preview qua `devInspect`
    - hiển thị settled payout
    - chart và table cho trạng thái mixed binary/range
-11. Thêm vault context vào execution UX:
-   - vault balance
-   - estimated open position payout / MTM
-   - max payout coverage
-   - available liquidity
-   - PLP wallet/share display tùy chọn cho club LP flow sau này
-12. Viết manual wallet runbook cho giao dịch testnet khi có test wallet đã được nạp tiền.
+6. Viết manual wallet runbook cho giao dịch testnet khi có test wallet đã được nạp tiền.

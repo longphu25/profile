@@ -516,3 +516,55 @@ The exact quote changes as oracle price and SVI update.
   product later supports group liquidity provision.
 - Do not mix member PredictManager DUSDC balance with wallet DUSDC balance; the
   wallet can have DUSDC while the manager still needs a deposit.
+
+### Current Predict Club Implementation - 2026-06-07
+
+The UI now uses a single pricing snapshot for the active round:
+
+- `deepbookPredictPricingService` reads Predict server oracle state and latest
+  SVI, then builds a local SVI fair-value preview.
+- The same service calls Predict contract read-only quotes through
+  `devInspectTransactionBlock`:
+  - ABOVE/BELOW: `predict::get_trade_amounts`
+  - RANGE: `predict::get_range_trade_amounts`
+- `Win Probability` comes from SVI fair value.
+- `Contract Price`, `Estimated Cost`, `Gross If Win`, `Potential Profit`, and
+  `Risk/Reward` come from the contract quote.
+- If the contract quote is unavailable, the UI shows `Contract quote
+  unavailable` and a reason instead of falling back to a hard-coded multiplier.
+- Manager portfolio context is read from the manager object's binary
+  `positions` table and RANGE `range_positions` table.
+- Vault context is read from the shared Predict object and exposes total
+  balance, MTM, max payout, available liquidity, available withdrawal, total
+  PLP supply, wallet PLP balance, and wallet LP share.
+
+Formula notes:
+
+```text
+estimatedCost = mintCost / 10^6
+grossIfWin = requestedContractQuantity / 10^6
+potentialProfit = max(grossIfWin - estimatedCost, 0)
+riskReward = potentialProfit / estimatedCost
+rewardMultiple = grossIfWin / estimatedCost
+```
+
+The SVI parameters from the Predict server are on a 1e9 scale:
+
+```text
+a = raw.a / 1e9
+b = raw.b / 1e9
+rho = sign(raw.rho_negative) * raw.rho / 1e9
+m = sign(raw.m_negative) * raw.m / 1e9
+sigma = raw.sigma / 1e9
+```
+
+Known boundaries:
+
+- `devInspect` is a quote, not execution. A real wallet still has to sign the
+  transaction and the final on-chain result may move if oracle price/SVI changes
+  before signing.
+- `Win Probability` and contract cost are related but not identical sources:
+  SVI fair value estimates probability, while contract quote returns the current
+  mint cost and payout amounts.
+- Mocked contract-quote tests are still pending; the current deterministic unit
+  tests cover SVI scale, binary/range fair values, and unavailable SVI behavior.
