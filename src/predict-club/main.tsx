@@ -24,6 +24,7 @@ const dAppKit = createDAppKit({
   networks: ['mainnet', 'testnet', 'devnet'],
   defaultNetwork: 'testnet',
   createClient: (network) => new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network] }),
+  slushWalletConfig: null,
 })
 
 declare module '@mysten/dapp-kit-react' {
