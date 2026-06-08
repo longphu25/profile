@@ -5,7 +5,14 @@
 import type { Plugin, HostAPI } from '../../src/plugins/types'
 import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
-import { useState, useEffect, useCallback } from 'react'
+import {
+  useState,
+  useEffect,
+  useCallback,
+  type ComponentType,
+  type MouseEvent,
+  type ReactNode,
+} from 'react'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import {
   DAppKitProvider,
@@ -20,12 +27,18 @@ import { createDAppKit } from '@mysten/dapp-kit-core'
 
 import {
   GRPC_URLS,
-  EXPLORER_URLS,
   SHARED_KEY,
+  PREDICT_CLUB_WALLET_PROFILE_KEY,
   NETWORKS,
   type Network,
+  type PredictClubWalletProfile,
   type TokenBalance,
+  type WalletAccount,
   type WalletProfile,
+  getSuiScanAccountUrl,
+  getSuiScanObjectUrl,
+  isFullSuiAddress,
+  shortenAddress,
 } from './types'
 import { ConnectPopup } from './ConnectPopup'
 import { NetworkSelector } from './NetworkSelector'
@@ -65,14 +78,74 @@ function getDecimals(coinType: string): number {
   return KNOWN_DECIMALS[symbol] ?? 9
 }
 
+interface WalletProfileContentProps {
+  embedded?: boolean
+  open?: boolean
+  onClose?: () => void
+}
+
+function normalizeNetwork(network: string): Network {
+  return NETWORKS.includes(network as Network) ? (network as Network) : 'testnet'
+}
+
+function useHostSuiContext() {
+  const [ctx, setCtx] = useState(() => sharedHost?.getSuiContext() ?? null)
+
+  useEffect(() => {
+    if (!sharedHost) return undefined
+    setCtx(sharedHost.getSuiContext())
+    return sharedHost.onSuiContextChange(setCtx)
+  }, [])
+
+  return ctx
+}
+
+function usePredictClubWalletProfile() {
+  const [profile, setProfile] = useState<PredictClubWalletProfile | null>(() => {
+    if (!sharedHost) return null
+    return (
+      (sharedHost.getSharedData(PREDICT_CLUB_WALLET_PROFILE_KEY) as PredictClubWalletProfile) ??
+      null
+    )
+  })
+
+  useEffect(() => {
+    if (!sharedHost) return undefined
+    setProfile(
+      (sharedHost.getSharedData(PREDICT_CLUB_WALLET_PROFILE_KEY) as PredictClubWalletProfile) ??
+        null,
+    )
+    return sharedHost.onSharedDataChange(PREDICT_CLUB_WALLET_PROFILE_KEY, (value) => {
+      setProfile((value as PredictClubWalletProfile) ?? null)
+    })
+  }, [])
+
+  return profile
+}
+
+function stopPropagation(event: MouseEvent) {
+  event.stopPropagation()
+}
+
+function formatOptionalAmount(value: number | null | undefined, suffix = '') {
+  if (value === null || value === undefined || !Number.isFinite(value)) return 'Unavailable'
+  return `${value.toLocaleString(undefined, { maximumFractionDigits: 4 })}${suffix}`
+}
+
 // --- Core content (used in both modes) ---
-function WalletProfileContent() {
+function WalletProfileContent({
+  embedded = false,
+  open = true,
+  onClose,
+}: WalletProfileContentProps) {
   const wallets = useWallets()
   const connection = useWalletConnection()
   const account = useCurrentAccount()
   const network = useCurrentNetwork()
   const client = useCurrentClient()
   const dAppKit = useDAppKit()
+  const hostContext = useHostSuiContext()
+  const predictProfile = usePredictClubWalletProfile()
 
   const [showPopup, setShowPopup] = useState(false)
   const [connecting, setConnecting] = useState(false)
@@ -120,8 +193,23 @@ function WalletProfileContent() {
         const profile: WalletProfile = {
           address: account.address,
           suinsName: suinsName,
-          network: network as Network,
+          network: normalizeNetwork(network),
           balances: tokens,
+          walletName: connection.wallet?.name,
+          walletIcon: connection.wallet?.icon,
+          accounts: hostContext?.accounts?.length
+            ? hostContext.accounts.map((a) => ({
+                address: a.address,
+                walletName: a.walletName,
+                walletIcon: a.walletIcon,
+              }))
+            : [
+                {
+                  address: account.address,
+                  walletName: connection.wallet?.name,
+                  walletIcon: connection.wallet?.icon,
+                },
+              ],
         }
         sharedHost.setSharedData(SHARED_KEY, profile)
       }
@@ -130,7 +218,15 @@ function WalletProfileContent() {
     } finally {
       setLoading(false)
     }
-  }, [account?.address, client, network, suinsName])
+  }, [
+    account?.address,
+    client,
+    network,
+    suinsName,
+    connection.wallet?.name,
+    connection.wallet?.icon,
+    hostContext?.accounts,
+  ])
 
   useEffect(() => {
     fetchProfile()
@@ -142,10 +238,33 @@ function WalletProfileContent() {
     sharedHost.setSharedData(SHARED_KEY, {
       address: account.address,
       suinsName,
-      network,
+      network: normalizeNetwork(network),
       balances,
+      walletName: connection.wallet?.name,
+      walletIcon: connection.wallet?.icon,
+      accounts: hostContext?.accounts?.length
+        ? hostContext.accounts.map((a) => ({
+            address: a.address,
+            walletName: a.walletName,
+            walletIcon: a.walletIcon,
+          }))
+        : [
+            {
+              address: account.address,
+              walletName: connection.wallet?.name,
+              walletIcon: connection.wallet?.icon,
+            },
+          ],
     } satisfies WalletProfile)
-  }, [account?.address, suinsName, network, balances])
+  }, [
+    account?.address,
+    suinsName,
+    network,
+    balances,
+    connection.wallet?.name,
+    connection.wallet?.icon,
+    hostContext?.accounts,
+  ])
 
   // Register transaction signer so other plugins can sign via host API
   useEffect(() => {
@@ -186,10 +305,12 @@ function WalletProfileContent() {
   }
 
   const handleDisconnect = () => {
-    dAppKit.disconnectWallet()
+    if (sharedHost) sharedHost.requestDisconnect()
+    else dAppKit.disconnectWallet()
     setBalances([])
     setSuinsName(null)
     if (sharedHost) sharedHost.setSharedData(SHARED_KEY, null)
+    onClose?.()
   }
 
   const handleNetworkChange = (n: Network) => {
@@ -198,41 +319,52 @@ function WalletProfileContent() {
   }
 
   const explorerUrl = account?.address
-    ? `${EXPLORER_URLS[network as Network] ?? EXPLORER_URLS.mainnet}/account/${account.address}`
+    ? getSuiScanAccountUrl(account.address, normalizeNetwork(network))
     : null
 
-  // Not connected
-  if (!connection.isConnected) {
-    return (
-      <div className="swp">
-        <div className="swp__header">
-          <h3 className="swp__title">Wallet Profile</h3>
-          <span className="swp__required-badge">Required</span>
-        </div>
-        <p className="swp__desc">Connect your wallet to enable all plugins</p>
+  const accounts: WalletAccount[] =
+    hostContext?.accounts?.length && account?.address
+      ? hostContext.accounts.map((a) => ({
+          address: a.address,
+          walletName: a.walletName,
+          walletIcon: a.walletIcon,
+        }))
+      : account?.address
+        ? [
+            {
+              address: account.address,
+              walletName: connection.wallet?.name,
+              walletIcon: connection.wallet?.icon,
+            },
+          ]
+        : []
 
-        <NetworkSelector current={network as Network} onChange={handleNetworkChange} />
-
-        <button className="swp__connect-btn" onClick={() => setShowPopup(true)}>
-          Connect Wallet
-        </button>
-
-        {error && <div className="swp__error">{error}</div>}
-
-        {showPopup && (
-          <ConnectPopup
-            wallets={wallets.map((w) => ({ name: w.name, icon: w.icon }))}
-            onConnect={handleConnect}
-            onClose={() => setShowPopup(false)}
-            connecting={connecting}
-          />
-        )}
+  const body = !connection.isConnected ? (
+    <div className="swp">
+      <div className="swp__header">
+        <h3 className="swp__title">Wallet Profile</h3>
+        <span className="swp__required-badge">Required</span>
       </div>
-    )
-  }
+      <p className="swp__desc">Connect your wallet to enable all plugins</p>
 
-  // Connected
-  return (
+      <NetworkSelector current={network as Network} onChange={handleNetworkChange} />
+
+      <button className="swp__connect-btn" onClick={() => setShowPopup(true)}>
+        Connect Wallet
+      </button>
+
+      {error && <div className="swp__error">{error}</div>}
+
+      {showPopup && (
+        <ConnectPopup
+          wallets={wallets.map((w) => ({ name: w.name, icon: w.icon }))}
+          onConnect={handleConnect}
+          onClose={() => setShowPopup(false)}
+          connecting={connecting}
+        />
+      )}
+    </div>
+  ) : (
     <div className="swp">
       <div className="swp__header">
         <h3 className="swp__title">Wallet Profile</h3>
@@ -244,7 +376,14 @@ function WalletProfileContent() {
         suinsName={suinsName}
         walletName={connection.wallet?.name ?? 'Wallet'}
         walletIcon={connection.wallet?.icon}
+        network={normalizeNetwork(network)}
         onDisconnect={handleDisconnect}
+      />
+
+      <AccountList
+        accounts={accounts}
+        network={normalizeNetwork(network)}
+        activeAddress={account!.address}
       />
 
       <NetworkSelector current={network as Network} onChange={handleNetworkChange} />
@@ -264,9 +403,190 @@ function WalletProfileContent() {
 
       <TokenList balances={balances} loading={loading} />
 
+      <PredictExtension profile={predictProfile} network={normalizeNetwork(network)} />
+
       <div className="swp__footer">
         Wallet context shared with all plugins via <code>sharedData.{SHARED_KEY}</code>
       </div>
+    </div>
+  )
+
+  if (!embedded) return body
+  if (!open) return null
+
+  return (
+    <div className="swp__overlay swp__profile-overlay" onClick={onClose}>
+      <section className="swp__popup swp__profile-popup" onClick={stopPropagation}>
+        <div className="swp__popup-header">
+          <h2 className="swp__popup-title">Wallet Profile</h2>
+          <button className="swp__popup-close" type="button" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </div>
+        {body}
+      </section>
+    </div>
+  )
+}
+
+function CopyableAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false)
+  const canCopy = isFullSuiAddress(address)
+
+  const copyAddress = async () => {
+    if (!canCopy) return
+    await navigator.clipboard.writeText(address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1600)
+  }
+
+  return (
+    <button
+      className="swp__icon-action"
+      type="button"
+      disabled={!canCopy}
+      onClick={copyAddress}
+      title={canCopy ? 'Copy full address' : 'Copy unavailable'}
+      aria-label="Copy full address"
+    >
+      {copied ? '✓' : '⎘'}
+    </button>
+  )
+}
+
+function AccountList({
+  accounts,
+  network,
+  activeAddress,
+}: {
+  accounts: WalletAccount[]
+  network: Network
+  activeAddress: string
+}) {
+  if (!accounts.length) return null
+
+  return (
+    <section className="swp__section">
+      <div className="swp__section-title">Accounts ({accounts.length})</div>
+      <div className="swp__account-list">
+        {accounts.map((account) => (
+          <div className="swp__account-row" key={account.address}>
+            {account.walletIcon ? (
+              <img src={account.walletIcon} alt="" className="swp__account-icon" />
+            ) : null}
+            <div className="swp__account-main">
+              <span className="swp__account-address">{shortenAddress(account.address)}</span>
+              <span className="swp__account-wallet">
+                {account.address === activeAddress ? 'Active' : (account.walletName ?? 'Wallet')}
+              </span>
+            </div>
+            <CopyableAddress address={account.address} />
+            <a
+              className="swp__icon-action"
+              href={getSuiScanAccountUrl(account.address, network)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="View account on SuiScan"
+              aria-label="View account on SuiScan"
+            >
+              ↗
+            </a>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function PredictExtension({
+  profile,
+  network,
+}: {
+  profile: PredictClubWalletProfile | null
+  network: Network
+}) {
+  if (!profile) return null
+
+  const managerId = profile.manager?.id ?? null
+  const binaryPositions =
+    profile.binaryPositions ??
+    profile.positions?.filter((position) => position.kind === 'binary').length ??
+    null
+  const rangePositions =
+    profile.rangePositions ??
+    profile.positions?.filter((position) => position.kind === 'range').length ??
+    null
+
+  return (
+    <section className="swp__section swp__predict">
+      <div className="swp__section-title">Predict Club</div>
+      <div className="swp__metric-grid">
+        <DataMetric label="DUSDC" value={formatOptionalAmount(profile.balances?.dusdc)} />
+        <DataMetric
+          label="Binary"
+          value={binaryPositions === null ? 'Unavailable' : String(binaryPositions)}
+        />
+        <DataMetric
+          label="RANGE"
+          value={rangePositions === null ? 'Unavailable' : String(rangePositions)}
+        />
+      </div>
+      <div className="swp__data-list">
+        <DataRow
+          label="PredictManager"
+          value={
+            managerId ? (
+              <a
+                href={getSuiScanObjectUrl(managerId, network)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {shortenAddress(managerId)} ↗
+              </a>
+            ) : (
+              (profile.manager?.status ?? 'Unavailable')
+            )
+          }
+        />
+        <DataRow
+          label="Manager balance"
+          value={formatOptionalAmount(profile.manager?.quoteBalance, ' DUSDC')}
+        />
+        <DataRow
+          label="Vault liquidity"
+          value={formatOptionalAmount(profile.vault?.availableLiquidity, ' DUSDC')}
+        />
+        <DataRow
+          label="Max payout"
+          value={formatOptionalAmount(profile.vault?.totalMaxPayout, ' DUSDC')}
+        />
+        <DataRow
+          label="Wallet LP share"
+          value={
+            profile.vault?.walletLpShare === null || profile.vault?.walletLpShare === undefined
+              ? 'Unavailable'
+              : `${(profile.vault.walletLpShare * 100).toFixed(4)}%`
+          }
+        />
+      </div>
+    </section>
+  )
+}
+
+function DataMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="swp__metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  )
+}
+
+function DataRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="swp__data-row">
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   )
 }
@@ -282,6 +602,10 @@ function WalletProfileStandalone() {
   )
 }
 
+function WalletProfileEmbedded(props: WalletProfileContentProps) {
+  return <WalletProfileContent embedded {...props} />
+}
+
 const SuiWalletProfilePlugin: Plugin = {
   name: 'SuiWalletProfile',
   version: '1.0.0',
@@ -289,12 +613,18 @@ const SuiWalletProfilePlugin: Plugin = {
 
   init(host: HostAPI) {
     sharedHost = isSuiHostAPI(host) ? host : null
-    // Always use standalone (own DAppKitProvider) since this plugin
-    // manages the wallet connection itself. sharedHost is still set
-    // for cross-plugin data sharing via setSharedData/getSharedData.
     host.registerComponent('SuiWalletProfile', WalletProfileStandalone)
+    host.registerComponent(
+      'SuiWalletProfile.Embedded',
+      WalletProfileEmbedded as ComponentType<unknown>,
+    )
+    host.registerComponent(
+      'SuiWalletProfile.Popup',
+      WalletProfileEmbedded as ComponentType<unknown>,
+    )
     host.log(
-      'SuiWalletProfile initialized' + (sharedHost ? ' (shared data enabled)' : ' (standalone)'),
+      'SuiWalletProfile initialized' +
+        (sharedHost ? ' (standalone + embedded shared data)' : ' (standalone)'),
     )
   },
 

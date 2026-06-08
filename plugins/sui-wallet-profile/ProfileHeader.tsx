@@ -1,13 +1,14 @@
 // Profile header — shows address, SuiNS name, avatar, copy button
 
 import { useState } from 'react'
-import { shortenAddress } from './types'
+import { getSuiScanAccountUrl, isFullSuiAddress, shortenAddress, type Network } from './types'
 
 interface ProfileHeaderProps {
   address: string
   suinsName: string | null
   walletName: string
   walletIcon?: string
+  network?: Network
   onDisconnect: () => void
 }
 
@@ -16,11 +17,13 @@ export function ProfileHeader({
   suinsName,
   walletName,
   walletIcon,
+  network = 'testnet',
   onDisconnect,
 }: ProfileHeaderProps) {
   const [copied, setCopied] = useState(false)
 
   const copyAddress = async () => {
+    if (!isFullSuiAddress(address)) return
     await navigator.clipboard.writeText(address)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -44,6 +47,15 @@ export function ProfileHeader({
           <button className="swp__copy-btn" onClick={copyAddress} title="Copy address">
             {copied ? '✓' : '⎘'}
           </button>
+          <a
+            className="swp__copy-btn"
+            href={getSuiScanAccountUrl(address, network)}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View on SuiScan"
+          >
+            ↗
+          </a>
         </div>
         <div className="swp__profile-wallet">{walletName}</div>
       </div>

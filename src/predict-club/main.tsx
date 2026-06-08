@@ -51,6 +51,10 @@ const pluginPath = import.meta.env.DEV
   ? `${import.meta.env.BASE_URL}plugins/predict-club/plugin.tsx`
   : `${import.meta.env.BASE_URL}assets/plugins/predict-club.js`
 
+const walletPluginPath = import.meta.env.DEV
+  ? `${import.meta.env.BASE_URL}plugins/sui-wallet-profile/plugin.tsx`
+  : `${import.meta.env.BASE_URL}assets/plugins/sui-wallet-profile.js`
+
 /**
  * Interactive mode orchestrator.
  * Loads the plugin, then replaces static HTML content inside each
@@ -59,6 +63,11 @@ const pluginPath = import.meta.env.DEV
 export function PredictClubOrchestrator() {
   const [, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showWalletProfile, setShowWalletProfile] = useState(false)
+  const [WalletProfilePopup, setWalletProfilePopup] = useState<ComponentType<{
+    open: boolean
+    onClose: () => void
+  }> | null>(null)
   const rootsRef = useRef<Root[]>([])
   const initRef = useRef(false)
 
@@ -74,13 +83,34 @@ export function PredictClubOrchestrator() {
       address: account?.address ?? null,
       network,
       isConnected: connection.isConnected,
-      accounts: [],
+      accounts: account
+        ? [
+            {
+              address: account.address,
+              walletName: connection.wallet?.name ?? 'Wallet',
+              walletIcon: connection.wallet?.icon,
+            },
+          ]
+        : [],
     })
     suiHostAPI.setSharedData(
       'walletProfile',
-      account?.address ? { address: account.address } : null,
+      account?.address
+        ? {
+            address: account.address,
+            network,
+            walletName: connection.wallet?.name,
+            walletIcon: connection.wallet?.icon,
+          }
+        : null,
     )
-  }, [account?.address, network, connection.isConnected])
+  }, [
+    account?.address,
+    network,
+    connection.isConnected,
+    connection.wallet?.name,
+    connection.wallet?.icon,
+  ])
 
   // Register wallet actions
   useEffect(() => {
@@ -115,6 +145,21 @@ export function PredictClubOrchestrator() {
 
     async function loadAndMount() {
       try {
+        const walletBustUrl = `${walletPluginPath}${walletPluginPath.includes('?') ? '&' : '?'}t=${Date.now()}`
+        const walletModule = await import(/* @vite-ignore */ walletBustUrl)
+        const walletPlugin = walletModule.default
+        if (!walletPlugin?.name || !walletPlugin?.init) {
+          throw new Error('Invalid wallet profile plugin')
+        }
+        walletPlugin.init(suiHostAPI)
+        walletPlugin.mount?.()
+        const EmbeddedWalletProfile = suiHostAPI.getComponent('SuiWalletProfile.Popup') as
+          | ComponentType<{ open: boolean; onClose: () => void }>
+          | undefined
+        if (EmbeddedWalletProfile) {
+          setWalletProfilePopup(() => EmbeddedWalletProfile)
+        }
+
         const bustUrl = `${pluginPath}${pluginPath.includes('?') ? '&' : '?'}t=${Date.now()}`
         const module = await import(/* @vite-ignore */ bustUrl)
         const plugin = module.default
@@ -187,7 +232,7 @@ export function PredictClubOrchestrator() {
     if (connection.isConnected && account) {
       btn.textContent = `${account.address.slice(0, 6)}...${account.address.slice(-4)}`
       btn.classList.add('connected')
-      btn.setAttribute('title', 'Disconnect wallet')
+      btn.setAttribute('title', 'Open wallet profile')
     } else {
       btn.textContent = 'Connect Wallet'
       btn.classList.remove('connected')
@@ -201,7 +246,7 @@ export function PredictClubOrchestrator() {
 
     const handleClick = () => {
       if (connection.isConnected) {
-        dAppKitInstance.disconnectWallet()
+        setShowWalletProfile(true)
       } else if (wallets.length > 0) {
         dAppKitInstance.connectWallet({ wallet: wallets[0] })
       }
@@ -215,7 +260,9 @@ export function PredictClubOrchestrator() {
     console.error('[PredictClub] Mount error:', error)
   }
 
-  return null
+  return WalletProfilePopup ? (
+    <WalletProfilePopup open={showWalletProfile} onClose={() => setShowWalletProfile(false)} />
+  ) : null
 }
 
 // Bootstrap: render orchestrator into hidden root

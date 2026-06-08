@@ -58,6 +58,7 @@
 .swp__copy-btn {
   background: none; border: none; color: #4da2ff; font-size: 14px;
   cursor: pointer; padding: 0; line-height: 1;
+  text-decoration: none;
 }
 
 .swp__profile-wallet { font-size: 10px; color: #555; margin-top: 2px; }
@@ -123,6 +124,19 @@
   padding: 20px; width: 340px; max-width: 90vw; max-height: 80vh; overflow-y: auto;
 }
 
+.swp__profile-overlay {
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 72px 16px 16px;
+}
+
+.swp__profile-popup {
+  width: 420px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 96px);
+  padding: 16px;
+}
+
 .swp__popup-header {
   display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
 }
@@ -155,6 +169,130 @@
 .swp__popup-empty { text-align: center; color: #555; padding: 20px 0; font-size: 13px; }
 .swp__popup-status { text-align: center; color: #4da2ff; padding: 8px 0; font-size: 12px; }
 .swp__popup-error { color: #f87171; font-size: 12px; margin-top: 8px; text-align: center; }
+
+/* Embedded profile sections */
+.swp__section {
+  padding: 12px 0;
+  border-top: 1px solid #1e1e22;
+}
+
+.swp__account-list,
+.swp__data-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.swp__account-row,
+.swp__data-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 0;
+  border-bottom: 1px solid #17171a;
+}
+
+.swp__account-row:last-child,
+.swp__data-row:last-child {
+  border-bottom: none;
+}
+
+.swp__account-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  flex: 0 0 auto;
+}
+
+.swp__account-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.swp__account-address {
+  color: #ededed;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.swp__account-wallet {
+  color: #666;
+  font-size: 10px;
+}
+
+.swp__icon-action {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #2a2a30;
+  border-radius: 6px;
+  background: #151518;
+  color: #4da2ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.swp__icon-action:hover {
+  border-color: #4da2ff;
+}
+
+.swp__icon-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.swp__metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.swp__metric {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #1f1f24;
+  border-radius: 8px;
+  background: #151518;
+}
+
+.swp__metric span,
+.swp__data-row span {
+  color: #666;
+  font-size: 10px;
+}
+
+.swp__metric strong {
+  display: block;
+  margin-top: 3px;
+  color: #ededed;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.swp__data-row {
+  justify-content: space-between;
+}
+
+.swp__data-row strong {
+  color: #ededed;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.swp__data-row a {
+  color: #4da2ff;
+  text-decoration: none;
+}
 
 /* States */
 .swp__loading { text-align: center; color: #666; padding: 20px 0; font-size: 13px; }
