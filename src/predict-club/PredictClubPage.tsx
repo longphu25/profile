@@ -13,9 +13,9 @@ import { ShadowContainer } from '../plugins/ShadowContainer'
 import { suiHostAPI, registerActions, updateSuiContext } from '../sui-dashboard/sui-host'
 
 const GRPC_URLS: Record<string, string> = {
-  mainnet: 'https://fullnode.mainnet.sui.io:443',
-  testnet: 'https://fullnode.testnet.sui.io:443',
-  devnet: 'https://fullnode.devnet.sui.io:443',
+  mainnet: 'https://sui-mainnet.mystenlabs.com',
+  testnet: 'https://sui-testnet.mystenlabs.com',
+  devnet: 'https://sui-devnet.mystenlabs.com',
 }
 
 const dAppKit = createDAppKit({
