@@ -14,24 +14,14 @@ import { suiHostAPI, registerActions, updateSuiContext } from '../sui-dashboard/
 import { useEffect, useRef, useState } from 'react'
 import './predict-club.css'
 
-const GRPC_URLS: Record<string, string> = {
-  mainnet: 'https://sui-mainnet.mystenlabs.com',
-  testnet: 'https://sui-testnet.mystenlabs.com',
-  devnet: 'https://sui-devnet.mystenlabs.com',
-}
-
 const dAppKit = createDAppKit({
   networks: ['mainnet', 'testnet', 'devnet'],
   defaultNetwork: 'testnet',
-  createClient: (network) => new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network] }),
+  createClient: (network) => new SuiGrpcClient({ network, baseUrl: `/sui-rpc/${network}` }),
   slushWalletConfig: null,
 })
 
-declare module '@mysten/dapp-kit-react' {
-  interface Register {
-    dAppKit: typeof dAppKit
-  }
-}
+// dAppKit type registered via other entry points
 
 /**
  * Panel name → data-pc-panel attribute value + plugin component name.

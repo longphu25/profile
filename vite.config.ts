@@ -116,6 +116,21 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path: string) => path.replace(/^\/api\/polymarket/, ''),
       },
+      '/sui-rpc/testnet': {
+        target: 'https://fullnode.testnet.sui.io:443',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/sui-rpc\/testnet/, ''),
+      },
+      '/sui-rpc/mainnet': {
+        target: 'https://fullnode.mainnet.sui.io:443',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/sui-rpc\/mainnet/, ''),
+      },
+      '/sui-rpc/devnet': {
+        target: 'https://fullnode.devnet.sui.io:443',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/sui-rpc\/devnet/, ''),
+      },
     },
   },
   build: {
