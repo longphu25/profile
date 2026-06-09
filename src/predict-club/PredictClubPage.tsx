@@ -9,13 +9,20 @@ import {
 } from '@mysten/dapp-kit-react'
 import { createDAppKit } from '@mysten/dapp-kit-core'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
+import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
 import { ShadowContainer } from '../plugins/ShadowContainer'
 import { suiHostAPI, registerActions, updateSuiContext } from '../sui-dashboard/sui-host'
+
+type SuiNetwork = 'mainnet' | 'testnet' | 'devnet'
+const createSuiClient = (network: SuiNetwork) =>
+  import.meta.env.DEV
+    ? new SuiGrpcClient({ network, baseUrl: `/sui-rpc/${network}` })
+    : new SuiJsonRpcClient({ network, url: getJsonRpcFullnodeUrl(network as any) })
 
 const dAppKit = createDAppKit({
   networks: ['mainnet', 'testnet', 'devnet'],
   defaultNetwork: 'testnet',
-  createClient: (network) => new SuiGrpcClient({ network, baseUrl: `/sui-rpc/${network}` }),
+  createClient: createSuiClient as any,
   slushWalletConfig: null,
 })
 
@@ -281,7 +288,7 @@ function PredictClubInner() {
 
 export function PredictClubPage() {
   return (
-    <DAppKitProvider dAppKit={dAppKit}>
+    <DAppKitProvider dAppKit={dAppKit as any}>
       <PredictClubInner />
     </DAppKitProvider>
   )

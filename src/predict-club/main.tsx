@@ -10,14 +10,21 @@ import {
 } from '@mysten/dapp-kit-react'
 import { createDAppKit } from '@mysten/dapp-kit-core'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
+import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
 import { suiHostAPI, registerActions, updateSuiContext } from '../sui-dashboard/sui-host'
 import { useEffect, useRef, useState } from 'react'
 import './predict-club.css'
 
+type SuiNetwork = 'mainnet' | 'testnet' | 'devnet'
+const createSuiClient = (network: SuiNetwork) =>
+  import.meta.env.DEV
+    ? new SuiGrpcClient({ network, baseUrl: `/sui-rpc/${network}` })
+    : new SuiJsonRpcClient({ network, url: getJsonRpcFullnodeUrl(network as any) })
+
 const dAppKit = createDAppKit({
   networks: ['mainnet', 'testnet', 'devnet'],
   defaultNetwork: 'testnet',
-  createClient: (network) => new SuiGrpcClient({ network, baseUrl: `/sui-rpc/${network}` }),
+  createClient: createSuiClient as any,
   slushWalletConfig: null,
 })
 
@@ -177,7 +184,7 @@ export function PredictClubOrchestrator() {
           const root = createRoot(container)
           root.render(
             <StrictMode>
-              <DAppKitProvider dAppKit={dAppKit}>
+              <DAppKitProvider dAppKit={dAppKit as any}>
                 <Component />
               </DAppKitProvider>
             </StrictMode>,
@@ -194,7 +201,7 @@ export function PredictClubOrchestrator() {
           const root = createRoot(modalSlot)
           root.render(
             <StrictMode>
-              <DAppKitProvider dAppKit={dAppKit}>
+              <DAppKitProvider dAppKit={dAppKit as any}>
                 <ModalComponent />
               </DAppKitProvider>
             </StrictMode>,
@@ -266,7 +273,7 @@ if (!rootEl.id) {
 
 createRoot(rootEl).render(
   <StrictMode>
-    <DAppKitProvider dAppKit={dAppKit}>
+    <DAppKitProvider dAppKit={dAppKit as any}>
       <PredictClubOrchestrator />
     </DAppKitProvider>
   </StrictMode>,
