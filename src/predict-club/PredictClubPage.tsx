@@ -267,9 +267,16 @@ function PredictClubInner() {
         </div>
       )}
 
-      {WalletProfilePopup ? (
-        <WalletProfilePopup open={showWalletProfile} onClose={() => setShowWalletProfile(false)} />
-      ) : null}
+      {WalletProfilePopup && showWalletProfile && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setShowWalletProfile(false)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <WalletProfilePopup open={true} onClose={() => setShowWalletProfile(false)} />
+          </div>
+        </div>
+      )}
 
       {error && <div className="predict-club-page__error">{error}</div>}
 
