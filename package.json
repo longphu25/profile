@@ -1,7 +1,7 @@
 {
   "name": "profile",
   "private": true,
-  "version": "0.45.0",
+  "version": "0.45.1",
   "type": "module",
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
@@ -19,6 +19,9 @@
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report test-results/html",
     "preview": "vite preview",
+    "setup:codegraph": "bash scripts/setup-codegraph.sh",
+    "codegraph:index": "codegraph init -i",
+    "codegraph:status": "codegraph status",
     "codegen": "sui-ts-codegen generate",
     "prepare": "husky",
     "doctor": "bunx react-doctor@latest"

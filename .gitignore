@@ -38,3 +38,6 @@ contracts/**/build/
 
 # Codegen artifacts
 package_summaries/
+
+# Local CodeGraph index
+.codegraph/

@@ -1,5 +1,22 @@
 # React + TypeScript + Vite
 
+## CodeGraph Setup
+
+To enable local code graph search for Codex, Kiro, Cursor, Claude Code, and
+other supported agents after cloning this repository:
+
+```bash
+bash scripts/setup-codegraph.sh --install-cli --target=codex,kiro
+```
+
+If the CodeGraph CLI is already installed:
+
+```bash
+bun run setup:codegraph
+```
+
+See [scripts/README-codegraph.md](scripts/README-codegraph.md) for options.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
