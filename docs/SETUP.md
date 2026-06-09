@@ -66,6 +66,21 @@ This collection intentionally includes both English `.md` files and Vietnamese
 Use `qmd search` and `qmd get` for normal work. Do not run `qmd query`,
 `qmd vsearch`, or `qmd embed` unless a task explicitly requires local models.
 
+## CodeGraph
+
+CodeGraph is installed and configured for source-code search and impact tracing.
+
+```bash
+codegraph status
+codegraph init -i
+```
+
+When working in source, prefer CodeGraph MCP/search over `rg` if the agent
+environment supports it. Use `rg` only for lightweight file discovery or when
+CodeGraph is unavailable.
+
+The local index is stored in `.codegraph/` and is ignored by Git.
+
 ## QMD MCP
 
 Codex global config contains:

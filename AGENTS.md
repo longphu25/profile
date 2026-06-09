@@ -21,3 +21,11 @@ dApp Kit rewrite, etc.), see `.agents/skills/sui-sdk-2-migration/SKILL.md`.
   `docs/decisions/` for durable tradeoffs, and existing domain folders for technical depth.
 - For local docs search, prefer `qmd search ... -c profile-docs` and `qmd get ...`.
   Do not use `qmd query` unless explicitly needed, because it can use local GGUF models.
+
+## Source Search
+
+- For source-code search and impact tracing, prefer `codegraph` MCP queries over `rg`
+  when CodeGraph is available in the current agent environment.
+- Use `rg` only for simple file discovery or when CodeGraph is unavailable.
+- Keep `codegraph` indexed after major source changes by running `bun run codegraph:index`
+  or `bash scripts/setup-codegraph.sh --no-agent-install`.

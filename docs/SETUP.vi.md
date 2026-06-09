@@ -68,6 +68,22 @@ Dùng `qmd search` và `qmd get` cho công việc thông thường. Không chạ
 `qmd query`, `qmd vsearch` hoặc `qmd embed` trừ khi tác vụ thực sự yêu cầu
 model cục bộ.
 
+## CodeGraph
+
+CodeGraph đã được cài và cấu hình cho việc tìm source code và truy vết ảnh
+hưởng.
+
+```bash
+codegraph status
+codegraph init -i
+```
+
+Khi làm việc với source, ưu tiên tìm bằng CodeGraph MCP/search hơn `rg` nếu
+agent đang hỗ trợ. Chỉ dùng `rg` cho việc liệt kê file nhẹ hoặc khi CodeGraph
+không khả dụng.
+
+Index cục bộ nằm ở `.codegraph/` và đã được ignore trong Git.
+
 ## QMD MCP
 
 Cấu hình global của Codex chứa:
