@@ -1253,7 +1253,7 @@ function QuickPredictColumn({
   const signAndExecute = useMemo(
     () => async (tx: any) => {
       if (!host) throw new Error('No host available')
-      const result = await host.signAndExecuteTransaction({ transaction: tx })
+      const result = await host.signAndExecuteTransaction(tx)
       return { digest: result.digest }
     },
     [host],
