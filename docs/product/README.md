@@ -17,6 +17,7 @@ distributed across existing root notes and domain docs.
 - Predict Club Architecture: `predict-club-architecture.md`
 - Predict Club Escrow Contract: `predict-club-escrow-contract.md`
 - Predict Club Funding: `predict-club-funding.md`
+- Predict Club UI Motion: `predict-club-ui-motion.md`
 - DeepBook: `../deepbook/README.md`
 - NAVI: `../defi/navi/TECHNICAL.md`
 - Seal: `../seal/TECHNICAL.md`

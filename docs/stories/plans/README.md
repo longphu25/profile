@@ -23,7 +23,7 @@ candidate work slices, roadmap order, and implementation packets.
 | [13-predict-club-community.md](13-predict-club-community.md) | Predict Club community workflow plan with leader proposals, member self-sign execution, clean architecture, and future group vault boundary. |
 | [14-predict-club-contract-integration.md](14-predict-club-contract-integration.md) | Next steps for deploying predict-club contracts to testnet, wiring codegen bindings into the plugin, and completing the end-to-end escrow + exchange flow. |
 | [15-swap-scallop-integration.md](15-swap-scallop-integration.md) | Swap and Scallop integration plan for Predict Club funding routes. |
-| [16-predict-club-wallet-profile-popup.md](16-predict-club-wallet-profile-popup.md) | Plan to mount `sui-wallet-profile` into Predict Club as an embedded wallet profile popup with copyable addresses, SuiScan links, PredictManager, portfolio, and vault context. |
+| [16-predict-club-wallet-profile-popup.md](16-predict-club-wallet-profile-popup.md) | Implemented wallet profile popup for Predict Club, including shared Predict context, popup performance fixes, and Fast Refresh guardrails. |
 | [17-scallop-plugin-extraction.md](17-scallop-plugin-extraction.md) | Extract Scallop borrow into standalone `sui-scallop` plugin, mount into predict-club via Host Component Registry. |
 
 ## Recommended Build Order
@@ -43,5 +43,5 @@ candidate work slices, roadmap order, and implementation packets.
 13. Add Predict Club as a community coordination page with leader-confirmed rounds, indicator consensus, and member self-sign execution.
 14. Deploy predict-club contracts to testnet, wire TypeScript bindings into the plugin, and complete the end-to-end escrow + exchange funding flow.
 15. Integrate swap and Scallop funding routes where they are safe and wallet-signed.
-16. Mount `sui-wallet-profile` into Predict Club as the wallet profile popup with copyable addresses, SuiScan links, PredictManager status, portfolio, and vault context.
+16. Maintain the Predict Club wallet profile popup and keep the Fast Refresh split between provider, context core, and hook files.
 17. Extract Scallop borrow into standalone `sui-scallop` plugin and mount back into predict-club via Host Component Registry for cross-plugin reuse.

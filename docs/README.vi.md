@@ -86,3 +86,6 @@ cho chiều sâu kỹ thuật.
 - Kiro steering hiện có policy cho RTK và QMD.
 - Luồng ví member Predict Club, funding gate và Playwright E2E smoke test đã
   được ghi log trong `docs/stories/plans/13-predict-club-community.md`.
+- Việc triển khai wallet profile popup cho Predict Club, guardrail Fast Refresh
+  và các fix performance popup đã được ghi log trong
+  `docs/stories/plans/16-predict-club-wallet-profile-popup.vi.md`.

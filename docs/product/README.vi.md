@@ -18,6 +18,7 @@ domain.
 - Kiến trúc Predict Club: `predict-club-architecture.md`
 - Escrow Contract Predict Club: `predict-club-escrow-contract.md`
 - Funding Predict Club: `predict-club-funding.md`
+- Motion UI Predict Club: `predict-club-ui-motion.vi.md`
 - DeepBook: `../deepbook/README.md`
 - NAVI: `../defi/navi/TECHNICAL.md`
 - Seal: `../seal/TECHNICAL.md`

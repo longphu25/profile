@@ -219,6 +219,30 @@ Regression:
 - `rtk bun run test:unit`
 - `rtk bun run test:e2e` khi local server binding được cho phép
 
+## Guardrail HMR / Fast Refresh
+
+Vite React Fast Refresh yêu cầu file export React component giữ export ổn định
+theo hướng component-only. Không export `usePredictClub` từ
+`plugins/predict-club/presentation/PredictClubContext.tsx`.
+
+Warning đã gặp:
+
+```text
+hmr invalidate /plugins/predict-club/presentation/PredictClubContext.tsx Could not Fast Refresh ("usePredictClub" export is incompatible).
+```
+
+Cấu trúc phòng tránh:
+
+- `PredictClubContext.tsx` sở hữu và export `PredictClubProvider`.
+- `PredictClubContextCore.ts` sở hữu context object và context/action types.
+- `usePredictClub.ts` sở hữu và export hook `usePredictClub`.
+- Các panel import hook từ `./usePredictClub`, không import từ
+  `./PredictClubContext`.
+
+Nếu sau này cần thêm helper hook, selector hoặc export không phải component, hãy
+đặt ở file riêng cạnh provider. Cách này giữ HMR incremental và tránh invalidate
+toàn module khi chỉnh UI Predict Club.
+
 ## Tiêu Chí Chấp Nhận
 
 - Predict Club dùng `plugins/sui-wallet-profile` cho wallet popup thay vì sở hữu
@@ -233,7 +257,8 @@ Regression:
 
 ## Trạng Thái Triển Khai
 
-- Trạng thái: đã triển khai phase 1
+- Trạng thái: đã triển khai wallet popup, shared Predict context, HMR guard và
+  tối ưu performance popup
 - Ưu tiên: cao cho Predict Club usability sau wallet/Predict pricing work
 - Rủi ro: trung bình vì chạm vào wallet plugin boundaries, shared context và E2E
   behavior
@@ -248,3 +273,27 @@ Regression:
   `predictClubWalletProfile`.
 - Wallet profile render copy full-address controls và SuiScan testnet
   account/object links.
+
+Các fix follow-up đã xong:
+
+- Predict Club render wallet profile popup qua React portal gắn vào
+  `document.body`, nên popup không bị ẩn bởi orchestrator root `display: none`.
+- Icon ví và connected address cùng dùng wallet trigger chung.
+- Embedded wallet profile dùng effective address từ DAppKit hoặc host context,
+  tránh crash khi chỉ có host context.
+- Popup chỉ mount khi mở; wallet profile bỏ qua fetch khi embedded popup đang
+  đóng.
+- Bỏ `backdrop-filter` toàn màn hình khỏi overlay wallet profile để tránh
+  mouse/scroll jank khi popup mở.
+- Predict Club giữ snapshot manager/vault tốt gần nhất thay vì ghi đè profile
+  data bằng `null` từ provider panel khác khi snapshot đang loading hoặc thiếu
+  một phần.
+- Predict manager snapshot không fail toàn bộ nếu đọc positions/dynamic fields
+  lỗi; manager balance và id vẫn có thể render.
+- `usePredictClub` đã được tách khỏi `PredictClubContext.tsx` để tuân thủ rule
+  export của Vite Fast Refresh.
+
+Validation đã chạy:
+
+- `bun run build`
+- `bun run test:e2e -- tests/e2e/predict-club.spec.ts`

@@ -14,6 +14,7 @@ Toàn bộ tài liệu cho các tích hợp DeepBook v3 trong dự án này.
 | [hedging-bot.md](hedging-bot.md) | Hedging bot — kiến trúc, auto-balance, quản lý khóa, points |
 | [margin-trading.md](margin-trading.md) | Margin Manager — vay, leverage, repay, chiến lược points (port từ depbuk-hedging) |
 | [api-reference.md](api-reference.md) | Tham chiếu DeepBook Indexer REST API + SDK + Sui RPC |
+| [predict-sdk-yosuku.vi.md](predict-sdk-yosuku.vi.md) | Ghi chú về `@yosuku/deepbook-predict`: SVI pricing, kiểm chứng quote on-chain, PTB builders và kế hoạch tích hợp Predict Club |
 | [predict-club-devinspect-pricing.vi.md](predict-club-devinspect-pricing.vi.md) | Predict Club — pricing `devInspect` quan sát được, scale SVI và kế hoạch triển khai |
 | [predict-club-payout-preview.vi.md](predict-club-payout-preview.vi.md) | Predict Club — ghi chú Capped Payout, Win Probability, SVI và payout preview |
 | [balance-manager.md](balance-manager.md) | Balance Manager — khái niệm, SDK API, lỗi thường gặp, token recycling |

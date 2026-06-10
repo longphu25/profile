@@ -84,6 +84,53 @@ không khả dụng.
 
 Index cục bộ nằm ở `.codegraph/` và đã được ignore trong Git.
 
+## 9Router Cho Codex Và Kiro
+
+Project có thể dùng VPS 9Router như một remote API tương thích OpenAI:
+
+```text
+Base URL: http://178.63.60.20:26650/v1
+Env bắt buộc: NINE_ROUTER_API_KEY
+```
+
+VPS expose `/v1/models` và `/v1/responses`; cả hai đều yêu cầu API key. VPS
+không expose MCP trực tiếp ở `/mcp`, vì vậy không thêm nó vào
+`.kiro/settings/mcp.json` như một MCP server.
+
+Codex đã có profile cục bộ:
+
+```text
+~/.codex/nine-router.config.toml
+```
+
+Dùng profile này từ terminal đã export key:
+
+```bash
+export NINE_ROUTER_API_KEY="..."
+codex -p nine-router
+codex exec -p nine-router "summarize this repo"
+```
+
+Với Kiro, điểm quan trọng là app phải nhận được biến môi trường. Nếu Kiro đã
+mở sẵn, app sẽ không thấy biến mới export trong shell. Trên macOS, set env cho
+GUI app trước khi mở Kiro:
+
+```bash
+launchctl setenv NINE_ROUTER_API_KEY "..."
+open -a Kiro
+```
+
+Nếu Kiro/Pencil Codex bridge hỏi endpoint model, dùng:
+
+```text
+Base URL: http://178.63.60.20:26650/v1
+API key: giá trị từ NINE_ROUTER_API_KEY
+Model: model trả về từ /v1/models
+```
+
+Không lưu API key vào file trong repo. Chỉ commit steering, setup hoặc hướng
+dẫn wrapper không chứa secret.
+
 ## QMD MCP
 
 Cấu hình global của Codex chứa:

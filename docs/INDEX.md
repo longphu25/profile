@@ -22,6 +22,7 @@
 - [[product/predict-club-architecture]] — Predict Club diagrams, runtime boundaries, and planned file structure
 - [[product/predict-club-escrow-contract]] — Time-locked escrow and generic USDC/DUSDC exchange contract plan
 - [[product/predict-club-funding]] — Funding Router, Scallop borrow risk, bridge handoff, and DUSDC escrow
+- [[product/predict-club-ui-motion]] — Predict Club product motion rules using Transitions.dev patterns
 - [[stories/README]] — Story packet and plan folder
 - [[decisions/README]] — Durable decision records
 - [[decisions/predict-club-architecture]] — Hybrid custody and future vault decision

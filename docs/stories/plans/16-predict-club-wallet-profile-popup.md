@@ -224,6 +224,30 @@ Regression:
 - `rtk bun run test:unit`
 - `rtk bun run test:e2e` when local server binding is allowed
 
+## HMR / Fast Refresh Guardrail
+
+Vite React Fast Refresh requires files that export React components to keep
+consistent component-only exports. Do not export `usePredictClub` from
+`plugins/predict-club/presentation/PredictClubContext.tsx`.
+
+Observed warning:
+
+```text
+hmr invalidate /plugins/predict-club/presentation/PredictClubContext.tsx Could not Fast Refresh ("usePredictClub" export is incompatible).
+```
+
+Preventive structure:
+
+- `PredictClubContext.tsx` owns and exports `PredictClubProvider`.
+- `PredictClubContextCore.ts` owns the context object and context/action types.
+- `usePredictClub.ts` owns and exports the `usePredictClub` hook.
+- Panel components import the hook from `./usePredictClub`, not from
+  `./PredictClubContext`.
+
+If future work adds helper hooks, selectors, or non-component exports, put them
+in separate files next to the provider. This keeps HMR incremental and avoids
+full module invalidation while editing the Predict Club UI.
+
 ## Acceptance Criteria
 
 - Predict Club uses `plugins/sui-wallet-profile` for the wallet popup instead
@@ -238,7 +262,8 @@ Regression:
 
 ## Implementation Status
 
-- State: phase 1 implemented
+- State: implemented through wallet popup, shared Predict context, HMR guard,
+  and popup performance cleanup
 - Priority: high for Predict Club usability after wallet/Predict pricing work
 - Risk: medium because it touches wallet plugin boundaries, shared context, and
   E2E behavior
@@ -254,3 +279,28 @@ Implemented in phase 1:
   `predictClubWalletProfile`.
 - Wallet profile renders copyable full-address controls and SuiScan testnet
   account/object links.
+
+Completed follow-up fixes:
+
+- Predict Club renders the wallet profile popup through a React portal attached
+  to `document.body`, so it is not hidden by the orchestrator root
+  `display: none`.
+- Wallet icon and connected address both use the shared wallet trigger.
+- Embedded wallet profile uses the effective address from DAppKit or host
+  context, preventing host-context-only crashes.
+- Popup mounts only while open; wallet profile fetches are skipped when an
+  embedded popup is closed.
+- Removed full-screen `backdrop-filter` from the wallet profile overlay to
+  avoid mouse/scroll jank while the popup is open.
+- Predict Club preserves the latest usable manager/vault snapshot instead of
+  overwriting profile data with `null` from another panel provider while a
+  snapshot is loading or partially unavailable.
+- Predict manager snapshot no longer fails completely if position/dynamic-field
+  reads fail; manager balance and id can still render.
+- `usePredictClub` was moved out of `PredictClubContext.tsx` to satisfy Vite
+  Fast Refresh export rules.
+
+Validation completed:
+
+- `bun run build`
+- `bun run test:e2e -- tests/e2e/predict-club.spec.ts`

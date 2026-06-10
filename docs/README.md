@@ -82,3 +82,6 @@ chosen, and the existing domain folders for technical depth.
 - Kiro steering now includes RTK and QMD policies.
 - Predict Club member wallet flow, funding gate, and Playwright E2E smoke test
   were logged in `docs/stories/plans/13-predict-club-community.md`.
+- Predict Club wallet profile popup implementation, Fast Refresh guardrail, and
+  popup performance fixes are logged in
+  `docs/stories/plans/16-predict-club-wallet-profile-popup.md`.

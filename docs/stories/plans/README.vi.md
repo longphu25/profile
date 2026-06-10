@@ -23,7 +23,7 @@ TaskOS. Nó nằm dưới `docs/stories/` vì các file này mô tả các lát 
 | [13-predict-club-community.md](13-predict-club-community.md) | ✅ **HOÀN THÀNH (V1)** — Workflow cộng đồng Predict Club với leader proposal, member tự ký thực thi, clean architecture. 37 commits Jun 3–5. |
 | [14-predict-club-contract-integration.md](14-predict-club-contract-integration.md) | Kế hoạch deploy predict-club contracts lên testnet, nối codegen bindings và hoàn thiện luồng escrow + exchange end-to-end. |
 | [15-swap-scallop-integration.md](15-swap-scallop-integration.md) | Kế hoạch tích hợp swap và Scallop cho funding routes của Predict Club. |
-| [16-predict-club-wallet-profile-popup.vi.md](16-predict-club-wallet-profile-popup.vi.md) | Kế hoạch mount `sui-wallet-profile` vào Predict Club như embedded wallet profile popup, gồm copy address, link SuiScan, PredictManager, portfolio và vault context. |
+| [16-predict-club-wallet-profile-popup.vi.md](16-predict-club-wallet-profile-popup.vi.md) | Đã triển khai wallet profile popup cho Predict Club, gồm shared Predict context, fix performance popup và guardrail Fast Refresh. |
 
 ## Thứ Tự Xây Dựng Được Khuyến Nghị
 
@@ -42,4 +42,4 @@ TaskOS. Nó nằm dưới `docs/stories/` vì các file này mô tả các lát 
 13. Thêm Predict Club như một trang điều phối cộng đồng với leader-confirmed round, indicator consensus và member self-sign execution.
 14. Deploy predict-club contracts lên testnet, nối TypeScript bindings vào plugin và hoàn thiện escrow + exchange funding flow end-to-end.
 15. Tích hợp swap và Scallop funding routes khi đủ an toàn và vẫn do ví người dùng ký.
-16. Mount `sui-wallet-profile` vào Predict Club làm wallet profile popup với copy address, link SuiScan, PredictManager status, portfolio và vault context.
+16. Duy trì wallet profile popup của Predict Club và giữ split Fast Refresh giữa provider, context core và hook files.
