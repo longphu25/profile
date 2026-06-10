@@ -11,6 +11,7 @@ import { FundingRouterPanel } from './presentation/FundingRouterPanel'
 import { EscrowOffersPanel } from './presentation/EscrowOffersPanel'
 import { RoundHistoryPanel } from './presentation/RoundHistoryPanel'
 import { ModalLayer } from './presentation/ModalLayer'
+import { QuickPredictPanelWrapper } from './presentation/QuickPredictPanelWrapper'
 import { PredictClubRoot } from './presentation/PredictClubRoot'
 import './style.css'
 
@@ -57,6 +58,7 @@ const PredictClubPlugin: Plugin = {
     host.registerComponent('PredictClub.FundingRouter', withProvider(FundingRouterPanel))
     host.registerComponent('PredictClub.EscrowOffers', withProvider(EscrowOffersPanel))
     host.registerComponent('PredictClub.RoundHistory', withProvider(RoundHistoryPanel))
+    host.registerComponent('PredictClub.QuickPredict', withProvider(QuickPredictPanelWrapper))
     host.registerComponent('PredictClub.ModalLayer', withProvider(ModalLayer))
 
     host.log('PredictClub plugin v2 initialized (multi-slot)')

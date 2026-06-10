@@ -40,6 +40,7 @@ const PANEL_MAP: Array<[string, string]> = [
   ['decision-strip', 'PredictClub.DecisionStrip'],
   ['club-panel', 'PredictClub.ClubPanel'],
   ['prediction-room', 'PredictClub.PredictionRoom'],
+  ['quick-predict', 'PredictClub.QuickPredict'],
   ['risk-panel', 'PredictClub.RiskPanel'],
   ['funding-router', 'PredictClub.FundingRouter'],
   ['escrow-offers', 'PredictClub.EscrowOffers'],

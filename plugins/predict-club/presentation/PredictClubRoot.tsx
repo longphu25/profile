@@ -1266,7 +1266,7 @@ function QuickPredictColumn({
         walletAddress={walletAddress}
         managerId={managerId}
         dusdc={dusdc}
-        isLeader={isLeader}
+        isLeader={isLeader || !!walletAddress}
         predictGateway={predictGateway}
         signAndExecute={signAndExecute}
         memberName={memberName}
