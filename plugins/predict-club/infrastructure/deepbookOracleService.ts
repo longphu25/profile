@@ -439,7 +439,26 @@ export function startOracleService() {
   connectWS()
 }
 
+let fastPollTimer: ReturnType<typeof setInterval> | null = null
+
+/**
+ * Enable fast polling (every 3s) for live quick rounds.
+ * Call stopFastPoll() when the round ends.
+ */
+export function startFastPoll() {
+  if (fastPollTimer) return
+  fastPollTimer = setInterval(refresh, 3_000)
+}
+
+export function stopFastPoll() {
+  if (fastPollTimer) {
+    clearInterval(fastPollTimer)
+    fastPollTimer = null
+  }
+}
+
 export function stopOracleService() {
+  stopFastPoll()
   if (pollTimer) {
     clearInterval(pollTimer)
     pollTimer = null
