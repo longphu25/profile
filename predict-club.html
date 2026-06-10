@@ -349,6 +349,14 @@
           >
         </div>
         <button
+          class="bg-secondary-container text-on-secondary-container px-md py-sm rounded font-label text-label-md cursor-pointer hover:opacity-90 transition-opacity flex items-center gap-1"
+          id="quick-predict-btn"
+          onclick="document.dispatchEvent(new CustomEvent('pc:open-quick-predict'))"
+        >
+          <span class="material-symbols-outlined text-[16px]">bolt</span>
+          Quick Predict
+        </button>
+        <button
           class="bg-primary-fixed-dim text-on-primary-fixed px-lg py-sm rounded font-headline text-headline-md cursor-pointer hover:bg-primary-container transition-colors glow-mint"
           id="accept-signal-btn"
         >
@@ -643,24 +651,6 @@
           </div>
         </div>
       </main>
-
-      <!-- QUICK PREDICT COLUMN -->
-      <aside
-        class="w-full lg:w-80 bg-surface-container flex flex-col shrink-0 overflow-hidden"
-        data-animate="column"
-        data-pc-panel="quick-predict"
-      >
-        <div class="p-md border-b border-outline-variant bg-surface-container-high flex justify-between items-center">
-          <h2 class="font-headline text-headline-md text-primary flex items-center gap-2">
-            <span class="material-symbols-outlined">bolt</span> Quick Predict
-          </h2>
-          <span class="w-2 h-2 rounded-full bg-on-surface-variant/30"></span>
-        </div>
-        <div class="flex-1 flex flex-col items-center justify-center p-lg text-center text-on-surface-variant">
-          <span class="material-symbols-outlined text-3xl mb-2">bolt</span>
-          <p class="font-label text-label-caps">Loading Quick Predict…</p>
-        </div>
-      </aside>
 
       <!-- RIGHT COLUMN: Risk & Execution -->
       <aside
@@ -1142,6 +1132,10 @@
     <div id="root" style="display: none"></div>
     <div
       id="pc-slot-modal-layer"
+      class="fixed inset-0 z-50 pointer-events-none [&>*]:pointer-events-auto"
+    ></div>
+    <div
+      id="pc-slot-quick-predict"
       class="fixed inset-0 z-50 pointer-events-none [&>*]:pointer-events-auto"
     ></div>
     <script type="module" src="/src/predict-club/main.tsx"></script>

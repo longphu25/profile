@@ -40,7 +40,6 @@ const PANEL_MAP: Array<[string, string]> = [
   ['decision-strip', 'PredictClub.DecisionStrip'],
   ['club-panel', 'PredictClub.ClubPanel'],
   ['prediction-room', 'PredictClub.PredictionRoom'],
-  ['quick-predict', 'PredictClub.QuickPredict'],
   ['risk-panel', 'PredictClub.RiskPanel'],
   ['funding-router', 'PredictClub.FundingRouter'],
   ['escrow-offers', 'PredictClub.EscrowOffers'],
@@ -205,6 +204,23 @@ export function PredictClubOrchestrator() {
             <StrictMode>
               <DAppKitProvider dAppKit={dAppKit as unknown as DefaultExpectedDppKit}>
                 <ModalComponent />
+              </DAppKitProvider>
+            </StrictMode>,
+          )
+          rootsRef.current.push(root)
+        }
+
+        // Mount Quick Predict popup into its dedicated slot
+        const quickSlot = document.getElementById('pc-slot-quick-predict')
+        const QuickPredictComponent = suiHostAPI.getComponent('PredictClub.QuickPredict') as
+          | ComponentType<unknown>
+          | undefined
+        if (quickSlot && QuickPredictComponent) {
+          const root = createRoot(quickSlot)
+          root.render(
+            <StrictMode>
+              <DAppKitProvider dAppKit={dAppKit as unknown as DefaultExpectedDppKit}>
+                <QuickPredictComponent />
               </DAppKitProvider>
             </StrictMode>,
           )

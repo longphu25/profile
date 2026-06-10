@@ -2,16 +2,10 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } fr
 import { recommendFundingRoute } from '../application/recommendFundingRoute'
 import { loadClubState, saveClubState } from '../data/localClubStore'
 import { fetchWalletBalances } from '../infrastructure/walletBalanceService'
-import {
-  subscribeOracle,
-  getSnapshot,
-  startFastPoll,
-  stopFastPoll,
-} from '../infrastructure/deepbookOracleService'
+import { subscribeOracle, getSnapshot } from '../infrastructure/deepbookOracleService'
 import { createSuiPredictGateway } from '../infrastructure/suiPredictGateway'
 import { computePayoutPreview } from '../domain/payoutPreview'
 import { OrderFlowChart } from './OrderFlowChart'
-import { QuickPredictPanel } from './QuickPredictPanel'
 import type {
   AssetBalances,
   ClubState,
@@ -33,7 +27,7 @@ const defaultContext: SuiContext = {
   accounts: [],
 }
 
-const mobileTabs = ['clubs', 'predict', 'quick', 'execution', 'funding', 'account'] as const
+const mobileTabs = ['clubs', 'predict', 'execution', 'funding', 'account'] as const
 type MobileTab = (typeof mobileTabs)[number]
 
 export function PredictClubRoot({ host }: PredictClubRootProps) {
@@ -44,17 +38,9 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
   const [mobileTab, setMobileTab] = useState<MobileTab>('clubs')
   const [balances, setBalances] = useState<AssetBalances>({ sui: 0, usdc: 0, dusdc: 0 })
   const [predictManagerId, setPredictManagerId] = useState<string | null>(null)
-  const [quickActive, setQuickActive] = useState(false)
 
   const oracleSnapshot = useSyncExternalStore(subscribeOracle, getSnapshot)
   const predictGateway = useMemo(() => createSuiPredictGateway(), [])
-
-  // Fast poll during quick rounds
-  useEffect(() => {
-    if (quickActive) startFastPoll()
-    else stopFastPoll()
-    return () => stopFastPoll()
-  }, [quickActive])
 
   // Resolve PredictManager for connected wallet
   useEffect(() => {
@@ -138,22 +124,6 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
           onCreateRound={() => setModal('create-round')}
         />
         <PredictionRoom club={club} mobileTab={mobileTab} oraclePrices={oracleSnapshot.prices} />
-        <QuickPredictColumn
-          mobileTab={mobileTab}
-          oracleSnapshot={oracleSnapshot}
-          walletAddress={context.address}
-          managerId={predictManagerId}
-          dusdc={balances.dusdc}
-          isLeader={isLeader}
-          predictGateway={predictGateway}
-          host={host}
-          memberName={
-            club.members.find(
-              (m) => m.wallet.toLowerCase() === (context.address ?? '').toLowerCase(),
-            )?.name ?? 'You'
-          }
-          onActiveChange={setQuickActive}
-        />
         <RiskExecutionColumn
           club={club}
           connected={context.isConnected}
@@ -525,8 +495,7 @@ function MobileNav({
   const items: Array<[MobileTab, string, string]> = [
     ['clubs', 'groups', 'Clubs'],
     ['predict', 'query_stats', 'Predict'],
-    ['quick', 'bolt', 'Quick'],
-    ['execution', 'gpp_maybe', 'Risk'],
+    ['execution', 'bolt', 'Execution'],
     ['funding', 'route', 'Funding'],
     ['account', 'person', 'Account'],
   ]
@@ -1224,54 +1193,4 @@ function formatUsd(value: number) {
 function formatSigned(value: number) {
   const formatted = `${value >= 0 ? '+' : ''}${formatUsd(value)}`
   return `${formatted} DUSDC`
-}
-
-function QuickPredictColumn({
-  mobileTab,
-  oracleSnapshot,
-  walletAddress,
-  managerId,
-  dusdc,
-  isLeader,
-  predictGateway,
-  host,
-  memberName,
-  onActiveChange,
-}: {
-  mobileTab: MobileTab
-  oracleSnapshot: ClubOracleSnapshot
-  walletAddress: string | null
-  managerId: string | null
-  dusdc: number
-  isLeader: boolean
-  predictGateway: ReturnType<typeof createSuiPredictGateway>
-  host: SuiHostAPI | null
-  memberName: string
-  onActiveChange: (active: boolean) => void
-}) {
-  const visible = mobileTab === 'quick'
-  const signAndExecute = useMemo(
-    () => async (tx: any) => {
-      if (!host) throw new Error('No host available')
-      const result = await host.signAndExecuteTransaction(tx)
-      return { digest: result.digest }
-    },
-    [host],
-  )
-
-  return (
-    <section className={`pc-column pc-quick-column ${visible ? 'pc-mobile-show' : ''}`}>
-      <QuickPredictPanel
-        oracleSnapshot={oracleSnapshot}
-        walletAddress={walletAddress}
-        managerId={managerId}
-        dusdc={dusdc}
-        isLeader={isLeader || !!walletAddress}
-        predictGateway={predictGateway}
-        signAndExecute={signAndExecute}
-        memberName={memberName}
-        onActiveChange={onActiveChange}
-      />
-    </section>
-  )
 }
