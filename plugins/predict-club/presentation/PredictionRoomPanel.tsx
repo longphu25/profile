@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { usePredictClub } from './PredictClubContext'
+import { usePredictClub } from './usePredictClub'
 import { computeConsensus } from '../domain/indicatorConsensus'
 import { labelize } from './shared'
 import { OrderFlowChart } from './OrderFlowChart'

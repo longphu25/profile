@@ -78,6 +78,86 @@ function getDecimals(coinType: string): number {
   return KNOWN_DECIMALS[symbol] ?? 9
 }
 
+const PROFILE_CACHE_TTL_MS = 30_000
+
+interface ProfileDataCacheValue {
+  tokens: TokenBalance[]
+  suinsName: string | null
+  updatedAt: number
+}
+
+interface WalletProfileClient {
+  core: {
+    listBalances: (input: { owner: string }) => Promise<{
+      balances: Array<{ coinType: string; balance: string }>
+    }>
+    defaultNameServiceName: (input: { address: string }) => Promise<{
+      data: { name: string | null }
+    }>
+  }
+}
+
+const profileDataCache = new Map<string, ProfileDataCacheValue>()
+const profileDataInflight = new Map<string, Promise<ProfileDataCacheValue>>()
+
+function profileCacheKey(network: string, address: string) {
+  return `${network}:${address.toLowerCase()}`
+}
+
+async function loadProfileData(
+  client: WalletProfileClient,
+  address: string,
+  network: string,
+): Promise<ProfileDataCacheValue> {
+  const key = profileCacheKey(network, address)
+  const cached = profileDataCache.get(key)
+  if (cached && Date.now() - cached.updatedAt < PROFILE_CACHE_TTL_MS) return cached
+
+  const inflight = profileDataInflight.get(key)
+  if (inflight) return inflight
+
+  const request = (async () => {
+    const { balances: raw } = await client.core.listBalances({ owner: address })
+    const tokens: TokenBalance[] = raw
+      .map((b) => {
+        const symbol = b.coinType.split('::').pop() ?? 'Unknown'
+        return {
+          coinType: b.coinType,
+          symbol,
+          balance: b.balance,
+          decimals: getDecimals(b.coinType),
+        }
+      })
+      .sort((a, b) => {
+        if (a.symbol === 'SUI') return -1
+        if (b.symbol === 'SUI') return 1
+        return Number(b.balance) - Number(a.balance)
+      })
+
+    let nextSuinsName: string | null = null
+    try {
+      const { data } = await client.core.defaultNameServiceName({ address })
+      nextSuinsName = data.name
+    } catch {
+      nextSuinsName = null
+    }
+
+    const value = { tokens, suinsName: nextSuinsName, updatedAt: Date.now() }
+    profileDataCache.set(key, value)
+    return value
+  })()
+
+  profileDataInflight.set(key, request)
+  try {
+    return await request
+  } catch (error) {
+    if (cached) return cached
+    throw error
+  } finally {
+    profileDataInflight.delete(key)
+  }
+}
+
 interface WalletProfileContentProps {
   embedded?: boolean
   open?: boolean
@@ -132,6 +212,14 @@ function formatOptionalAmount(value: number | null | undefined, suffix = '') {
   return `${value.toLocaleString(undefined, { maximumFractionDigits: 4 })}${suffix}`
 }
 
+function formatProfileError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? '')
+  if (message.includes('429') || message.includes('Too Many Requests')) {
+    return 'Sui RPC rate limit reached. Cached wallet data will be used when available; retry shortly.'
+  }
+  return message || 'Failed to load profile'
+}
+
 // --- Core content (used in both modes) ---
 function WalletProfileContent({
   embedded = false,
@@ -162,43 +250,25 @@ function WalletProfileContent({
   // Fetch balances + SuiNS
   const fetchProfile = useCallback(async () => {
     const addr = effectiveAddress
+    if (embedded && !open) return
     if (!addr || !client) return
     setLoading(true)
     setError(null)
 
     try {
-      // Balances
-      const { balances: raw } = await client.core.listBalances({ owner: addr })
-      const tokens: TokenBalance[] = raw
-        .map((b) => {
-          const symbol = b.coinType.split('::').pop() ?? 'Unknown'
-          return {
-            coinType: b.coinType,
-            symbol,
-            balance: b.balance,
-            decimals: getDecimals(b.coinType),
-          }
-        })
-        .sort((a, b) => {
-          if (a.symbol === 'SUI') return -1
-          if (b.symbol === 'SUI') return 1
-          return Number(b.balance) - Number(a.balance)
-        })
+      const { tokens, suinsName: nextSuinsName } = await loadProfileData(
+        client as WalletProfileClient,
+        addr,
+        network,
+      )
       setBalances(tokens)
-
-      // SuiNS name
-      try {
-        const { data } = await client.core.defaultNameServiceName({ address: addr })
-        setSuinsName(data.name)
-      } catch {
-        setSuinsName(null)
-      }
+      setSuinsName(nextSuinsName)
 
       // Share profile via host API
       if (sharedHost) {
         const profile: WalletProfile = {
           address: addr,
-          suinsName: suinsName,
+          suinsName: nextSuinsName,
           network: normalizeNetwork(network),
           balances: tokens,
           walletName: connection.wallet?.name,
@@ -220,15 +290,16 @@ function WalletProfileContent({
         sharedHost.setSharedData(SHARED_KEY, profile)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load profile')
+      setError(formatProfileError(err))
     } finally {
       setLoading(false)
     }
   }, [
-    account?.address,
     client,
+    effectiveAddress,
+    embedded,
+    open,
     network,
-    suinsName,
     connection.wallet?.name,
     connection.wallet?.icon,
     hostContext?.accounts,
@@ -263,7 +334,7 @@ function WalletProfileContent({
           ],
     } satisfies WalletProfile)
   }, [
-    account?.address,
+    effectiveAddress,
     suinsName,
     network,
     balances,
@@ -283,7 +354,7 @@ function WalletProfileContent({
       }
       return { digest: tx!.digest, effects: tx }
     })
-  }, [connection.isConnected, dAppKit])
+  }, [effectiveConnected, dAppKit])
 
   // Listen for network switch from dashboard header
   useEffect(() => {
@@ -344,78 +415,82 @@ function WalletProfileContent({
             },
           ]
         : []
+  const activeAccount = accounts.find((item) => item.address === effectiveAddress)
+  const effectiveWalletName = connection.wallet?.name ?? activeAccount?.walletName ?? 'Wallet'
+  const effectiveWalletIcon = connection.wallet?.icon ?? activeAccount?.walletIcon
 
-  const body = !effectiveConnected ? (
-    <div className="swp">
-      <div className="swp__header">
-        <h3 className="swp__title">Wallet Profile</h3>
-        <span className="swp__required-badge">Required</span>
+  const body =
+    !effectiveConnected || !effectiveAddress ? (
+      <div className="swp">
+        <div className="swp__header">
+          <h3 className="swp__title">Wallet Profile</h3>
+          <span className="swp__required-badge">Required</span>
+        </div>
+        <p className="swp__desc">Connect your wallet to enable all plugins</p>
+
+        <NetworkSelector current={network as Network} onChange={handleNetworkChange} />
+
+        <button className="swp__connect-btn" onClick={() => setShowPopup(true)}>
+          Connect Wallet
+        </button>
+
+        {error && <div className="swp__error">{error}</div>}
+
+        {showPopup && (
+          <ConnectPopup
+            wallets={wallets.map((w) => ({ name: w.name, icon: w.icon }))}
+            onConnect={handleConnect}
+            onClose={() => setShowPopup(false)}
+            connecting={connecting}
+          />
+        )}
       </div>
-      <p className="swp__desc">Connect your wallet to enable all plugins</p>
+    ) : (
+      <div className="swp">
+        <div className="swp__header">
+          <h3 className="swp__title">Wallet Profile</h3>
+          <span className="swp__connected-badge">Connected</span>
+        </div>
 
-      <NetworkSelector current={network as Network} onChange={handleNetworkChange} />
-
-      <button className="swp__connect-btn" onClick={() => setShowPopup(true)}>
-        Connect Wallet
-      </button>
-
-      {error && <div className="swp__error">{error}</div>}
-
-      {showPopup && (
-        <ConnectPopup
-          wallets={wallets.map((w) => ({ name: w.name, icon: w.icon }))}
-          onConnect={handleConnect}
-          onClose={() => setShowPopup(false)}
-          connecting={connecting}
+        <ProfileHeader
+          address={effectiveAddress!}
+          suinsName={suinsName}
+          walletName={effectiveWalletName}
+          walletIcon={effectiveWalletIcon}
+          network={normalizeNetwork(network)}
+          onDisconnect={handleDisconnect}
         />
-      )}
-    </div>
-  ) : (
-    <div className="swp">
-      <div className="swp__header">
-        <h3 className="swp__title">Wallet Profile</h3>
-        <span className="swp__connected-badge">Connected</span>
+
+        <AccountList
+          accounts={accounts}
+          network={normalizeNetwork(network)}
+          activeAddress={effectiveAddress!}
+        />
+
+        <NetworkSelector current={network as Network} onChange={handleNetworkChange} />
+
+        {explorerUrl && (
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="swp__explorer-link"
+          >
+            View on Explorer ↗
+          </a>
+        )}
+
+        {error && <div className="swp__error">{error}</div>}
+
+        <TokenList balances={balances} loading={loading} />
+
+        <PredictExtension profile={predictProfile} network={normalizeNetwork(network)} />
+
+        <div className="swp__footer">
+          Wallet context shared with all plugins via <code>sharedData.{SHARED_KEY}</code>
+        </div>
       </div>
-
-      <ProfileHeader
-        address={account!.address}
-        suinsName={suinsName}
-        walletName={connection.wallet?.name ?? 'Wallet'}
-        walletIcon={connection.wallet?.icon}
-        network={normalizeNetwork(network)}
-        onDisconnect={handleDisconnect}
-      />
-
-      <AccountList
-        accounts={accounts}
-        network={normalizeNetwork(network)}
-        activeAddress={account!.address}
-      />
-
-      <NetworkSelector current={network as Network} onChange={handleNetworkChange} />
-
-      {explorerUrl && (
-        <a
-          href={explorerUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="swp__explorer-link"
-        >
-          View on Explorer ↗
-        </a>
-      )}
-
-      {error && <div className="swp__error">{error}</div>}
-
-      <TokenList balances={balances} loading={loading} />
-
-      <PredictExtension profile={predictProfile} network={normalizeNetwork(network)} />
-
-      <div className="swp__footer">
-        Wallet context shared with all plugins via <code>sharedData.{SHARED_KEY}</code>
-      </div>
-    </div>
-  )
+    )
 
   if (!embedded) return body
   if (!open) return null

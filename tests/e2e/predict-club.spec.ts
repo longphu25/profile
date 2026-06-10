@@ -20,6 +20,7 @@ test.describe('Predict Club member flow', () => {
     await expect(page.locator('[data-pc-panel="risk-panel"]')).toContainText('Your Exposure')
     await expect(page.locator('[data-pc-panel="funding-router"]')).toContainText('Direct DUSDC')
     await expect(page.locator('[data-wallet-btn]')).toHaveAttribute('title', 'Connect wallet')
+    await expect(page.locator('[data-wallet-trigger]')).toHaveCount(2)
 
     await page.locator('[data-pc-panel="funding-router"] button').first().click()
 

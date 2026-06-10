@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { usePredictClub } from './PredictClubContext'
+import { usePredictClub } from './usePredictClub'
 import type { RiskActionTarget, RiskCheckCategory } from '../domain/riskGate'
 import { formatUsd } from './shared'
 

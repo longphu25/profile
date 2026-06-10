@@ -1,4 +1,4 @@
-import { usePredictClub } from './PredictClubContext'
+import { usePredictClub } from './usePredictClub'
 import { formatUsd, labelize } from './shared'
 
 export function ClubPanel() {

@@ -62,6 +62,15 @@ export const DEEPBOOK_PLUGINS: DeepBookPluginDef[] = [
     status: 'live',
   },
   {
+    id: 'abyss-vault',
+    name: 'AbyssVault',
+    label: 'Abyss Vault',
+    src: pluginPath('abyss-vault'),
+    styleUrl: '/plugins/abyss-vault/style.css',
+    group: 'earn',
+    status: 'live',
+  },
+  {
     id: 'hedging-bot',
     name: 'SuiDeepBookHedgingBot',
     label: 'Hedging Bot',

@@ -1,5 +1,5 @@
 import { Fragment, useState, type ReactNode } from 'react'
-import { usePredictClub } from './PredictClubContext'
+import { usePredictClub } from './usePredictClub'
 import { formatSigned, labelize } from './shared'
 
 export function RoundHistoryPanel() {

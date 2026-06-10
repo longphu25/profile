@@ -1,4 +1,4 @@
-import { usePredictClub } from './PredictClubContext'
+import { usePredictClub } from './usePredictClub'
 import { formatUsd, labelize } from './shared'
 
 export function EscrowOffersPanel() {
@@ -41,8 +41,10 @@ export function EscrowOffersPanel() {
 
   const isOwnOffer = (maker: string) => {
     if (!context.address) return false
-    return maker.toLowerCase() === context.address.toLowerCase() ||
+    return (
+      maker.toLowerCase() === context.address.toLowerCase() ||
       maker.toLowerCase().includes(context.address.slice(-4).toLowerCase())
+    )
   }
 
   return (

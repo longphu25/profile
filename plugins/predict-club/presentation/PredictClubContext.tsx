@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -9,8 +7,8 @@ import {
   type ReactNode,
 } from 'react'
 import { recommendFundingRoute } from '../application/recommendFundingRoute'
-import { createRound, type CreateRoundResult } from '../application/createRound'
-import { confirmRound, type ConfirmRoundResult } from '../application/confirmRound'
+import { createRound } from '../application/createRound'
+import { confirmRound } from '../application/confirmRound'
 import { pledgeToRound } from '../application/pledgeToRound'
 import {
   createEscrowOffer,
@@ -23,7 +21,7 @@ import {
   fillOfferOnChain,
   cancelOfferOnChain,
 } from '../application/escrowOnChain'
-import { claimWinnings, type ClaimParams } from '../application/claimWinnings'
+import { claimWinnings } from '../application/claimWinnings'
 import { swapSuiToUsdc } from '../application/swapSuiToUsdc'
 import { fetchOnChainOffers } from '../infrastructure/escrowQueryService'
 import { settleRound, type SettlementOutcome } from '../application/settleRound'
@@ -31,15 +29,11 @@ import { executeTradeplan } from '../application/executeTradeplan'
 import { createSuiPredictGateway } from '../infrastructure/suiPredictGateway'
 import { fetchWalletBalances } from '../infrastructure/walletBalanceService'
 import { transition } from '../domain/roundLifecycle'
-import { evaluateRiskGate, type RiskEvaluation, type RiskGateInput } from '../domain/riskGate'
-import { computeConsensus, type ConsensusResult } from '../domain/indicatorConsensus'
+import { evaluateRiskGate, type RiskGateInput } from '../domain/riskGate'
+import { computeConsensus } from '../domain/indicatorConsensus'
 import { MIN_SAFE_EXPIRY_MINUTES, ORACLE_STALE_THRESHOLD_MS } from '../domain/policies'
 import * as store from '../data/clubStore'
-import {
-  subscribeOracle,
-  getSnapshot,
-  type ClubOracleSnapshot,
-} from '../infrastructure/deepbookOracleService'
+import { subscribeOracle, getSnapshot } from '../infrastructure/deepbookOracleService'
 import {
   EMPTY_CONTRACT_QUOTE,
   computeFairValuePreview,
@@ -47,17 +41,18 @@ import {
   type PredictPricingSnapshot,
 } from '../infrastructure/deepbookPredictPricingService'
 import { deriveSignalsFromPrices } from '../infrastructure/indicatorSignalGateway'
-import type {
-  AssetBalances,
-  ClubMember,
-  ClubState,
-  EscrowOfferView,
-  ModalKind,
-  RoundStatus,
-} from '../domain/types'
+import type { AssetBalances, ClubMember, ClubState, RoundStatus } from '../domain/types'
 import type { CreateRoundParams } from '../domain/policies'
 import type { SuiHostAPI } from '../../../src/sui-dashboard/sui-types'
-import { PREDICT_CLUB_WALLET_PROFILE_KEY } from '../../sui-wallet-profile/types'
+import {
+  PREDICT_CLUB_WALLET_PROFILE_KEY,
+  type PredictClubWalletProfile,
+} from '../../sui-wallet-profile/types'
+import {
+  PredictClubContext,
+  type PredictClubActions,
+  type PredictClubContextValue,
+} from './PredictClubContextCore'
 
 const ZERO_BALANCES: AssetBalances = { sui: 0, usdc: 0, dusdc: 0 }
 
@@ -74,63 +69,6 @@ function createPricingSnapshot(round: ClubState['activeRound']): PredictPricingS
 
 function memberIdForWallet(address: string): string {
   return `member-${address.slice(2, 10).toLowerCase()}`
-}
-
-export interface PredictClubContextValue {
-  club: ClubState
-  context: { address: string | null; isConnected: boolean }
-  balances: AssetBalances
-  modal: ModalKind | null
-  setModal: (m: ModalKind | null) => void
-  selectedOffer: EscrowOfferView | null
-  setSelectedOffer: (o: EscrowOfferView | null) => void
-  primaryAction: { label: string; action: () => void }
-  fundingRecommendation: { route: string; label: string }
-  updateRoundStatus: (status: RoundStatus) => void
-  host: SuiHostAPI | null
-  actions: PredictClubActions
-  riskEvaluation: RiskEvaluation
-  consensus: ConsensusResult
-  toastMessage: string | null
-  oracleSnapshot: ClubOracleSnapshot
-  pricingSnapshot: PredictPricingSnapshot
-  currentMember: ClubMember | null
-  predictManagerId: string | null
-  predictManagerLoading: boolean
-}
-
-export interface PredictClubActions {
-  createRound: (params: CreateRoundParams) => CreateRoundResult
-  createPredictManager: () => Promise<{ ok: boolean; digest?: string; error?: string }>
-  confirmRound: () => ConfirmRoundResult
-  pledgeToRound: (memberId: string, amount: number) => { ok: boolean; error?: string }
-  publishRound: () => { ok: boolean; error?: string }
-  executeRound: () => Promise<{ ok: boolean; error?: string }>
-  settleRound: (outcome: SettlementOutcome) => { ok: boolean; error?: string }
-  createEscrowOffer: (params: CreateEscrowParams) => { ok: boolean; error?: string }
-  fillEscrowOffer: (offerId: string) => { ok: boolean; error?: string }
-  cancelEscrowOffer: (offerId: string) => { ok: boolean; error?: string }
-  createEscrowOfferOnChain: (params: {
-    offerCoinId: string
-    offerAsset: 'DUSDC' | 'USDC' | 'SUI'
-    wantAsset: 'DUSDC' | 'USDC' | 'SUI'
-    wantAmount: bigint
-    expiresInEpochs: number
-    recipient?: string
-    roundId?: string
-  }) => Promise<{ ok: boolean; digest?: string; error?: string }>
-  fillEscrowOfferOnChain: (offer: EscrowOfferView, paymentCoinId: string) => Promise<{ ok: boolean; digest?: string; error?: string }>
-  cancelEscrowOfferOnChain: (offer: EscrowOfferView) => Promise<{ ok: boolean; digest?: string; error?: string }>
-  claimSettlementOnChain: (params: ClaimParams) => Promise<{ ok: boolean; digest?: string; error?: string }>
-  swapSuiToUsdc: (suiAmount: number, minUsdcOut: number) => Promise<{ ok: boolean; digest?: string; error?: string }>
-}
-
-const Ctx = createContext<PredictClubContextValue | null>(null)
-
-export function usePredictClub(): PredictClubContextValue {
-  const v = useContext(Ctx)
-  if (!v) throw new Error('usePredictClub must be inside PredictClubProvider')
-  return v
 }
 
 export function PredictClubProvider({
@@ -282,14 +220,18 @@ export function PredictClubProvider({
         fetchAndSet(ctx.address)
         intervalId = setInterval(() => fetchAndSet(ctx.address!), 30_000)
         // Load on-chain offers
-        fetchOnChainOffers().then((offers) => {
-          if (offers.length > 0) {
-            store.updateClub((c) => {
-              const localOnly = c.escrowOffers.filter((o) => !o.id.startsWith('0x'))
-              return { ...c, escrowOffers: [...localOnly, ...offers] }
-            })
-          }
-        }).catch(() => {})
+        fetchOnChainOffers()
+          .then((offers) => {
+            if (offers.length > 0) {
+              store.updateClub((c) => {
+                const localOnly = c.escrowOffers.filter((o) => !o.id.startsWith('0x'))
+                const seen = new Set(localOnly.map((o) => o.id))
+                const unique = offers.filter((o) => !seen.has(o.id))
+                return { ...c, escrowOffers: [...localOnly, ...unique] }
+              })
+            }
+          })
+          .catch(() => {})
       } else {
         setBalances(ZERO_BALANCES)
       }
@@ -416,29 +358,37 @@ export function PredictClubProvider({
 
     const manager = pricingSnapshot.manager
     const positions = manager?.positions ?? []
+    const previous =
+      (host.getSharedData(PREDICT_CLUB_WALLET_PROFILE_KEY) as PredictClubWalletProfile | null) ??
+      null
+    const managerId = predictManagerId ?? manager?.id ?? previous?.manager?.id ?? null
+    const profilePositions = manager
+      ? positions.slice(0, 6).map((position) => ({
+          id: position.id,
+          kind: position.kind,
+          oracleId: position.oracleId,
+          quantity: position.quantity,
+        }))
+      : (previous?.positions ?? [])
     host.setSharedData(PREDICT_CLUB_WALLET_PROFILE_KEY, {
       manager: {
-        id: predictManagerId ?? manager?.id ?? null,
-        status: predictManagerLoading
-          ? 'Loading'
-          : predictManagerId || manager?.id
-            ? 'Ready'
-            : 'Unavailable',
-        quoteBalance: manager?.quoteBalance ?? null,
+        id: managerId,
+        status: predictManagerLoading ? 'Loading' : managerId ? 'Ready' : 'Unavailable',
+        quoteBalance: manager?.quoteBalance ?? previous?.manager?.quoteBalance ?? null,
       },
       balances,
       binaryPositions:
-        manager?.positionsSize ?? positions.filter((position) => position.kind === 'binary').length,
+        manager?.positionsSize ??
+        (manager
+          ? positions.filter((position) => position.kind === 'binary').length
+          : (previous?.binaryPositions ?? null)),
       rangePositions:
         manager?.rangePositionsSize ??
-        positions.filter((position) => position.kind === 'range').length,
-      positions: positions.slice(0, 6).map((position) => ({
-        id: position.id,
-        kind: position.kind,
-        oracleId: position.oracleId,
-        quantity: position.quantity,
-      })),
-      vault: pricingSnapshot.vault,
+        (manager
+          ? positions.filter((position) => position.kind === 'range').length
+          : (previous?.rangePositions ?? null)),
+      positions: profilePositions,
+      vault: pricingSnapshot.vault ?? previous?.vault ?? null,
     })
   }, [
     balances,
@@ -458,14 +408,16 @@ export function PredictClubProvider({
   const refreshOnChainOffers = useCallback(() => {
     // Delay to let indexer catch up, then merge on-chain offers
     setTimeout(() => {
-      fetchOnChainOffers().then((onChainOffers) => {
-        if (onChainOffers.length > 0) {
-          store.updateClub((c) => {
-            const localOnly = c.escrowOffers.filter((o) => !o.id.startsWith('0x'))
-            return { ...c, escrowOffers: [...localOnly, ...onChainOffers] }
-          })
-        }
-      }).catch(() => {})
+      fetchOnChainOffers()
+        .then((onChainOffers) => {
+          if (onChainOffers.length > 0) {
+            store.updateClub((c) => {
+              const localOnly = c.escrowOffers.filter((o) => !o.id.startsWith('0x'))
+              return { ...c, escrowOffers: [...localOnly, ...onChainOffers] }
+            })
+          }
+        })
+        .catch(() => {})
     }, 2000)
   }, [])
 
@@ -874,5 +826,5 @@ export function PredictClubProvider({
     predictManagerLoading,
   }
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+  return <PredictClubContext.Provider value={value}>{children}</PredictClubContext.Provider>
 }

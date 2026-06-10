@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { usePredictClub } from './PredictClubContext'
+import { usePredictClub } from './usePredictClub'
 import { selectAutoOracle, selectOracle } from '../infrastructure/deepbookOracleService'
 import { formatUsd, labelize } from './shared'
 

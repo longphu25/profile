@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { usePredictClub } from './PredictClubContext'
+import { usePredictClub } from './usePredictClub'
 import { recommendFundingRoute } from '../application/recommendFundingRoute'
 import type { AssetBalances, FundingRoute, ModalKind, PredictionRound } from '../domain/types'
 

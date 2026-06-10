@@ -314,17 +314,19 @@ async function fetchManagerSnapshot(
   const fields = content.fields as any
   const positionsTableId = fields.positions?.fields?.id?.id
   const rangePositionsTableId = fields.range_positions?.fields?.id?.id
+  const balanceTableId = fields.balance_manager?.fields?.balances?.fields?.id?.id
   const positions = [
-    ...(positionsTableId ? await fetchBinaryPositions(positionsTableId) : []),
-    ...(rangePositionsTableId ? await fetchRangePositions(rangePositionsTableId) : []),
+    ...(positionsTableId ? await fetchBinaryPositions(positionsTableId).catch(() => []) : []),
+    ...(rangePositionsTableId
+      ? await fetchRangePositions(rangePositionsTableId).catch(() => [])
+      : []),
   ]
+  const quoteBalance = await readManagerQuoteBalance(balanceTableId).catch(() => 0n)
 
   return {
     id: managerId,
     owner: String(fields.owner ?? walletAddress),
-    quoteBalance: fromDusdc(
-      await readManagerQuoteBalance(fields.balance_manager?.fields?.balances?.fields?.id?.id),
-    ),
+    quoteBalance: fromDusdc(quoteBalance),
     positionsSize: Number(fields.positions?.fields?.size ?? 0),
     rangePositionsSize: Number(fields.range_positions?.fields?.size ?? 0),
     positions,

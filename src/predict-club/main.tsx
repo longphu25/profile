@@ -1,5 +1,6 @@
 import { StrictMode, type ComponentType } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { createPortal } from 'react-dom'
 import {
   DAppKitProvider,
   useCurrentAccount,
@@ -8,7 +9,7 @@ import {
   useWalletConnection,
   useWallets,
 } from '@mysten/dapp-kit-react'
-import { createDAppKit } from '@mysten/dapp-kit-core'
+import { createDAppKit, type DefaultExpectedDppKit } from '@mysten/dapp-kit-core'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
 import { suiHostAPI, registerActions, updateSuiContext } from '../sui-dashboard/sui-host'
@@ -19,12 +20,12 @@ type SuiNetwork = 'mainnet' | 'testnet' | 'devnet'
 const createSuiClient = (network: SuiNetwork) =>
   import.meta.env.DEV
     ? new SuiGrpcClient({ network, baseUrl: `/sui-rpc/${network}` })
-    : new SuiJsonRpcClient({ network, url: getJsonRpcFullnodeUrl(network as any) })
+    : new SuiJsonRpcClient({ network, url: getJsonRpcFullnodeUrl(network) })
 
 const dAppKit = createDAppKit({
   networks: ['mainnet', 'testnet', 'devnet'],
   defaultNetwork: 'testnet',
-  createClient: createSuiClient as any,
+  createClient: createSuiClient,
   slushWalletConfig: null,
 })
 
@@ -184,7 +185,7 @@ export function PredictClubOrchestrator() {
           const root = createRoot(container)
           root.render(
             <StrictMode>
-              <DAppKitProvider dAppKit={dAppKit as any}>
+              <DAppKitProvider dAppKit={dAppKit as unknown as DefaultExpectedDppKit}>
                 <Component />
               </DAppKitProvider>
             </StrictMode>,
@@ -201,7 +202,7 @@ export function PredictClubOrchestrator() {
           const root = createRoot(modalSlot)
           root.render(
             <StrictMode>
-              <DAppKitProvider dAppKit={dAppKit as any}>
+              <DAppKitProvider dAppKit={dAppKit as unknown as DefaultExpectedDppKit}>
                 <ModalComponent />
               </DAppKitProvider>
             </StrictMode>,
@@ -236,11 +237,13 @@ export function PredictClubOrchestrator() {
       btn.classList.remove('connected')
       btn.setAttribute('title', 'Connect wallet')
     }
-  }, [connection.isConnected, account])
+  }, [connection.isConnected, account?.address])
 
   useEffect(() => {
-    const btn = document.querySelector('[data-wallet-btn]') as HTMLButtonElement | null
-    if (!btn) return undefined
+    const controls = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('[data-wallet-trigger], [data-wallet-btn]'),
+    )
+    if (!controls.length) return undefined
 
     const handleClick = () => {
       if (connection.isConnected) {
@@ -250,17 +253,20 @@ export function PredictClubOrchestrator() {
       }
     }
 
-    btn.addEventListener('click', handleClick)
-    return () => btn.removeEventListener('click', handleClick)
+    controls.forEach((control) => control.addEventListener('click', handleClick))
+    return () => controls.forEach((control) => control.removeEventListener('click', handleClick))
   }, [connection.isConnected, dAppKitInstance, wallets])
 
   if (error) {
     console.error('[PredictClub] Mount error:', error)
   }
 
-  return WalletProfilePopup ? (
-    <WalletProfilePopup open={showWalletProfile} onClose={() => setShowWalletProfile(false)} />
-  ) : null
+  return WalletProfilePopup && showWalletProfile
+    ? createPortal(
+        <WalletProfilePopup open={true} onClose={() => setShowWalletProfile(false)} />,
+        document.body,
+      )
+    : null
 }
 
 // Bootstrap: render orchestrator into hidden root
@@ -273,7 +279,7 @@ if (!rootEl.id) {
 
 createRoot(rootEl).render(
   <StrictMode>
-    <DAppKitProvider dAppKit={dAppKit as any}>
+    <DAppKitProvider dAppKit={dAppKit as unknown as DefaultExpectedDppKit}>
       <PredictClubOrchestrator />
     </DAppKitProvider>
   </StrictMode>,

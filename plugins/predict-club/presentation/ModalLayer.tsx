@@ -1,4 +1,4 @@
-import { usePredictClub } from './PredictClubContext'
+import { usePredictClub } from './usePredictClub'
 import { formatUsd } from './shared'
 import type { ModalKind } from '../domain/types'
 import { demoClubState } from '../domain/fixtures'
@@ -248,7 +248,9 @@ function FundToJoinBody() {
           <RouteCard
             icon="swap_horiz"
             title="SUI to USDC"
-            note={balances.sui > 2 ? `${balances.sui.toFixed(1)} SUI available` : 'Insufficient SUI'}
+            note={
+              balances.sui > 2 ? `${balances.sui.toFixed(1)} SUI available` : 'Insufficient SUI'
+            }
             active={route === 'deepbook-sui-to-usdc'}
           />
           <RouteCard
@@ -460,7 +462,9 @@ function ExecuteTradeBody() {
           </div>
         </div>
         <div className="flex-1 border border-primary-fixed-dim/30 bg-primary-fixed-dim/5 p-sm flex flex-col">
-          <div className="font-label text-label-caps text-primary-fixed-dim mb-xs">Gross If Win</div>
+          <div className="font-label text-label-caps text-primary-fixed-dim mb-xs">
+            Gross If Win
+          </div>
           <div className="font-data text-data-lg text-primary-fixed-dim">
             {contractQuote.grossIfWin != null
               ? `${formatUsd(contractQuote.grossIfWin)} DUSDC`
@@ -612,8 +616,11 @@ function FillEscrowBody() {
 function ScallopBorrowBodyWrapper() {
   const { host, balances, context } = usePredictClub()
   const ScallopBorrow = host?.getComponent('ScallopBorrow') as
-    | React.ComponentType<import('../../sui-scallop/presentation/ScallopBorrowPanel').ScallopBorrowPanelProps>
-    | null | undefined
+    | React.ComponentType<
+        import('../../sui-scallop/presentation/ScallopBorrowPanel').ScallopBorrowPanelProps
+      >
+    | null
+    | undefined
 
   if (!ScallopBorrow) {
     return (
