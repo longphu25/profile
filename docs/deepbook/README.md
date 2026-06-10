@@ -18,6 +18,7 @@ All documentation for DeepBook v3 integrations in this project.
 | [predict-club-devinspect-pricing.md](predict-club-devinspect-pricing.md) | Predict Club — observed DeepBook Predict `devInspect` pricing, SVI scaling, and implementation plan |
 | [predict-club-payout-preview.vi.md](predict-club-payout-preview.vi.md) | Predict Club — Capped Payout, Win Probability, SVI, and payout preview notes |
 | [balance-manager.md](balance-manager.md) | Balance Manager — what it is, SDK API, common errors, token recycling |
+| [crash-suize-deepbook-predict-analysis.md](crash-suize-deepbook-predict-analysis.md) | **Competitive analysis** — crash.suize.io crash game on DeepBook Predict, opportunities for Predict Club |
 | [trading-strategies.md](trading-strategies.md) | Strategy comparison, lessons learned, cost analysis, pool selection |
 | [btc/](btc/README.md) | **BTC Chart Pro** — standalone trading dashboard, alerts, snapshot, VP heatmap |
 
