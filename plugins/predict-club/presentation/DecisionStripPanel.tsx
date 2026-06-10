@@ -256,6 +256,14 @@ export function DecisionStripPanel() {
           </span>
         </div>
         <button
+          className="bg-secondary-container text-on-secondary-container px-md py-sm rounded font-label text-label-md cursor-pointer hover:opacity-90 transition-opacity flex items-center gap-1"
+          type="button"
+          onClick={() => document.dispatchEvent(new CustomEvent('pc:open-quick-predict'))}
+        >
+          <span className="material-symbols-outlined text-[16px]">bolt</span>
+          Quick
+        </button>
+        <button
           className={`px-lg py-sm rounded font-headline text-headline-md transition-colors ${
             blocked
               ? 'bg-surface-variant text-on-surface-variant border border-outline cursor-not-allowed'
