@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { usePredictClub } from './usePredictClub'
 import type { RiskActionTarget, RiskCheckCategory } from '../domain/riskGate'
 import { formatCompactDusdc, formatUsd } from './shared'
-import { formatProbabilityLabel } from './display'
+import { formatProbabilityLabel, shortenSuiAddress } from './display'
 
 export function RiskPanel() {
   const { club, context, primaryAction, pricingSnapshot, riskEvaluation, setModal } =
@@ -273,39 +273,146 @@ export function RiskPanel() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-xs">
-          <div className="bg-surface-container-highest border border-outline-variant rounded-lg p-sm min-w-0">
-            <span className="font-label text-label-caps text-on-surface-variant uppercase block">
-              Portfolio
-            </span>
-            <span className="font-data text-data-md text-on-surface tabular-nums block mt-1">
-              {pricingSnapshot.manager
-                ? `${pricingSnapshot.manager.positions.length} open`
-                : context.isConnected
-                  ? 'Unavailable'
-                  : 'Connect wallet'}
-            </span>
-            <span className="font-data text-[10px] leading-4 text-on-surface-variant block truncate">
-              {pricingSnapshot.manager
-                ? `${formatUsd(pricingSnapshot.manager.quoteBalance)} DUSDC manager balance`
-                : (pricingSnapshot.managerReason ?? 'Manager-owned positions')}
-            </span>
+        <div className="bg-surface-container-highest border border-outline-variant rounded-lg p-md flex flex-col gap-sm min-w-0">
+          <div className="flex items-center justify-between gap-sm min-w-0">
+            <div className="min-w-0">
+              <span className="font-label text-label-caps text-on-surface-variant uppercase block">
+                Portfolio
+              </span>
+              <span className="font-data text-[10px] leading-4 text-on-surface-variant block truncate">
+                {pricingSnapshot.manager
+                  ? `${pricingSnapshot.manager.positions.length} open positions`
+                  : (pricingSnapshot.managerReason ?? 'Manager-owned positions')}
+              </span>
+            </div>
+            {pricingSnapshot.manager && (
+              <span className="font-data text-data-sm text-primary-fixed-dim tabular-nums shrink-0">
+                {formatUsd(pricingSnapshot.manager.quoteBalance)} DUSDC
+              </span>
+            )}
           </div>
-          <div className="bg-surface-container-highest border border-outline-variant rounded-lg p-sm min-w-0">
-            <span className="font-label text-label-caps text-on-surface-variant uppercase block">
-              Vault
-            </span>
-            <span className="font-data text-data-md text-on-surface tabular-nums block mt-1">
+
+          {pricingSnapshot.manager ? (
+            <div className="grid grid-cols-3 gap-xs">
+              <CompactMetric
+                label="Binary"
+                tone="gain"
+                value={String(
+                  pricingSnapshot.manager.positions.filter((position) => position.kind === 'binary')
+                    .length,
+                )}
+              />
+              <CompactMetric
+                label="Range"
+                tone="gain"
+                value={String(
+                  pricingSnapshot.manager.positions.filter((position) => position.kind === 'range')
+                    .length,
+                )}
+              />
+              <CompactMetric
+                label="Open"
+                tone="gain"
+                value={String(pricingSnapshot.manager.positions.length)}
+              />
+            </div>
+          ) : (
+            <div className="rounded-md border border-outline-variant bg-surface-container px-sm py-xs">
+              <span className="font-data text-[11px] leading-4 text-on-surface-variant block">
+                {pricingSnapshot.managerReason ?? 'Manager-owned positions'}
+              </span>
+            </div>
+          )}
+
+          {pricingSnapshot.manager?.positions.length ? (
+            <div className="flex flex-col gap-xs">
+              {pricingSnapshot.manager.positions.slice(0, 4).map((position) => (
+                <div
+                  key={position.id}
+                  className="rounded-md border border-outline-variant bg-surface-container px-sm py-xs flex items-center justify-between gap-sm"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-xs min-w-0">
+                      <span className="font-label text-[9px] leading-3 text-on-surface-variant uppercase border border-outline-variant rounded px-[4px] py-px shrink-0">
+                        {position.kind}
+                      </span>
+                      <span className="font-data text-[11px] text-on-surface truncate">
+                        {shortenSuiAddress(position.oracleId)}
+                      </span>
+                    </div>
+                    <p className="font-data text-[10px] leading-4 text-on-surface-variant truncate">
+                      {position.side
+                        ? `${position.side} · ${formatUsd(position.strike ?? 0)} strike`
+                        : `${formatUsd(position.lowerStrike ?? 0)} - ${formatUsd(position.upperStrike ?? 0)} range`}
+                    </p>
+                  </div>
+                  <span className="font-data text-data-sm text-primary-fixed-dim tabular-nums shrink-0">
+                    {formatCompactDusdc(position.quantity)}
+                  </span>
+                </div>
+              ))}
+              {pricingSnapshot.manager.positions.length > 4 && (
+                <span className="font-data text-[10px] text-on-surface-variant">
+                  +{pricingSnapshot.manager.positions.length - 4} more positions
+                </span>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="bg-surface-container-highest border border-outline-variant rounded-lg p-md flex flex-col gap-sm min-w-0">
+          <div className="flex items-center justify-between gap-sm min-w-0">
+            <div className="min-w-0">
+              <span className="font-label text-label-caps text-on-surface-variant uppercase block">
+                Vault
+              </span>
+              <span className="font-data text-[10px] leading-4 text-on-surface-variant block truncate">
+                {pricingSnapshot.vault
+                  ? 'On-chain backing and withdrawal capacity'
+                  : (pricingSnapshot.vaultReason ?? 'Available liquidity')}
+              </span>
+            </div>
+            <span className="font-data text-data-sm text-primary-fixed-dim tabular-nums shrink-0">
               {pricingSnapshot.vault
-                ? `${formatUsd(pricingSnapshot.vault.availableLiquidity)} DUSDC`
+                ? `${formatCompactDusdc(pricingSnapshot.vault.availableLiquidity)} DUSDC`
                 : 'Unavailable'}
             </span>
-            <span className="font-data text-[10px] leading-4 text-on-surface-variant block truncate">
-              {pricingSnapshot.vault
-                ? 'Available liquidity'
-                : (pricingSnapshot.vaultReason ?? 'Available liquidity')}
-            </span>
           </div>
+
+          {pricingSnapshot.vault ? (
+            <div className="grid grid-cols-2 gap-xs sm:grid-cols-4">
+              <CompactMetric
+                label="Liquidity"
+                tone="gain"
+                value={formatCompactDusdc(pricingSnapshot.vault.availableLiquidity)}
+              />
+              <CompactMetric
+                label="Max payout"
+                tone="gain"
+                value={formatCompactDusdc(pricingSnapshot.vault.totalMaxPayout)}
+              />
+              <CompactMetric
+                label="Withdrawal"
+                tone="gain"
+                value={formatCompactDusdc(pricingSnapshot.vault.availableWithdrawal)}
+              />
+              <CompactMetric
+                label="LP share"
+                tone="gain"
+                value={
+                  Number.isFinite(pricingSnapshot.vault.walletLpShare)
+                    ? `${(pricingSnapshot.vault.walletLpShare * 100).toFixed(2)}%`
+                    : '—'
+                }
+              />
+            </div>
+          ) : (
+            <div className="rounded-md border border-outline-variant bg-surface-container px-sm py-xs">
+              <span className="font-data text-[11px] leading-4 text-on-surface-variant block">
+                {pricingSnapshot.vaultReason ?? 'Available liquidity'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Execute */}

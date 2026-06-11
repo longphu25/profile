@@ -14,13 +14,16 @@ declare module 'bun:test' {
     toBeCloseTo(expected: number, precision?: number): void
     toBeGreaterThan(expected: number): void
     toBeLessThan(expected: number): void
+    toBeLessThanOrEqual(expected: number): void
     toBeNull(): void
     toContain(expected: string): void
+    toEqual(expected: unknown): void
     not: ExpectationNegated
   }
 
   export interface ExpectationNegated {
     toContain(expected: string): void
+    toBeNull(): void
   }
 
   export const expect: (value: unknown) => Expectation

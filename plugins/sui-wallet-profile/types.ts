@@ -61,6 +61,10 @@ export interface PredictClubWalletProfile {
     kind: 'binary' | 'range'
     oracleId?: string
     quantity?: number
+    side?: 'ABOVE' | 'BELOW'
+    strike?: number
+    lowerStrike?: number
+    upperStrike?: number
   }>
   vault?: {
     availableLiquidity?: number | null

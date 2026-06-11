@@ -213,6 +213,16 @@ function formatOptionalAmount(value: number | null | undefined, suffix = '') {
   return `${value.toLocaleString(undefined, { maximumFractionDigits: 4 })}${suffix}`
 }
 
+function formatOptionalPercent(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return 'Unavailable'
+  return `${(value * 100).toFixed(2)}%`
+}
+
+function formatOptionalCount(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return 'Unavailable'
+  return value.toLocaleString(undefined, { maximumFractionDigits: 0 })
+}
+
 function formatProfileError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? '')
   if (message.includes('429') || message.includes('Too Many Requests')) {
@@ -671,20 +681,16 @@ function PredictExtension({
     profile.rangePositions ??
     profile.positions?.filter((position) => position.kind === 'range').length ??
     null
+  const totalPositions = profile.positions?.length ?? (binaryPositions ?? 0) + (rangePositions ?? 0)
 
   return (
     <section className="swp__section swp__predict">
       <div className="swp__section-title">Predict Club</div>
       <div className="swp__metric-grid">
-        <DataMetric label="DUSDC" value={formatOptionalAmount(profile.balances?.dusdc)} />
-        <DataMetric
-          label="Binary"
-          value={binaryPositions === null ? 'Unavailable' : String(binaryPositions)}
-        />
-        <DataMetric
-          label="RANGE"
-          value={rangePositions === null ? 'Unavailable' : String(rangePositions)}
-        />
+        <DataMetric label="Open" value={formatOptionalCount(totalPositions)} />
+        <DataMetric label="Binary" value={formatOptionalCount(binaryPositions)} />
+        <DataMetric label="RANGE" value={formatOptionalCount(rangePositions)} />
+        <DataMetric label="LP share" value={formatOptionalPercent(profile.vault?.walletLpShare)} />
       </div>
       <div className="swp__data-list">
         <DataRow
@@ -711,11 +717,23 @@ function PredictExtension({
         />
         <DataRow
           label="Wallet LP share"
-          value={
-            profile.vault?.walletLpShare === null || profile.vault?.walletLpShare === undefined
-              ? 'Unavailable'
-              : `${(profile.vault.walletLpShare * 100).toFixed(4)}%`
-          }
+          value={formatOptionalPercent(profile.vault?.walletLpShare)}
+        />
+      </div>
+      <div className="swp__section-title">Vault Backing</div>
+      <div className="swp__metric-grid">
+        <DataMetric
+          label="Liquidity"
+          value={formatOptionalAmount(profile.vault?.availableLiquidity, ' DUSDC')}
+        />
+        <DataMetric
+          label="Max payout"
+          value={formatOptionalAmount(profile.vault?.totalMaxPayout, ' DUSDC')}
+        />
+        <DataMetric label="MTM" value={formatOptionalAmount(profile.vault?.totalMtm, ' DUSDC')} />
+        <DataMetric
+          label="Withdrawal"
+          value={formatOptionalAmount(profile.vault?.availableWithdrawal, ' DUSDC')}
         />
       </div>
       {profile.positions?.length ? (
@@ -723,14 +741,28 @@ function PredictExtension({
           {profile.positions.slice(0, 4).map((position) => (
             <div className="swp__position-row" key={position.id}>
               <div className="swp__position-main">
-                <span>{position.kind}</span>
+                <span>{position.kind === 'range' ? 'Range' : 'Binary'}</span>
                 <strong>{position.quantity ? `${position.quantity} contracts` : 'Position'}</strong>
+                <small className="swp__position-meta">
+                  {position.side
+                    ? `${position.side} ${position.strike ? `@ ${formatOptionalAmount(position.strike)}` : ''}`
+                    : position.lowerStrike || position.upperStrike
+                      ? `${formatOptionalAmount(position.lowerStrike)} - ${formatOptionalAmount(position.upperStrike)}`
+                      : position.oracleId
+                        ? shortenAddress(position.oracleId)
+                        : 'No oracle id'}
+                </small>
               </div>
               <SuiScanObjectControl objectId={position.id} network={network} label="position" />
             </div>
           ))}
+          {profile.positions.length > 4 ? (
+            <div className="swp__position-more">+{profile.positions.length - 4} more positions</div>
+          ) : null}
         </div>
-      ) : null}
+      ) : (
+        <div className="swp__empty">No open Predict positions</div>
+      )}
     </section>
   )
 }

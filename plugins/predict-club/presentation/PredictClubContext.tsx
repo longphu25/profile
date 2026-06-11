@@ -415,6 +415,10 @@ export function PredictClubProvider({
           kind: position.kind,
           oracleId: position.oracleId,
           quantity: position.quantity,
+          side: position.side,
+          strike: position.strike,
+          lowerStrike: position.lowerStrike,
+          upperStrike: position.upperStrike,
         }))
       : (previous?.positions ?? [])
     host.setSharedData(PREDICT_CLUB_WALLET_PROFILE_KEY, {
