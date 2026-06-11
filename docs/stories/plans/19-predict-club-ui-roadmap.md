@@ -305,6 +305,8 @@ Validation:
 - Playwright funding modal test
 - disabled-state regression check
 
+Status: implemented in `0.46.0`.
+
 ## Phase 7: Round Lifecycle And Actions
 
 Objective:
@@ -334,6 +336,8 @@ Validation:
 - state-machine style unit tests if feasible
 - Playwright checks for disconnected and connected states
 
+Status: implemented in `0.46.0`.
+
 ## Phase 8: Test And Documentation Hardening
 
 Objective:
@@ -353,10 +357,12 @@ Work:
    - Funding modal opens
    - no severe page errors
 3. Keep docs updated in:
-   - `docs/product/`
-   - `docs/deepbook/`
-   - `docs/stories/plans/`
-   - `docs/decisions/` when tradeoffs become durable
+    - `docs/product/`
+    - `docs/deepbook/`
+    - `docs/stories/plans/`
+    - `docs/decisions/` when tradeoffs become durable
+
+Status: implemented in `0.46.0`.
 4. Run QMD index after docs changes.
 5. Run CodeGraph index after broad source changes.
 

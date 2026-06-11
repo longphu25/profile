@@ -301,6 +301,8 @@ Validation:
 - Playwright funding modal test
 - disabled-state regression check
 
+Status: implemented trong `0.46.0`.
+
 ## Phase 7: Round Lifecycle Và Actions
 
 Mục tiêu:
@@ -330,6 +332,8 @@ Validation:
 - unit tests kiểu state machine nếu khả thi
 - Playwright checks cho disconnected và connected states
 
+Status: implemented trong `0.46.0`.
+
 ## Phase 8: Tests Và Documentation Hardening
 
 Mục tiêu:
@@ -349,10 +353,12 @@ Việc cần làm:
    - Funding modal mở được
    - không có page error nghiêm trọng
 3. Giữ docs cập nhật trong:
-   - `docs/product/`
-   - `docs/deepbook/`
-   - `docs/stories/plans/`
-   - `docs/decisions/` khi tradeoff trở thành quyết định lâu dài
+    - `docs/product/`
+    - `docs/deepbook/`
+    - `docs/stories/plans/`
+    - `docs/decisions/` khi tradeoff trở thành quyết định lâu dài
+
+Status: implemented trong `0.46.0`.
 4. Chạy QMD index sau docs changes.
 5. Chạy CodeGraph index sau source changes lớn.
 
