@@ -22,6 +22,8 @@
 - [[product/predict-club-architecture]] — Sơ đồ Predict Club, runtime boundary và cấu trúc file dự kiến
 - [[product/predict-club-escrow-contract]] — Kế hoạch contract cho escrow khóa thời gian và trao đổi USDC/DUSDC tổng quát
 - [[product/predict-club-funding]] — Funding Router, rủi ro vay Scallop, bridge handoff và DUSDC escrow
+- [[product/predict-club-ui-motion]] — Quy tắc motion UI Predict Club dùng pattern Transitions.dev
+- [[product/predict-club-ui-requirements]] — UI contract cockpit Predict Club, trách nhiệm panel, wallet/address UX, lỗi và validation
 - [[stories/README]] — Thư mục story packet và plan
 - [[decisions/README]] — Hồ sơ quyết định bền vững
 - [[decisions/predict-club-architecture]] — Quyết định custody lai và boundary group vault ở V2
@@ -127,6 +129,8 @@
 - [[deepbook/hedging-bot]] — Thiết kế hedging bot
 - [[deepbook/margin-trading]] — Margin trading
 - [[deepbook/balance-manager]] — Balance manager
+- [[deepbook/predict-club-data-contract]] — Data contract Predict Club cho oracle, SVI, quote, portfolio, vault, cache và rate-limit
+- [[deepbook/predict-club-devinspect-pricing]] — Ghi chú contract quote và pricing `devInspect` của Predict Club
 - [[deepbook/trading-strategies]] — Các loại chiến lược
 - [[deepbook/error-log]] — Theo dõi lỗi
 - [[deepbook/SESSION-CONTEXT]] — Ghi chú ngữ cảnh phiên
@@ -148,6 +152,12 @@
 - [[stories/plans/11-deepbook-suite-modular-refactor]] — Refactor module cho DeepBook Suite
 - [[stories/plans/12-deepbook-predict-standalone-chart-trading]] — Kế hoạch `deepbook-predict.html` độc lập với popup giao dịch DUSDC theo click biểu đồ và overlay vị thế theo ví
 - [[stories/plans/13-predict-club-community]] — Quy trình cộng đồng Predict Club, clean architecture, kế hoạch plugin và boundary group vault tương lai
+- [[stories/plans/14-predict-club-contract-integration]] — TODO deploy predict-club contracts, nối codegen bindings và hoàn thiện escrow + exchange flow
+- [[stories/plans/15-swap-scallop-integration]] — Đánh giá DeepBook swap và Scallop borrow cho funding routes Predict Club
+- [[stories/plans/16-predict-club-wallet-profile-popup]] — Triển khai wallet profile popup và guardrail Fast Refresh
+- [[stories/plans/17-scallop-plugin-extraction]] — Kế hoạch tách Scallop plugin và Host Component Registry
+- [[stories/plans/18-predict-club-quick-predict]] — Luồng Quick Predict
+- [[stories/plans/19-predict-club-ui-roadmap]] — Roadmap triển khai UI Predict Club theo phase
 
 ## Walrus Storage (3 plugin)
 

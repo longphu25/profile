@@ -70,6 +70,14 @@ cho chiều sâu kỹ thuật.
 - `product/predict-club-funding.md`: các tuyến nạp vốn cho thành viên chưa có
   DUSDC, gồm DeepBook đổi SUI sang USDC, vay Scallop, bridge handoff và club
   escrow exchange.
+- `product/predict-club-ui-requirements.vi.md`: yêu cầu UI ổn định cho cockpit
+  Predict Club, gồm Decision Strip, Risk Checks, Your Exposure, wallet profile,
+  address UX và validation expectations.
+- `deepbook/predict-club-data-contract.vi.md`: data contract DeepBook Predict
+  cho oracle state, SVI, pricing preview, contract quote, portfolio, vault và
+  cache/rate-limit behavior.
+- `stories/plans/19-predict-club-ui-roadmap.vi.md`: roadmap triển khai từng
+  bước để hoàn thiện giao diện Predict Club.
 
 ## Cập Nhật Thiết Lập Gần Đây
 
@@ -89,3 +97,6 @@ cho chiều sâu kỹ thuật.
 - Việc triển khai wallet profile popup cho Predict Club, guardrail Fast Refresh
   và các fix performance popup đã được ghi log trong
   `docs/stories/plans/16-predict-club-wallet-profile-popup.vi.md`.
+- Yêu cầu UI Predict Club, data contract DeepBook và roadmap UI theo phase đã
+  được ghi vào `product/`, `deepbook/` và `stories/plans/` để các bước triển
+  khai tiếp theo có nguồn sự thật rõ ràng.

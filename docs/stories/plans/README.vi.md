@@ -24,6 +24,9 @@ TaskOS. Nó nằm dưới `docs/stories/` vì các file này mô tả các lát 
 | [14-predict-club-contract-integration.md](14-predict-club-contract-integration.md) | Kế hoạch deploy predict-club contracts lên testnet, nối codegen bindings và hoàn thiện luồng escrow + exchange end-to-end. |
 | [15-swap-scallop-integration.md](15-swap-scallop-integration.md) | Kế hoạch tích hợp swap và Scallop cho funding routes của Predict Club. |
 | [16-predict-club-wallet-profile-popup.vi.md](16-predict-club-wallet-profile-popup.vi.md) | Đã triển khai wallet profile popup cho Predict Club, gồm shared Predict context, fix performance popup và guardrail Fast Refresh. |
+| [17-scallop-plugin-extraction.md](17-scallop-plugin-extraction.md) | Tách Scallop borrow thành plugin độc lập `sui-scallop`, mount vào predict-club qua Host Component Registry. |
+| [18-predict-club-quick-predict.md](18-predict-club-quick-predict.md) | Luồng Quick Predict để tạo round và thao tác prediction nhanh hơn. |
+| [19-predict-club-ui-roadmap.vi.md](19-predict-club-ui-roadmap.vi.md) | Roadmap từng bước để hoàn thiện giao diện Predict Club, data contracts, risk/exposure, wallet UX, portfolio/vaults, funding, lifecycle, tests và docs. |
 
 ## Thứ Tự Xây Dựng Được Khuyến Nghị
 
@@ -43,3 +46,6 @@ TaskOS. Nó nằm dưới `docs/stories/` vì các file này mô tả các lát 
 14. Deploy predict-club contracts lên testnet, nối TypeScript bindings vào plugin và hoàn thiện escrow + exchange funding flow end-to-end.
 15. Tích hợp swap và Scallop funding routes khi đủ an toàn và vẫn do ví người dùng ký.
 16. Duy trì wallet profile popup của Predict Club và giữ split Fast Refresh giữa provider, context core và hook files.
+17. Tách Scallop borrow thành plugin độc lập `sui-scallop` và mount lại vào predict-club qua Host Component Registry để tái sử dụng giữa plugin.
+18. Giữ Quick Predict đồng bộ với luồng Predict Club chính để shortcut không bỏ qua risk hoặc quote checks.
+19. Triển khai roadmap UI Predict Club theo phase: data contract, decision strip, risk/exposure, wallet/address UX, portfolio/vaults, funding, lifecycle và hardening tests/docs.

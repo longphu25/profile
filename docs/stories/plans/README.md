@@ -25,6 +25,8 @@ candidate work slices, roadmap order, and implementation packets.
 | [15-swap-scallop-integration.md](15-swap-scallop-integration.md) | Swap and Scallop integration plan for Predict Club funding routes. |
 | [16-predict-club-wallet-profile-popup.md](16-predict-club-wallet-profile-popup.md) | Implemented wallet profile popup for Predict Club, including shared Predict context, popup performance fixes, and Fast Refresh guardrails. |
 | [17-scallop-plugin-extraction.md](17-scallop-plugin-extraction.md) | Extract Scallop borrow into standalone `sui-scallop` plugin, mount into predict-club via Host Component Registry. |
+| [18-predict-club-quick-predict.md](18-predict-club-quick-predict.md) | Quick Predict entry flow for faster round creation and prediction actions. |
+| [19-predict-club-ui-roadmap.md](19-predict-club-ui-roadmap.md) | Step-by-step roadmap for finishing the Predict Club interface, data contracts, risk/exposure, wallet UX, portfolio/vaults, funding, lifecycle, tests, and docs. |
 
 ## Recommended Build Order
 
@@ -45,3 +47,5 @@ candidate work slices, roadmap order, and implementation packets.
 15. Integrate swap and Scallop funding routes where they are safe and wallet-signed.
 16. Maintain the Predict Club wallet profile popup and keep the Fast Refresh split between provider, context core, and hook files.
 17. Extract Scallop borrow into standalone `sui-scallop` plugin and mount back into predict-club via Host Component Registry for cross-plugin reuse.
+18. Keep Quick Predict aligned with the main Predict Club flow so shortcuts do not bypass risk or quote checks.
+19. Execute the Predict Club UI roadmap in phases: data contract, decision strip, risk/exposure, wallet/address UX, portfolio/vaults, funding, lifecycle, and tests/docs hardening.

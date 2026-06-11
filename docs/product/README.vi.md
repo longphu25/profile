@@ -19,6 +19,7 @@ domain.
 - Escrow Contract Predict Club: `predict-club-escrow-contract.md`
 - Funding Predict Club: `predict-club-funding.md`
 - Motion UI Predict Club: `predict-club-ui-motion.vi.md`
+- Yêu cầu UI Predict Club: `predict-club-ui-requirements.vi.md`
 - DeepBook: `../deepbook/README.md`
 - NAVI: `../defi/navi/TECHNICAL.md`
 - Seal: `../seal/TECHNICAL.md`
@@ -27,3 +28,10 @@ domain.
 
 Khi một hành vi sản phẩm trở nên ổn định, hãy tóm tắt nó ở đây hoặc liên kết
 chính xác tới tài liệu domain sở hữu nó.
+
+## Nguồn Sự Thật UI Predict Club
+
+Dùng `predict-club-ui-requirements.vi.md` trước khi thay đổi bề mặt Predict
+Club. Tài liệu này sở hữu layout kỳ vọng, trách nhiệm từng panel, hành vi
+wallet/address, error states và validation tối thiểu. Các kế hoạch triển khai
+nên link về tài liệu này thay vì định nghĩa lại UI contract.

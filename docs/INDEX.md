@@ -23,6 +23,7 @@
 - [[product/predict-club-escrow-contract]] — Time-locked escrow and generic USDC/DUSDC exchange contract plan
 - [[product/predict-club-funding]] — Funding Router, Scallop borrow risk, bridge handoff, and DUSDC escrow
 - [[product/predict-club-ui-motion]] — Predict Club product motion rules using Transitions.dev patterns
+- [[product/predict-club-ui-requirements]] — Predict Club cockpit UI contract, panel responsibilities, wallet/address UX, errors, and validation
 - [[stories/README]] — Story packet and plan folder
 - [[decisions/README]] — Durable decision records
 - [[decisions/predict-club-architecture]] — Hybrid custody and future vault decision
@@ -146,6 +147,8 @@
 - [[deepbook/hedging-bot]] — Hedging bot design
 - [[deepbook/margin-trading]] — Margin trading
 - [[deepbook/balance-manager]] — Balance manager
+- [[deepbook/predict-club-data-contract]] — Predict Club oracle, SVI, quote, portfolio, vault, cache, and rate-limit data contract
+- [[deepbook/predict-club-devinspect-pricing]] — Predict Club contract quote and `devInspect` pricing notes
 - [[deepbook/trading-strategies]] — Strategy types
 - [[deepbook/error-log]] — Error tracking
 - [[deepbook/SESSION-CONTEXT]] — Session context notes
@@ -169,6 +172,10 @@
 - [[stories/plans/13-predict-club-community]] — Predict Club community workflow, clean architecture, plugin plan, and future group vault boundary
 - [[stories/plans/14-predict-club-contract-integration]] — TODOs for deploying predict-club contracts, wiring codegen bindings, and completing escrow + exchange flow
 - [[stories/plans/15-swap-scallop-integration]] — Assessment of DeepBook swap and Scallop borrow integration for Predict Club funding routes
+- [[stories/plans/16-predict-club-wallet-profile-popup]] — Wallet profile popup implementation and Fast Refresh guardrail
+- [[stories/plans/17-scallop-plugin-extraction]] — Scallop plugin extraction and Host Component Registry plan
+- [[stories/plans/18-predict-club-quick-predict]] — Quick Predict entry flow
+- [[stories/plans/19-predict-club-ui-roadmap]] — Predict Club UI implementation roadmap by phase
 
 ## Walrus Storage (3 plugins)
 

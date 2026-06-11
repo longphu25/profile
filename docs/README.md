@@ -66,6 +66,14 @@ chosen, and the existing domain folders for technical depth.
 - `product/predict-club-funding.md`: funding routes for members without DUSDC,
   including DeepBook SUI to USDC, Scallop borrowing, bridge handoff, and club
   escrow exchange.
+- `product/predict-club-ui-requirements.md`: stable UI requirements for the
+  Predict Club cockpit, including Decision Strip, Risk Checks, Your Exposure,
+  wallet profile, address UX, and validation expectations.
+- `deepbook/predict-club-data-contract.md`: DeepBook Predict data contract for
+  oracle state, SVI, pricing preview, contract quote, portfolio, vault, and
+  cache/rate-limit behavior.
+- `stories/plans/19-predict-club-ui-roadmap.md`: step-by-step implementation
+  roadmap for finishing the Predict Club interface.
 
 ## Recent Setup Updates
 
@@ -85,3 +93,6 @@ chosen, and the existing domain folders for technical depth.
 - Predict Club wallet profile popup implementation, Fast Refresh guardrail, and
   popup performance fixes are logged in
   `docs/stories/plans/16-predict-club-wallet-profile-popup.md`.
+- Predict Club UI requirements, DeepBook data contract, and phased UI roadmap
+  are now logged in `product/`, `deepbook/`, and `stories/plans/` so future
+  implementation work has a clear source of truth.
