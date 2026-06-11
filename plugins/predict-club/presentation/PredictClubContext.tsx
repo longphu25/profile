@@ -348,6 +348,7 @@ export function PredictClubProvider({
       null
     )
   }, [club.members, suiContext.address])
+  const isLeader = currentMember?.role === 'leader'
 
   const consensus = useMemo(() => computeConsensus(round.indicators), [round.indicators])
 
@@ -794,38 +795,18 @@ export function PredictClubProvider({
       case 'draft':
         return { label: 'Publish Round', action: () => actions.publishRound() }
       case 'open':
-        return { label: 'Confirm Round', action: () => actions.confirmRound() }
+        return isLeader
+          ? { label: 'Confirm Round', action: () => actions.confirmRound() }
+          : { label: 'Accept Signal', action: () => updateRoundStatus('funding') }
       case 'confirmed':
       case 'funding':
-        if (!riskEvaluation.canExecute) {
-          return {
-            label:
-              !predictManagerLoading && !predictManagerId
-                ? 'Create Manager'
-                : riskEvaluation.warningReasons.some((c) => c.category === 'funding')
-                  ? 'Fund to Join'
-                  : 'Review Risk',
-            action: () => {
-              const fundingIssue = [
-                ...riskEvaluation.blockingReasons,
-                ...riskEvaluation.warningReasons,
-              ].some((c) => c.category === 'funding')
-              if (fundingIssue) {
-                store.setModal('fund-to-join')
-              } else {
-                store.setToast(
-                  riskEvaluation.blockingReasons[0]?.message ??
-                    riskEvaluation.warningReasons[0]?.message ??
-                    'Review risk checks before executing',
-                )
-              }
-            },
-          }
+        if (funding.blocked || balances.dusdc < round.suggestedDusdc) {
+          return { label: 'Fund to Join', action: () => store.setModal('fund-to-join') }
         }
         return { label: 'Execute Trade', action: () => store.setModal('execute-trade') }
       case 'executed':
         return {
-          label: 'Settle (Demo)',
+          label: 'Mark Settled',
           action: () =>
             actions.settleRound({
               roundId: round.id,
@@ -837,19 +818,21 @@ export function PredictClubProvider({
       case 'settled':
         return { label: 'Claim Settlement', action: () => store.setModal('claim-settlement') }
       case 'claimed':
+      case 'cancelled':
         return { label: 'New Round', action: () => store.setModal('create-round') }
       default:
         return { label: 'Accept Signal', action: () => updateRoundStatus('funding') }
     }
   }, [
     actions,
+    balances.dusdc,
+    funding.blocked,
     host,
-    predictManagerId,
-    predictManagerLoading,
-    riskEvaluation,
     round.id,
     round.status,
+    round.suggestedDusdc,
     round.strike,
+    isLeader,
     suiContext.isConnected,
     updateRoundStatus,
   ])
@@ -863,7 +846,12 @@ export function PredictClubProvider({
     selectedOffer,
     setSelectedOffer: store.setSelectedOffer,
     primaryAction,
-    fundingRecommendation: { route: funding.route, label: funding.label },
+    fundingRecommendation: {
+      route: funding.route,
+      label: funding.label,
+      reason: funding.reason,
+      blocked: funding.blocked,
+    },
     updateRoundStatus,
     host,
     actions,

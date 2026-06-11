@@ -28,7 +28,7 @@ export interface PredictClubContextValue {
   selectedOffer: EscrowOfferView | null
   setSelectedOffer: (o: EscrowOfferView | null) => void
   primaryAction: { label: string; action: () => void }
-  fundingRecommendation: { route: string; label: string }
+  fundingRecommendation: { route: string; label: string; reason: string; blocked: boolean }
   updateRoundStatus: (status: RoundStatus) => void
   host: SuiHostAPI | null
   actions: PredictClubActions

@@ -71,17 +71,38 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
   const primary = useMemo(() => {
     if (!context.isConnected)
       return { label: 'Connect Wallet', action: () => host?.requestConnect() }
-    if (round.status === 'settled')
-      return { label: 'Claim Settlement', action: () => setModal('claim-settlement') }
-    if (round.status === 'confirmed' || round.status === 'funding') {
-      if (balances.dusdc < round.suggestedDusdc) {
-        return { label: 'Fund to Join', action: () => setModal('fund-to-join') }
-      }
-      return { label: 'Execute Trade', action: () => setModal('execute-trade') }
+    switch (round.status) {
+      case 'draft':
+        return { label: 'Publish Round', action: () => updateRoundStatus('open') }
+      case 'open':
+        return isLeader
+          ? { label: 'Confirm Round', action: () => updateRoundStatus('confirmed') }
+          : { label: 'Accept Signal', action: () => updateRoundStatus('funding') }
+      case 'confirmed':
+      case 'funding':
+        if (funding.blocked || balances.dusdc < round.suggestedDusdc) {
+          return { label: 'Fund to Join', action: () => setModal('fund-to-join') }
+        }
+        return { label: 'Execute Trade', action: () => setModal('execute-trade') }
+      case 'executed':
+        return { label: 'Mark Settled', action: () => updateRoundStatus('settled') }
+      case 'settled':
+        return { label: 'Claim Settlement', action: () => setModal('claim-settlement') }
+      case 'claimed':
+      case 'cancelled':
+        return { label: 'New Round', action: () => setModal('create-round') }
+      default:
+        return { label: 'Accept Signal', action: () => updateRoundStatus('funding') }
     }
-    if (isLeader) return { label: 'Leader Confirm', action: () => updateRoundStatus('confirmed') }
-    return { label: 'Accept Signal', action: () => updateRoundStatus('funding') }
-  }, [context.isConnected, host, isLeader, round.status, round.suggestedDusdc, balances.dusdc])
+  }, [
+    balances.dusdc,
+    funding.blocked,
+    host,
+    isLeader,
+    round.status,
+    round.suggestedDusdc,
+    setModal,
+  ])
 
   function updateRoundStatus(status: RoundStatus) {
     setClub((current) => ({ ...current, activeRound: { ...current.activeRound, status } }))
@@ -97,6 +118,7 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
       <DecisionStrip
         club={club}
         fundingLabel={funding.label}
+        fundingReason={funding.reason}
         onPrimary={primary.action}
         primaryLabel={primary.label}
       />
@@ -112,6 +134,9 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
           club={club}
           connected={context.isConnected}
           fundingRoute={funding.route}
+          fundingLabel={funding.label}
+          fundingReason={funding.reason}
+          fundingReady={!funding.blocked}
           mobileTab={mobileTab}
           oracleSnapshot={oracleSnapshot}
           onPrimary={primary.action}
@@ -120,7 +145,7 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
       </main>
 
       <section className={`pc-bottom ${mobileTab === 'funding' ? 'pc-mobile-show' : ''}`}>
-        <FundingRouter onOpenModal={setModal} />
+        <FundingRouter balances={balances} funding={funding} onOpenModal={setModal} round={round} />
         <EscrowOffers
           offers={club.escrowOffers}
           onCreate={() => setModal('create-escrow')}
@@ -154,11 +179,13 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
 function DecisionStrip({
   club,
   fundingLabel,
+  fundingReason,
   primaryLabel,
   onPrimary,
 }: {
   club: ClubState
   fundingLabel: string
+  fundingReason: string
   primaryLabel: string
   onPrimary: () => void
 }) {
@@ -188,7 +215,10 @@ function DecisionStrip({
         >
           {primaryLabel}
         </button>
-        <span className="pc-funding-note">{fundingLabel}</span>
+        <div className="pc-funding-note">
+          <span>{fundingLabel}</span>
+          <small>{fundingReason}</small>
+        </div>
       </div>
     </section>
   )
@@ -288,6 +318,9 @@ function RiskExecutionColumn({
   club,
   connected,
   fundingRoute,
+  fundingLabel,
+  fundingReason,
+  fundingReady,
   mobileTab,
   oracleSnapshot,
   onPrimary,
@@ -296,6 +329,9 @@ function RiskExecutionColumn({
   club: ClubState
   connected: boolean
   fundingRoute: string
+  fundingLabel: string
+  fundingReason: string
+  fundingReady: boolean
   mobileTab: MobileTab
   oracleSnapshot: ClubOracleSnapshot
   onPrimary: () => void
@@ -316,13 +352,20 @@ function RiskExecutionColumn({
     ? `+${formatUsd(payoutPreview.potentialProfit ?? payoutPreview.indicativePayout)} DUSDC`
     : (payoutPreview.reason ?? 'Pricing preview unavailable')
   const visible = mobileTab === 'execution'
+  const escrowed =
+    round.status === 'funding' ||
+    round.status === 'executed' ||
+    round.status === 'settled' ||
+    round.status === 'claimed'
+  const signed =
+    round.status === 'executed' || round.status === 'settled' || round.status === 'claimed'
   const items = [
     ['Signal Received', true],
     ['Club Consensus', true],
     ['Wallet Connected', connected],
-    ['Liquidity Sourced', fundingRoute === 'ready-with-dusdc'],
-    ['Funds Escrowed', false],
-    ['Contract Signed', false],
+    ['Liquidity Sourced', fundingReady && fundingRoute === 'ready-with-dusdc'],
+    ['Funds Escrowed', escrowed],
+    ['Contract Signed', signed],
   ] as const
 
   return (
@@ -350,6 +393,12 @@ function RiskExecutionColumn({
         <section className="pc-exposure-card">
           <DataRow label="Estimated Cost" value={`${round.suggestedDusdc} DUSDC`} tone="error" />
           <DataRow label="Potential Profit" value={payoutValue} tone="mint" />
+          <DataRow
+            label="Funding Route"
+            value={fundingLabel}
+            tone={fundingReady ? 'mint' : 'amber'}
+          />
+          <p className="pc-funding-note">{fundingReason}</p>
         </section>
         <div className="pc-execute-box">
           <button
@@ -366,31 +415,68 @@ function RiskExecutionColumn({
   )
 }
 
-function FundingRouter({ onOpenModal }: { onOpenModal: (modal: ModalKind) => void }) {
+function FundingRouter({
+  balances,
+  funding,
+  onOpenModal,
+  round,
+}: {
+  balances: AssetBalances
+  funding: { route: string; label: string; reason: string; blocked: boolean }
+  onOpenModal: (modal: ModalKind) => void
+  round: ClubState['activeRound']
+}) {
   const nodes = [
-    ['Ready', 'Direct Wallet', 'DUSDC', 'fund-to-join'],
-    ['Standby', 'Swap', 'DeepBook', 'fund-to-join'],
-    ['Standby', 'Borrow', 'Scallop', 'scallop-borrow'],
-    ['Pending', 'Escrow', 'Predict P2P', 'create-escrow'],
+    {
+      state: balances.dusdc >= round.suggestedDusdc ? 'Ready' : 'Blocked',
+      label: 'Direct DUSDC',
+      value: `${formatUsd(balances.dusdc)} DUSDC`,
+      modal: 'fund-to-join' as const,
+      active: funding.route === 'ready-with-dusdc',
+    },
+    {
+      state: balances.usdc >= round.suggestedDusdc ? 'Available' : 'Blocked',
+      label: 'Escrow USDC→DUSDC',
+      value: `${formatUsd(balances.usdc)} USDC`,
+      modal: 'create-escrow' as const,
+      active: funding.route === 'club-escrow-usdc-to-dusdc',
+    },
+    {
+      state: balances.sui > 2 ? 'Available' : 'Blocked',
+      label: 'Swap SUI→USDC',
+      value: `${balances.sui.toFixed(1)} SUI`,
+      modal: 'fund-to-join' as const,
+      active: funding.route === 'deepbook-sui-to-usdc',
+    },
+    {
+      state: 'Review',
+      label: 'Bridge to Sui',
+      value: 'External',
+      modal: 'fund-to-join' as const,
+      active: funding.route === 'bridge-assets-to-sui',
+    },
   ] as const
 
   return (
     <section className="pc-bottom-panel pc-funding-panel">
       <header>
         <Icon name="route" />
-        <span>Funding Router</span>
+        <div>
+          <span>Funding Router</span>
+          <small>{funding.reason}</small>
+        </div>
       </header>
       <div className="pc-route-strip">
-        {nodes.map(([state, label, value, modal], index) => (
+        {nodes.map((node) => (
           <button
-            className={`pc-route-node ${index === 0 ? 'pc-route-active' : ''}`}
-            key={`${label}-${value}`}
+            className={`pc-route-node ${node.active ? 'pc-route-active' : ''}`}
+            key={`${node.label}-${node.value}`}
             type="button"
-            onClick={() => onOpenModal(modal)}
+            onClick={() => onOpenModal(node.modal)}
           >
-            <span>{state}</span>
-            <em>{label}</em>
-            <strong>{value}</strong>
+            <span>{node.state}</span>
+            <em>{node.label}</em>
+            <strong>{node.value}</strong>
           </button>
         ))}
       </div>

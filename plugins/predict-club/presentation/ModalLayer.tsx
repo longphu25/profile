@@ -195,6 +195,8 @@ function FundToJoinBody() {
   } = usePredictClub()
   const round = club.activeRound
   const hasEnoughDusdc = balances.dusdc >= round.suggestedDusdc
+  const hasEnoughUsdc = balances.usdc >= round.suggestedDusdc
+  const hasEnoughSui = balances.sui > 2
   const managerStatus = !context.isConnected
     ? 'Connect wallet'
     : predictManagerLoading
@@ -203,6 +205,36 @@ function FundToJoinBody() {
         ? 'Ready'
         : 'Required'
   const route = fundingRecommendation.route
+  const routeCards = [
+    {
+      icon: 'payments',
+      title: 'Direct DUSDC',
+      note: hasEnoughDusdc ? 'Ready to pledge' : 'Need DUSDC balance',
+      status: hasEnoughDusdc ? ('ready' as const) : ('blocked' as const),
+      active: route === 'ready-with-dusdc',
+    },
+    {
+      icon: 'swap_horiz',
+      title: 'Escrow USDC→DUSDC',
+      note: hasEnoughUsdc ? 'Available via escrow' : 'Need USDC balance',
+      status: hasEnoughUsdc ? ('available' as const) : ('blocked' as const),
+      active: route === 'club-escrow-usdc-to-dusdc',
+    },
+    {
+      icon: 'account_balance',
+      title: 'Swap SUI→USDC',
+      note: hasEnoughSui ? `${balances.sui.toFixed(1)} SUI available` : 'Insufficient SUI',
+      status: hasEnoughSui ? ('available' as const) : ('blocked' as const),
+      active: route === 'deepbook-sui-to-usdc',
+    },
+    {
+      icon: 'lock',
+      title: 'Bridge to Sui',
+      note: 'Preview only',
+      status: 'needs-review' as const,
+      active: route === 'bridge-assets-to-sui',
+    },
+  ]
   return (
     <>
       {/* Balances */}
@@ -219,6 +251,8 @@ function FundToJoinBody() {
         </div>
       </div>
       <div className="border border-outline-variant bg-surface-container-low p-md rounded flex flex-col gap-sm">
+        <Row label="Recommended route" value={fundingRecommendation.label} />
+        <Row label="Why" value={fundingRecommendation.reason} />
         <Row label="Wallet">
           {context.address ? (
             <AddressControl value={context.address} target="account" label="wallet address" />
@@ -250,32 +284,9 @@ function FundToJoinBody() {
           </span>
         </div>
         <div className="grid grid-cols-2 gap-sm">
-          <RouteCard
-            icon="payments"
-            title="Direct DUSDC"
-            note={hasEnoughDusdc ? 'Ready to pledge' : 'Need DUSDC balance'}
-            active={route === 'ready-with-dusdc'}
-          />
-          <RouteCard
-            icon="swap_horiz"
-            title="SUI to USDC"
-            note={
-              balances.sui > 2 ? `${balances.sui.toFixed(1)} SUI available` : 'Insufficient SUI'
-            }
-            active={route === 'deepbook-sui-to-usdc'}
-          />
-          <RouteCard
-            icon="account_balance"
-            title="Bridge"
-            note="Preview only"
-            active={route === 'bridge-assets-to-sui'}
-          />
-          <RouteCard
-            icon="lock"
-            title="Escrow"
-            note="Fill DUSDC offer"
-            active={route === 'club-escrow-usdc-to-dusdc'}
-          />
+          {routeCards.map((item) => (
+            <RouteCard key={item.title} {...item} />
+          ))}
         </div>
       </div>
       {/* Amount Input */}
@@ -677,6 +688,7 @@ function ModalFooterContent({ modal }: { modal: ModalKind }) {
     club,
     context,
     currentMember,
+    fundingRecommendation,
     host,
     oracleSnapshot,
     predictManagerId,
@@ -748,11 +760,20 @@ function ModalFooterContent({ modal }: { modal: ModalKind }) {
         )
       }
       if (!currentMember || balances.dusdc < club.activeRound.suggestedDusdc) {
-        const canSwap = balances.sui > 2
+        const canSwap = fundingRecommendation.route === 'deepbook-sui-to-usdc' && balances.sui > 2
+        const canEscrow =
+          fundingRecommendation.route === 'club-escrow-usdc-to-dusdc' &&
+          balances.usdc >= club.activeRound.suggestedDusdc
         return (
           <>
             <SecondaryBtn label="Close" onClick={() => setModal(null)} />
-            {canSwap ? (
+            {canEscrow ? (
+              <PrimaryBtn
+                label="Create Escrow Offer"
+                onClick={() => setModal('create-escrow')}
+                icon="lock"
+              />
+            ) : canSwap ? (
               <PrimaryBtn
                 label={`Swap ${Math.min(balances.sui - 1.5, 5).toFixed(1)} SUI → USDC`}
                 onClick={() => {
@@ -762,7 +783,12 @@ function ModalFooterContent({ modal }: { modal: ModalKind }) {
                 icon="swap_horiz"
               />
             ) : (
-              <PrimaryBtn label="Need DUSDC" onClick={() => {}} disabled icon="payments" />
+              <PrimaryBtn
+                label="Review Funding Route"
+                onClick={() => {}}
+                disabled
+                icon="payments"
+              />
             )}
           </>
         )
@@ -994,13 +1020,17 @@ function RouteCard({
   icon,
   title,
   note,
+  status,
   active,
 }: {
   icon: string
   title: string
   note: string
+  status: 'ready' | 'available' | 'needs-review' | 'blocked'
   active?: boolean
 }) {
+  const statusLabel =
+    status === 'needs-review' ? 'Review' : status.charAt(0).toUpperCase() + status.slice(1)
   return (
     <label
       className={`relative flex flex-col p-md bg-surface border rounded cursor-pointer transition-colors ${active ? 'border-primary-fixed ring-1 ring-primary-fixed shadow-[0_0_8px_rgba(0,224,179,0.15)]' : 'border-outline-variant hover:bg-surface-bright hover:border-outline'}`}
@@ -1022,6 +1052,19 @@ function RouteCard({
         {title}
       </span>
       <span className="font-data text-data-sm text-on-surface-variant mt-xs">{note}</span>
+      <span
+        className={`mt-sm inline-flex w-fit items-center rounded-full px-sm py-[2px] font-label text-label-caps text-[10px] ${
+          status === 'ready'
+            ? 'bg-primary-fixed-dim/10 text-primary-fixed-dim'
+            : status === 'available'
+              ? 'bg-secondary-fixed/10 text-secondary-fixed'
+              : status === 'needs-review'
+                ? 'bg-tertiary-fixed/10 text-tertiary-fixed-dim'
+                : 'bg-surface-variant text-on-surface-variant'
+        }`}
+      >
+        {statusLabel}
+      </span>
     </label>
   )
 }
