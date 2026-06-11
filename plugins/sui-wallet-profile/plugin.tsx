@@ -9,6 +9,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ComponentType,
   type MouseEvent,
   type ReactNode,
@@ -234,6 +235,7 @@ function WalletProfileContent({
   const dAppKit = useDAppKit()
   const hostContext = useHostSuiContext()
   const predictProfile = usePredictClubWalletProfile()
+  const popupRef = useRef<HTMLElement | null>(null)
 
   // Determine effective connection state:
   // Prefer dApp Kit hooks, fall back to host context for cross-bundle scenarios
@@ -395,6 +397,19 @@ function WalletProfileContent({
     if (sharedHost) sharedHost.requestNetworkSwitch(n)
   }
 
+  useEffect(() => {
+    if (!embedded || !open) return undefined
+    const frame = window.requestAnimationFrame(() => popupRef.current?.focus())
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose?.()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [embedded, open, onClose])
+
   const explorerUrl = effectiveAddress
     ? getSuiScanAccountUrl(effectiveAddress, normalizeNetwork(network))
     : null
@@ -497,7 +512,12 @@ function WalletProfileContent({
 
   return (
     <div className="swp__overlay swp__profile-overlay" onClick={onClose}>
-      <section className="swp__popup swp__profile-popup" onClick={stopPropagation}>
+      <section
+        ref={popupRef}
+        className="swp__popup swp__profile-popup"
+        onClick={stopPropagation}
+        tabIndex={-1}
+      >
         <div className="swp__popup-header">
           <h2 className="swp__popup-title">Wallet Profile</h2>
           <button className="swp__popup-close" type="button" onClick={onClose} aria-label="Close">
@@ -532,6 +552,60 @@ function CopyableAddress({ address }: { address: string }) {
     >
       {copied ? '✓' : '⎘'}
     </button>
+  )
+}
+
+function SuiScanObjectControl({
+  objectId,
+  network,
+  label = 'object',
+}: {
+  objectId: string
+  network: Network
+  label?: string
+}) {
+  const [copied, setCopied] = useState(false)
+
+  const copyObjectId = async () => {
+    try {
+      await navigator.clipboard.writeText(objectId)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1600)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  return (
+    <span className="swp__object-control" title={objectId}>
+      <button
+        className="swp__object-id"
+        type="button"
+        onClick={copyObjectId}
+        aria-label={`Copy ${label} id`}
+      >
+        {shortenAddress(objectId)}
+      </button>
+      <button
+        className="swp__icon-action"
+        type="button"
+        onClick={copyObjectId}
+        title={`Copy ${label} id`}
+        aria-label={`Copy ${label} id`}
+      >
+        {copied ? '✓' : '⎘'}
+      </button>
+      <a
+        className="swp__icon-action"
+        href={getSuiScanObjectUrl(objectId, network)}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={`View ${label} on SuiScan`}
+        aria-label={`View ${label} on SuiScan`}
+      >
+        ↗
+      </a>
+    </span>
   )
 }
 
@@ -617,13 +691,7 @@ function PredictExtension({
           label="PredictManager"
           value={
             managerId ? (
-              <a
-                href={getSuiScanObjectUrl(managerId, network)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {shortenAddress(managerId)} ↗
-              </a>
+              <SuiScanObjectControl objectId={managerId} network={network} label="PredictManager" />
             ) : (
               (profile.manager?.status ?? 'Unavailable')
             )
@@ -650,6 +718,19 @@ function PredictExtension({
           }
         />
       </div>
+      {profile.positions?.length ? (
+        <div className="swp__position-list">
+          {profile.positions.slice(0, 4).map((position) => (
+            <div className="swp__position-row" key={position.id}>
+              <div className="swp__position-main">
+                <span>{position.kind}</span>
+                <strong>{position.quantity ? `${position.quantity} contracts` : 'Position'}</strong>
+              </div>
+              <SuiScanObjectControl objectId={position.id} network={network} label="position" />
+            </div>
+          ))}
+        </div>
+      ) : null}
     </section>
   )
 }

@@ -294,6 +294,67 @@
   text-decoration: none;
 }
 
+.swp__object-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.swp__object-id {
+  min-width: 0;
+  background: none;
+  border: none;
+  color: #4da2ff;
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 0;
+}
+
+.swp__object-id:hover {
+  text-decoration: underline;
+}
+
+.swp__position-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.swp__position-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #1f1f24;
+  border-radius: 8px;
+  background: #151518;
+  padding: 8px;
+}
+
+.swp__position-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.swp__position-main span {
+  color: #666;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.swp__position-main strong {
+  color: #ededed;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 /* States */
 .swp__loading { text-align: center; color: #666; padding: 20px 0; font-size: 13px; }
 .swp__empty { text-align: center; color: #555; padding: 16px 0; font-size: 12px; }
