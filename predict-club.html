@@ -289,11 +289,21 @@
           <div class="flex items-center gap-sm">
             <span class="font-data text-data-lg font-bold">BTC</span>
             <span
-              class="font-data text-data-md text-on-surface-variant tabular-nums"
+              class="font-data text-data-md text-primary-fixed-dim tabular-nums font-bold"
               id="live-price"
               >$64,231.50</span
             >
           </div>
+        </div>
+        <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
+        <!-- Forward -->
+        <div class="flex flex-col" data-animate="strip-item">
+          <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
+            >Forward</span
+          >
+          <span class="font-data text-data-md text-primary-fixed-dim tabular-nums font-bold"
+            >$64,180</span
+          >
         </div>
         <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
         <!-- Direction -->
@@ -304,7 +314,7 @@
           <span
             class="font-data text-data-md text-primary-fixed-dim font-bold flex items-center gap-1"
           >
-            <span class="material-symbols-outlined text-sm">trending_up</span> UP
+            <span class="material-symbols-outlined text-sm">trending_up</span> ABOVE
           </span>
         </div>
         <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
@@ -324,7 +334,7 @@
           <span
             class="font-data text-data-md tabular-nums text-tertiary-fixed-dim"
             id="expiry-timer"
-            >02:14:55</span
+            >Exp 2h 14m · 0s ago</span
           >
         </div>
         <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
@@ -337,9 +347,41 @@
             >45,000 <span class="text-on-surface-variant text-body-sm">DUSDC</span></span
           >
         </div>
+        <div class="w-px h-8 bg-outline-variant hidden lg:block"></div>
+        <!-- Price ticks -->
+        <div class="flex flex-col" data-animate="strip-item">
+          <span class="font-label text-label-caps text-on-surface-variant uppercase tracking-wider"
+            >Price ticks</span
+          >
+          <div
+            class="flex items-center gap-xs rounded-md border border-outline-variant bg-surface-container-high px-xs py-[3px] min-w-[158px]"
+          >
+            <div class="relative flex items-end gap-px h-6 w-28 overflow-hidden shrink-0">
+              <div class="absolute left-0 right-0 top-1/2 h-px bg-outline-variant/70"></div>
+              <div class="relative z-10 flex-1 rounded-sm bg-primary-fixed-dim/45 h-[38%]"></div>
+              <div class="relative z-10 flex-1 rounded-sm bg-primary-fixed-dim/45 h-[52%]"></div>
+              <div class="relative z-10 flex-1 rounded-sm bg-primary-fixed-dim/45 h-[31%]"></div>
+              <div class="relative z-10 flex-1 rounded-sm bg-primary-fixed-dim/45 h-[64%]"></div>
+              <div class="relative z-10 flex-1 rounded-sm bg-primary-fixed-dim/45 h-[48%]"></div>
+              <div class="relative z-10 flex-1 rounded-sm bg-primary-fixed-dim/45 h-[72%]"></div>
+              <div class="relative z-10 flex-1 rounded-sm bg-primary-fixed-dim/45 h-[57%]"></div>
+              <div class="relative z-10 flex-1 rounded-sm bg-primary-fixed-dim h-[86%]"></div>
+            </div>
+            <span class="font-data text-[11px] leading-4 text-primary-fixed-dim tabular-nums font-bold"
+              >24</span
+            >
+          </div>
+        </div>
       </div>
       <!-- Status + CTA -->
       <div class="flex items-center gap-md">
+        <button
+          class="font-label text-label-caps text-primary-fixed-dim uppercase border border-primary-fixed-dim/40 rounded px-sm py-1 flex items-center gap-1 shrink-0"
+          type="button"
+        >
+          Active Oracles (3)
+          <span class="material-symbols-outlined text-[14px]">expand_more</span>
+        </button>
         <div
           class="flex items-center gap-2 border border-primary-fixed-dim rounded-full px-sm py-1 bg-[#00e0b31a]"
         >
@@ -656,11 +698,11 @@
           </h2>
         </div>
         <div class="p-md flex flex-col gap-lg flex-1 overflow-y-auto">
-          <!-- Readiness Checklist -->
+          <!-- Risk checks -->
           <div>
             <div class="flex justify-between items-center mb-sm">
               <span class="font-label text-label-caps text-on-surface-variant uppercase"
-                >Execution Readiness</span
+                >Risk Checks</span
               >
               <span class="font-data text-data-sm text-primary-fixed-dim">4/6</span>
             </div>

@@ -643,8 +643,6 @@ function computeStats(history: QuickRound[], address: string): PlayerStats {
   let losses = 0
   let streak = 0
   let counting = true
-  const netPnl = 0 // would need actual payout data; approximate with quantity
-
   for (const r of history) {
     const p = r.participants.find((x) => x.address.toLowerCase() === address.toLowerCase())
     if (!p || !r.result) continue

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { usePredictClub } from './usePredictClub'
 import type { RiskActionTarget, RiskCheckCategory } from '../domain/riskGate'
-import { formatUsd } from './shared'
+import { formatCompactDusdc, formatUsd } from './shared'
+import { formatProbabilityLabel } from './display'
 
 export function RiskPanel() {
   const { club, context, primaryAction, pricingSnapshot, riskEvaluation, setModal } =
@@ -16,16 +17,24 @@ export function RiskPanel() {
     contractQuote.grossIfWin !== null ||
     contractQuote.potentialProfit !== null ||
     contractQuote.riskReward !== null
-  const probabilityUnavailable = fairValuePreview.degraded || !fairValuePreview.probability
   const isFlooredProbability = fairValuePreview.reason === 'Probability floored for display'
-  const probabilityLabel = isFlooredProbability
-    ? '<0.1%'
-    : probabilityUnavailable
-      ? '—'
-      : `${((fairValuePreview.probability ?? 0) * 100).toFixed(1)}%`
+  const probabilityLabel = formatProbabilityLabel(fairValuePreview.probability, {
+    degraded: fairValuePreview.degraded,
+    reason: fairValuePreview.reason,
+  })
   const profitLabel =
-    contractQuote.potentialProfit !== null ? `+${formatUsd(contractQuote.potentialProfit)}` : '—'
-  const riskRewardLabel = contractQuote.riskReward ? contractQuote.riskReward.toFixed(2) : '—'
+    contractQuote.potentialProfit !== null
+      ? formatCompactDusdc(contractQuote.potentialProfit, { signed: true })
+      : '—'
+  const grossIfWinLabel = formatCompactDusdc(contractQuote.grossIfWin)
+  const costLabel = `-${formatCompactDusdc(maxLossDusdc)}`
+  const riskRewardLabel =
+    contractQuote.riskReward && Number.isFinite(contractQuote.riskReward)
+      ? contractQuote.riskReward.toFixed(2)
+      : '—'
+  const quoteReason = compactQuoteReason(
+    contractQuote.reason ?? 'Waiting for oracle, manager, or contract quote data.',
+  )
   const exposureStatusLabel = quoteUnavailable
     ? hasIndicativeQuote
       ? 'SVI estimate'
@@ -188,8 +197,10 @@ export function RiskPanel() {
             </span>
           </button>
 
-          <div className="grid grid-cols-3 gap-[1px] bg-outline-variant border border-outline-variant rounded overflow-hidden">
-            <CompactMetric label="Cost" tone="loss" value={`-${formatUsd(maxLossDusdc)}`} />
+          <div className="grid grid-cols-2 gap-[1px] bg-outline-variant border border-outline-variant rounded overflow-hidden sm:grid-cols-5">
+            <CompactMetric label="Cost" tone="loss" value={costLabel} />
+            <CompactMetric label="Win" tone="gain" value={probabilityLabel} />
+            <CompactMetric label="Gross" tone="gain" value={grossIfWinLabel} />
             <CompactMetric label="Profit" tone="gain" value={profitLabel} />
             <CompactMetric label="R/R" tone="gain" value={riskRewardLabel} />
           </div>
@@ -207,7 +218,7 @@ export function RiskPanel() {
                     </span>
                   </div>
                   <p className="font-data text-[11px] leading-4 text-on-surface-variant mt-1">
-                    {contractQuote.reason ?? 'Waiting for oracle, manager, or contract quote data.'}
+                    {quoteReason}
                   </p>
                 </div>
               ) : (
@@ -223,7 +234,7 @@ export function RiskPanel() {
                         </span>
                       </div>
                       <p className="font-data text-[11px] leading-4 text-on-surface-variant mt-1">
-                        {contractQuote.reason ?? 'Contract quote unavailable; showing SVI preview.'}
+                        {quoteReason}
                       </p>
                     </div>
                   )}
@@ -232,7 +243,9 @@ export function RiskPanel() {
                     Contract Price
                   </span>
                   <span className="font-data text-data-md text-on-surface tabular-nums font-bold text-right min-w-0 break-words">
-                    {contractQuote.contractPrice ? formatUsd(contractQuote.contractPrice) : '—'}
+                    {contractQuote.contractPrice
+                      ? formatCompactDusdc(contractQuote.contractPrice)
+                      : '—'}
                     <span className="text-[10px] leading-none ml-1 text-on-surface-variant">
                       DUSDC
                     </span>
@@ -242,7 +255,7 @@ export function RiskPanel() {
                     Gross If Win
                   </span>
                   <span className="font-data text-data-md text-primary-fixed-dim tabular-nums font-bold text-right min-w-0 break-words">
-                    {formatUsd(contractQuote.grossIfWin ?? 0)}
+                    {grossIfWinLabel}
                     <span className="text-[10px] leading-none ml-1 text-on-surface-variant">
                       DUSDC
                     </span>
@@ -269,13 +282,13 @@ export function RiskPanel() {
               {pricingSnapshot.manager
                 ? `${pricingSnapshot.manager.positions.length} open`
                 : context.isConnected
-                  ? 'No manager'
+                  ? 'Unavailable'
                   : 'Connect wallet'}
             </span>
             <span className="font-data text-[10px] leading-4 text-on-surface-variant block truncate">
               {pricingSnapshot.manager
                 ? `${formatUsd(pricingSnapshot.manager.quoteBalance)} DUSDC manager balance`
-                : 'Manager-owned positions'}
+                : (pricingSnapshot.managerReason ?? 'Manager-owned positions')}
             </span>
           </div>
           <div className="bg-surface-container-highest border border-outline-variant rounded-lg p-sm min-w-0">
@@ -288,7 +301,9 @@ export function RiskPanel() {
                 : 'Unavailable'}
             </span>
             <span className="font-data text-[10px] leading-4 text-on-surface-variant block truncate">
-              Available liquidity
+              {pricingSnapshot.vault
+                ? 'Available liquidity'
+                : (pricingSnapshot.vaultReason ?? 'Available liquidity')}
             </span>
           </div>
         </div>
@@ -322,6 +337,17 @@ export function RiskPanel() {
       </div>
     </>
   )
+}
+
+function compactQuoteReason(reason: string): string {
+  if (reason.includes('outside the contract pricing bounds')) {
+    return 'Strike is outside contract pricing bounds. Try a nearer strike or active oracle.'
+  }
+  if (reason.includes('devInspect')) {
+    return 'Contract quote failed. Showing SVI estimate when available.'
+  }
+  if (reason.length > 120) return `${reason.slice(0, 117)}...`
+  return reason
 }
 
 function CompactMetric({

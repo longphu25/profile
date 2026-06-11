@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { usePredictClub } from './usePredictClub'
 import { selectAutoOracle, selectOracle } from '../infrastructure/deepbookOracleService'
-import { formatUsd, labelize } from './shared'
+import { AddressControl, formatUsd, labelize } from './shared'
 
 function formatAge(ms: number): string {
   const s = Math.floor((Date.now() - ms) / 1000)
@@ -29,6 +29,10 @@ function directionIcon(direction: 'UP' | 'DOWN' | 'RANGE'): string {
   return 'swap_horiz'
 }
 
+function oracleShortId(id: string): string {
+  return `${id.slice(0, 10)}…${id.slice(-6)}`
+}
+
 export function DecisionStripPanel() {
   const { club, context, primaryAction, toastMessage, oracleSnapshot, riskEvaluation, setModal } =
     usePredictClub()
@@ -48,6 +52,17 @@ export function DecisionStripPanel() {
   const priceTickMax = priceTickSpots.length > 0 ? Math.max(...priceTickSpots) : 0
   const priceTickRange = priceTickMax - priceTickMin || 1
   const oracleSelectionNote = oracleSnapshot.selectionMode === 'manual' ? 'Manual' : 'Auto-selected'
+  const expiryLabel = selectedOracle ? `Exp ${formatExpiry(selectedOracle.expiry)}` : 'Exp pending'
+  const freshnessLabel = oracleSnapshot.lastUpdateMs
+    ? formatAge(oracleSnapshot.lastUpdateMs)
+    : 'No price'
+  const oracleHealthLabel = oracleSnapshot.isHealthy
+    ? `${expiryLabel} · ${freshnessLabel}`
+    : selectedOracle
+      ? `Stale · ${freshnessLabel}`
+      : 'Oracle pending'
+  const hasPrice = Boolean(spot && forward)
+  const hasSvi = Boolean(oracleSnapshot.oracleState?.latest_svi)
   const strikeLabel = round.direction === 'RANGE' ? 'Range' : 'Strike'
   const strikeValue =
     round.direction === 'RANGE'
@@ -75,11 +90,8 @@ export function DecisionStripPanel() {
 
   return (
     <>
-      <div className="flex items-center gap-lg flex-wrap">
-        <div className="flex flex-col" data-animate="strip-item">
-          <span className="font-label text-label-caps text-on-surface-variant uppercase tracking-wider">
-            Asset
-          </span>
+      <div className="flex items-center gap-lg flex-wrap min-w-0">
+        <StripItem label="Asset">
           <div className="flex items-center gap-sm">
             <span className="font-data text-data-lg font-bold">BTC</span>
             <span
@@ -89,30 +101,11 @@ export function DecisionStripPanel() {
               ${formatUsd(spot ?? round.btcSpot)}
             </span>
           </div>
-        </div>
+        </StripItem>
         <Divider />
         <StripItem label="Forward">
           <span className="font-data text-data-md text-primary-fixed-dim tabular-nums font-bold">
             {forward ? `$${formatUsd(forward)}` : '—'}
-          </span>
-        </StripItem>
-        <Divider />
-        <StripItem label="Oracle">
-          <span
-            className={`font-data text-data-md tabular-nums flex items-center gap-1 ${
-              oracleSnapshot.isHealthy ? 'text-primary-fixed-dim' : 'text-error'
-            }`}
-            title={oracleSelectionNote}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                oracleSnapshot.isHealthy ? 'bg-primary-fixed-dim animate-pulse' : 'bg-error'
-              }`}
-            />
-            <span>
-              {selectedOracle ? `Exp ${formatExpiry(selectedOracle.expiry)}` : 'Pending'}
-              {oracleSnapshot.lastUpdateMs ? ` · ${formatAge(oracleSnapshot.lastUpdateMs)}` : ''}
-            </span>
           </span>
         </StripItem>
         <Divider />
@@ -129,9 +122,19 @@ export function DecisionStripPanel() {
           <span className="font-data text-data-md tabular-nums">{strikeValue}</span>
         </StripItem>
         <Divider />
-        <StripItem label="Status">
-          <span className="font-data text-data-md tabular-nums text-tertiary-fixed-dim uppercase">
-            {labelize(round.status)}
+        <StripItem label="Expiry">
+          <span
+            className={`font-data text-data-md tabular-nums flex items-center gap-1 ${
+              oracleSnapshot.isHealthy ? 'text-tertiary-fixed-dim' : 'text-error'
+            }`}
+            title={`${oracleSelectionNote} oracle${selectedOracle ? ` ${oracleShortId(selectedOracle.oracle_id)}` : ''}`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                oracleSnapshot.isHealthy ? 'bg-primary-fixed-dim animate-pulse' : 'bg-error'
+              }`}
+            />
+            {oracleHealthLabel}
           </span>
         </StripItem>
         <Divider />
@@ -143,9 +146,9 @@ export function DecisionStripPanel() {
         </StripItem>
         <Divider />
         <StripItem label="Price ticks">
-          <div className="flex items-center gap-xs rounded-md border border-outline-variant bg-surface-container-high px-xs py-[3px]">
+          <div className="flex items-center gap-xs rounded-md border border-outline-variant bg-surface-container-high px-xs py-[3px] min-w-[158px]">
             <div
-              className="relative flex items-end gap-px h-6 w-28 overflow-hidden"
+              className="relative flex items-end gap-px h-6 w-28 overflow-hidden shrink-0"
               title={`${oracleSnapshot.prices.length} price ticks`}
             >
               <div className="absolute left-0 right-0 top-1/2 h-px bg-outline-variant/70" />
@@ -173,12 +176,21 @@ export function DecisionStripPanel() {
           </div>
         </StripItem>
       </div>
-      <div className="flex items-center gap-md">
+      <div className="flex items-center gap-md shrink-0">
         <div className="relative">
           <button
             type="button"
-            className="font-label text-label-caps text-primary-fixed-dim uppercase border border-primary-fixed-dim/40 rounded px-sm py-1 flex items-center gap-1 shrink-0"
+            className={`font-label text-label-caps uppercase border rounded px-sm py-1 flex items-center gap-1 shrink-0 ${
+              selectedOracle
+                ? 'text-primary-fixed-dim border-primary-fixed-dim/40'
+                : 'text-error border-error/40'
+            }`}
             onClick={() => setOraclesOpen((open) => !open)}
+            title={
+              selectedOracle
+                ? `${oracleSelectionNote}: ${oracleShortId(selectedOracle.oracle_id)}`
+                : 'No active oracle selected'
+            }
           >
             Active Oracles ({activeOracles.length})
             <span
@@ -189,7 +201,7 @@ export function DecisionStripPanel() {
             </span>
           </button>
           {oraclesOpen && (
-            <div className="absolute right-0 top-full z-50 mt-sm w-[360px] max-w-[calc(100vw-2rem)] rounded-lg border border-outline-variant bg-surface-container-highest p-sm shadow-2xl">
+            <div className="absolute right-0 top-full z-50 mt-sm w-[420px] max-w-[calc(100vw-2rem)] rounded-lg border border-outline-variant bg-surface-container-highest p-sm shadow-2xl">
               <div className="flex items-center justify-between gap-sm mb-xs">
                 <span className="font-label text-label-caps text-on-surface-variant uppercase">
                   Active Oracles
@@ -205,46 +217,85 @@ export function DecisionStripPanel() {
                 )}
               </div>
               <div className="flex flex-col gap-xs max-h-56 overflow-y-auto">
-                {activeOracles.map((oracle) => (
-                  <div
-                    key={oracle.oracle_id}
-                    className={`rounded border p-xs ${
-                      oracle.oracle_id === oracleSnapshot.selectedOracleId
-                        ? 'border-primary-fixed-dim/50 bg-primary-fixed-dim/5'
-                        : 'border-outline-variant bg-surface-container'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-sm">
-                      <span className="font-data text-data-sm text-on-surface truncate">
-                        {oracle.underlying_asset}
-                      </span>
-                      <span className="font-label text-label-caps text-on-surface-variant uppercase shrink-0">
-                        {formatExpiry(oracle.expiry)}
-                      </span>
+                {activeOracles.map((oracle) => {
+                  const isSelected = oracle.oracle_id === oracleSnapshot.selectedOracleId
+                  return (
+                    <div
+                      key={oracle.oracle_id}
+                      className={`rounded border p-xs ${
+                        isSelected
+                          ? 'border-primary-fixed-dim/50 bg-primary-fixed-dim/5'
+                          : 'border-outline-variant bg-surface-container'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-sm">
+                        <div className="min-w-0">
+                          <span className="font-data text-data-sm text-on-surface truncate block">
+                            {oracle.underlying_asset}
+                          </span>
+                          <AddressControl
+                            value={oracle.oracle_id}
+                            label="oracle"
+                            target="object"
+                            className="text-[10px] leading-4"
+                          />
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="font-label text-label-caps text-on-surface-variant uppercase block">
+                            {formatExpiry(oracle.expiry)}
+                          </span>
+                          <span className="font-data text-[10px] text-on-surface-variant block">
+                            {oracle.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-sm mt-xs">
+                        {isSelected ? (
+                          <>
+                            <span
+                              className={`font-label text-[9px] leading-3 uppercase border rounded px-[4px] py-px ${
+                                hasPrice
+                                  ? 'text-primary-fixed-dim border-primary-fixed-dim/30'
+                                  : 'text-error border-error/30'
+                              }`}
+                            >
+                              {hasPrice ? 'Price' : 'No price'}
+                            </span>
+                            <span
+                              className={`font-label text-[9px] leading-3 uppercase border rounded px-[4px] py-px ${
+                                hasSvi
+                                  ? 'text-primary-fixed-dim border-primary-fixed-dim/30'
+                                  : 'text-error border-error/30'
+                              }`}
+                            >
+                              {hasSvi ? 'SVI' : 'No SVI'}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-label text-[9px] leading-3 text-on-surface-variant uppercase border border-outline-variant rounded px-[4px] py-px">
+                            Select to load
+                          </span>
+                        )}
+                        {!isSelected ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              selectOracle(oracle.oracle_id)
+                              setOraclesOpen(false)
+                            }}
+                            className="ml-auto font-label text-label-caps text-primary-fixed-dim uppercase border border-primary-fixed-dim/40 rounded px-xs py-[2px] shrink-0"
+                          >
+                            Select
+                          </button>
+                        ) : (
+                          <span className="ml-auto font-label text-label-caps text-primary-fixed-dim uppercase">
+                            Selected
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-sm mt-px">
-                      <span className="font-data text-[10px] text-on-surface-variant truncate">
-                        {oracle.oracle_id.slice(0, 10)}…{oracle.oracle_id.slice(-6)}
-                      </span>
-                      {oracle.oracle_id !== oracleSnapshot.selectedOracleId ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            selectOracle(oracle.oracle_id)
-                            setOraclesOpen(false)
-                          }}
-                          className="ml-auto font-label text-label-caps text-primary-fixed-dim uppercase border border-primary-fixed-dim/40 rounded px-xs py-[2px] shrink-0"
-                        >
-                          Select
-                        </button>
-                      ) : (
-                        <span className="ml-auto font-label text-label-caps text-primary-fixed-dim uppercase">
-                          Selected
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}

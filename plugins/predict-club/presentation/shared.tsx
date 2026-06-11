@@ -1,6 +1,7 @@
 /** Shared tiny components used across panels */
 
 import { useState, useEffect, useCallback } from 'react'
+import { formatCompactDusdc, getSuiScanUrl, shortenSuiAddress, type SuiScanTarget } from './display'
 
 export function Icon({ name }: { name: string }) {
   return (
@@ -23,6 +24,8 @@ export function formatUsd(value: number) {
   }).format(value)
 }
 
+export { formatCompactDusdc, getSuiScanUrl, shortenSuiAddress }
+
 export function formatSigned(value: number) {
   return `${value >= 0 ? '+' : ''}${formatUsd(value)} DUSDC`
 }
@@ -31,6 +34,64 @@ export function formatSigned(value: number) {
 export function truncateAddress(address: string): string {
   if (address.length <= 10) return address
   return `${address.slice(0, 6)}…${address.slice(-4)}`
+}
+
+export function AddressControl({
+  value,
+  target = 'object',
+  label,
+  className = '',
+}: {
+  value: string
+  target?: SuiScanTarget
+  label?: string
+  className?: string
+}) {
+  const [copied, setCopied] = useState(false)
+  const href = getSuiScanUrl(value, target)
+
+  async function copyValue() {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1400)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 min-w-0 font-data text-data-sm tabular-nums ${className}`}
+      title={value}
+    >
+      <button
+        type="button"
+        className="min-w-0 truncate text-primary-fixed-dim hover:text-primary transition-colors"
+        onClick={copyValue}
+        aria-label={`Copy ${label ?? target}`}
+      >
+        {shortenSuiAddress(value)}
+      </button>
+      <button
+        type="button"
+        className="material-symbols-outlined text-[14px] text-on-surface-variant hover:text-primary-fixed-dim transition-colors"
+        onClick={copyValue}
+        aria-label={`Copy full ${label ?? target}`}
+      >
+        {copied ? 'check' : 'content_copy'}
+      </button>
+      <a
+        className="material-symbols-outlined text-[14px] text-on-surface-variant hover:text-primary-fixed-dim transition-colors"
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`View ${label ?? target} on SuiScan`}
+      >
+        open_in_new
+      </a>
+    </span>
+  )
 }
 
 /** Classify a wallet error message into a user-friendly message */

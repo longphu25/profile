@@ -1,5 +1,5 @@
 import { usePredictClub } from './usePredictClub'
-import { formatUsd } from './shared'
+import { AddressControl, formatUsd } from './shared'
 import type { ModalKind } from '../domain/types'
 import { demoClubState } from '../domain/fixtures'
 
@@ -219,16 +219,27 @@ function FundToJoinBody() {
         </div>
       </div>
       <div className="border border-outline-variant bg-surface-container-low p-md rounded flex flex-col gap-sm">
-        <Row
-          label="Wallet"
-          value={context.address ? shortAddress(context.address) : 'Not connected'}
-        />
+        <Row label="Wallet">
+          {context.address ? (
+            <AddressControl value={context.address} target="account" label="wallet address" />
+          ) : (
+            <span className="font-data text-data-md text-on-surface">Not connected</span>
+          )}
+        </Row>
         <Row label="Club Member" value={currentMember?.name ?? 'Will join as You'} />
-        <Row
-          label="PredictManager"
-          value={managerStatus}
-          tone={predictManagerId ? 'mint' : 'amber'}
-        />
+        <Row label="PredictManager" tone={predictManagerId ? 'mint' : 'amber'}>
+          {predictManagerId ? (
+            <AddressControl value={predictManagerId} target="object" label="PredictManager" />
+          ) : (
+            <span
+              className={`font-data text-data-md ${
+                predictManagerId ? 'text-primary-fixed-dim' : 'text-tertiary-fixed-dim'
+              }`}
+            >
+              {managerStatus}
+            </span>
+          )}
+        </Row>
       </div>
       {/* Funding Route */}
       <div className="flex flex-col gap-sm">
@@ -1053,10 +1064,6 @@ function PrimaryBtn({
       {label}
     </button>
   )
-}
-
-function shortAddress(address: string): string {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
 
 function modalTitle(modal: ModalKind): string {

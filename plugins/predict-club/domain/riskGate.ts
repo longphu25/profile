@@ -37,6 +37,13 @@ export interface RiskGateInput {
   indicators: IndicatorSignal[]
   walletConnected?: boolean
   predictManagerReady?: boolean | null
+  oracleActive?: boolean | null
+  priceAvailable?: boolean | null
+  sviAvailable?: boolean | null
+  quoteAvailable?: boolean | null
+  quoteReason?: string
+  vaultAvailable?: boolean | null
+  vaultReason?: string
 }
 
 export function evaluateRiskGate(input: RiskGateInput): RiskEvaluation {
@@ -64,6 +71,48 @@ export function evaluateRiskGate(input: RiskGateInput): RiskEvaluation {
     actionTarget: 'oracle',
     actionHint: 'Wait for live oracle data before confirming or executing.',
   })
+
+  if (input.oracleActive !== undefined && input.oracleActive !== null) {
+    checks.push({
+      id: 'oracle-active',
+      label: 'Oracle active',
+      category: 'market-data',
+      passed: input.oracleActive,
+      severity: 'blocking',
+      message: input.oracleActive ? undefined : 'Selected oracle is not active',
+      actionLabel: 'Review oracle',
+      actionTarget: 'oracle',
+      actionHint: 'Select an active oracle before confirming or executing.',
+    })
+  }
+
+  if (input.priceAvailable !== undefined && input.priceAvailable !== null) {
+    checks.push({
+      id: 'forward-price',
+      label: 'Forward price',
+      category: 'market-data',
+      passed: input.priceAvailable,
+      severity: 'blocking',
+      message: input.priceAvailable ? undefined : 'Forward price unavailable',
+      actionLabel: 'Review oracle',
+      actionTarget: 'oracle',
+      actionHint: 'Wait for Predict server price data before pricing the round.',
+    })
+  }
+
+  if (input.sviAvailable !== undefined && input.sviAvailable !== null) {
+    checks.push({
+      id: 'svi-surface',
+      label: 'SVI surface',
+      category: 'market-data',
+      passed: input.sviAvailable,
+      severity: 'blocking',
+      message: input.sviAvailable ? undefined : 'SVI unavailable',
+      actionLabel: 'Review oracle',
+      actionTarget: 'oracle',
+      actionHint: 'SVI is required for win probability and degraded pricing preview.',
+    })
+  }
 
   // Expiry safety
   const expirySafe = input.expiryMinutes >= minSafeExpiryMinutes
@@ -139,6 +188,36 @@ export function evaluateRiskGate(input: RiskGateInput): RiskEvaluation {
       actionLabel: 'Review funding',
       actionTarget: 'funding',
       actionHint: 'Create or fund a PredictManager before executing.',
+    })
+  }
+
+  if (input.quoteAvailable !== undefined && input.quoteAvailable !== null) {
+    checks.push({
+      id: 'contract-quote',
+      label: 'Contract quote',
+      category: 'trade-safety',
+      passed: input.quoteAvailable,
+      severity: 'warning',
+      message: input.quoteAvailable
+        ? undefined
+        : (input.quoteReason ?? 'Contract quote unavailable'),
+      actionLabel: 'Review round',
+      actionTarget: 'prediction-room',
+      actionHint: 'Use a nearer strike or active oracle if the contract rejects the quote.',
+    })
+  }
+
+  if (input.vaultAvailable !== undefined && input.vaultAvailable !== null) {
+    checks.push({
+      id: 'vault-liquidity',
+      label: 'Vault liquidity',
+      category: 'trade-safety',
+      passed: input.vaultAvailable,
+      severity: 'warning',
+      message: input.vaultAvailable ? undefined : (input.vaultReason ?? 'Vault unavailable'),
+      actionLabel: 'Review oracle',
+      actionTarget: 'oracle',
+      actionHint: 'Vault data is needed to show available liquidity and payout capacity.',
     })
   }
 

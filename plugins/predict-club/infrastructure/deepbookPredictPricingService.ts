@@ -70,7 +70,9 @@ export interface PredictPricingSnapshot {
   fairValue: PayoutPreview
   quote: ContractQuotePreview
   manager: PredictManagerSnapshot | null
+  managerReason?: string
   vault: VaultSnapshot | null
+  vaultReason?: string
   loading: boolean
   updatedAt: number
 }
@@ -121,15 +123,37 @@ export async function fetchPredictPricingSnapshot({
       ...EMPTY_CONTRACT_QUOTE,
       reason: sanitizeContractQuoteReason(error),
     })),
-    walletAddress ? fetchManagerSnapshot(walletAddress, managerId).catch(() => null) : null,
-    fetchVaultSnapshot(walletAddress).catch(() => null),
+    walletAddress
+      ? fetchManagerSnapshot(walletAddress, managerId).then(
+          (snapshot) => ({
+            snapshot,
+            reason: snapshot ? undefined : 'No PredictManager found for this wallet',
+          }),
+          (error) => ({
+            snapshot: null,
+            reason: sanitizeDataUnavailableReason(error, 'PredictManager unavailable'),
+          }),
+        )
+      : Promise.resolve({
+          snapshot: null,
+          reason: 'Connect wallet to resolve PredictManager',
+        }),
+    fetchVaultSnapshot(walletAddress).then(
+      (snapshot) => ({ snapshot, reason: undefined as string | undefined }),
+      (error) => ({
+        snapshot: null,
+        reason: sanitizeDataUnavailableReason(error, 'Vault liquidity unavailable'),
+      }),
+    ),
   ])
 
   return {
     fairValue,
     quote,
-    manager,
-    vault,
+    manager: manager.snapshot,
+    managerReason: manager.reason,
+    vault: vault.snapshot,
+    vaultReason: vault.reason,
     loading: false,
     updatedAt: Date.now(),
   }
@@ -269,6 +293,21 @@ export function sanitizeContractQuoteReason(error: unknown): string {
   }
   if (raw.includes('MoveAbort') || raw.includes('ExecutionError') || raw.length > 240) {
     return 'Contract quote unavailable from devInspect. Use the SVI preview and retry with a nearer strike or active oracle.'
+  }
+  return raw
+}
+
+function sanitizeDataUnavailableReason(error: unknown, fallback: string): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '')
+  if (!raw || raw === 'undefined' || raw === 'null') return fallback
+  if (raw.includes('429') || raw.toLowerCase().includes('too many requests')) {
+    return `${fallback}: Sui RPC rate limit reached`
+  }
+  if (raw.includes('Failed to fetch') || raw.includes('NetworkError')) {
+    return `${fallback}: network request failed`
+  }
+  if (raw.length > 160 || raw.includes('ExecutionError') || raw.includes('MoveAbort')) {
+    return fallback
   }
   return raw
 }

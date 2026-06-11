@@ -61,9 +61,34 @@ function createPricingSnapshot(round: ClubState['activeRound']): PredictPricingS
     fairValue: computeFairValuePreview(round, null),
     quote: EMPTY_CONTRACT_QUOTE,
     manager: null,
+    managerReason: 'Connect wallet to resolve PredictManager',
     vault: null,
+    vaultReason: 'Vault liquidity unavailable',
     loading: false,
     updatedAt: 0,
+  }
+}
+
+function preserveLastGoodPricingSnapshot(
+  previous: PredictPricingSnapshot,
+  next: PredictPricingSnapshot,
+): PredictPricingSnapshot {
+  return {
+    ...next,
+    manager: next.manager ?? previous.manager,
+    managerReason:
+      next.manager || !previous.manager
+        ? next.managerReason
+        : next.managerReason
+          ? `${next.managerReason}; showing last known manager snapshot`
+          : 'Showing last known manager snapshot',
+    vault: next.vault ?? previous.vault,
+    vaultReason:
+      next.vault || !previous.vault
+        ? next.vaultReason
+        : next.vaultReason
+          ? `${next.vaultReason}; showing last known vault snapshot`
+          : 'Showing last known vault snapshot',
   }
 }
 
@@ -167,18 +192,26 @@ export function PredictClubProvider({
       round: club.activeRound,
     })
       .then((snapshot) => {
-        if (!cancelled) setPricingSnapshot(snapshot)
+        if (!cancelled) {
+          setPricingSnapshot((current) => preserveLastGoodPricingSnapshot(current, snapshot))
+        }
       })
       .catch(() => {
         if (!cancelled) {
-          setPricingSnapshot({
+          setPricingSnapshot((current) => ({
             fairValue: computeFairValuePreview(club.activeRound, oracleSnapshot.oracleState),
             quote: { ...EMPTY_CONTRACT_QUOTE, reason: 'Contract quote unavailable' },
-            manager: null,
-            vault: null,
+            manager: current.manager,
+            managerReason: current.manager
+              ? 'PredictManager unavailable; showing last known manager snapshot'
+              : 'PredictManager unavailable',
+            vault: current.vault,
+            vaultReason: current.vault
+              ? 'Vault liquidity unavailable; showing last known vault snapshot'
+              : 'Vault liquidity unavailable',
             loading: false,
             updatedAt: Date.now(),
-          })
+          }))
         }
       })
 
@@ -334,14 +367,28 @@ export function PredictClubProvider({
           ? null
           : Boolean(predictManagerId)
         : null,
+      oracleActive: oracleSnapshot.oracleState?.status === 'active',
+      priceAvailable: Boolean(oracleSnapshot.oracleState?.latest_price?.forward),
+      sviAvailable: Boolean(oracleSnapshot.oracleState?.latest_svi),
+      quoteAvailable: pricingSnapshot.quote.status === 'ok',
+      quoteReason: pricingSnapshot.quote.reason,
+      vaultAvailable: Boolean(pricingSnapshot.vault),
+      vaultReason: pricingSnapshot.vaultReason,
       ...overrides,
     }),
     [
       balances.dusdc,
       consensus.bias,
       oracleSnapshot.lastUpdateMs,
+      oracleSnapshot.oracleState?.latest_price?.forward,
+      oracleSnapshot.oracleState?.latest_svi,
+      oracleSnapshot.oracleState?.status,
       predictManagerId,
       predictManagerLoading,
+      pricingSnapshot.quote.reason,
+      pricingSnapshot.quote.status,
+      pricingSnapshot.vault,
+      pricingSnapshot.vaultReason,
       round,
       suiContext.isConnected,
     ],

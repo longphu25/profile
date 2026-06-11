@@ -3,7 +3,6 @@ import { recommendFundingRoute } from '../application/recommendFundingRoute'
 import { loadClubState, saveClubState } from '../data/localClubStore'
 import { fetchWalletBalances } from '../infrastructure/walletBalanceService'
 import { subscribeOracle, getSnapshot } from '../infrastructure/deepbookOracleService'
-import { createSuiPredictGateway } from '../infrastructure/suiPredictGateway'
 import { computePayoutPreview } from '../domain/payoutPreview'
 import { OrderFlowChart } from './OrderFlowChart'
 import type {
@@ -37,22 +36,7 @@ export function PredictClubRoot({ host }: PredictClubRootProps) {
   const [context, setContext] = useState<SuiContext>(() => host?.getSuiContext() ?? defaultContext)
   const [mobileTab, setMobileTab] = useState<MobileTab>('clubs')
   const [balances, setBalances] = useState<AssetBalances>({ sui: 0, usdc: 0, dusdc: 0 })
-  const [predictManagerId, setPredictManagerId] = useState<string | null>(null)
-
   const oracleSnapshot = useSyncExternalStore(subscribeOracle, getSnapshot)
-  const predictGateway = useMemo(() => createSuiPredictGateway(), [])
-
-  // Resolve PredictManager for connected wallet
-  useEffect(() => {
-    if (!context.isConnected || !context.address) {
-      setPredictManagerId(null)
-      return
-    }
-    predictGateway
-      .fetchManagerId(context.address)
-      .then(setPredictManagerId)
-      .catch(() => {})
-  }, [context.address, context.isConnected, predictGateway])
 
   useEffect(() => {
     if (!host) return undefined
@@ -351,7 +335,7 @@ function RiskExecutionColumn({
       <div className="pc-risk-body">
         <section>
           <div className="pc-section-title">
-            <span>Execution Readiness</span>
+            <span>Risk Checks</span>
             <b>{items.filter(([, ok]) => ok).length}/6</b>
           </div>
           <div className="pc-check-list">
