@@ -241,6 +241,8 @@ Objective:
 
 Show what the connected wallet owns and what liquidity backs the round.
 
+Status: implemented in `0.45.6`.
+
 Work:
 
 1. Parse and render binary positions.
@@ -260,6 +262,23 @@ Validation:
 
 - script/manual check with a known wallet
 - Playwright empty and populated portfolio states
+
+Implementation notes:
+
+- `RiskPanel` now shows portfolio position rows instead of only a raw open count.
+- Wallet profile now shows open, binary, and range counts alongside a vault
+  backing section.
+- Vault metrics are rendered as explicit liquidity, max payout, withdrawal, and
+  LP share values rather than hidden behind generic placeholders.
+- Position rows surface oracle ids and strike context when available.
+- The shared wallet profile payload preserves binary/range position details for
+  the popup and the Predict Club panels.
+
+Validation run:
+
+- `bun run build`
+- `bun run test:unit`
+- `bun run test:e2e -- tests/e2e/predict-club.spec.ts`
 
 ## Phase 6: Funding Router And Escrow
 

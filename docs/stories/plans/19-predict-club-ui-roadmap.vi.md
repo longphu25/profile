@@ -237,6 +237,8 @@ Mục tiêu:
 
 Hiển thị ví đang sở hữu gì và thanh khoản nào đang backing round.
 
+Trạng thái: đã triển khai trong `0.45.6`.
+
 Việc cần làm:
 
 1. Parse và render binary positions.
@@ -256,6 +258,23 @@ Validation:
 
 - script/manual check với wallet đã biết
 - Playwright cho portfolio empty và populated states
+
+Ghi chú triển khai:
+
+- `RiskPanel` giờ hiển thị các row vị thế thay vì chỉ tổng số open.
+- Wallet profile hiển thị số lượng open, binary và range cùng một section
+  vault backing riêng.
+- Vault metrics hiển thị rõ liquidity, max payout, withdrawal và LP share,
+  không còn ẩn sau placeholder chung.
+- Mỗi position row cho thấy oracle id và strike context khi có dữ liệu.
+- Shared wallet profile payload giữ lại binary/range details để popup và các
+  panel khác dùng chung.
+
+Validation đã chạy:
+
+- `bun run build`
+- `bun run test:unit`
+- `bun run test:e2e -- tests/e2e/predict-club.spec.ts`
 
 ## Phase 6: Funding Router Và Escrow
 
