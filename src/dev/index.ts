@@ -1,21 +1,31 @@
-// Dev-only tooling loader. No-op + tree-shaken in production because every
-// import is gated behind `import.meta.env.DEV`.
+// Dev-only tooling loader. Both tools are OFF by default and opt-in via env
+// flags, because each adds main-thread overhead in dev:
+//   - react-scan instruments every component (profiling + canvas overlay)
+//   - react-grab adds element-selection listeners
 //
-// - react-scan: render-performance outlines + toolbar (spot wasted re-renders)
-// - react-grab: copy any UI element with its source context (file:line) for agents
+// Enable per tool in a local `.env` (see `.env.example`):
+//   VITE_DEV_REACT_SCAN=true
+//   VITE_DEV_REACT_GRAB=true
 //
-// Import this once at the top of an entry's main.tsx: `import '../dev'`.
+// Everything is gated behind `import.meta.env.DEV` so it is tree-shaken from
+// production builds regardless of the flags.
+
+function flagEnabled(value: unknown): boolean {
+  return value === 'true' || value === '1' || value === true
+}
+
 if (import.meta.env.DEV) {
-  // React Scan — initialise before first render where possible. Logging is off
-  // to avoid console spam; the on-screen toolbar/outlines remain available.
-  import('react-scan')
-    .then(({ scan }) => scan({ enabled: true, log: false }))
-    .catch(() => {
+  if (flagEnabled(import.meta.env.VITE_DEV_REACT_SCAN)) {
+    import('react-scan')
+      .then(({ scan }) => scan({ enabled: true, log: false }))
+      .catch(() => {
+        // Optional dev tooling — ignore load failures.
+      })
+  }
+
+  if (flagEnabled(import.meta.env.VITE_DEV_REACT_GRAB)) {
+    import('react-grab').catch(() => {
       // Optional dev tooling — ignore load failures.
     })
-
-  // React Grab — element-to-source copy for agent workflows.
-  import('react-grab').catch(() => {
-    // Optional dev tooling — ignore load failures.
-  })
+  }
 }

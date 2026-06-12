@@ -15,12 +15,28 @@ import '../dev'
 Wired into all `src/*/main.tsx` entries (app, predict-club, btc-chart,
 deepbook, polymarket, sui-dashboard, sui-wasm, etc.).
 
+Both tools are **OFF by default** and opt-in via env flags, because each adds
+main-thread overhead in dev (react-scan instruments every component; react-grab
+adds selection listeners). Enable in a local `.env`:
+
+```bash
+VITE_DEV_REACT_SCAN=true   # render-perf outlines + profiling
+VITE_DEV_REACT_GRAB=true   # element -> source copy
+```
+
 ```ts
 if (import.meta.env.DEV) {
-  import('react-scan').then(({ scan }) => scan({ enabled: true, log: false }))
-  import('react-grab')
+  if (flagEnabled(import.meta.env.VITE_DEV_REACT_SCAN)) {
+    import('react-scan').then(({ scan }) => scan({ enabled: true, log: false }))
+  }
+  if (flagEnabled(import.meta.env.VITE_DEV_REACT_GRAB)) {
+    import('react-grab')
+  }
 }
 ```
+
+Restart `npm run dev` after changing flags. Everything is gated behind
+`import.meta.env.DEV`, so it is tree-shaken from production regardless.
 
 ## React Scan (`react-scan@0.5.7`)
 
