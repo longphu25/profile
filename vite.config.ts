@@ -76,6 +76,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      '/api/sui-testnet': {
+        target: 'https://fullnode.testnet.sui.io',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/api\/sui-testnet/, ''),
+      },
       '/api/mexc': {
         target: 'https://contract.mexc.com',
         changeOrigin: true,

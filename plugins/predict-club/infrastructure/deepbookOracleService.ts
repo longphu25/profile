@@ -5,6 +5,7 @@
  */
 
 import { MIN_SAFE_EXPIRY_MINUTES } from '../domain/policies'
+import { TESTNET_WS_URL } from '../../../src/constants/predict-club'
 import type { SVIParams } from '../domain/payoutPreview'
 
 const PREDICT_SERVER = 'https://predict-server.testnet.mystenlabs.com'
@@ -53,7 +54,11 @@ export interface ClubOracleSnapshot {
 type Listener = (snapshot: ClubOracleSnapshot) => void
 
 const STALE_THRESHOLD_MS = 60_000
-const WS_URL = 'wss://fullnode.testnet.sui.io:443'
+// Public fullnodes have removed WebSocket subscriptions, so this is opt-in only
+// (set VITE_TESTNET_WS_URL to a subscription-capable endpoint to enable).
+const WS_URL = TESTNET_WS_URL
+const WS_MAX_RECONNECTS = 5
+let wsReconnectAttempts = 0
 
 let snapshot: ClubOracleSnapshot = {
   selectedOracleId: null,
@@ -293,10 +298,14 @@ async function refresh() {
 // ── WebSocket for real-time events ─────────────────────────────────────────────
 
 function connectWS() {
+  // No subscription-capable WS endpoint configured — skip entirely (avoids
+  // endless failed reconnects against public fullnodes). REST polling covers updates.
+  if (!WS_URL) return
   try {
     ws = new WebSocket(WS_URL)
 
     ws.onopen = () => {
+      wsReconnectAttempts = 0
       ws!.send(
         JSON.stringify({
           jsonrpc: '2.0',
@@ -370,13 +379,22 @@ function connectWS() {
 
     ws.onclose = () => {
       ws = null
-      wsReconnectTimer = setTimeout(connectWS, 5000)
+      scheduleReconnect()
     }
 
     ws.onerror = () => ws?.close()
   } catch {
-    wsReconnectTimer = setTimeout(connectWS, 5000)
+    scheduleReconnect()
   }
+}
+
+/** Exponential backoff reconnect, capped at WS_MAX_RECONNECTS attempts. */
+function scheduleReconnect() {
+  if (!WS_URL) return
+  if (wsReconnectAttempts >= WS_MAX_RECONNECTS) return
+  const delay = Math.min(30_000, 5_000 * 2 ** wsReconnectAttempts)
+  wsReconnectAttempts++
+  wsReconnectTimer = setTimeout(connectWS, delay)
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
