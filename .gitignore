@@ -41,3 +41,8 @@ package_summaries/
 
 # Local CodeGraph index
 .codegraph/
+
+# Local env (keep .env.example tracked)
+.env
+.env.local
+.env.*.local

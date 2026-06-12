@@ -85,3 +85,19 @@ server: {
 }
 // rồi set VITE_TESTNET_RPC_URL=/sui-rpc
 ```
+
+
+## Cấu hình production (env)
+
+Xem `.env.example` ở root. Copy sang `.env` và set RPC CORS-friendly:
+
+```bash
+# .env
+VITE_TESTNET_RPC_URL=https://sui-testnet-endpoint.blockvision.org/v1/<API_KEY>
+# VITE_TESTNET_WS_URL=  # để trống — public fullnode không hỗ trợ WS subscription
+```
+
+- Dev: để trống → tự dùng Vite proxy `/api/sui-testnet` (đã hết CORS).
+- Production: BẮT BUỘC set `VITE_TESTNET_RPC_URL` vì không có dev proxy; nếu để trống
+  sẽ fallback về `fullnode.testnet.sui.io` và bị CORS chặn.
+- `.env` đã được gitignore; chỉ `.env.example` được commit.
