@@ -29,7 +29,7 @@ import {
 } from './alerts'
 import { drawVolumeProfile as drawVP } from './volume-profile'
 import { drawOrderFlow, type OFOverlaySignal } from './order-flow-overlay'
-import { computeSMC, type SMCResult } from './smc'
+import { computeSMC, initSmcWasm, type SMCResult } from './smc-wasm'
 import { buildBoxFlipSignals, type BoxFlipResult } from './box-flip'
 import { downloadChartSnapshot } from './snapshot'
 
@@ -2937,6 +2937,7 @@ const BtcChartPlugin: Plugin = {
   },
 
   mount() {
+    initSmcWasm()
     console.log('[BtcChart] mounted')
   },
 
