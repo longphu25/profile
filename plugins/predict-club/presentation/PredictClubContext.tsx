@@ -63,6 +63,10 @@ import {
 
 const ZERO_BALANCES: AssetBalances = { sui: 0, usdc: 0, dusdc: 0 }
 
+// Re-anchor the round strike toward live spot when it drifts beyond this fraction
+// (5%), so the contract quote stays within pricing bounds.
+const STRIKE_REANCHOR_THRESHOLD = 0.05
+
 function createPricingSnapshot(round: ClubState['activeRound']): PredictPricingSnapshot {
   return {
     fairValue: computeFairValuePreview(round, null),
@@ -290,11 +294,25 @@ export function PredictClubProvider({
     return subscribeOracle((snap) => {
       const spot = snap.oracleState?.latest_price?.spot
       if (spot && spot > 0) {
-        // Update live BTC spot in active round
-        store.updateClub((c) => ({
-          ...c,
-          activeRound: { ...c.activeRound, btcSpot: spot },
-        }))
+        // Update live BTC spot, and re-anchor a far-off strike toward spot so the
+        // contract quote stays computable (avoids "strike outside pricing bounds").
+        store.updateClub((c) => {
+          const round = c.activeRound
+          const editable =
+            round.status === 'draft' || round.status === 'open' || round.status === 'confirmed'
+          const farFromSpot =
+            round.strike > 0 && Math.abs(round.strike - spot) / spot > STRIKE_REANCHOR_THRESHOLD
+          let nextRound = { ...round, btcSpot: spot }
+          if (editable && round.direction !== 'RANGE' && farFromSpot) {
+            // Snap strike to spot plus a small directional offset (0.25%).
+            const offset = spot * 0.0025
+            nextRound = {
+              ...nextRound,
+              strike: Math.round(round.direction === 'DOWN' ? spot - offset : spot + offset),
+            }
+          }
+          return { ...c, activeRound: nextRound }
+        })
       }
 
       // Derive live indicators from price history
