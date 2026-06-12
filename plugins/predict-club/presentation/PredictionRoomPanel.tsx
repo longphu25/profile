@@ -74,6 +74,7 @@ export function PredictionRoomPanel() {
           <button
             type="button"
             onClick={() => setEvidenceOpen((open) => !open)}
+            aria-expanded={evidenceOpen}
             className="flex items-center gap-1 font-label text-label-caps text-on-surface-variant uppercase hover:text-on-surface transition-colors"
           >
             <span
