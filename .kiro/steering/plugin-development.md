@@ -221,3 +221,82 @@ Add to `SUI_PLUGINS` in `src/sui-dashboard/SuiDashboard.tsx`
 
 ### Vite build config
 Add entry point in `vite.config.ts` → `build.rollupOptions.input`
+
+## Advanced Plugin Architecture (Multi-Adapter / Multi-Source)
+
+For plugins that integrate multiple external sources (e.g., swap with 5 DEXes), follow this extended structure:
+
+### Required Directory Layout
+
+```
+plugins/<name>/
+├── plugin.tsx              # THIN entry — only wires host API + top-level component
+├── style.css               # All scoped styles (BEM: .<name>__<element>)
+├── components/             # UI layer (SRP per component)
+│   ├── index.ts            # Barrel export
+│   ├── <Component>.tsx     # Each file = 1 responsibility
+│   └── ...
+├── hooks/                  # React hooks (state + side effects)
+│   ├── index.ts            # Barrel export
+│   └── use<Feature>.ts    # Named by what it does
+└── lib/                    # Pure logic layer (no React)
+    ├── index.ts            # Barrel export (public API only)
+    ├── types.ts            # ALL interfaces + type definitions
+    ├── utils.ts            # Pure utility functions (formatters, timeout, cache)
+    ├── <adapter>.ts        # One file per external source (Strategy pattern)
+    └── router.ts           # Orchestrator (coordinates adapters)
+```
+
+### SOLID Checklist for Plugins
+
+- [ ] **SRP:** `plugin.tsx` < 50 lines of wiring logic. Real logic lives in lib/.
+- [ ] **OCP:** Adding a new adapter = 1 new file + `.register()` call. No edits to existing files.
+- [ ] **LSP:** All adapters implement same `DexAdapter` (or equivalent) interface.
+- [ ] **ISP:** Types file exports small focused interfaces, not monolithic ones.
+- [ ] **DIP:** Hooks/router depend on interface, never import concrete adapter for logic.
+
+### Adapter (Strategy) Pattern Template
+
+```typescript
+// lib/types.ts
+export interface DataAdapter {
+  readonly id: string
+  readonly label: string
+  readonly timeout: number
+  supports(params: Params): boolean
+  fetch(params: Params): Promise<Result>
+}
+
+// lib/<source>.ts
+export class MySourceAdapter implements DataAdapter {
+  readonly id = 'my-source'
+  readonly label = 'My Source'
+  readonly timeout = 3000
+  supports(params) { return true }
+  async fetch(params) { /* ... */ }
+}
+
+// lib/router.ts — Open/Closed orchestrator
+export class Router {
+  private adapters: DataAdapter[] = []
+  register(adapter: DataAdapter): this { this.adapters.push(adapter); return this }
+  async fetchAll(params: Params): Promise<Result[]> { /* parallel + timeout */ }
+}
+```
+
+### Performance Patterns (Required for multi-source plugins)
+
+1. **Parallel fetch:** Always `Promise.allSettled` — never sequential.
+2. **Per-adapter timeout:** `withTimeout(adapter.fetch(p), adapter.timeout)`
+3. **Debounce input:** 300ms minimum before triggering fetches.
+4. **Cache with TTL:** 5s default. Key = `${adapter.id}:${inputHash}`.
+5. **Streaming render:** Show results as they arrive, sort incrementally.
+6. **Pre-warm:** Ping endpoints on mount to warm TCP/TLS connections.
+
+### Code Quality for Plugins
+
+- All public interfaces/functions have JSDoc.
+- Adapter properties marked `readonly`.
+- No `any` types — use `unknown` + type narrowing.
+- Barrel exports ONLY re-export public API — internals stay private.
+- No circular imports. Dependency flow: `types → utils → adapters → router → hooks → components → plugin`.
