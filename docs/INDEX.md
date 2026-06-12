@@ -12,6 +12,7 @@
 - [[HARNESS]] — Human-agent collaboration model for this repo
 - [[HARNESS_FACTORY]] — Repo-native port of `revfactory/harness` skill logic
 - [[FEATURE_INTAKE]] — Tiny / normal / high-risk classification before work
+- [[CONTEXT_RULES]] — What to read per task phase and risk lane (context engineering)
 - [[ARCHITECTURE]] — Architecture boundaries and source docs
 - [[TEST_MATRIX]] — Validation expectations by work type
 - [[HARNESS_BACKLOG]] — Missing harness improvements
@@ -25,6 +26,7 @@
 - [[product/predict-club-ui-motion]] — Predict Club product motion rules using Transitions.dev patterns
 - [[product/predict-club-ui-requirements]] — Predict Club cockpit UI contract, panel responsibilities, wallet/address UX, errors, and validation
 - [[stories/README]] — Story packet and plan folder
+- [[stories/STATUS]] — Uniform status index for all plans
 - [[decisions/README]] — Durable decision records
 - [[decisions/predict-club-architecture]] — Hybrid custody and future vault decision
 - [[decisions/predict-club-funding-escrow]] — P2P escrow exchange decision for USDC to DUSDC funding
@@ -122,6 +124,13 @@
 |--------|---------|------|--------|
 | sui-zk-login | OAuth → ZK Proof → Wallet + Send (devnet) | — | ✅ |
 | sui-zk-merkle | Poseidon Merkle tree → identity.json blobs | Rust 155KB | ✅ |
+
+## DeFi — Swap, WASM & RPC
+
+- [[defi/swap-router-optimization]] — Multi-DEX swap aggregator design (DeepBook, Cetus, Turbos, 7k, Bluefin)
+- [[defi/wasm-candidates]] — Plugin functions eligible for Rust/WASM acceleration
+- [[defi/rpc-cors-and-wallet]] — Browser RPC, CORS proxy, WebSocket gating, and wallet connect
+- [[defi/self-host-fonts]] — Self-hosting the Satoshi font (replaces fontshare CDN)
 
 ## DeFi — NAVI Protocol (4 plugins)
 

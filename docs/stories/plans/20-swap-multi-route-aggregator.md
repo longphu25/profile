@@ -3,7 +3,7 @@
 > Story: Nâng cấp plugin `sui-swap` từ single-DEX (DeepBook only) thành multi-route aggregator
 > hỗ trợ DeepBook (CLOB), Cetus (AMM), Turbos (AMM).
 
-**Status:** Planning  
+**Status:** Done  
 **Priority:** High  
 **Estimate:** 2-3 sessions  
 
