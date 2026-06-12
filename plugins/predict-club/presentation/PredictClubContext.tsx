@@ -24,6 +24,13 @@ import {
 import { claimWinnings } from '../application/claimWinnings'
 import { swapSuiToUsdc } from '../application/swapSuiToUsdc'
 import { fetchOnChainOffers } from '../infrastructure/escrowQueryService'
+
+/** Merge local + on-chain escrow offers, de-duplicating by id (last write wins). */
+function mergeEscrowOffers<T extends { id: string }>(localOnly: T[], incoming: T[]): T[] {
+  const byId = new Map<string, T>()
+  for (const offer of [...localOnly, ...incoming]) byId.set(offer.id, offer)
+  return Array.from(byId.values())
+}
 import { settleRound, type SettlementOutcome } from '../application/settleRound'
 import { executeTradeplan } from '../application/executeTradeplan'
 import { createSuiPredictGateway } from '../infrastructure/suiPredictGateway'
@@ -258,9 +265,7 @@ export function PredictClubProvider({
             if (offers.length > 0) {
               store.updateClub((c) => {
                 const localOnly = c.escrowOffers.filter((o) => !o.id.startsWith('0x'))
-                const seen = new Set(localOnly.map((o) => o.id))
-                const unique = offers.filter((o) => !seen.has(o.id))
-                return { ...c, escrowOffers: [...localOnly, ...unique] }
+                return { ...c, escrowOffers: mergeEscrowOffers(localOnly, offers) }
               })
             }
           })
@@ -465,7 +470,7 @@ export function PredictClubProvider({
           if (onChainOffers.length > 0) {
             store.updateClub((c) => {
               const localOnly = c.escrowOffers.filter((o) => !o.id.startsWith('0x'))
-              return { ...c, escrowOffers: [...localOnly, ...onChainOffers] }
+              return { ...c, escrowOffers: mergeEscrowOffers(localOnly, onChainOffers) }
             })
           }
         })
