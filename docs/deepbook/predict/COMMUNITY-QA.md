@@ -391,3 +391,362 @@ KeychainID (on-chain PDA)
 | Builder Tooling | SDKs, dev tools, indexers |
 | Walrus | Decentralized data, storage |
 | DeepBook | Trading, prediction markets, margin |
+
+
+---
+
+## Q11: Lấy dbUSDC bằng swap on-chain (không cần faucet)
+
+### Câu hỏi
+
+> Làm sao lấy dbUSDC trên testnet?
+
+### Trả lời (từ team)
+
+Swap trực tiếp on-chain qua DeepBook V3 SDK:
+
+```typescript
+import { DeepBookClient } from '@mysten/deepbook-v3'
+
+const [baseOutCoin, quoteOutCoin, deepOutCoin] = db.deepBook.swapExactQuoteForBase({
+  poolKey: 'SUI_DBUSDC', // pool phù hợp
+  inOut: 0, // Minimum quote out (0 = no slippage protection)
+});
+
+tx.transferObjects(
+  [baseOutCoin, quoteOutCoin, deepOutCoin],
+  signer.toSuiAddress(),
+);
+```
+
+- SDK docs: https://docs.sui.io/onchain-finance/deepbookv3-sdk/
+- Dùng version mới nhất của DeepBook SDK (V3)
+- Đảm bảo compatible versions giữa `@mysten/deepbook-v3` và `@mysten/sui`
+
+### ⚠️ dbUSDC ≠ dUSDC (Predict)
+
+| Token | Protocol | Cách lấy |
+|-------|----------|----------|
+| dbUSDC | DeepBook Spot (quote asset) | Swap on-chain via DeepBook SDK |
+| dUSDC | Predict (quote asset) | Request qua tally form hoặc team mint |
+| USDC (Circle) | General testnet | Circle testnet faucet |
+
+Predict dùng **dUSDC** (`0xe95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC`), không phải dbUSDC.
+
+---
+
+## Q12: Oracle keeper outage — settlement stuck
+
+### Report (June 2025)
+
+Oracle `0x195833aeee071530d2bdcd2e03916b7458d57c81ed540b82d6e1cb594bdf41f2`:
+- BTC, expiry Jun 12 08:00 UTC
+- **Stopped price updates** Jun 10 at 13:55 UTC
+- Multiple oracles stopped at exact same second → keeper instance crashed
+- Expired Jun 12 → `settlement_price` = null (chưa settle)
+- Rest of system fine — other feeds updating normally
+
+### Impact
+
+- Positions priced off this oracle **cannot be redeemed** (settlement_price null)
+- Options: wait for keeper restart, hoặc rebuild position on fresh market
+
+### Lessons
+
+1. **Oracle staleness = real production problem** — validates Risk Guardian concept
+2. UI should check `settlement_price != null` trước khi enable redeem button
+3. Display warning: "Oracle pending settlement — keeper may be down"
+4. Multiple oracles dying at same time = single keeper instance failure (not oracle-specific)
+5. Cần monitor oracle `last_update_timestamp` — nếu stale > N minutes, flag warning
+
+### Code implication
+
+```typescript
+// Trước khi attempt redeem, check settlement
+const oracleState = await fetch(`${PREDICT_SERVER}/oracles/${oracleId}/state`)
+const data = await oracleState.json()
+
+if (data.status === 'settled' && data.settlement_price != null) {
+  // Safe to redeem
+} else if (data.status === 'pending_settlement') {
+  // Show warning: oracle expired but not yet settled
+  // Keeper may be down — check last_update_timestamp
+}
+```
+
+---
+
+## Q13: DeepBook Sandbox — alternative testing tool
+
+### Resource
+
+https://github.com/MystenLabs/deepbook-sandbox
+
+Dùng khi:
+- Cần test customizations mà không request lượng lớn DUSDC
+- Team đang quản lý DUSDC distribution chặt (volume cao)
+- Muốn isolated testing environment
+
+### DUSDC request policy (June 2025)
+
+- Team từ chối requests lớn ($20k DUSDC)
+- Khuyên: "start with a smaller amount first"
+- Alternative: dùng DeepBook sandbox
+- Faucet form vẫn hoạt động: https://tally.so/r/Xx102L
+
+---
+
+## Updated Resources
+
+| Resource | URL | Notes |
+|----------|-----|-------|
+| DeepBook V3 SDK docs | https://docs.sui.io/onchain-finance/deepbookv3-sdk/ | Swap, margin, spot |
+| DeepBook Sandbox | https://github.com/MystenLabs/deepbook-sandbox | Isolated testing |
+| DUSDC faucet (tally form) | https://tally.so/r/Xx102L | Request small amounts |
+| Predict server | https://predict-server.testnet.mystenlabs.com | API endpoints |
+| SUI testnet faucet | https://faucet.sui.io | Gas only |
+| Circle testnet USDC | (Circle faucet) | Type: `0xa1ec7fc...::usdc::USDC` |
+
+
+---
+
+## Q14: Oracle settlement — authorized keepers & orphaned oracles (DEEP DIVE)
+
+### Context
+
+Oracle `0x195833...f2` (BTC, expiry Jun 12 08:00 UTC) stopped getting price updates Jun 10 13:55 UTC.
+Multiple oracles stopped at same second → keeper instance died. Oracle expired → `settlement_price` still null.
+Another oracle with same 08:00 expiry settled within seconds → different keeper instance, still alive.
+
+### Key technical facts confirmed
+
+#### 1. Settlement requires `OracleSVICap` (authorized only)
+
+```move
+// Only authorized keeper can call this:
+public fun update_prices(
+  oracle: &mut OracleSVI,
+  cap: &OracleSVICap,  // ← AUTHORIZED CAP REQUIRED
+  spot: u64,
+  forward: u64,
+  // ... SVI params
+)
+```
+
+- `update_prices` with `OracleSVICap` is the ONLY way to push new prices and trigger settlement
+- When oracle passes expiry + next price update arrives → settlement_price freezes
+- **No permissionless settlement path exists** — you cannot settle an oracle yourself
+- This is fundamentally different from `redeem_permissionless` (anyone can redeem positions)
+
+#### 2. Keeper architecture (inferred from behavior)
+
+```
+Mysten Keeper Infrastructure:
+├── Keeper Instance A (owns OracleSVICap for oracles 1, 2, 3)
+├── Keeper Instance B (owns OracleSVICap for oracles 4, 5, 6)
+├── Keeper Instance C (owns OracleSVICap for oracles 7, 8, 9)
+└── ...
+
+If Instance A dies:
+  → Oracles 1, 2, 3 stop receiving price updates
+  → When they expire, settlement_price = null forever (orphaned)
+  → Oracles 4-9 continue normally (different keeper instances)
+```
+
+- Settlement is NOT "all oracles at expiry X settle together"
+- Each oracle is bound to a specific keeper instance via its `OracleSVICap`
+- Keeper instance death = all its oracles become orphaned
+- Multiple oracles dying at same second = strong signal of single instance crash
+
+#### 3. Orphaned oracle = likely stuck forever (on testnet)
+
+The question "do orphaned oracles eventually get picked up?" was asked directly to team.
+**No definitive answer given** — team only said "this oracle is already expired" (not helpful).
+
+**Practical conclusion**: On testnet, orphaned oracles likely stay unsettled forever unless:
+- Team manually restarts the specific keeper instance
+- Team manually settles with the cap
+- A monitoring system detects and re-assigns
+
+**Recommendation**: Move tests to a fresh market. Don't wait.
+
+**Real impact reported**: One builder's vault held a position on this orphaned oracle — funds
+locked, cannot recover without settlement. Rebuilding the entire simulation from scratch is
+significantly more work than simply swapping the oracle, because positions are part of a larger
+test setup (vault state, manager balances, strategy parameters). This is a **capital loss**
+scenario on testnet.
+
+**Design lesson**: Never commit vault/strategy funds to a single oracle without an exit plan.
+Consider spreading positions across multiple oracles, or building test harnesses that can
+snapshot and restore state independently of oracle settlement.
+
+---
+
+### Bài học rút ra (Lessons Learned)
+
+#### For builders on DeepBook Predict
+
+| # | Lesson | Action |
+|---|--------|--------|
+| 1 | Oracle settlement = centralized dependency | Design UI/bot to handle "oracle stuck" gracefully |
+| 2 | Cannot self-serve settle | Don't build features that assume settlement happens automatically |
+| 3 | Keeper instance crash = multiple oracles orphaned at once | Monitor `last_update_timestamp` across all oracles |
+| 4 | Same expiry ≠ same fate | Don't assume "expiry 08:00 = all settle at 08:00" |
+| 5 | Testnet infra less reliable than mainnet will be | Always have fallback: "use a different oracle" |
+| 6 | Position stuck on orphaned oracle = capital locked | Build early detection + warning for users |
+| 7 | Vault holding positions on single oracle = single point of failure | Diversify across oracles, never all-in on one |
+| 8 | Rebuilding simulation from scratch >> swapping oracle | Design vault tests with recovery path (snapshot state, allow oracle swap) |
+
+#### For our codebase specifically
+
+| # | What to implement | Where |
+|---|-------------------|-------|
+| 1 | Orphaned oracle detection | Oracle health monitor |
+| 2 | "Oracle likely stuck" warning in UI | Trade panel, portfolio |
+| 3 | Auto-suggest fresh oracle when current is stale | Oracle selector |
+| 4 | Don't show "Claim" button for positions on unsettled oracles | Portfolio tab |
+| 5 | Track keeper health via `last_update_timestamp` delta | KeeperTab, alerts |
+
+---
+
+### Two types of "keeper" — critical distinction
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  TYPE 1: Oracle Price Keeper (AUTHORIZED — Mysten only)         │
+│                                                                  │
+│  What: Push price updates, trigger settlement                    │
+│  Who: Mysten Labs infra (holds OracleSVICap)                    │
+│  Permission: AUTHORIZED — requires OracleSVICap                  │
+│  If dies: Oracle stops updating, settlement_price = null         │
+│  You can do: NOTHING (except report to team)                     │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│  TYPE 2: Position Redeem Keeper (PERMISSIONLESS — anyone)        │
+│                                                                  │
+│  What: Call redeem_permissionless for settled positions           │
+│  Who: Anyone with SUI for gas                                    │
+│  Permission: NONE — fully permissionless                         │
+│  Prerequisite: Oracle MUST be settled (settlement_price != null)  │
+│  Incentive: Currently none (you pay gas, payout goes to owner)   │
+│  You can do: Build and run this yourself ✅                      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**TYPE 2 cannot function without TYPE 1 completing first.**
+If oracle never settles → redeem_permissionless can never be called → positions stuck.
+
+---
+
+### Orphaned oracle detection code
+
+```typescript
+/**
+ * Detect if an oracle is likely orphaned (expired but never settled).
+ * 
+ * Heuristic: If oracle expired > 30 minutes ago and still not settled,
+ * the keeper is probably dead. Normal settlement happens within seconds.
+ */
+function classifyOracleHealth(oracle: {
+  status: string
+  expiry: number
+  settlement_price: number | null
+  last_update_timestamp?: number
+}): 'healthy' | 'stale' | 'orphaned' {
+  const now = Date.now()
+  
+  // Already settled = healthy
+  if (oracle.status === 'settled' && oracle.settlement_price != null) {
+    return 'healthy'
+  }
+  
+  // Active but not updating = stale (keeper may be dying)
+  if (oracle.status === 'active' && oracle.last_update_timestamp) {
+    const staleness = now - oracle.last_update_timestamp
+    if (staleness > 5 * 60 * 1000) return 'stale' // > 5 min without update
+  }
+  
+  // Expired but not settled = orphaned
+  if (oracle.expiry < now) {
+    const timeSinceExpiry = now - oracle.expiry
+    if (timeSinceExpiry > 30 * 60 * 1000) return 'orphaned' // > 30 min past expiry
+    return 'stale' // < 30 min — might still settle
+  }
+  
+  return 'healthy'
+}
+
+// Usage in UI:
+const health = classifyOracleHealth(oracle)
+if (health === 'orphaned') {
+  showWarning('Oracle expired >30 min ago without settlement. Keeper likely down. Use a different oracle.')
+} else if (health === 'stale') {
+  showWarning('Oracle has not updated recently. Monitor closely.')
+}
+```
+
+---
+
+### Timeline of the incident (reconstructed)
+
+```
+Jun 10, 13:55 UTC — Keeper instance crashes
+  → Multiple oracles stop receiving price updates
+  → oracle 0x1958... last_update_timestamp frozen at Jun 10 13:55
+
+Jun 10-12 — Oracle is "active" but stale (no new data)
+  → Mints still possible (oracle.status = active)
+  → But prices are stale → positions priced incorrectly
+
+Jun 12, 08:00 UTC — Oracle expiry timestamp reached
+  → Status transitions to "pending_settlement"
+  → Normally: first post-expiry price update → freezes settlement_price
+  → But keeper is dead → no update arrives → settlement_price = null
+
+Jun 12, 08:00+ UTC — Other oracles with same expiry settle normally
+  → Different keeper instance → different OracleSVICap → works fine
+
+Jun 12, present — Oracle stuck in "pending_settlement" forever
+  → settlement_price = null
+  → redeem_permissionless cannot be called
+  → Positions are effectively locked
+```
+
+---
+
+### Impact on predict-club architecture
+
+For Predict Club rounds:
+1. When selecting oracle for a round, **check staleness** before proposing to members
+2. If oracle becomes stale during an active round, **warn leader immediately**
+3. If round oracle is orphaned post-expiry, **mark round as "settlement pending — oracle issue"**
+4. Provide "Switch to fresh oracle" action for leader (cancel round + create new)
+5. Never auto-commit to a single oracle without health check
+
+```typescript
+// Before creating a round, validate oracle health
+async function validateOracleForRound(oracleId: string): Promise<{
+  valid: boolean
+  reason?: string
+}> {
+  const state = await fetch(`${PREDICT_SERVER}/oracles/${oracleId}/state`).then(r => r.json())
+  
+  if (state.status !== 'active') {
+    return { valid: false, reason: `Oracle is ${state.status}, not active` }
+  }
+  
+  const staleness = Date.now() - state.last_update_timestamp
+  if (staleness > 5 * 60 * 1000) {
+    return { valid: false, reason: `Oracle stale (last update ${Math.round(staleness/60000)}m ago)` }
+  }
+  
+  // Check expiry is far enough in the future for the round
+  const timeToExpiry = state.expiry - Date.now()
+  if (timeToExpiry < 10 * 60 * 1000) {
+    return { valid: false, reason: `Oracle expires in ${Math.round(timeToExpiry/60000)}m — too soon` }
+  }
+  
+  return { valid: true }
+}
+```
