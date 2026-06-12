@@ -54,17 +54,21 @@ export async function initWasm(): Promise<boolean> {
   wasmLoadAttempted = true
 
   try {
-    const wasmUrl = new URL(
-      '/plugins/sui-swap/wasm/pkg/sui_swap_wasm.js',
-      globalThis.location?.origin || 'http://localhost',
-    )
-    const wasm = await (0, eval)('imp' + 'ort')(wasmUrl.href)
-    await wasm.default()
-    wasmModule = wasm as unknown as WasmModule
+    const pkgUrl = `${import.meta.env.BASE_URL}plugins/sui-swap/pkg/sui_swap_wasm.js`
+    const mod = (await import(/* @vite-ignore */ pkgUrl)) as unknown as {
+      default: (input?: { module_or_path: URL }) => Promise<unknown>
+    } & WasmModule
+    await mod.default({
+      module_or_path: new URL(
+        `${import.meta.env.BASE_URL}plugins/sui-swap/pkg/sui_swap_wasm_bg.wasm`,
+        location.origin,
+      ),
+    })
+    wasmModule = mod as unknown as WasmModule
     console.log('[SuiSwap] WASM loaded — using native compute')
     return true
-  } catch {
-    console.log('[SuiSwap] WASM unavailable — using JS fallback')
+  } catch (e) {
+    console.log('[SuiSwap] WASM unavailable — using JS fallback', e)
     return false
   }
 }
