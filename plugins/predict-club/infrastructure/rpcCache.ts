@@ -133,6 +133,63 @@ export async function cachedRpc<T = unknown>(
   }
 }
 
+/**
+ * Cached REST GET (for indexer/server endpoints, not JSON-RPC).
+ *
+ * Shares the TTL cache, request coalescing, and circuit breaker keyed by the
+ * full URL. Use for read-only endpoints; never for writes or coin-object reads
+ * that must be fresh at transaction-build time.
+ */
+export async function cachedGet<T = unknown>(
+  url: string,
+  ttlMs: number = DEFAULT_TTL_MS,
+): Promise<T> {
+  const key = `GET|${url}`
+  const now = Date.now()
+
+  if (ttlMs > 0) {
+    const hit = cache.get(key)
+    if (hit && hit.expiresAt > now) {
+      return hit.value as T
+    }
+  }
+
+  if (isEndpointDown(url)) {
+    throw new Error(`Endpoint unavailable (circuit open): ${url}`)
+  }
+
+  const existing = inflight.get(key)
+  if (existing) return existing as Promise<T>
+
+  const promise = (async () => {
+    try {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`GET ${url}: ${res.status}`)
+      const data = await res.json()
+      recordSuccess(url)
+      if (ttlMs > 0) {
+        cache.set(key, { value: data, expiresAt: Date.now() + ttlMs })
+      }
+      return data as T
+    } catch (err) {
+      recordFailure(url)
+      throw err
+    }
+  })()
+
+  inflight.set(key, promise)
+  try {
+    return (await promise) as T
+  } finally {
+    inflight.delete(key)
+  }
+}
+
+/** Invalidate a cached GET by exact URL. */
+export function invalidateGet(url: string): void {
+  cache.delete(`GET|${url}`)
+}
+
 /** Invalidate cached entries. Pass a method to scope, or omit to clear all. */
 export function invalidateRpc(method?: string): void {
   if (!method) {

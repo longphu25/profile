@@ -1,8 +1,11 @@
 import { Transaction } from '@mysten/sui/transactions'
 import type { Direction } from '../domain/types'
 import { TESTNET_RPC_URL } from '../../../src/constants/predict-club'
+import { cachedGet } from './rpcCache'
 
 const PREDICT_SERVER = 'https://predict-server.testnet.mystenlabs.com'
+// Manager registry rarely changes within a session — cache the list 20s.
+const MANAGERS_TTL_MS = 20_000
 const PREDICT_ID = '0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a38028a'
 const PREDICT_PACKAGE = '0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138'
 const DUSDC_TYPE =
@@ -105,8 +108,7 @@ export function createSuiPredictGateway(): SuiPredictGateway {
 
     async fetchManagerId(walletAddress) {
       try {
-        const res = await fetch(`${PREDICT_SERVER}/managers`)
-        const managers = await res.json()
+        const managers = await cachedGet<unknown>(`${PREDICT_SERVER}/managers`, MANAGERS_TTL_MS)
         if (!Array.isArray(managers)) return null
         const found = managers.find(
           (m: any) => m.owner?.toLowerCase() === walletAddress.toLowerCase(),
