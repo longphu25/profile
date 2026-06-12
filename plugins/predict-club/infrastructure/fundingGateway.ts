@@ -1,17 +1,13 @@
 import { Transaction } from '@mysten/sui/transactions'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
-import {
-  DeepBookClient,
-  testnetCoins,
-  testnetPools,
-  testnetPackageIds,
-} from '@mysten/deepbook-v3'
+import { DeepBookClient, testnetCoins, testnetPools, testnetPackageIds } from '@mysten/deepbook-v3'
 import {
   PREDICT_CLUB_PACKAGE_ID,
   CLUB_ESCROW_MARKET_ID,
+  TESTNET_RPC_URL,
 } from '../../../src/constants/predict-club'
 
-const RPC_URL = 'https://fullnode.testnet.sui.io:443'
+const RPC_URL = TESTNET_RPC_URL
 
 // === Interface (Port) ===
 

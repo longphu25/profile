@@ -1,5 +1,6 @@
 import { Transaction } from '@mysten/sui/transactions'
 import type { Direction } from '../domain/types'
+import { TESTNET_RPC_URL } from '../../../src/constants/predict-club'
 
 const PREDICT_SERVER = 'https://predict-server.testnet.mystenlabs.com'
 const PREDICT_ID = '0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a38028a'
@@ -63,7 +64,7 @@ function snapStrike(usd: number, tickSize: number, minStrike: number): number {
 async function fetchDusdcCoins(
   walletAddress: string,
 ): Promise<{ coinObjectId: string; balance: string }[]> {
-  const res = await fetch('https://fullnode.testnet.sui.io:443', {
+  const res = await fetch(TESTNET_RPC_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

@@ -1,9 +1,10 @@
 import { bcs } from '@mysten/sui/bcs'
-import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
+import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
 import { Transaction } from '@mysten/sui/transactions'
 import { computePayoutPreview, type PayoutPreview } from '../domain/payoutPreview'
 import type { Direction, PredictionRound } from '../domain/types'
 import type { OracleState } from './deepbookOracleService'
+import { TESTNET_RPC_URL } from '../../../src/constants/predict-club'
 
 const PREDICT_SERVER = 'https://predict-server.testnet.mystenlabs.com'
 const PACKAGE_ID = '0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138'
@@ -17,7 +18,7 @@ const PRICE_SCALE = 1_000_000_000
 const CONTRACT_UNIT = 10n ** BigInt(DUSDC_DECIMALS)
 const FALLBACK_SENDER = '0x0000000000000000000000000000000000000000000000000000000000000001'
 
-const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl('testnet'), network: 'testnet' })
+const client = new SuiJsonRpcClient({ url: TESTNET_RPC_URL, network: 'testnet' })
 
 export interface ContractQuotePreview {
   status: 'ok' | 'unavailable'
