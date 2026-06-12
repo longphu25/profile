@@ -17,6 +17,8 @@ dApp Kit rewrite, etc.), see `.agents/skills/sui-sdk-2-migration/SKILL.md`.
 ## Project Harness
 
 - Start docs work at `docs/README.md`, `docs/HARNESS.md`, and `docs/FEATURE_INTAKE.md`.
+- Use `docs/CONTEXT_RULES.md` to decide what to read per task phase and risk lane.
+- Check `docs/stories/STATUS.md` for the current state of each plan before reusing one.
 - Use `docs/product/` for stable product truth, `docs/stories/` for scoped plans/work packets,
   `docs/decisions/` for durable tradeoffs, and existing domain folders for technical depth.
 - For local docs search, prefer `qmd search ... -c profile-docs` and `qmd get ...`.
