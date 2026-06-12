@@ -1,4 +1,4 @@
-import '../dev/react-grab'
+import '../dev'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { SuiWasmDashboard } from './SuiWasmDashboard'

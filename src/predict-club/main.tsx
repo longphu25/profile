@@ -1,4 +1,4 @@
-import '../dev/react-grab'
+import '../dev'
 import { StrictMode, type ComponentType } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { createPortal } from 'react-dom'

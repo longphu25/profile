@@ -1,4 +1,4 @@
-import '../dev/react-grab'
+import '../dev'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 
