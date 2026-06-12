@@ -1,3 +1,4 @@
+import '../dev/react-grab'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BtcChartPage } from './BtcChartPage'

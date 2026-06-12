@@ -50,6 +50,7 @@
 - [[runtime-entry-points]] — Các entry HTML/TSX, trang nào dùng để làm gì, build ra sao
 - [[plugin-catalog]] — Danh mục plugin theo domain: wallet, DeFi, DeepBook, Seal, Walrus
 - [[development-workflow]] — Cách chạy, build, thêm plugin mới, và các lưu ý release/docs
+- [[development-workflow-react-grab]] — React Grab: copy UI element → source context for agents
 
 ## Documentation Organization
 
