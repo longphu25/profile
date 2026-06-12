@@ -1,12 +1,10 @@
-// SUI Swap Plugin
-// Swap tokens via DeepBook v3 pools with real on-chain execution
-// Builds swap transactions using @mysten/deepbook-v3 SDK
-// Requires connected wallet (via SuiHostAPI) for execution
+// SUI Swap Plugin v2 — Multi-Route Aggregator
+// Architecture: Strategy pattern (DexAdapter) + SRP components + streaming hooks
 
 import type { Plugin, HostAPI } from '../../src/plugins/types'
 import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Transaction } from '@mysten/sui/transactions'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import {
@@ -18,109 +16,28 @@ import {
   testnetPools,
   testnetPackageIds,
 } from '@mysten/deepbook-v3'
+import { useSwapQuotes } from './hooks/useSwapQuotes'
+import { TokenInput, RouteList, SlippageSelector } from './components'
+import type { QuoteParams, DexId } from './lib/types'
+import { formatNum } from './lib/utils'
+import { initWasm } from './lib/wasm-bridge'
 import './style.css'
-
-const INDEXER = {
-  mainnet: 'https://deepbook-indexer.mainnet.mystenlabs.com',
-  testnet: 'https://deepbook-indexer.testnet.mystenlabs.com',
-}
 
 const RPC_URLS: Record<string, string> = {
   mainnet: 'https://fullnode.mainnet.sui.io:443',
   testnet: 'https://fullnode.testnet.sui.io:443',
 }
 
-const EXPLORER = {
+const EXPLORER: Record<string, string> = {
   mainnet: 'https://suiscan.xyz/mainnet',
   testnet: 'https://suiscan.xyz/testnet',
 }
 
-interface PoolInfo {
-  pool_id: string
-  pool_name: string
-  base_asset_symbol: string
-  quote_asset_symbol: string
-  base_asset_decimals: number
-  quote_asset_decimals: number
-}
-
-interface OrderBookData {
-  bids: [string, string][]
-  asks: [string, string][]
-}
-
-interface TickerEntry {
-  last_price: number
-  base_volume: number
-  quote_volume: number
-  isFrozen: number
-}
+const SUPPORTED_TOKENS = ['SUI', 'USDC', 'DEEP', 'WAL', 'USDT']
 
 let sharedHost: SuiHostAPI | null = null
 
-// --- Helpers ---
-function formatPrice(v: number): string {
-  if (v === 0) return '—'
-  if (v >= 1000) return v.toLocaleString(undefined, { maximumFractionDigits: 2 })
-  if (v >= 1) return v.toFixed(4)
-  if (v >= 0.001) return v.toFixed(5)
-  return v.toFixed(8)
-}
-
-function formatNum(v: number): string {
-  if (v >= 1e6) return `${(v / 1e6).toFixed(2)}M`
-  if (v >= 1e3) return `${(v / 1e3).toFixed(2)}K`
-  return v.toFixed(4)
-}
-
-/** Estimate output from orderbook depth (market order simulation) */
-function estimateSwapOutput(
-  amount: number,
-  isBuy: boolean,
-  orderbook: OrderBookData,
-): { output: number; avgPrice: number; priceImpact: number } {
-  if (amount <= 0) return { output: 0, avgPrice: 0, priceImpact: 0 }
-
-  const levels = isBuy ? orderbook.asks : orderbook.bids
-  if (levels.length === 0) return { output: 0, avgPrice: 0, priceImpact: 0 }
-
-  const bestPrice = Number(levels[0][0])
-  let remaining = amount
-  let filled = 0
-
-  for (const [priceStr, sizeStr] of levels) {
-    const price = Number(priceStr)
-    const size = Number(sizeStr)
-    if (isBuy) {
-      const levelCost = price * size
-      if (remaining >= levelCost) {
-        remaining -= levelCost
-        filled += size
-      } else {
-        filled += remaining / price
-        remaining = 0
-        break
-      }
-    } else {
-      if (remaining >= size) {
-        remaining -= size
-        filled += size * price
-      } else {
-        filled += remaining * price
-        remaining = 0
-        break
-      }
-    }
-  }
-
-  const spent = amount - remaining
-  const avgPrice = isBuy ? spent / filled || 0 : filled / (amount - remaining) || 0
-  const priceImpact = bestPrice > 0 ? Math.abs((avgPrice - bestPrice) / bestPrice) * 100 : 0
-
-  return { output: filled, avgPrice, priceImpact }
-}
-
-/** Create a DeepBookClient for the given network and address */
+/** Factory: create DeepBookClient for on-chain execution */
 function createDeepBook(network: 'mainnet' | 'testnet', address: string): DeepBookClient {
   const client = new SuiGrpcClient({ network, baseUrl: RPC_URLS[network] })
   return new DeepBookClient({
@@ -133,12 +50,11 @@ function createDeepBook(network: 'mainnet' | 'testnet', address: string): DeepBo
   })
 }
 
-/** Check if a pool key exists in the SDK constants */
-function isSdkPool(poolKey: string, network: 'mainnet' | 'testnet'): boolean {
-  const pools = network === 'mainnet' ? mainnetPools : testnetPools
-  return poolKey in pools
-}
-
+/**
+ * SwapContent — main swap UI component.
+ * Composed from small SRP sub-components.
+ * Uses useSwapQuotes hook for streaming multi-route quotes.
+ */
 function SwapContent() {
   const [network, setNetwork] = useState<'mainnet' | 'testnet'>(() => {
     if (sharedHost) {
@@ -147,370 +63,231 @@ function SwapContent() {
     }
     return 'mainnet'
   })
-  const [pools, setPools] = useState<PoolInfo[]>([])
-  const [selectedPool, setSelectedPool] = useState('')
-  const [ticker, setTicker] = useState<Record<string, TickerEntry>>({})
-  const [orderbook, setOrderbook] = useState<OrderBookData | null>(null)
-  const [isBuy, setIsBuy] = useState(true)
+  const [fromToken, setFromToken] = useState('SUI')
+  const [toToken, setToToken] = useState('USDC')
   const [amount, setAmount] = useState('')
-  const [slippage, setSlippage] = useState(0.5) // 0.5%
-  const [loading, setLoading] = useState(true)
-  const [obLoading, setObLoading] = useState(false)
+  const [slippage, setSlippage] = useState(0.5)
+  const [selectedRoute, setSelectedRoute] = useState<DexId | null>(null)
   const [swapping, setSwapping] = useState(false)
   const [txDigest, setTxDigest] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [swapError, setSwapError] = useState<string | null>(null)
-  const [isConnected, setIsConnected] = useState(false)
-  const [walletAddress, setWalletAddress] = useState<string | null>(() => {
-    if (!sharedHost) return null
-    const d = sharedHost.getSharedData('walletProfile') as { address: string } | null
-    return d?.address ?? null
-  })
 
-  const base = INDEXER[network]
-  const explorerBase = EXPLORER[network]
-
-  // Track wallet from shared data
-  useEffect(() => {
-    if (!sharedHost) return
-    return sharedHost.onSharedDataChange('walletProfile', (v) => {
-      const p = v as { address: string } | null
-      setWalletAddress(p?.address ?? null)
-      setIsConnected(!!p?.address)
-    })
-  }, [])
-
-  const pool = useMemo(() => pools.find((p) => p.pool_name === selectedPool), [pools, selectedPool])
-  const fromSymbol = isBuy ? (pool?.quote_asset_symbol ?? '—') : (pool?.base_asset_symbol ?? '—')
-  const toSymbol = isBuy ? (pool?.base_asset_symbol ?? '—') : (pool?.quote_asset_symbol ?? '—')
-  const lastPrice = ticker[selectedPool]?.last_price ?? 0
-  const canUseSdk = isSdkPool(selectedPool, network)
-
-  // Fetch pools + ticker
-  useEffect(() => {
-    setLoading(true)
-    Promise.all([
-      fetch(`${base}/get_pools`).then((r) => r.json()),
-      fetch(`${base}/ticker`).then((r) => r.json()),
-    ])
-      .then(([poolData, tickerData]: [PoolInfo[], Record<string, TickerEntry>]) => {
-        const active = poolData.filter((p) => tickerData[p.pool_name]?.isFrozen !== 1)
-        setPools(active)
-        setTicker(tickerData)
-        if (active.length > 0 && !active.find((p) => p.pool_name === selectedPool)) {
-          const def = active.find((p) => p.pool_name === 'SUI_USDC') ?? active[0]
-          setSelectedPool(def.pool_name)
-        }
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
-      .finally(() => setLoading(false))
-  }, [base])
-
-  // Fetch orderbook
-  const fetchOrderbook = useCallback(async () => {
-    if (!selectedPool) return
-    setObLoading(true)
-    try {
-      const res = await fetch(`${base}/orderbook/${selectedPool}?level=2&depth=20`)
-      if (!res.ok) throw new Error(`Orderbook: ${res.status}`)
-      setOrderbook(await res.json())
-    } catch {
-      setOrderbook(null)
-    } finally {
-      setObLoading(false)
-    }
-  }, [base, selectedPool])
-
-  useEffect(() => {
-    fetchOrderbook()
-  }, [fetchOrderbook])
+  const [address, setAddress] = useState<string | null>(
+    () => sharedHost?.getSuiContext().address ?? null,
+  )
+  const [isConnected, setIsConnected] = useState(
+    () => sharedHost?.getSuiContext().isConnected ?? false,
+  )
 
   useEffect(() => {
     if (!sharedHost) return
     return sharedHost.onSuiContextChange((ctx) => {
-      if (ctx.network === 'testnet' || ctx.network === 'mainnet') setNetwork(ctx.network)
+      setAddress(ctx.address)
+      setIsConnected(ctx.isConnected)
+      if (ctx.network === 'testnet' || ctx.network === 'mainnet') {
+        setNetwork(ctx.network as 'mainnet' | 'testnet')
+      }
     })
   }, [])
 
-  const amountNum = Number(amount) || 0
-  const estimate = orderbook ? estimateSwapOutput(amountNum, isBuy, orderbook) : null
+  const amountNum = parseFloat(amount) || 0
+
+  const quoteParams: QuoteParams | null = useMemo(() => {
+    if (amountNum <= 0 || fromToken === toToken) return null
+    return {
+      fromToken,
+      toToken,
+      amount: amountNum,
+      slippage: slippage / 100,
+      sender: address,
+      network,
+    }
+  }, [fromToken, toToken, amountNum, slippage, address, network])
+
+  const { quotes, loading, error, bestDex } = useSwapQuotes(quoteParams)
+
+  useEffect(() => {
+    if (bestDex && !selectedRoute) setSelectedRoute(bestDex)
+  }, [bestDex, selectedRoute])
 
   const handleFlip = () => {
-    setIsBuy((b) => !b)
+    setFromToken(toToken)
+    setToToken(fromToken)
     setAmount('')
+    setSelectedRoute(null)
+    setTxDigest(null)
+    setSwapError(null)
+  }
+
+  const resetState = () => {
+    setSelectedRoute(null)
     setTxDigest(null)
     setSwapError(null)
   }
 
   const handleSwap = async () => {
-    if (!sharedHost || !walletAddress || !estimate || estimate.output <= 0 || !canUseSdk) return
+    if (!sharedHost || !selectedRoute || !address) return
+    const chosen = quotes.find((q) => q.dex === selectedRoute)
+    if (!chosen) return
 
     setSwapping(true)
     setSwapError(null)
     setTxDigest(null)
 
     try {
-      const dbClient = createDeepBook(network, walletAddress)
-      const minOut = estimate.output * (1 - slippage / 100)
-
-      // Build the swap transaction
-      const tx = new Transaction()
-      tx.setSender(walletAddress)
-
-      if (isBuy) {
-        // Buy base: spend quote → receive base
-        // swapExactQuoteForBase: amount = quote amount, minOut = min base out
-        dbClient.deepBook.swapExactQuoteForBase({
-          poolKey: selectedPool,
-          amount: amountNum,
-          deepAmount: 0,
-          minOut,
-        })(tx)
+      if (chosen.dex === 'deepbook') {
+        await executeDeepBookSwap(chosen.outputAmount)
+      } else if (chosen.serializedTx) {
+        const tx = Transaction.from(chosen.serializedTx)
+        const result = await sharedHost.signAndExecuteTransaction(tx)
+        setTxDigest(result.digest)
       } else {
-        // Sell base: spend base → receive quote
-        // swapExactBaseForQuote: amount = base amount, minOut = min quote out
-        dbClient.deepBook.swapExactBaseForQuote({
-          poolKey: selectedPool,
-          amount: amountNum,
-          deepAmount: 0,
-          minOut,
-        })(tx)
+        throw new Error(`${chosen.dexLabel} execution not available for this route`)
       }
-
-      const result = await sharedHost.signAndExecuteTransaction(tx)
-      setTxDigest(result.digest)
-
-      // Refresh orderbook after swap
-      fetchOrderbook()
-    } catch (err) {
-      setSwapError(err instanceof Error ? err.message : String(err))
+    } catch (err: unknown) {
+      setSwapError(err instanceof Error ? err.message : 'Swap failed')
     } finally {
       setSwapping(false)
     }
   }
 
+  const executeDeepBookSwap = async (estimatedOutput: number) => {
+    if (!address || !sharedHost) return
+    const db = createDeepBook(network, address)
+    const pools = network === 'mainnet' ? mainnetPools : testnetPools
+    const poolKey = `${fromToken}_${toToken}`
+    const reverseKey = `${toToken}_${fromToken}`
+    const isBase = poolKey in pools
+    const actualKey = isBase ? poolKey : reverseKey
+
+    if (!(actualKey in pools)) throw new Error('Pool not found in DeepBook SDK')
+
+    const minOut = estimatedOutput * (1 - slippage / 100)
+    const tx = new Transaction()
+
+    if (isBase) {
+      const [baseCoin, quoteCoin, deepCoin] = db.deepBook.swapExactBaseForQuote({
+        poolKey: actualKey,
+        amount: amountNum,
+        deepAmount: 0.5,
+        minOut,
+      })(tx)
+      tx.transferObjects([baseCoin, quoteCoin, deepCoin], address)
+    } else {
+      const [baseCoin, quoteCoin, deepCoin] = db.deepBook.swapExactQuoteForBase({
+        poolKey: actualKey,
+        amount: amountNum,
+        deepAmount: 0.5,
+        minOut,
+      })(tx)
+      tx.transferObjects([baseCoin, quoteCoin, deepCoin], address)
+    }
+
+    const result = await sharedHost.signAndExecuteTransaction(tx)
+    setTxDigest(result.digest)
+  }
+
+  const selectedQuote = quotes.find((q) => q.dex === selectedRoute)
+  const outputDisplay = loading
+    ? '...'
+    : selectedQuote
+      ? formatNum(selectedQuote.outputAmount)
+      : quotes[0]
+        ? formatNum(quotes[0].outputAmount)
+        : '0.0'
+
   return (
     <div className="sui-swap">
       <div className="sui-swap__header">
-        <h3 className="sui-swap__title">Swap</h3>
-        <p className="sui-swap__desc">Trade via DeepBook v3 orderbook</p>
+        <h2 className="sui-swap__title">Swap</h2>
+        <p className="sui-swap__desc">Best price across DeepBook · Cetus · Turbos · 7k · Bluefin</p>
       </div>
 
-      {error && <div className="sui-swap__error">{error}</div>}
-      {loading && <div className="sui-swap__loading">Loading pools...</div>}
+      <TokenInput
+        label="From"
+        amount={amount}
+        onAmountChange={(v) => {
+          setAmount(v)
+          resetState()
+        }}
+        token={fromToken}
+        onTokenChange={(t) => {
+          setFromToken(t)
+          resetState()
+        }}
+        tokens={SUPPORTED_TOKENS.filter((t) => t !== toToken)}
+      />
 
-      {!loading && (
-        <>
-          {/* From */}
-          <div className="sui-swap__card">
-            <div className="sui-swap__card-label">You pay</div>
-            <div className="sui-swap__card-row">
-              <input
-                className="sui-swap__amount-input"
-                type="text"
-                inputMode="decimal"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => {
-                  setAmount(e.target.value.replace(/[^0-9.]/g, ''))
-                  setTxDigest(null)
-                  setSwapError(null)
-                }}
-              />
-              <select
-                className="sui-swap__token-select"
-                value={selectedPool}
-                onChange={(e) => {
-                  setSelectedPool(e.target.value)
-                  setTxDigest(null)
-                  setSwapError(null)
-                }}
-              >
-                {pools.map((p) => (
-                  <option key={p.pool_name} value={p.pool_name}>
-                    {p.pool_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="sui-swap__card-sub">
-              <span>{fromSymbol}</span>
-              <span>Price: {formatPrice(lastPrice)}</span>
-            </div>
-          </div>
+      <div className="sui-swap__flip">
+        <button className="sui-swap__flip-btn" onClick={handleFlip} title="Swap direction">
+          ↕
+        </button>
+      </div>
 
-          {/* Flip */}
-          <div className="sui-swap__flip">
-            <button className="sui-swap__flip-btn" onClick={handleFlip} title="Swap direction">
-              ↕
-            </button>
-          </div>
+      <TokenInput
+        label="To"
+        amount=""
+        token={toToken}
+        onTokenChange={(t) => {
+          setToToken(t)
+          resetState()
+        }}
+        tokens={SUPPORTED_TOKENS.filter((t) => t !== fromToken)}
+        readOnly
+        displayValue={outputDisplay}
+      />
 
-          {/* To */}
-          <div className="sui-swap__card">
-            <div className="sui-swap__card-label">You receive</div>
-            <div className="sui-swap__card-row">
-              <input
-                className="sui-swap__amount-input"
-                type="text"
-                placeholder="0"
-                value={estimate && estimate.output > 0 ? formatNum(estimate.output) : ''}
-                readOnly
-              />
-              <div className="sui-swap__token-select" style={{ cursor: 'default' }}>
-                {toSymbol}
-              </div>
-            </div>
-            <div className="sui-swap__card-sub">
-              <span>{toSymbol}</span>
-              {estimate && estimate.avgPrice > 0 && (
-                <span>Avg: {formatPrice(estimate.avgPrice)}</span>
-              )}
-            </div>
-          </div>
+      <SlippageSelector value={slippage} onChange={setSlippage} />
 
-          {/* Quote details */}
-          {estimate && amountNum > 0 && estimate.output > 0 && (
-            <div className="sui-swap__quote">
-              <div className="sui-swap__quote-row">
-                <span className="sui-swap__quote-label">Rate</span>
-                <span className="sui-swap__quote-value">
-                  1 {fromSymbol} ≈ {formatPrice(isBuy ? 1 / estimate.avgPrice : estimate.avgPrice)}{' '}
-                  {toSymbol}
-                </span>
-              </div>
-              <div className="sui-swap__quote-row">
-                <span className="sui-swap__quote-label">Price Impact</span>
-                <span
-                  className={`sui-swap__quote-value ${estimate.priceImpact > 1 ? 'sui-swap__quote-value--red' : 'sui-swap__quote-value--green'}`}
-                >
-                  {estimate.priceImpact.toFixed(3)}%
-                </span>
-              </div>
-              <div className="sui-swap__quote-row">
-                <span className="sui-swap__quote-label">Min Received</span>
-                <span className="sui-swap__quote-value">
-                  {formatNum(estimate.output * (1 - slippage / 100))} {toSymbol}
-                </span>
-              </div>
-              <div className="sui-swap__quote-row">
-                <span className="sui-swap__quote-label">Slippage</span>
-                <span className="sui-swap__quote-value">
-                  {[0.1, 0.5, 1.0].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setSlippage(s)}
-                      style={{
-                        background: slippage === s ? '#4da2ff' : 'transparent',
-                        color: slippage === s ? '#fff' : '#888',
-                        border: `1px solid ${slippage === s ? '#4da2ff' : '#333'}`,
-                        borderRadius: 4,
-                        padding: '1px 6px',
-                        marginLeft: 4,
-                        cursor: 'pointer',
-                        fontSize: 11,
-                      }}
-                    >
-                      {s}%
-                    </button>
-                  ))}
-                </span>
-              </div>
-              <div className="sui-swap__quote-row">
-                <span className="sui-swap__quote-label">Route</span>
-                <span className="sui-swap__quote-value">DeepBook v3 · {selectedPool}</span>
-              </div>
-            </div>
-          )}
+      <RouteList
+        quotes={quotes}
+        toToken={toToken}
+        selectedRoute={selectedRoute}
+        bestDex={bestDex}
+        loading={loading}
+        hasAmount={amountNum > 0}
+        onSelectRoute={setSelectedRoute}
+      />
 
-          {/* Swap error */}
-          {swapError && <div className="sui-swap__error">{swapError}</div>}
+      {(error || swapError) && <div className="sui-swap__error">{swapError || error}</div>}
 
-          {/* Success */}
-          {txDigest && (
-            <div className="sui-swap__quote">
-              <div className="sui-swap__quote-row">
-                <span className="sui-swap__quote-label">✓ Swap successful</span>
-                <span className="sui-swap__quote-value">
-                  <a
-                    href={`${explorerBase}/tx/${txDigest}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="sui-swap__link"
-                  >
-                    {txDigest.slice(0, 10)}...{txDigest.slice(-6)}
-                  </a>
-                </span>
-              </div>
-            </div>
-          )}
+      {txDigest && (
+        <div className="sui-swap__success">
+          <span>✓ Swap successful</span>
+          <a
+            href={`${EXPLORER[network]}/tx/${txDigest}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sui-swap__link"
+          >
+            {txDigest.slice(0, 10)}...{txDigest.slice(-6)}
+          </a>
+        </div>
+      )}
 
-          {/* Action button */}
-          {!isConnected && sharedHost ? (
-            <button
-              className="sui-swap__action sui-swap__action--connect"
-              onClick={() => sharedHost!.requestConnect()}
-            >
-              Connect Wallet
-            </button>
-          ) : !canUseSdk && selectedPool ? (
-            <button className="sui-swap__action" disabled>
-              Pool not supported by SDK
-            </button>
-          ) : (
-            <button
-              className="sui-swap__action"
-              disabled={amountNum <= 0 || !estimate || estimate.output <= 0 || swapping}
-              onClick={handleSwap}
-            >
-              {swapping
-                ? 'Swapping...'
-                : amountNum <= 0
-                  ? 'Enter amount'
-                  : `Swap ${fromSymbol} → ${toSymbol}`}
-            </button>
-          )}
-
-          {/* Mini orderbook */}
-          {orderbook && (
-            <div className="sui-swap__orderbook">
-              <div className="sui-swap__ob-title">Orderbook {obLoading && '(refreshing...)'}</div>
-              <div className="sui-swap__ob-grid">
-                <div className="sui-swap__ob-side">
-                  <div className="sui-swap__ob-label">Bids</div>
-                  {orderbook.bids.slice(0, 5).map(([price, size], i) => (
-                    <div key={i} className="sui-swap__ob-row sui-swap__ob-row--bid">
-                      <span className="sui-swap__ob-price">{price}</span>
-                      <span className="sui-swap__ob-size">{size}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="sui-swap__ob-side">
-                  <div className="sui-swap__ob-label">Asks</div>
-                  {orderbook.asks.slice(0, 5).map(([price, size], i) => (
-                    <div key={i} className="sui-swap__ob-row sui-swap__ob-row--ask">
-                      <span className="sui-swap__ob-price">{price}</span>
-                      <span className="sui-swap__ob-size">{size}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </>
+      {!isConnected && sharedHost ? (
+        <button
+          className="sui-swap__action sui-swap__action--connect"
+          onClick={() => sharedHost!.requestConnect()}
+        >
+          Connect Wallet
+        </button>
+      ) : (
+        <button
+          className="sui-swap__action"
+          disabled={amountNum <= 0 || quotes.length === 0 || swapping || !selectedRoute}
+          onClick={handleSwap}
+        >
+          {swapping
+            ? 'Swapping...'
+            : amountNum <= 0
+              ? 'Enter amount'
+              : `Swap via ${selectedQuote?.dexLabel || 'Best Route'}`}
+        </button>
       )}
 
       <div className="sui-swap__footer">
-        Powered by{' '}
-        <a
-          href="https://docs.sui.io/standards/deepbook"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="sui-swap__link"
-        >
-          DeepBook v3
-        </a>
-        {' · Estimates from live orderbook'}
+        Powered by DeepBook · Cetus · Turbos · 7k · Bluefin — Best price routing
       </div>
     </div>
   )
@@ -518,21 +295,22 @@ function SwapContent() {
 
 const SuiSwapPlugin: Plugin = {
   name: 'SuiSwap',
-  version: '1.0.0',
+  version: '2.0.0',
   styleUrls: ['/plugins/sui-swap/style.css'],
 
   init(host: HostAPI) {
     sharedHost = isSuiHostAPI(host) ? host : null
     host.registerComponent('SuiSwap', SwapContent)
-    host.log('SuiSwap initialized' + (sharedHost ? ' (shared)' : ' (standalone)'))
+    host.log('SuiSwap v2 — multi-route aggregator (DeepBook + Cetus + Turbos + 7k + Bluefin)')
   },
 
   mount() {
+    initWasm()
     console.log('[SuiSwap] mounted')
   },
   unmount() {
+    initWasm()
     sharedHost = null
-    console.log('[SuiSwap] unmounted')
   },
 }
 
