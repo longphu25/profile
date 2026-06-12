@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -67,6 +68,11 @@ const ZERO_BALANCES: AssetBalances = { sui: 0, usdc: 0, dusdc: 0 }
 // (5%), so the contract quote stays within pricing bounds.
 const STRIKE_REANCHOR_THRESHOLD = 0.05
 
+// Throttle the pricing RPC bundle (~10 calls) so oracle ticks don't flood the
+// fullnode. Local fairValue still updates every tick; RPC waits this long
+// unless user-controlled inputs change.
+const PRICING_RPC_THROTTLE_MS = 15_000
+
 function createPricingSnapshot(round: ClubState['activeRound']): PredictPricingSnapshot {
   return {
     fairValue: computeFairValuePreview(round, null),
@@ -130,6 +136,10 @@ export function PredictClubProvider({
   const [pricingSnapshot, setPricingSnapshot] = useState<PredictPricingSnapshot>(() =>
     createPricingSnapshot(club.activeRound),
   )
+  const pricingFetchRef = useRef<{ inputKey: string; lastFetchMs: number }>({
+    inputKey: '',
+    lastFetchMs: 0,
+  })
   useEffect(() => {
     if (!host) return
     setSuiContext(host.getSuiContext())
@@ -190,11 +200,39 @@ export function PredictClubProvider({
     const address = suiContext.isConnected ? suiContext.address : null
     let cancelled = false
 
+    // fairValue is a cheap local compute — refresh it every oracle tick so the
+    // preview stays live without any network call.
     setPricingSnapshot((current) => ({
       ...current,
       fairValue: computeFairValuePreview(club.activeRound, oracleSnapshot.oracleState),
-      loading: true,
     }))
+
+    // The contract quote + manager/vault snapshots need ~10 RPC calls. Throttle
+    // them: fetch immediately when user-controlled inputs change, otherwise at
+    // most once per PRICING_RPC_THROTTLE_MS even as the oracle ticks. This
+    // prevents flooding the fullnode (429 Too Many Requests).
+    const inputKey = [
+      club.activeRound.direction,
+      club.activeRound.strike,
+      club.activeRound.lowerStrike,
+      club.activeRound.upperStrike,
+      club.activeRound.expiryMinutes,
+      club.activeRound.suggestedDusdc,
+      predictManagerId,
+      address,
+    ].join('|')
+
+    const now = Date.now()
+    const inputChanged = pricingFetchRef.current.inputKey !== inputKey
+    const throttled = now - pricingFetchRef.current.lastFetchMs < PRICING_RPC_THROTTLE_MS
+    if (!inputChanged && throttled) {
+      return () => {
+        cancelled = true
+      }
+    }
+    pricingFetchRef.current = { inputKey, lastFetchMs: now }
+
+    setPricingSnapshot((current) => ({ ...current, loading: true }))
 
     fetchPredictPricingSnapshot({
       walletAddress: address,
