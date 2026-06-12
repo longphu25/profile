@@ -156,6 +156,10 @@ export default defineConfig({
         'btc-chart': resolve(__dirname, 'btc-chart.html'),
         'deepbook-predict': resolve(__dirname, 'deepbook-predict.html'),
         'predict-club': resolve(__dirname, 'predict-club.html'),
+        'predict-club-lifecycle-prototype': resolve(
+          __dirname,
+          'predict-club-lifecycle-prototype.html',
+        ),
         // Build plugins as separate entry points
         'plugins/hello-plugin': resolve(__dirname, 'plugins/hello-plugin/plugin.tsx'),
         'plugins/hello-world-sui': resolve(__dirname, 'plugins/hello-world-sui/plugin.tsx'),
