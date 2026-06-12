@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import type { HostAPI, Plugin } from '../../src/plugins/types'
 import { isSuiHostAPI, type SuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import { startOracleService, stopOracleService } from './infrastructure/deepbookOracleService'
+import { initIndicatorWasm } from './infrastructure/indicatorWasm'
 import { PredictClubProvider } from './presentation/PredictClubContext'
 import { DecisionStripPanel } from './presentation/DecisionStripPanel'
 import { ClubPanel } from './presentation/ClubPanel'
@@ -46,6 +47,7 @@ const PredictClubPlugin: Plugin = {
       activeHost = host
     }
     startOracleService()
+    initIndicatorWasm()
 
     // Register monolithic component (backward compatible)
     host.registerComponent('PredictClub', PredictClubComponent)

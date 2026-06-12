@@ -1,5 +1,6 @@
 import type { IndicatorSignal } from '../domain/types'
 import type { OraclePrice } from './deepbookOracleService'
+import { deriveSignalsWasm } from './indicatorWasm'
 
 export interface IndicatorSignalGateway {
   fetchSignals(market: string): Promise<IndicatorSignal[]>
@@ -191,7 +192,8 @@ export function createIndicatorSignalGateway(
     async fetchSignals(_market: string): Promise<IndicatorSignal[]> {
       const prices = getPrices()
       if (prices.length < 3) return DEFAULT_SIGNALS
-      return deriveSignalsFromPrices(prices)
+      // Prefer WASM kernel; fall back to JS when unavailable
+      return deriveSignalsWasm(prices) ?? deriveSignalsFromPrices(prices)
     },
 
     async checkOracleHealth(_oracleId: string) {
