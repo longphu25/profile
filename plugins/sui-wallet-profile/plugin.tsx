@@ -54,6 +54,9 @@ const standaloneDAppKit = createDAppKit({
   networks: ['mainnet', 'testnet', 'devnet'],
   defaultNetwork: 'mainnet',
   createClient: (network) => new SuiGrpcClient({ network, baseUrl: GRPC_URLS[network as Network] }),
+  // Disable Slush web wallet initializer (we use wallet extensions); avoids
+  // noisy "Registration un-successful" warning when Slush API is unreachable.
+  slushWalletConfig: null,
 })
 
 declare module '@mysten/dapp-kit-react' {
