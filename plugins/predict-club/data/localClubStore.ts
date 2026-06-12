@@ -3,6 +3,27 @@ import type { ClubState } from '../domain/types'
 
 const STORAGE_KEY = 'predict-club:v1'
 
+/** De-duplicate an array of records by `id`, keeping the last occurrence. */
+function dedupById<T extends { id: string }>(items: T[]): T[] {
+  const byId = new Map<string, T>()
+  for (const item of items) {
+    if (item && typeof item.id === 'string') byId.set(item.id, item)
+  }
+  return Array.from(byId.values())
+}
+
+/** Sanitize persisted club state: remove duplicate ids that accumulated across sessions. */
+function sanitizeClubState(club: ClubState): ClubState {
+  return {
+    ...club,
+    escrowOffers: Array.isArray(club.escrowOffers)
+      ? dedupById(club.escrowOffers)
+      : club.escrowOffers,
+    history: Array.isArray(club.history) ? dedupById(club.history) : club.history,
+    members: Array.isArray(club.members) ? dedupById(club.members) : club.members,
+  }
+}
+
 export interface PersistedClubStateV1 {
   _version: 1
   _updatedAt: number
@@ -85,7 +106,7 @@ export function loadClubState(): ClubState {
       return demoClubState
     }
 
-    return club as ClubState
+    return sanitizeClubState(club as ClubState)
   } catch (e) {
     console.warn('[predict-club] Failed to load state from localStorage:', e)
     return demoClubState
