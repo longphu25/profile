@@ -112,7 +112,62 @@ export function computeFairValuePreview(round: PredictionRound, oracle: OracleSt
   })
 }
 
-export async function fetchPredictPricingSnapshot({
+// Module-level cache + in-flight coalescing. Predict Club mounts each panel in
+// its own React root with its own provider, so ~9 providers would otherwise
+// fire this ~10-RPC bundle independently every oracle tick (429 flooding).
+// Sharing by input key collapses them into a single network round-trip.
+const PRICING_SNAPSHOT_TTL_MS = 15_000
+let pricingCache: { key: string; value: PredictPricingSnapshot; ts: number } | null = null
+const pricingInflight = new Map<string, Promise<PredictPricingSnapshot>>()
+
+function pricingInputKey(input: PredictPricingInput): string {
+  const r = input.round
+  return [
+    input.walletAddress ?? '',
+    input.managerId ?? '',
+    input.oracle?.oracle_id ?? '',
+    input.oracle?.latest_price?.forward ?? '',
+    r.direction,
+    r.strike,
+    r.lowerStrike ?? '',
+    r.upperStrike ?? '',
+    r.expiryMinutes,
+    r.suggestedDusdc,
+  ].join('|')
+}
+
+/**
+ * Cached + coalesced pricing snapshot. All callers sharing the same input key
+ * within the TTL get the same result; concurrent calls share one in-flight
+ * promise. This bounds fullnode load regardless of how many panels mount.
+ */
+export async function fetchPredictPricingSnapshot(
+  input: PredictPricingInput,
+): Promise<PredictPricingSnapshot> {
+  const key = pricingInputKey(input)
+  const now = Date.now()
+
+  if (pricingCache && pricingCache.key === key && now - pricingCache.ts < PRICING_SNAPSHOT_TTL_MS) {
+    return pricingCache.value
+  }
+
+  const existing = pricingInflight.get(key)
+  if (existing) return existing
+
+  const promise = fetchPredictPricingSnapshotUncached(input)
+    .then((value) => {
+      pricingCache = { key, value, ts: Date.now() }
+      return value
+    })
+    .finally(() => {
+      pricingInflight.delete(key)
+    })
+
+  pricingInflight.set(key, promise)
+  return promise
+}
+
+async function fetchPredictPricingSnapshotUncached({
   walletAddress,
   managerId,
   oracle,
