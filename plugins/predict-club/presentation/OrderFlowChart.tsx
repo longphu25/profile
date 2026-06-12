@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import {
   createChart,
   type IChartApi,
@@ -10,6 +10,7 @@ import {
   type Time,
 } from 'lightweight-charts'
 import type { OraclePrice } from '../infrastructure/deepbookOracleService'
+import { subscribeBinanceRef, type BinanceRefPoint } from '../infrastructure/binanceRefService'
 
 /**
  * Professional DeepBook Order Flow chart using TradingView Lightweight Charts.
@@ -21,6 +22,10 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
   const spotSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
   const fwdSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
   const basisSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null)
+  const binanceSeriesRef = useRef<ISeriesApi<'Line'> | null>(null)
+  const binanceDataRef = useRef<Map<number, number>>(new Map())
+  // Binance reference overlay is OFF by default — opt-in toggle only.
+  const [showBinanceRef, setShowBinanceRef] = useState(false)
 
   // Convert prices to chart data — dedup by time, sort ascending
   const { spotData, fwdData, basisData } = useMemo(() => {
@@ -164,6 +169,23 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
     })
     basisSeriesRef.current = basisSeries
 
+    // Binance reference line (hidden until toggled on). Amber dashed, distinct
+    // from oracle Spot/Forward so it reads as an external reference only.
+    const binanceSeries = chart.addLineSeries({
+      color: '#e2c635',
+      lineWidth: 1,
+      lineStyle: 1, // dotted
+      priceScaleId: 'right',
+      lastValueVisible: false,
+      priceLineVisible: false,
+      visible: false,
+      crosshairMarkerRadius: 3,
+      crosshairMarkerBackgroundColor: '#e2c635',
+      crosshairMarkerBorderColor: '#07100d',
+      title: 'Binance',
+    })
+    binanceSeriesRef.current = binanceSeries
+
     // Resize observer
     const ro = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect
@@ -184,6 +206,34 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
     basisSeriesRef.current?.setData(basisData)
     chartRef.current?.timeScale().fitContent()
   }, [spotData, fwdData, basisData])
+
+  // Binance reference overlay: only subscribe + show while toggled on.
+  useEffect(() => {
+    const series = binanceSeriesRef.current
+    if (!series) return
+
+    if (!showBinanceRef) {
+      series.applyOptions({ visible: false })
+      return
+    }
+
+    series.applyOptions({ visible: true })
+    const unsubscribe = subscribeBinanceRef((point: BinanceRefPoint) => {
+      const map = binanceDataRef.current
+      map.set(point.time, point.price)
+      // Keep the reference window bounded.
+      if (map.size > 600) {
+        const oldest = map.keys().next().value
+        if (oldest !== undefined) map.delete(oldest)
+      }
+      const data = Array.from(map.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([time, value]) => ({ time: time as Time, value }))
+      binanceSeriesRef.current?.setData(data)
+    })
+
+    return unsubscribe
+  }, [showBinanceRef])
 
   const lastSpot = prices[prices.length - 1]?.spot
   const lastFwd = prices[prices.length - 1]?.forward
@@ -208,6 +258,31 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
             Forward {lastFwd?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—'}
           </span>
         </div>
+
+        {/* Binance reference overlay toggle — off by default, click to show */}
+        <button
+          type="button"
+          onClick={() => setShowBinanceRef((v) => !v)}
+          title="Toggle Binance BTCUSDT reference line (external, for reference only)"
+          className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors ${
+            showBinanceRef
+              ? 'bg-[rgba(226,198,53,0.12)]'
+              : 'bg-transparent opacity-60 hover:opacity-100'
+          }`}
+        >
+          <span
+            className={`w-3 border-t border-dotted inline-block ${
+              showBinanceRef ? 'border-[#e2c635]' : 'border-on-surface-variant'
+            }`}
+          />
+          <span
+            className={`font-data text-[11px] tabular-nums ${
+              showBinanceRef ? 'text-[#e2c635]' : 'text-on-surface-variant'
+            }`}
+          >
+            Spot: Binance{showBinanceRef ? '' : ' (ref)'}
+          </span>
+        </button>
         <div className="ml-auto flex items-center gap-xs">
           <span className="font-label text-[10px] text-on-surface-variant uppercase">Basis</span>
           <span
