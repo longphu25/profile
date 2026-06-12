@@ -20,6 +20,8 @@ export interface BinanceRefPoint {
 type Listener = (point: BinanceRefPoint) => void
 
 const WS_URL = 'wss://fstream.binance.com/ws/btcusdt@kline_1m'
+const REST_KLINES_URL =
+  'https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=1m&limit=60'
 const MAX_RECONNECTS = 5
 
 const listeners = new Set<Listener>()
@@ -83,6 +85,29 @@ function disconnect(): void {
     ws.onerror = null
     ws.close()
     ws = null
+  }
+}
+
+/**
+ * Fetch recent 1m close history so the reference line has multiple points
+ * immediately. The live WS only changes the current minute's candle, so without
+ * seeding the chart would have a single point and draw nothing.
+ */
+export async function fetchBinanceRefHistory(): Promise<BinanceRefPoint[]> {
+  try {
+    const res = await fetch(REST_KLINES_URL)
+    if (!res.ok) return []
+    const rows = (await res.json()) as unknown[]
+    if (!Array.isArray(rows)) return []
+    // Binance kline row: [openTime, open, high, low, close, ...]
+    return rows
+      .map((r) => {
+        const row = r as [number, string, string, string, string]
+        return { time: Math.floor(Number(row[0]) / 1000), price: Number(row[4]) }
+      })
+      .filter((p) => Number.isFinite(p.time) && Number.isFinite(p.price))
+  } catch {
+    return []
   }
 }
 

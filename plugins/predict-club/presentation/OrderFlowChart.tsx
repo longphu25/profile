@@ -10,7 +10,11 @@ import {
   type Time,
 } from 'lightweight-charts'
 import type { OraclePrice } from '../infrastructure/deepbookOracleService'
-import { subscribeBinanceRef, type BinanceRefPoint } from '../infrastructure/binanceRefService'
+import {
+  subscribeBinanceRef,
+  fetchBinanceRefHistory,
+  type BinanceRefPoint,
+} from '../infrastructure/binanceRefService'
 
 /**
  * Professional DeepBook Order Flow chart using TradingView Lightweight Charts.
@@ -218,21 +222,40 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
     }
 
     series.applyOptions({ visible: true })
+
+    let cancelled = false
+    const map = binanceDataRef.current
+
+    const render = () => {
+      const data = Array.from(map.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([time, value]) => ({ time: time as Time, value }))
+      binanceSeriesRef.current?.setData(data)
+    }
+
+    // Seed recent 1m history so the line has multiple points immediately.
+    // The live WS only mutates the current minute, so without this the chart
+    // would hold a single point and draw nothing.
+    fetchBinanceRefHistory().then((points) => {
+      if (cancelled) return
+      for (const p of points) map.set(p.time, p.price)
+      render()
+    })
+
     const unsubscribe = subscribeBinanceRef((point: BinanceRefPoint) => {
-      const map = binanceDataRef.current
       map.set(point.time, point.price)
       // Keep the reference window bounded.
       if (map.size > 600) {
         const oldest = map.keys().next().value
         if (oldest !== undefined) map.delete(oldest)
       }
-      const data = Array.from(map.entries())
-        .sort((a, b) => a[0] - b[0])
-        .map(([time, value]) => ({ time: time as Time, value }))
-      binanceSeriesRef.current?.setData(data)
+      render()
     })
 
-    return unsubscribe
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
   }, [showBinanceRef])
 
   const lastSpot = prices[prices.length - 1]?.spot
