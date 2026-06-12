@@ -75,5 +75,5 @@ và map đúng `font-weight`:
   Satoshi đang tải.
 - Font stack fallback: `'Satoshi', 'Avenir Next', Avenir, ui-sans-serif, system-ui, ...`
   nên nếu font lỗi, UI vẫn hiển thị bình thường.
-- File `public/fonts/satoshi/style.css` và `example.html` (từ font.download) không
-  được dùng — có thể xóa nếu muốn gọn.
+- Các file thừa từ font.download (`style.css`, `example.html`) đã được xóa; chỉ
+  giữ lại các file `.woff` thực sự dùng.
