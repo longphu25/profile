@@ -1,9 +1,17 @@
-import {
-  CLUB_ESCROW_MARKET_ID,
-} from '../../../src/constants/predict-club'
+import { CLUB_ESCROW_MARKET_ID, TESTNET_RPC_URL } from '../../../src/constants/predict-club'
 import type { EscrowOfferView } from '../domain/types'
+import { cachedRpc, invalidateRpc } from './rpcCache'
 
-const RPC = 'https://fullnode.testnet.sui.io:443'
+const RPC = TESTNET_RPC_URL
+
+// Escrow offers refresh on a slow cadence — cache 12s.
+const ESCROW_TTL_MS = 12_000
+
+/** Invalidate cached escrow queries (call after creating/filling an offer). */
+export function invalidateEscrowCache(): void {
+  invalidateRpc('suix_getDynamicFields')
+  invalidateRpc('sui_multiGetObjects')
+}
 
 interface RpcResult {
   result?: { data: Array<{ data?: { objectId: string; content?: { fields?: any } } }> }
@@ -15,32 +23,22 @@ interface RpcResult {
  */
 export async function fetchOnChainOffers(): Promise<EscrowOfferView[]> {
   try {
-    const res = await fetch(RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'suix_getDynamicFields',
-        params: [CLUB_ESCROW_MARKET_ID, null, 50],
-      }),
-    })
-    const data = (await res.json()) as { result?: { data: Array<{ objectId: string; name: any }> } }
+    const data = await cachedRpc<{ result?: { data: Array<{ objectId: string; name: any }> } }>(
+      RPC,
+      'suix_getDynamicFields',
+      [CLUB_ESCROW_MARKET_ID, null, 50],
+      ESCROW_TTL_MS,
+    )
     if (!data.result?.data?.length) return []
 
     // Fetch each offer object
     const objectIds = data.result.data.map((d) => d.objectId)
-    const objRes = await fetch(RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 2,
-        method: 'sui_multiGetObjects',
-        params: [objectIds, { showContent: true }],
-      }),
-    })
-    const objData = (await objRes.json()) as RpcResult
+    const objData = await cachedRpc<RpcResult>(
+      RPC,
+      'sui_multiGetObjects',
+      [objectIds, { showContent: true }],
+      ESCROW_TTL_MS,
+    )
 
     const offers: EscrowOfferView[] = (objData.result?.data ?? [])
       .filter((o) => o.data?.content?.fields)
