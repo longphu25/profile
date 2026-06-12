@@ -140,6 +140,6 @@ public/wasm/
 
 1. ✅ `sui-swap` — DONE (simulateMarketOrder + rankQuotes)
 2. ✅ `btc-chart` — computeSMC (DONE — wasm crate + JS fallback)
-3. 🔜 `predict-club` — deriveSignalsFromPrices (batch indicator compute)
+3. ✅ `predict-club` — deriveSignalsFromPrices (DONE — wasm crate + JS fallback, 6 indicators)
 4. 📋 Merge vào shared crate
 5. 📋 `sui-wal-swap` + `sui-deepbook-orderbook` (share existing functions)
