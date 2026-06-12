@@ -23,7 +23,7 @@ import {
 } from '../application/escrowOnChain'
 import { claimWinnings } from '../application/claimWinnings'
 import { swapSuiToUsdc } from '../application/swapSuiToUsdc'
-import { fetchOnChainOffers } from '../infrastructure/escrowQueryService'
+import { fetchOnChainOffers, invalidateEscrowCache } from '../infrastructure/escrowQueryService'
 
 /** Merge local + on-chain escrow offers, de-duplicating by id (last write wins). */
 function mergeEscrowOffers<T extends { id: string }>(localOnly: T[], incoming: T[]): T[] {
@@ -463,6 +463,8 @@ export function PredictClubProvider({
   }, [])
 
   const refreshOnChainOffers = useCallback(() => {
+    // Drop stale cached escrow queries so the post-mutation fetch hits the chain
+    invalidateEscrowCache()
     // Delay to let indexer catch up, then merge on-chain offers
     setTimeout(() => {
       fetchOnChainOffers()
