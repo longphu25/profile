@@ -1,14 +1,8 @@
 {
   "name": "profile",
   "private": true,
-  "version": "0.48.0",
+  "version": "0.48.1",
   "type": "module",
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "biome format --write",
-      "eslint --fix"
-    ]
-  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
