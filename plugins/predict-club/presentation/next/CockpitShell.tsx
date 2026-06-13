@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { PriceChart } from './PriceChart'
 
 /**
  * Cockpit layout primitive (C0) for the rebuilt Predict Club pro surface.
@@ -74,7 +75,9 @@ export function CockpitShell() {
 
       {/* Main: chart-king + docked rail (desktop) / chart hero (mobile). */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-px overflow-y-auto bg-outline-variant lg:grid-cols-[minmax(0,1fr)_22rem] lg:overflow-hidden [&>*]:min-h-[16rem] lg:[&>*]:min-h-0">
-        <Zone data-pc-chart label="Price Chart" hint="King zone (C1)" className="lg:min-h-0" />
+        <div data-pc-chart className="min-h-0 bg-surface-container-lowest lg:min-h-0">
+          <PriceChart />
+        </div>
         <Zone data-pc-rail label="Action Rail" hint="Docked (C2)" className="hidden lg:flex" />
       </div>
 
