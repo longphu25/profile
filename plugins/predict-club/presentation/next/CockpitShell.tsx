@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ActionDock } from './ActionDock'
 import { ContextRail } from './ContextRail'
+import { DockTabs } from './DockTabs'
 import { ExposureRail } from './ExposureRail'
 import { LifecycleRail } from './LifecycleRail'
 import { PriceChart } from './PriceChart'
@@ -21,29 +22,6 @@ import { PriceChart } from './PriceChart'
  * ExposureRail, and DockTabs. The structure here is the contract those phases
  * build against, so the grid, breakpoints, and test hooks are intentional.
  */
-
-function Zone({
-  label,
-  hint,
-  className = '',
-  ...rest
-}: {
-  label: string
-  hint?: string
-  className?: string
-} & Record<`data-${string}`, string | boolean>) {
-  return (
-    <div
-      className={`flex min-h-0 flex-col items-center justify-center gap-1 bg-surface-container p-md text-center ${className}`}
-      {...rest}
-    >
-      <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant/60">
-        {label}
-      </span>
-      {hint && <span className="font-data text-data-sm text-on-surface-variant/40">{hint}</span>}
-    </div>
-  )
-}
 
 export function CockpitShell() {
   const [dockOpen, setDockOpen] = useState(false)
@@ -86,11 +64,7 @@ export function CockpitShell() {
             {dockOpen ? 'expand_more' : 'expand_less'}
           </span>
         </button>
-        {dockOpen && (
-          <div className="max-h-[40vh] overflow-auto px-md pb-md">
-            <Zone label="Reference Dock" hint="Funding, offers, history (C5)" />
-          </div>
-        )}
+        {dockOpen && <DockTabs className="max-h-[40vh]" />}
       </section>
 
       {/* Mobile: always-visible compact CTA bar pinned at the bottom (C2/C6). */}
