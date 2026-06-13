@@ -25,6 +25,7 @@ import { PriceChart } from './PriceChart'
 
 export function CockpitShell() {
   const [dockOpen, setDockOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   return (
     <div
@@ -40,6 +41,8 @@ export function CockpitShell() {
         <div data-pc-chart className="min-h-0 bg-surface-container-lowest lg:min-h-0">
           <PriceChart />
         </div>
+        {/* Mobile context rail sits below the chart hero (desktop has it up top). */}
+        <ContextRail className="flex shrink-0 lg:hidden" />
         {/* Desktop rail column: action on top, exposure below (both scroll). */}
         <div className="hidden min-h-0 flex-col gap-px bg-outline-variant lg:flex">
           <ActionDock className="shrink-0" />
@@ -67,17 +70,72 @@ export function CockpitShell() {
         {dockOpen && <DockTabs className="max-h-[40vh]" />}
       </section>
 
-      {/* Mobile: always-visible compact CTA bar pinned at the bottom (C2/C6). */}
-      <div
+      {/* Mobile: always-visible compact CTA bar that opens the action sheet (C6). */}
+      <button
+        type="button"
         data-pc-cta-bar
-        className="flex shrink-0 items-center justify-between gap-sm border-t border-outline-variant bg-surface-container-high px-md py-sm pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:hidden"
-        aria-label="Primary action"
+        onClick={() => setSheetOpen(true)}
+        aria-expanded={sheetOpen}
+        aria-haspopup="dialog"
+        className="flex shrink-0 items-center justify-between gap-sm border-t border-outline-variant bg-surface-container-high px-md py-sm pb-[calc(0.5rem+env(safe-area-inset-bottom))] text-left transition-colors hover:bg-surface-bright lg:hidden"
       >
-        <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant/60">
-          Action Sheet
+        <span className="flex items-center gap-sm">
+          <span
+            className="material-symbols-outlined text-[20px] text-primary-fixed-dim"
+            aria-hidden="true"
+          >
+            bolt
+          </span>
+          <span className="font-label text-label-caps uppercase tracking-wider text-on-surface">
+            Trade
+          </span>
         </span>
-        <span className="font-data text-data-sm text-on-surface-variant/40">C2 / C6</span>
-      </div>
+        <span
+          className="material-symbols-outlined text-[20px] text-on-surface-variant"
+          aria-hidden="true"
+        >
+          keyboard_arrow_up
+        </span>
+      </button>
+
+      {/* Mobile action sheet: the docked rail content, surfaced on demand (C6). */}
+      {sheetOpen && (
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Trade"
+        >
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={() => setSheetOpen(false)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <div
+            data-pc-action-sheet
+            className="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col gap-px overflow-hidden rounded-t-xl bg-outline-variant pb-[env(safe-area-inset-bottom)]"
+          >
+            <div className="flex items-center justify-between bg-surface-container-high px-md py-sm">
+              <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant">
+                Trade
+              </span>
+              <button
+                type="button"
+                onClick={() => setSheetOpen(false)}
+                aria-label="Close"
+                className="material-symbols-outlined text-[22px] text-on-surface-variant hover:text-on-surface"
+              >
+                close
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <ActionDock />
+              <ExposureRail className="mt-px" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
