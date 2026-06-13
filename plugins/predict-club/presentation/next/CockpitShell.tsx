@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { ActionDock } from './ActionDock'
 import { PriceChart } from './PriceChart'
 
 /**
@@ -78,7 +79,7 @@ export function CockpitShell() {
         <div data-pc-chart className="min-h-0 bg-surface-container-lowest lg:min-h-0">
           <PriceChart />
         </div>
-        <Zone data-pc-rail label="Action Rail" hint="Docked (C2)" className="hidden lg:flex" />
+        <ActionDock className="hidden lg:flex" />
       </div>
 
       {/* Collapsible dock below the chart (desktop). C5 fills it. */}
