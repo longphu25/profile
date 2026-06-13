@@ -1,4 +1,5 @@
 import { ActionRail } from './ActionRail'
+import { BottomDockNext } from './BottomDockNext'
 import { DecisionStripNext } from './DecisionStripNext'
 import { PanelShell } from './PanelShell'
 import { PredictionRoomNext } from './PredictionRoomNext'
@@ -44,15 +45,7 @@ export function NextShell() {
       </div>
 
       {/* Bottom dock — R6 (collapsible for guided mode) */}
-      <PanelShell
-        bordered={false}
-        title="Funding · Offers · History"
-        icon="dock_to_bottom"
-        collapsible
-        className="shrink-0 max-h-[40vh]"
-      >
-        <Placeholder label="Bottom Dock" hint="R6" />
-      </PanelShell>
+      <BottomDockNext className="shrink-0 max-h-[40vh]" />
     </div>
   )
 }
