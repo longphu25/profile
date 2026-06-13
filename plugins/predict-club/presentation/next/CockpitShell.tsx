@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ActionDock } from './ActionDock'
 import { ContextRail } from './ContextRail'
+import { ExposureRail } from './ExposureRail'
 import { LifecycleRail } from './LifecycleRail'
 import { PriceChart } from './PriceChart'
 
@@ -61,7 +62,11 @@ export function CockpitShell() {
         <div data-pc-chart className="min-h-0 bg-surface-container-lowest lg:min-h-0">
           <PriceChart />
         </div>
-        <ActionDock className="hidden lg:flex" />
+        {/* Desktop rail column: action on top, exposure below (both scroll). */}
+        <div className="hidden min-h-0 flex-col gap-px bg-outline-variant lg:flex">
+          <ActionDock className="shrink-0" />
+          <ExposureRail className="min-h-0 flex-1" />
+        </div>
       </div>
 
       {/* Collapsible dock below the chart (desktop). C5 fills it. */}
