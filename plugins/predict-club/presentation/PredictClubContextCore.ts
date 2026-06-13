@@ -11,6 +11,7 @@ import type {
   AssetBalances,
   ClubMember,
   ClubState,
+  Direction,
   EscrowOfferView,
   ModalKind,
   RoundStatus,
@@ -48,7 +49,7 @@ export interface PredictClubActions {
   confirmRound: () => ConfirmRoundResult
   pledgeToRound: (memberId: string, amount: number) => { ok: boolean; error?: string }
   publishRound: () => { ok: boolean; error?: string }
-  executeRound: () => Promise<{ ok: boolean; error?: string }>
+  executeRound: (directionOverride?: Direction) => Promise<{ ok: boolean; error?: string }>
   settleRound: (outcome: SettlementOutcome) => { ok: boolean; error?: string }
   createEscrowOffer: (params: CreateEscrowParams) => { ok: boolean; error?: string }
   fillEscrowOffer: (offerId: string) => { ok: boolean; error?: string }

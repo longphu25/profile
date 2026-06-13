@@ -615,7 +615,7 @@ export function PredictClubProvider({
         return { ok: result.ok, error: result.error }
       },
 
-      executeRound: async () => {
+      executeRound: async (directionOverride) => {
         const address = host?.getSuiContext().address
         if (!address) return { ok: false, error: 'Wallet not connected' }
 
@@ -623,6 +623,18 @@ export function PredictClubProvider({
         const selectedOracleId = oracleSnapshot.selectedOracleId
         if (!selectedOracleId || !oracle) {
           return { ok: false, error: 'No active oracle available' }
+        }
+
+        // One-tap UP/DOWN: caller picks direction at submit time. Re-anchor the
+        // strike to current spot on the chosen side so the contract quote stays
+        // valid, and persist both so settlement (which reads round.direction)
+        // resolves against the side the user actually took.
+        const direction = directionOverride ?? round.direction
+        const liveSpot = oracle.latest_price?.spot ?? round.btcSpot ?? round.strike
+        let strike = round.strike
+        if (directionOverride && directionOverride !== 'RANGE' && liveSpot > 0) {
+          const offset = liveSpot * 0.0025
+          strike = Math.round(directionOverride === 'DOWN' ? liveSpot - offset : liveSpot + offset)
         }
 
         // Find manager ID for this wallet
@@ -671,8 +683,8 @@ export function PredictClubProvider({
           club,
           member.id,
           {
-            direction: round.direction,
-            strike: round.strike,
+            direction,
+            strike,
             lowerStrike: round.lowerStrike,
             upperStrike: round.upperStrike,
             amountDusdc: round.suggestedDusdc,
@@ -696,7 +708,7 @@ export function PredictClubProvider({
           store.setClub(result.club)
           store.updateClub((c) => ({
             ...c,
-            activeRound: { ...c.activeRound, status: 'executed' },
+            activeRound: { ...c.activeRound, status: 'executed', direction, strike },
           }))
           store.setToast(`Trade executed — ${result.digest?.slice(0, 12)}…`)
           store.setModal(null)
