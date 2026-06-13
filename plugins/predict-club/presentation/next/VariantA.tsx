@@ -7,14 +7,14 @@ import { formatProbabilityLabel } from '../display'
 import type { Direction } from '../../domain/types'
 
 /**
- * THROWAWAY prototype — Variant A: "Swipe Deck" (chart-backed, one-tap).
+ * THROWAWAY prototype — Variant A: "Swipe Deck" (chart-hero, one-tap).
  *
- * The live OrderFlow chart fills the background (non-interactive, dimmed); a
- * translucent oracle card floats on top — swipe it to switch oracle. The key
- * economics stay visible (no extra tap), and the two big UP/DOWN buttons submit
- * the trade immediately: tapping UP calls executeRound('UP'), DOWN calls
- * executeRound('DOWN') — no separate "pick then submit" step. All data is real
- * (usePredictClub + selectOracle). Delete when a direction is chosen.
+ * The live OrderFlow chart is the visible hero (full opacity, framed), not a
+ * dimmed backdrop. A swipeable oracle chip rail + price headline sit above it,
+ * an economics strip below it, and two big distinct-color UP/DOWN buttons submit
+ * the trade in one tap: UP → executeRound('UP'), DOWN → executeRound('DOWN').
+ * No separate "pick then submit". All data is real (usePredictClub +
+ * selectOracle). Delete when a direction is chosen.
  */
 
 export function VariantA() {
@@ -28,11 +28,9 @@ export function VariantA() {
     0,
     oracles.findIndex((o) => o.oracle_id === oracleSnapshot.selectedOracleId),
   )
-  const [idx, setIdx] = useState(selectedIdx)
   const [submitting, setSubmitting] = useState<Direction | null>(null)
   const touchX = useRef<number | null>(null)
 
-  const active = oracles[idx]
   const spot = oracleSnapshot.oracleState?.latest_price?.spot ?? 0
   const forward = oracleSnapshot.oracleState?.latest_price?.forward ?? 0
   const quote = pricingSnapshot.quote
@@ -42,8 +40,7 @@ export function VariantA() {
 
   function go(delta: number) {
     if (oracles.length === 0) return
-    const next = (idx + delta + oracles.length) % oracles.length
-    setIdx(next)
+    const next = (selectedIdx + delta + oracles.length) % oracles.length
     const target = oracles[next]
     if (target) selectOracle(target.oracle_id)
   }
@@ -70,7 +67,7 @@ export function VariantA() {
 
   if (oracles.length === 0) {
     return (
-      <Screen prices={oracleSnapshot.prices}>
+      <Screen>
         <div className="flex flex-1 items-center justify-center text-center">
           <p className="font-data text-data-sm text-on-surface-variant/60">
             No active oracles right now. Check back shortly.
@@ -81,72 +78,82 @@ export function VariantA() {
   }
 
   return (
-    <Screen prices={oracleSnapshot.prices}>
-      {/* Oracle position dots */}
-      <div className="flex items-center justify-center gap-1.5 pt-1 pb-2" aria-hidden="true">
-        {oracles.map((o, i) => (
-          <span
-            key={o.oracle_id}
-            className={[
-              'h-1.5 rounded-full transition-all',
-              i === idx ? 'w-5 bg-primary-fixed-dim' : 'w-1.5 bg-on-surface-variant/40',
-            ].join(' ')}
-          />
-        ))}
+    <Screen>
+      {/* Oracle chip rail — tap or swipe the chart to switch */}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none]">
+        {oracles.map((o) => {
+          const sel = o.oracle_id === oracleSnapshot.selectedOracleId
+          return (
+            <button
+              key={o.oracle_id}
+              type="button"
+              onClick={() => selectOracle(o.oracle_id)}
+              className={[
+                'shrink-0 rounded-full border px-3 py-1.5 font-data text-data-sm transition-colors',
+                sel
+                  ? 'border-primary-fixed-dim bg-primary-fixed-dim/15 text-primary-fixed-dim'
+                  : 'border-outline-variant bg-surface-container text-on-surface-variant',
+              ].join(' ')}
+            >
+              {o.underlying_asset}
+              <span className="ml-1.5 opacity-60">{formatExpiry(o.expiry)}</span>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Swipeable oracle card — floats over the chart */}
+      {/* Price headline */}
+      <div className="flex items-end justify-between">
+        <div>
+          <div className="font-headline text-[2.5rem] font-black leading-none text-on-surface tabular-nums">
+            ${formatUsd(spot)}
+          </div>
+          <div className="mt-1 font-data text-data-sm text-on-surface-variant">
+            Forward ${formatUsd(forward)}
+          </div>
+        </div>
+        <span className="rounded-full bg-primary-fixed-dim/12 px-2.5 py-1 font-label text-label-caps uppercase tracking-wide text-primary-fixed-dim">
+          {formatProbabilityLabel(fair.probability, {
+            degraded: fair.degraded,
+            reason: fair.reason,
+          })}
+        </span>
+      </div>
+
+      {/* Chart hero — visible, framed, swipe to change oracle */}
       <div
-        className="relative flex-1 select-none px-1"
+        data-pc-chart-bg
+        className="relative min-h-[180px] flex-1 select-none overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border border-outline-variant/60 bg-surface-container-lowest/70 p-6 shadow-xl backdrop-blur-md">
-          {/* arrows for non-touch */}
-          <button
-            type="button"
-            onClick={() => go(-1)}
-            aria-label="Previous oracle"
-            className="material-symbols-outlined absolute left-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface-container/80 text-on-surface-variant lg:flex"
-          >
-            chevron_left
-          </button>
-          <button
-            type="button"
-            onClick={() => go(1)}
-            aria-label="Next oracle"
-            className="material-symbols-outlined absolute right-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface-container/80 text-on-surface-variant lg:flex"
-          >
-            chevron_right
-          </button>
+        <OrderFlowChart prices={oracleSnapshot.prices} />
+        {oracles.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              aria-label="Previous oracle"
+              className="material-symbols-outlined absolute left-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface-container/85 text-on-surface-variant lg:flex"
+            >
+              chevron_left
+            </button>
+            <button
+              type="button"
+              onClick={() => go(1)}
+              aria-label="Next oracle"
+              className="material-symbols-outlined absolute right-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface-container/85 text-on-surface-variant lg:flex"
+            >
+              chevron_right
+            </button>
+          </>
+        )}
+      </div>
 
-          {/* Header: asset + expiry */}
-          <div>
-            <span className="font-label text-label-caps uppercase tracking-widest text-on-surface-variant/80">
-              {active?.underlying_asset ?? 'Oracle'} · settles {formatExpiry(active?.expiry)}
-            </span>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="font-headline text-[2.75rem] font-black leading-none text-on-surface tabular-nums">
-                ${formatUsd(spot)}
-              </span>
-            </div>
-            <div className="mt-1 flex items-center gap-3 font-data text-data-sm text-on-surface-variant">
-              <span>Forward ${formatUsd(forward)}</span>
-              <span className="text-primary-fixed-dim">
-                {formatProbabilityLabel(fair.probability, {
-                  degraded: fair.degraded,
-                  reason: fair.reason,
-                })}
-              </span>
-            </div>
-          </div>
-
-          {/* Economics strip — always visible, no extra tap */}
-          <div className="grid grid-cols-2 gap-2">
-            <Stat label="Est. cost" value={`-${formatCompactDusdc(quote.estimatedCost ?? 0)}`} />
-            <Stat label="Payout if win" value={formatCompactDusdc(quote.grossIfWin)} tone="mint" />
-          </div>
-        </div>
+      {/* Economics strip — always visible, no extra tap */}
+      <div className="grid grid-cols-2 gap-2">
+        <Stat label="Est. cost" value={`-${formatCompactDusdc(quote.estimatedCost ?? 0)}`} />
+        <Stat label="Payout if win" value={formatCompactDusdc(quote.grossIfWin)} tone="mint" />
       </div>
 
       {/* One-tap UP / DOWN — distinct colors, submit on click */}
@@ -155,13 +162,13 @@ export function VariantA() {
           type="button"
           data-pc-action="connect"
           onClick={primaryAction.action}
-          className="mt-3 h-16 w-full rounded-2xl bg-primary-fixed-dim font-headline text-headline-md text-on-primary-fixed"
+          className="h-16 w-full rounded-2xl bg-primary-fixed-dim font-headline text-headline-md font-black text-on-primary-fixed transition-transform active:scale-[0.98]"
         >
           Connect Wallet
         </button>
       ) : (
-        <div className="mt-3">
-          <div className="grid grid-cols-2 gap-3 px-1">
+        <div>
+          <div className="grid grid-cols-2 gap-3">
             <SubmitButton
               dir="UP"
               spot={spot}
@@ -186,26 +193,13 @@ export function VariantA() {
   )
 }
 
-function Screen({
-  children,
-  prices,
-}: {
-  children: React.ReactNode
-  prices: React.ComponentProps<typeof OrderFlowChart>['prices']
-}) {
+function Screen({ children }: { children: React.ReactNode }) {
   return (
     <div
       data-pc-variant="A"
-      className="relative mx-auto flex h-full w-full max-w-[28rem] flex-col overflow-hidden px-4 pb-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]"
+      className="mx-auto flex h-full w-full max-w-[28rem] flex-col gap-3 overflow-hidden bg-background px-4 pt-3 pb-[5.5rem]"
     >
-      {/* Chart background — non-interactive, dimmed underlay */}
-      <div data-pc-chart-bg className="pointer-events-none absolute inset-0 opacity-40">
-        <OrderFlowChart prices={prices} />
-      </div>
-      {/* Legibility scrim */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/40 via-background/10 to-background" />
-      {/* Foreground */}
-      <div className="relative z-10 flex h-full flex-col">{children}</div>
+      {children}
     </div>
   )
 }
@@ -231,19 +225,19 @@ function SubmitButton({
       onClick={onClick}
       disabled={disabled}
       className={[
-        'flex h-20 flex-col items-center justify-center gap-0.5 rounded-2xl font-headline transition-all active:scale-[0.97]',
+        'flex h-[4.5rem] flex-col items-center justify-center gap-0.5 rounded-2xl font-headline transition-all active:scale-[0.97]',
         disabled && !submitting
           ? 'bg-surface-variant text-on-surface-variant opacity-60'
           : up
-            ? 'bg-primary-fixed-dim text-on-primary-fixed glow-mint'
-            : 'bg-error text-on-error',
+            ? 'bg-primary-fixed-dim text-on-primary-fixed'
+            : 'bg-[#ff5d73] text-[#2a0008]',
       ].join(' ')}
     >
-      <span className="material-symbols-outlined text-[30px]">
+      <span className="material-symbols-outlined text-[28px]">
         {submitting ? 'progress_activity' : up ? 'trending_up' : 'trending_down'}
       </span>
-      <span className="text-headline-md font-black">{up ? 'UP' : 'DOWN'}</span>
-      <span className="font-data text-[10px] uppercase opacity-80">
+      <span className="text-headline-md font-black leading-none">{up ? 'UP' : 'DOWN'}</span>
+      <span className="font-data text-[10px] font-bold uppercase opacity-80">
         {submitting ? 'submitting…' : `${up ? 'above' : 'below'} $${formatUsd(spot)}`}
       </span>
     </button>
@@ -252,7 +246,7 @@ function SubmitButton({
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: 'mint' }) {
   return (
-    <div className="rounded-xl border border-outline-variant/40 bg-surface-container/50 px-3 py-2">
+    <div className="rounded-xl border border-outline-variant/50 bg-surface-container/60 px-3 py-2">
       <div className="font-label text-[10px] uppercase tracking-wide text-on-surface-variant/70">
         {label}
       </div>
@@ -269,7 +263,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: 'mi
 }
 
 function formatExpiry(ms?: number): string {
-  if (!ms) return '—'
+  if (!ms) return '-'
   const diff = ms - Date.now()
   if (diff <= 0) return 'now'
   const h = Math.floor(diff / 3_600_000)
