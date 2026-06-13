@@ -2,6 +2,7 @@ import { ActionRail } from './ActionRail'
 import { DecisionStripNext } from './DecisionStripNext'
 import { PanelShell } from './PanelShell'
 import { PredictionRoomNext } from './PredictionRoomNext'
+import { RiskPanelNext } from './RiskPanelNext'
 import { RoundLifecycleStrip } from './RoundLifecycleStrip'
 
 /** Placeholder body for R1 — later phases replace each region with its real
@@ -39,9 +40,7 @@ export function NextShell() {
           <Placeholder label="Club Panel" />
         </PanelShell>
         <PredictionRoomNext />
-        <PanelShell bordered={false} title="Risk & Execution" icon="gpp_maybe">
-          <Placeholder label="Risk Panel" hint="R5" />
-        </PanelShell>
+        <RiskPanelNext />
       </div>
 
       {/* Bottom dock — R6 (collapsible for guided mode) */}
