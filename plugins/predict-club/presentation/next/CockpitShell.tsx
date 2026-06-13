@@ -1,5 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { ActionDock } from './ActionDock'
+import { ContextRail } from './ContextRail'
+import { LifecycleRail } from './LifecycleRail'
 import { PriceChart } from './PriceChart'
 
 /**
@@ -42,18 +44,6 @@ function Zone({
   )
 }
 
-function Band({
-  children,
-  className = '',
-  ...rest
-}: { children: ReactNode; className?: string } & Record<`data-${string}`, string | boolean>) {
-  return (
-    <div className={`flex items-center bg-surface-container px-md py-sm ${className}`} {...rest}>
-      {children}
-    </div>
-  )
-}
-
 export function CockpitShell() {
   const [dockOpen, setDockOpen] = useState(false)
 
@@ -62,17 +52,9 @@ export function CockpitShell() {
       data-pc-cockpit
       className="flex h-full min-h-0 flex-col gap-px overflow-x-hidden bg-outline-variant"
     >
-      {/* Thin context bands above the chart (C3 fills these). */}
-      <Band data-pc-lifecycle className="shrink-0" aria-label="Round lifecycle">
-        <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant/50">
-          Lifecycle
-        </span>
-      </Band>
-      <Band data-pc-context className="hidden shrink-0 lg:flex" aria-label="Round context">
-        <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant/50">
-          Context
-        </span>
-      </Band>
+      {/* Thin context bands above the chart (C3). */}
+      <LifecycleRail className="shrink-0" />
+      <ContextRail className="hidden shrink-0 lg:flex" />
 
       {/* Main: chart-king + docked rail (desktop) / chart hero (mobile). */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-px overflow-y-auto bg-outline-variant lg:grid-cols-[minmax(0,1fr)_22rem] lg:overflow-hidden [&>*]:min-h-[16rem] lg:[&>*]:min-h-0">
