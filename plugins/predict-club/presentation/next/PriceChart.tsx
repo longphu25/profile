@@ -96,14 +96,15 @@ export function PriceChart() {
     )
   }
 
-  // Y range spans the price series plus the strike, so the strike line is always
-  // on-canvas, with a small headroom margin so the line never kisses the edge.
-  const values = strike != null ? [...series, strike] : series
-  let min = Math.min(...values)
-  let max = Math.max(...values)
+  // Y range tracks the PRICE SERIES only (like the old OrderFlowChart), so small
+  // intrabar moves stay readable. Forcing the strike in would flatten the series
+  // whenever the strike sits far from spot; instead an off-range strike is shown
+  // as a clamped edge marker below.
+  let min = Math.min(...series)
+  let max = Math.max(...series)
   const span = max - min || Math.max(1, max * 0.001)
-  min -= span * 0.08
-  max += span * 0.08
+  min -= span * 0.12
+  max += span * 0.12
 
   const plotW = Math.max(0, w - PAD.left - PAD.right)
   const plotH = Math.max(0, h - PAD.top - PAD.bottom)
@@ -116,7 +117,12 @@ export function PriceChart() {
   // 3 horizontal gridlines at 25/50/75% of the range, labeled with the price.
   const gridVals = [0.25, 0.5, 0.75].map((t) => min + (max - min) * t)
   const latestY = latest != null ? yAt(latest) : 0
-  const strikeY = strike != null ? yAt(strike) : 0
+  const strikeAbove = strike != null && strike > max
+  const strikeBelow = strike != null && strike < min
+  const strikeOffRange = strikeAbove || strikeBelow
+  // Clamp an off-range strike to the nearest plot edge so its marker stays visible.
+  const strikeY =
+    strike == null ? 0 : strikeAbove ? PAD.top : strikeBelow ? PAD.top + plotH : yAt(strike)
   const ready = w > 0 && h > 0
 
   return (
@@ -179,9 +185,11 @@ export function PriceChart() {
             strokeLinejoin="round"
           />
 
-          {/* Strike reference line (dashed) + label */}
+          {/* Strike reference. In-range: a dashed line across the plot. Off-range:
+              the line is clamped to the nearest edge and the label carries a caret
+              so the strike is never drawn at a price the series never reached. */}
           {strike != null && (
-            <g>
+            <g opacity={strikeOffRange ? 0.65 : 1}>
               <line
                 x1={PAD.left}
                 y1={strikeY}
@@ -206,6 +214,7 @@ export function PriceChart() {
                 className="font-data"
                 fontSize="10"
               >
+                {strikeAbove ? '▲ ' : strikeBelow ? '▼ ' : ''}
                 {formatUsd(strike)}
               </text>
             </g>
