@@ -14,6 +14,7 @@ import { RoundHistoryPanel } from './presentation/RoundHistoryPanel'
 import { ModalLayer } from './presentation/ModalLayer'
 import { QuickPredictPanelWrapper } from './presentation/QuickPredictPanelWrapper'
 import { PredictClubRoot } from './presentation/PredictClubRoot'
+import { NextShell } from './presentation/next/NextShell'
 import './style.css'
 
 let activeHost: SuiHostAPI | null = null
@@ -62,6 +63,9 @@ const PredictClubPlugin: Plugin = {
     host.registerComponent('PredictClub.RoundHistory', withProvider(RoundHistoryPanel))
     host.registerComponent('PredictClub.QuickPredict', withProvider(QuickPredictPanelWrapper))
     host.registerComponent('PredictClub.ModalLayer', withProvider(ModalLayer))
+
+    // Redesign (Next) surface — React-owned region grid, shares the same context
+    host.registerComponent('PredictClub.Next.Shell', withProvider(NextShell))
 
     host.log('PredictClub plugin v2 initialized (multi-slot)')
   },

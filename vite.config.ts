@@ -72,6 +72,7 @@ export default defineConfig({
       'btc-chart.html',
       'deepbook-predict.html',
       'predict-club.html',
+      'predict-club-next.html',
     ],
   },
   server: {
@@ -156,6 +157,7 @@ export default defineConfig({
         'btc-chart': resolve(__dirname, 'btc-chart.html'),
         'deepbook-predict': resolve(__dirname, 'deepbook-predict.html'),
         'predict-club': resolve(__dirname, 'predict-club.html'),
+        'predict-club-next': resolve(__dirname, 'predict-club-next.html'),
         'predict-club-lifecycle-prototype': resolve(
           __dirname,
           'predict-club-lifecycle-prototype.html',

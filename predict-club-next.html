@@ -1,0 +1,107 @@
+<!doctype html>
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Predict Club — Redesign (Next)</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      .tabular-nums {
+        font-variant-numeric: tabular-nums;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0c1512;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #3a4a44;
+        border-radius: 3px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #83958d;
+      }
+    </style>
+  </head>
+
+  <body
+    class="bg-background text-on-surface font-body text-body-base h-screen flex flex-col overflow-hidden"
+  >
+    <!-- ═══════════════════════ TOP NAV BAR ═══════════════════════ -->
+    <header
+      class="flex justify-between items-center w-full px-lg h-14 bg-surface-container-lowest border-b border-outline-variant shrink-0"
+    >
+      <div class="flex items-center gap-xl">
+        <div class="flex items-center gap-sm">
+          <span
+            class="font-headline text-headline-lg font-black text-primary-fixed tracking-tight"
+            >PREDICT CLUB</span
+          >
+          <span
+            class="font-label text-label-caps uppercase tracking-widest text-on-primary-fixed bg-primary-fixed-dim rounded px-xs py-[2px]"
+            >Next</span
+          >
+        </div>
+      </div>
+      <div class="flex items-center gap-lg">
+        <div
+          class="hidden lg:flex items-center gap-md font-data text-data-sm text-on-surface-variant bg-surface-container-high px-sm py-xs rounded border border-outline-variant"
+        >
+          <span class="flex items-center gap-1"
+            ><span class="text-primary-fixed-dim">SUI:</span>
+            <span class="tabular-nums">—</span></span
+          >
+          <div class="w-px h-4 bg-outline-variant"></div>
+          <span class="flex items-center gap-1"
+            ><span class="text-primary-fixed-dim">DUSDC:</span>
+            <span class="tabular-nums">—</span></span
+          >
+        </div>
+        <button
+          class="p-xs hover:bg-surface-bright rounded transition-colors cursor-pointer text-primary-fixed-dim"
+          aria-label="Wallet tools"
+          data-wallet-trigger
+        >
+          <span class="material-symbols-outlined">account_balance_wallet</span>
+        </button>
+        <button
+          class="bg-primary-fixed-dim text-on-primary-fixed px-md py-xs rounded font-data text-data-sm cursor-pointer hover:bg-primary-container transition-colors"
+          data-wallet-btn
+          data-wallet-trigger
+        >
+          Connect Wallet
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══════════════════════ WORKSPACE (React-owned region grid) ═══════════════════════ -->
+    <main id="pc-next-root" class="flex-1 min-h-0 overflow-hidden">
+      <div
+        class="h-full grid place-items-center text-on-surface-variant font-data text-data-sm"
+      >
+        Loading Predict Club (Next)…
+      </div>
+    </main>
+
+    <!-- React plugin mounting -->
+    <div id="root" style="display: none"></div>
+    <div
+      id="pc-slot-modal-layer"
+      class="fixed inset-0 z-50 pointer-events-none [&>*]:pointer-events-auto"
+    ></div>
+    <div
+      id="pc-slot-quick-predict"
+      class="fixed inset-0 z-50 pointer-events-none [&>*]:pointer-events-auto"
+    ></div>
+    <script type="module" src="/src/predict-club-next/main.tsx"></script>
+  </body>
+</html>
