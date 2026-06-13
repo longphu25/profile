@@ -152,7 +152,7 @@ export function PredictClubNextOrchestrator() {
         plugin.mount?.()
 
         const container = document.getElementById('pc-next-root')
-        const Shell = suiHostAPI.getComponent('PredictClub.Next.Shell') as
+        const Shell = suiHostAPI.getComponent('PredictClub.Next.Cockpit') as
           | ComponentType<unknown>
           | undefined
         if (container && Shell) {

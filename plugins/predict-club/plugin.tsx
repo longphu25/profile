@@ -15,6 +15,7 @@ import { ModalLayer } from './presentation/ModalLayer'
 import { QuickPredictPanelWrapper } from './presentation/QuickPredictPanelWrapper'
 import { PredictClubRoot } from './presentation/PredictClubRoot'
 import { NextShell } from './presentation/next/NextShell'
+import { CockpitShell } from './presentation/next/CockpitShell'
 import './style.css'
 
 let activeHost: SuiHostAPI | null = null
@@ -66,6 +67,9 @@ const PredictClubPlugin: Plugin = {
 
     // Redesign (Next) surface — React-owned region grid, shares the same context
     host.registerComponent('PredictClub.Next.Shell', withProvider(NextShell))
+
+    // Cockpit rebuild (story 22, chart-king) — replaces Next.Shell at cutover.
+    host.registerComponent('PredictClub.Next.Cockpit', withProvider(CockpitShell))
 
     host.log('PredictClub plugin v2 initialized (multi-slot)')
   },
