@@ -1,13 +1,13 @@
 import { expect, test } from 'playwright/test'
 
 /**
- * Variant A ("Swipe Deck", chart-backed, one-tap) on the Next surface.
+ * Variant A ("Swipe Deck", side-peek carousel, one-tap) on the Next surface.
  *
- * Verifies the disconnected render path: chart background mounts, the swipeable
- * oracle card shows live economics, and the disconnected CTA is Connect Wallet
+ * Verifies the disconnected render path: the oracle carousel mounts, the
+ * centered card shows live economics, and the disconnected CTA is Connect Wallet
  * (the UP/DOWN one-tap submit buttons are gated behind a connected wallet, so
  * they must NOT appear while disconnected). Wallet-connected execution is not
- * covered here — it needs a funded signer the headless run doesn't have.
+ * covered here - it needs a funded signer the headless run doesn't have.
  */
 test.describe('Predict Club Next — Variant A', () => {
   const pageErrorsByTest = new WeakMap<object, string[]>()
@@ -32,9 +32,10 @@ test.describe('Predict Club Next — Variant A', () => {
     await expect(page.locator('[data-pc-variant="A"]')).toBeVisible({ timeout: 15_000 })
   })
 
-  test('renders chart-backed variant with no severe page errors', async ({ page }) => {
+  test('renders oracle carousel with no severe page errors', async ({ page }) => {
     await expect(page.locator('[data-pc-chart-bg]')).toBeVisible()
-    await expect(page.locator('[data-pc-chart-bg] canvas').first()).toBeVisible({ timeout: 15_000 })
+    // Centered card shows a live spot price headline (no canvas — simple SVG sparkline).
+    await expect(page.locator('[data-pc-variant="A"]')).toContainText('$', { timeout: 15_000 })
     expect(pageErrorsByTest.get(page) ?? []).toEqual([])
   })
 

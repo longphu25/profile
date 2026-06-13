@@ -1,20 +1,19 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePredictClub } from '../usePredictClub'
 import { selectOracle } from '../../infrastructure/deepbookOracleService'
-import { OrderFlowChart } from '../OrderFlowChart'
 import { formatCompactDusdc, formatUsd } from '../shared'
 import { formatProbabilityLabel } from '../display'
 import type { Direction } from '../../domain/types'
 
 /**
- * THROWAWAY prototype — Variant A: "Swipe Deck" (chart-hero, one-tap).
+ * THROWAWAY prototype — Variant A: "Swipe Deck" (side-peek carousel, one-tap).
  *
- * The live OrderFlow chart is the visible hero (full opacity, framed), not a
- * dimmed backdrop. A swipeable oracle chip rail + price headline sit above it,
- * an economics strip below it, and two big distinct-color UP/DOWN buttons submit
- * the trade in one tap: UP → executeRound('UP'), DOWN → executeRound('DOWN').
- * No separate "pick then submit". All data is real (usePredictClub +
- * selectOracle). Delete when a direction is chosen.
+ * A real horizontal snap-carousel of oracle cards: the centered card is the
+ * selected oracle and shows live data (price, a SIMPLE inline sparkline, payout);
+ * the neighbours peek at the edges showing just asset + expiry until swiped in.
+ * Scrolling a new card to center calls selectOracle, so its live data fills in.
+ * Two distinct-color UP/DOWN buttons submit in one tap: UP → executeRound('UP'),
+ * DOWN → executeRound('DOWN'). All data is real. Delete when a direction is chosen.
  */
 
 export function VariantA() {
@@ -28,31 +27,66 @@ export function VariantA() {
     0,
     oracles.findIndex((o) => o.oracle_id === oracleSnapshot.selectedOracleId),
   )
+
+  const [active, setActive] = useState(selectedIdx)
   const [submitting, setSubmitting] = useState<Direction | null>(null)
-  const touchX = useRef<number | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const cardRefs = useRef<(HTMLElement | null)[]>([])
+  const activeRef = useRef(active)
+  activeRef.current = active
 
   const spot = oracleSnapshot.oracleState?.latest_price?.spot ?? 0
   const forward = oracleSnapshot.oracleState?.latest_price?.forward ?? 0
   const quote = pricingSnapshot.quote
   const fair = pricingSnapshot.fairValue
+  const spotSeries = useMemo(
+    () => oracleSnapshot.prices.map((p) => p.spot),
+    [oracleSnapshot.prices],
+  )
   const blocked = !riskEvaluation.canExecute
   const blockingReason = riskEvaluation.blockingReasons[0]?.message
 
-  function go(delta: number) {
-    if (oracles.length === 0) return
-    const next = (selectedIdx + delta + oracles.length) % oracles.length
-    const target = oracles[next]
-    if (target) selectOracle(target.oracle_id)
-  }
+  // Detect the centered card and adopt it as the selected oracle.
+  useEffect(() => {
+    const root = scrollRef.current
+    if (!root || oracles.length === 0) return
+    const ratios = new Map<number, number>()
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          const i = Number((e.target as HTMLElement).dataset.idx)
+          ratios.set(i, e.intersectionRatio)
+        }
+        let best = activeRef.current
+        let bestRatio = -1
+        ratios.forEach((r, i) => {
+          if (r > bestRatio) {
+            bestRatio = r
+            best = i
+          }
+        })
+        if (best !== activeRef.current) {
+          activeRef.current = best
+          setActive(best)
+          const target = oracles[best]
+          if (target) selectOracle(target.oracle_id)
+        }
+      },
+      { root, threshold: [0.25, 0.5, 0.75, 1] },
+    )
+    for (const el of cardRefs.current) if (el) obs.observe(el)
+    return () => obs.disconnect()
+  }, [oracles])
 
-  function onTouchStart(e: React.TouchEvent) {
-    touchX.current = e.touches[0]?.clientX ?? null
-  }
-  function onTouchEnd(e: React.TouchEvent) {
-    if (touchX.current === null) return
-    const dx = (e.changedTouches[0]?.clientX ?? 0) - touchX.current
-    if (Math.abs(dx) > 48) go(dx < 0 ? 1 : -1)
-    touchX.current = null
+  // Center the initially-selected card without animating on first paint.
+  useEffect(() => {
+    cardRefs.current[selectedIdx]?.scrollIntoView({ inline: 'center', block: 'nearest' })
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function scrollToCard(i: number) {
+    cardRefs.current[i]?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
   }
 
   async function submit(dir: Direction) {
@@ -79,84 +113,126 @@ export function VariantA() {
 
   return (
     <Screen>
-      {/* Oracle chip rail — tap or swipe the chart to switch */}
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none]">
-        {oracles.map((o) => {
-          const sel = o.oracle_id === oracleSnapshot.selectedOracleId
-          return (
-            <button
+      {/* Side-peek carousel */}
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={scrollRef}
+          data-pc-chart-bg
+          className="flex h-full snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-[10%] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {oracles.map((o, i) => (
+            <article
               key={o.oracle_id}
-              type="button"
-              onClick={() => selectOracle(o.oracle_id)}
+              data-idx={i}
+              ref={(el) => {
+                cardRefs.current[i] = el
+              }}
               className={[
-                'shrink-0 rounded-full border px-3 py-1.5 font-data text-data-sm transition-colors',
-                sel
-                  ? 'border-primary-fixed-dim bg-primary-fixed-dim/15 text-primary-fixed-dim'
-                  : 'border-outline-variant bg-surface-container text-on-surface-variant',
+                'flex w-[80%] shrink-0 snap-center flex-col rounded-3xl border p-5 transition-all duration-300',
+                i === active
+                  ? 'border-primary-fixed-dim/50 bg-surface-container-low shadow-[0_0_40px_-12px_rgba(0,224,179,0.5)]'
+                  : 'scale-[0.94] border-outline-variant/60 bg-surface-container-lowest opacity-60',
               ].join(' ')}
             >
-              {o.underlying_asset}
-              <span className="ml-1.5 opacity-60">{formatExpiry(o.expiry)}</span>
-            </button>
-          )
-        })}
-      </div>
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <span className="font-headline text-headline-md font-black text-on-surface">
+                  {o.underlying_asset}
+                </span>
+                <span className="rounded-full border border-outline-variant/70 px-2.5 py-1 font-data text-[11px] text-on-surface-variant">
+                  {formatExpiry(o.expiry)}
+                </span>
+              </div>
 
-      {/* Price headline */}
-      <div className="flex items-end justify-between">
-        <div>
-          <div className="font-headline text-[2.5rem] font-black leading-none text-on-surface tabular-nums">
-            ${formatUsd(spot)}
-          </div>
-          <div className="mt-1 font-data text-data-sm text-on-surface-variant">
-            Forward ${formatUsd(forward)}
-          </div>
+              {i === active ? (
+                <>
+                  {/* Spot price */}
+                  <div className="mt-4 font-data text-[2.75rem] font-black leading-none tracking-tight text-on-surface tabular-nums">
+                    ${formatUsd(spot)}
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-2 font-data text-data-sm">
+                    <span className="text-on-surface-variant">Fwd ${formatUsd(forward)}</span>
+                    <span className="ml-auto rounded-full bg-primary-fixed-dim/15 px-2 py-0.5 font-label text-label-caps uppercase tracking-wide text-primary-fixed-dim">
+                      {formatProbabilityLabel(fair.probability, {
+                        degraded: fair.degraded,
+                        reason: fair.reason,
+                      })}
+                    </span>
+                  </div>
+
+                  {/* Simple sparkline */}
+                  <Sparkline values={spotSeries} className="mt-4 flex-1" />
+
+                  {/* Economics */}
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <Stat
+                      label="Est. cost"
+                      value={`-${formatCompactDusdc(quote.estimatedCost ?? 0)}`}
+                    />
+                    <Stat
+                      label="Payout if win"
+                      value={formatCompactDusdc(quote.grossIfWin)}
+                      tone="mint"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center">
+                  <span className="material-symbols-outlined text-[28px] text-on-surface-variant/40">
+                    swipe
+                  </span>
+                  <span className="font-data text-[11px] uppercase tracking-wide text-on-surface-variant/50">
+                    Swipe to load
+                  </span>
+                </div>
+              )}
+            </article>
+          ))}
         </div>
-        <span className="rounded-full bg-primary-fixed-dim/12 px-2.5 py-1 font-label text-label-caps uppercase tracking-wide text-primary-fixed-dim">
-          {formatProbabilityLabel(fair.probability, {
-            degraded: fair.degraded,
-            reason: fair.reason,
-          })}
-        </span>
-      </div>
 
-      {/* Chart hero — visible, framed, swipe to change oracle */}
-      <div
-        data-pc-chart-bg
-        className="relative min-h-[180px] flex-1 select-none overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
-        <OrderFlowChart prices={oracleSnapshot.prices} />
+        {/* Desktop arrows */}
         {oracles.length > 1 && (
           <>
-            <button
-              type="button"
-              onClick={() => go(-1)}
-              aria-label="Previous oracle"
-              className="material-symbols-outlined absolute left-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface-container/85 text-on-surface-variant lg:flex"
-            >
-              chevron_left
-            </button>
-            <button
-              type="button"
-              onClick={() => go(1)}
-              aria-label="Next oracle"
-              className="material-symbols-outlined absolute right-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface-container/85 text-on-surface-variant lg:flex"
-            >
-              chevron_right
-            </button>
+            {active > 0 && (
+              <button
+                type="button"
+                onClick={() => scrollToCard(active - 1)}
+                aria-label="Previous oracle"
+                className="material-symbols-outlined absolute left-1 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface-container/90 text-on-surface-variant shadow-lg lg:flex"
+              >
+                chevron_left
+              </button>
+            )}
+            {active < oracles.length - 1 && (
+              <button
+                type="button"
+                onClick={() => scrollToCard(active + 1)}
+                aria-label="Next oracle"
+                className="material-symbols-outlined absolute right-1 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface-container/90 text-on-surface-variant shadow-lg lg:flex"
+              >
+                chevron_right
+              </button>
+            )}
           </>
         )}
       </div>
 
-      {/* Economics strip — always visible, no extra tap */}
-      <div className="grid grid-cols-2 gap-2">
-        <Stat label="Est. cost" value={`-${formatCompactDusdc(quote.estimatedCost ?? 0)}`} />
-        <Stat label="Payout if win" value={formatCompactDusdc(quote.grossIfWin)} tone="mint" />
-      </div>
+      {/* Position dots */}
+      {oracles.length > 1 && (
+        <div className="flex items-center justify-center gap-1.5" aria-hidden="true">
+          {oracles.map((o, i) => (
+            <span
+              key={o.oracle_id}
+              className={[
+                'h-1.5 rounded-full transition-all',
+                i === active ? 'w-5 bg-primary-fixed-dim' : 'w-1.5 bg-on-surface-variant/30',
+              ].join(' ')}
+            />
+          ))}
+        </div>
+      )}
 
-      {/* One-tap UP / DOWN — distinct colors, submit on click */}
+      {/* One-tap UP / DOWN */}
       {!context.isConnected ? (
         <button
           type="button"
@@ -197,9 +273,65 @@ function Screen({ children }: { children: React.ReactNode }) {
   return (
     <div
       data-pc-variant="A"
-      className="mx-auto flex h-full w-full max-w-[28rem] flex-col gap-3 overflow-hidden bg-background px-4 pt-3 pb-[5.5rem]"
+      className="mx-auto flex h-full w-full max-w-[28rem] flex-col gap-3 overflow-hidden bg-background px-4 pt-4 pb-[5.5rem]"
     >
       {children}
+    </div>
+  )
+}
+
+/** Minimal SVG sparkline of recent spot prices — line + soft area fill. */
+function Sparkline({ values, className }: { values: number[]; className?: string }) {
+  if (values.length < 2) {
+    return (
+      <div
+        className={`flex items-center justify-center rounded-xl bg-surface-container-lowest/60 ${className ?? ''}`}
+      >
+        <span className="font-data text-[11px] text-on-surface-variant/40">collecting prices…</span>
+      </div>
+    )
+  }
+  const w = 100
+  const h = 36
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * w
+    const y = h - ((v - min) / range) * h
+    return [x, y] as const
+  })
+  const line = pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ')
+  const area = `0,${h} ${line} ${w},${h}`
+  const rising = values[values.length - 1] >= values[0]
+  const stroke = rising ? '#00e0b3' : '#ff5d73'
+
+  return (
+    <div className={className}>
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        preserveAspectRatio="none"
+        className="h-full w-full"
+        role="img"
+        aria-label="Recent spot price trend"
+      >
+        <defs>
+          <linearGradient id="pc-spark-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={stroke} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={stroke} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <polygon points={area} fill="url(#pc-spark-fill)" />
+        <polyline
+          points={line}
+          fill="none"
+          stroke={stroke}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
     </div>
   )
 }
@@ -263,7 +395,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: 'mi
 }
 
 function formatExpiry(ms?: number): string {
-  if (!ms) return '-'
+  if (!ms) return 'now'
   const diff = ms - Date.now()
   if (diff <= 0) return 'now'
   const h = Math.floor(diff / 3_600_000)
