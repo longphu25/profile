@@ -1,3 +1,4 @@
+import { ActionRail } from './ActionRail'
 import { PanelShell } from './PanelShell'
 
 /** Placeholder body for R1 — later phases replace each region with its real
@@ -21,9 +22,7 @@ export function NextShell() {
   return (
     <div className="h-full min-h-0 flex flex-col gap-px bg-outline-variant overflow-hidden">
       {/* Primary action — R2 (top priority, action-first IA) */}
-      <PanelShell bordered={false} title="Next Action" icon="bolt" className="shrink-0">
-        <Placeholder label="Primary Action Rail" hint="R2" />
-      </PanelShell>
+      <ActionRail className="shrink-0" />
 
       {/* Round lifecycle — R3 */}
       <PanelShell bordered={false} title="Round Lifecycle" icon="timeline" className="shrink-0">
