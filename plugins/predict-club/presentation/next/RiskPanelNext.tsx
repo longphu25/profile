@@ -10,7 +10,7 @@ import { PanelShell } from './PanelShell'
  * shows a second competing primary action.
  */
 export function RiskPanelNext({ className }: { className?: string }) {
-  const { pricingSnapshot, riskEvaluation } = usePredictClub()
+  const { pricingSnapshot, riskEvaluation, context } = usePredictClub()
   const quote = pricingSnapshot.quote
   const fairValue = pricingSnapshot.fairValue
   const quoteUnavailable = quote.status !== 'ok'
@@ -81,17 +81,25 @@ export function RiskPanelNext({ className }: { className?: string }) {
             <span className="font-label text-label-caps text-on-surface-variant uppercase">
               Your Exposure
             </span>
-            {quoteUnavailable && (
+            {context.isConnected && quoteUnavailable && (
               <span className="font-label text-label-caps text-tertiary-fixed-dim uppercase">
                 Preview unavailable
               </span>
             )}
           </div>
-          <Metric label="Est. cost" value={costLabel} tone="error" />
-          <Metric label="Win prob" value={probabilityLabel} />
-          <Metric label="Gross if win" value={grossLabel} tone="mint" />
-          <Metric label="Profit" value={profitLabel} tone="mint" />
-          <Metric label="Risk / reward" value={riskRewardLabel} />
+          {context.isConnected ? (
+            <>
+              <Metric label="Est. cost" value={costLabel} tone="error" />
+              <Metric label="Win prob" value={probabilityLabel} />
+              <Metric label="Gross if win" value={grossLabel} tone="mint" />
+              <Metric label="Profit" value={profitLabel} tone="mint" />
+              <Metric label="Risk / reward" value={riskRewardLabel} />
+            </>
+          ) : (
+            <p className="font-data text-data-sm text-on-surface-variant/60 py-xs">
+              Connect your wallet to see your position cost and potential profit.
+            </p>
+          )}
         </div>
       </div>
     </PanelShell>
