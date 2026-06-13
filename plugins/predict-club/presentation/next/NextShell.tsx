@@ -1,5 +1,7 @@
 import { ActionRail } from './ActionRail'
+import { DecisionStripNext } from './DecisionStripNext'
 import { PanelShell } from './PanelShell'
+import { RoundLifecycleStrip } from './RoundLifecycleStrip'
 
 /** Placeholder body for R1 — later phases replace each region with its real
  * panel (ActionRail, RoundLifecycleStrip, DecisionStripNext, …). */
@@ -25,14 +27,10 @@ export function NextShell() {
       <ActionRail className="shrink-0" />
 
       {/* Round lifecycle — R3 */}
-      <PanelShell bordered={false} title="Round Lifecycle" icon="timeline" className="shrink-0">
-        <Placeholder label="Lifecycle Stepper" hint="R3" />
-      </PanelShell>
+      <RoundLifecycleStrip className="shrink-0" />
 
       {/* Decision strip — R3 */}
-      <PanelShell bordered={false} title="Decision" icon="tune" className="shrink-0">
-        <Placeholder label="Decision Strip" hint="R3" />
-      </PanelShell>
+      <DecisionStripNext className="shrink-0" />
 
       {/* Center context row — R4 / R5. 3-col on desktop, stacked on mobile. */}
       <div className="flex-1 min-h-0 grid gap-px bg-outline-variant grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)_20rem]">

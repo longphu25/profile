@@ -13,17 +13,22 @@ declare module 'bun:test' {
     toBe(expected: unknown): void
     toBeCloseTo(expected: number, precision?: number): void
     toBeGreaterThan(expected: number): void
+    toBeGreaterThanOrEqual(expected: number): void
     toBeLessThan(expected: number): void
     toBeLessThanOrEqual(expected: number): void
     toBeNull(): void
     toContain(expected: string): void
     toEqual(expected: unknown): void
+    toHaveLength(expected: number): void
+    toThrow(expected?: string | RegExp | Error): void
     not: ExpectationNegated
   }
 
   export interface ExpectationNegated {
+    toBe(expected: unknown): void
     toContain(expected: string): void
     toBeNull(): void
+    toThrow(expected?: string | RegExp | Error): void
   }
 
   export const expect: (value: unknown) => Expectation
