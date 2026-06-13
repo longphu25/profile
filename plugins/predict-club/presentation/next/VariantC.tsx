@@ -35,7 +35,7 @@ export function VariantC() {
   const blocked = primaryAction.label === 'Execute Trade' && !riskEvaluation.canExecute
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-md flex-col gap-3 overflow-y-auto px-4 py-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]">
+    <div className="mx-auto flex h-full w-full max-w-[28rem] flex-col gap-3 overflow-y-auto px-4 py-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]">
       {/* 1. Oracle picker (compact dropdown) */}
       <section>
         <span className="font-label text-label-caps uppercase tracking-widest text-on-surface-variant/70">

@@ -35,7 +35,7 @@ export function VariantB() {
   const blocked = primaryAction.label === 'Execute Trade' && !riskEvaluation.canExecute
 
   return (
-    <div className="relative mx-auto flex h-full w-full max-w-md flex-col overflow-hidden">
+    <div className="relative mx-auto flex h-full w-full max-w-[28rem] flex-col overflow-hidden">
       {/* Scrollable context region */}
       <div className="flex-1 overflow-y-auto px-4 pb-[14rem] pt-3">
         {/* Oracle chip rail */}

@@ -214,7 +214,7 @@ export function VariantA() {
 
 function Screen({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex h-full w-full max-w-md flex-col px-4 pb-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]">
+    <div className="mx-auto flex h-full w-full max-w-[28rem] flex-col px-4 pb-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))]">
       {children}
     </div>
   )
