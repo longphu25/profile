@@ -374,6 +374,110 @@ Validation:
 - `qmd update -c profile-docs`
 - `bun run codegraph:index` sau source changes
 
+## Phase 9: Round Lifecycle Visualization (Variant A)
+
+Mục tiêu:
+
+Thay text thô `Phase: {round.status}` ở `PredictionRoomPanel.tsx:39` bằng một
+stepper ngang + countdown banner (prototype Variant A), để member nhìn một chỗ
+là biết round đang ở bước nào, bao lâu nữa settle, và khi nào claim được.
+
+Trạng thái: planned (bump 0.54.0 khi triển khai).
+
+### Bối cảnh
+
+- Render path thật: panel module đọc từ `PredictClubContext`, mount vào
+  `[data-pc-panel]` trong `predict-club.html` qua `src/predict-club/main.tsx`.
+  `PredictClubRoot.tsx` chỉ là backward-compat, KHÔNG sửa cho task này.
+- Prototype throwaway: `src/predict-club-lifecycle-prototype/` (variants A/B/C).
+  Chỉ lấy thiết kế Variant A, KHÔNG import code prototype vào production.
+- Khác biệt cốt lõi với prototype: prototype auto-advance bằng timer giả. Production
+  chuyển phase do user/oracle điều khiển, nên CHỈ hiện countdown thật khi có deadline
+  thật (`oracleState.expiry` lúc status = `executed`). Tuyệt đối không bịa countdown
+  cho các phase do người dùng bấm.
+
+### Mapping 8 RoundStatus → 5 bước lifecycle
+
+| RoundStatus | LifecyclePhase | Bước active | Ghi chú |
+| --- | --- | --- | --- |
+| `draft` | setup | 1 | Leader đang cấu hình |
+| `open` | setup | 1 | Chờ accept signal |
+| `confirmed` | fund | 2 | Đã confirm, chờ nạp vốn |
+| `funding` | fund | 2 | Đang nạp DUSDC |
+| `executed` | live | 3 | Vị thế đang chạy — có countdown thật |
+| `settled` | settle | 4 | Oracle đã settle, chờ claim |
+| `claimed` | claim | 5 | Terminal — done |
+| `cancelled` | — | — | Banner đỏ riêng, không hiện steps |
+
+### Quy tắc countdown (trung thực, không bịa)
+
+- `executed` (live): "Settles in MM:SS" từ `oracleState.expiry - Date.now()`;
+  progress bar tính từ `round.confirmedAt` → `oracleState.expiry`. Tick mỗi 1s bằng
+  `useState` + `setInterval`, clear khi unmount.
+- `settled`: "Awaiting claim" — không countdown.
+- `claimed`: "Claimed ✓" — terminal.
+- `draft`/`open`/`confirmed`/`funding`: hiện label bước + hint, KHÔNG timer. Có thể
+  hiện `round.expiryMinutes` như "round length đã cấu hình", ghi rõ là config chứ
+  không phải đếm ngược.
+- `cancelled`: banner đỏ "Round cancelled", ẩn stepper.
+
+### Việc cần làm
+
+1. Tạo `domain/roundPhase.ts` (logic thuần, có test):
+   - `type LifecyclePhase = 'setup' | 'fund' | 'live' | 'settle' | 'claim'`
+   - `PHASE_ORDER`, `PHASE_LABEL`, `PHASE_HINT` (Record theo phase).
+   - `mapStatusToPhase(status: RoundStatus): { phase: LifecyclePhase; stepIndex: number; cancelled: boolean; terminal: boolean }`.
+   - `secondsToSettlement(args: { status: RoundStatus; oracleExpiryMs: number | null; nowMs: number }): number | null`
+     — trả số dương CHỈ khi `status === 'executed'` và `oracleExpiryMs > nowMs`; còn lại trả `null`.
+   - `settlementProgress(args: { confirmedAtMs?: number; oracleExpiryMs: number | null; nowMs: number }): number | null`
+     — 0..1, `null` khi thiếu mốc.
+   - `formatTimer(totalSeconds: number): string` → `MM:SS` (clamp ≥ 0).
+2. Tạo `presentation/RoundLifecycleStrip.tsx`:
+   - Đọc `club.activeRound`, `oracleSnapshot.oracleState?.expiry` qua `usePredictClub()`.
+   - State `nowMs` cập nhật mỗi 1s CHỈ khi phase = live (tránh re-render thừa).
+   - Render: stepper 5 node ngang (done = mint fill + ✓, current = mint ring + glow,
+     pending = surface) dùng token Tailwind: `bg-primary-fixed-dim`, `text-primary-fixed-dim`,
+     `border-outline-variant`, `bg-surface-container`. Dưới stepper là banner phase
+     (label + hint + countdown/progress theo quy tắc trên).
+   - Dùng `font-data` cho countdown, `font-label`/`text-label-caps` cho nhãn bước.
+3. Sửa `presentation/PredictionRoomPanel.tsx`:
+   - Bỏ badge `Phase: {round.status.toUpperCase()}` (dòng 38-40).
+   - Render `<RoundLifecycleStrip />` thành band full-width ngay dưới header
+     (trước grid indicators). Giữ lại chip `{round.id}`.
+4. Tạo test `tests/unit/roundPhase.test.ts` (bun:test):
+   - Cả 8 status map đúng phase + stepIndex; `cancelled`/`claimed` set cờ đúng.
+   - `secondsToSettlement` trả `null` cho mọi status ≠ `executed`; trả dương khi
+     `executed` + expiry tương lai; trả `null` khi expiry quá khứ.
+   - `formatTimer(0)` → `00:00`; `formatTimer(125)` → `02:05`.
+5. Bump `package.json` minor → `0.54.0`.
+
+### Acceptance
+
+- `PredictionRoomPanel.tsx` không còn chuỗi literal `Phase: {round.status`.
+- `RoundLifecycleStrip` được render trong prediction room.
+- `roundPhase.ts` export `mapStatusToPhase`, `secondsToSettlement`, `formatTimer`.
+- `executed` hiển thị countdown giảm dần theo giây; các phase khác không có timer giả.
+- `cancelled` hiển thị banner đỏ, không có stepper.
+- Không có layout shift khi đổi phase (stepper width ổn định).
+
+### Validation
+
+- `bun run build`
+- `bun run test:unit` (gồm `roundPhase.test.ts`)
+- `bun run test:e2e -- tests/e2e/predict-club.spec.ts`
+- Playwright screenshot desktop + mobile (375px) cho ≥ 2 phase (live + claim).
+
+### File đụng tới
+
+- Thêm: `plugins/predict-club/domain/roundPhase.ts`
+- Thêm: `plugins/predict-club/presentation/RoundLifecycleStrip.tsx`
+- Thêm: `tests/unit/roundPhase.test.ts`
+- Sửa: `plugins/predict-club/presentation/PredictionRoomPanel.tsx`
+- Sửa: `package.json` (version)
+- (Tùy chọn) dọn prototype `src/predict-club-lifecycle-prototype/*` +
+  `predict-club-lifecycle-prototype.html` + entry trong `vite.config.ts` sau khi
+  Variant A đã vào production.
+
 ## Chiến Lược Commit
 
 Chia commit nhỏ:

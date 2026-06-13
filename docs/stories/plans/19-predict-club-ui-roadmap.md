@@ -378,6 +378,111 @@ Validation:
 - `qmd update -c profile-docs`
 - `bun run codegraph:index` after source changes
 
+## Phase 9: Round Lifecycle Visualization (Variant A)
+
+Objective:
+
+Replace the raw `Phase: {round.status}` text at `PredictionRoomPanel.tsx:39` with
+a horizontal stepper + countdown banner (prototype Variant A), so a member can
+see in one place where the round is, how long until settlement, and when they can
+claim.
+
+Status: planned (bump to `0.54.0` on implementation).
+
+### Context
+
+- Real render path: modular panels read from `PredictClubContext` and mount into
+  `[data-pc-panel]` containers in `predict-club.html` via `src/predict-club/main.tsx`.
+  `PredictClubRoot.tsx` is backward-compat only — do NOT touch it for this task.
+- Throwaway prototype: `src/predict-club-lifecycle-prototype/` (variants A/B/C).
+  Take only the Variant A design; do NOT import prototype code into production.
+- Core difference vs prototype: the prototype auto-advances on a fake timer.
+  Production phases are user/oracle driven, so only show a REAL countdown when a
+  real deadline exists (`oracleState.expiry` while status = `executed`). Never
+  fabricate a countdown for user-triggered phases.
+
+### Mapping 8 RoundStatus → 5 lifecycle steps
+
+| RoundStatus | LifecyclePhase | Active step | Notes |
+| --- | --- | --- | --- |
+| `draft` | setup | 1 | Leader configuring |
+| `open` | setup | 1 | Awaiting accept signal |
+| `confirmed` | fund | 2 | Confirmed, awaiting funding |
+| `funding` | fund | 2 | Funding DUSDC |
+| `executed` | live | 3 | Position live — real countdown |
+| `settled` | settle | 4 | Oracle settled, awaiting claim |
+| `claimed` | claim | 5 | Terminal — done |
+| `cancelled` | — | — | Dedicated red banner, no steps |
+
+### Countdown rules (truthful, never fabricated)
+
+- `executed` (live): "Settles in MM:SS" from `oracleState.expiry - Date.now()`;
+  progress bar spans `round.confirmedAt` → `oracleState.expiry`. Tick every 1s via
+  `useState` + `setInterval`, cleared on unmount.
+- `settled`: "Awaiting claim" — no countdown.
+- `claimed`: "Claimed ✓" — terminal.
+- `draft`/`open`/`confirmed`/`funding`: show step label + hint, NO timer. May show
+  `round.expiryMinutes` as "configured round length", labeled clearly as config not
+  a live countdown.
+- `cancelled`: red banner "Round cancelled", hide the stepper.
+
+### Work
+
+1. Create `domain/roundPhase.ts` (pure logic, unit-tested):
+   - `type LifecyclePhase = 'setup' | 'fund' | 'live' | 'settle' | 'claim'`
+   - `PHASE_ORDER`, `PHASE_LABEL`, `PHASE_HINT` (Records keyed by phase).
+   - `mapStatusToPhase(status: RoundStatus): { phase: LifecyclePhase; stepIndex: number; cancelled: boolean; terminal: boolean }`.
+   - `secondsToSettlement(args: { status: RoundStatus; oracleExpiryMs: number | null; nowMs: number }): number | null`
+     — returns a positive number ONLY when `status === 'executed'` and `oracleExpiryMs > nowMs`; otherwise `null`.
+   - `settlementProgress(args: { confirmedAtMs?: number; oracleExpiryMs: number | null; nowMs: number }): number | null`
+     — 0..1, `null` when anchors missing.
+   - `formatTimer(totalSeconds: number): string` → `MM:SS` (clamp ≥ 0).
+2. Create `presentation/RoundLifecycleStrip.tsx`:
+   - Read `club.activeRound` and `oracleSnapshot.oracleState?.expiry` via `usePredictClub()`.
+   - `nowMs` state ticking every 1s ONLY while phase = live (avoid wasted re-renders).
+   - Render: 5-node horizontal stepper (done = mint fill + ✓, current = mint ring +
+     glow, pending = surface) using Tailwind tokens: `bg-primary-fixed-dim`,
+     `text-primary-fixed-dim`, `border-outline-variant`, `bg-surface-container`. Below
+     the stepper, a phase banner (label + hint + countdown/progress per rules above).
+   - Use `font-data` for the countdown, `font-label`/`text-label-caps` for step labels.
+3. Edit `presentation/PredictionRoomPanel.tsx`:
+   - Remove the `Phase: {round.status.toUpperCase()}` badge (lines 38-40).
+   - Render `<RoundLifecycleStrip />` as a full-width band right under the header
+     (before the indicators grid). Keep the `{round.id}` chip.
+4. Create `tests/unit/roundPhase.test.ts` (bun:test):
+   - All 8 statuses map to correct phase + stepIndex; `cancelled`/`claimed` set flags.
+   - `secondsToSettlement` returns `null` for every status ≠ `executed`; positive when
+     `executed` + future expiry; `null` when expiry is in the past.
+   - `formatTimer(0)` → `00:00`; `formatTimer(125)` → `02:05`.
+5. Bump `package.json` minor → `0.54.0`.
+
+### Acceptance
+
+- `PredictionRoomPanel.tsx` no longer contains the literal `Phase: {round.status`.
+- `RoundLifecycleStrip` renders inside the prediction room.
+- `roundPhase.ts` exports `mapStatusToPhase`, `secondsToSettlement`, `formatTimer`.
+- `executed` shows a per-second decreasing countdown; other phases show no fake timer.
+- `cancelled` shows a red banner with no stepper.
+- No layout shift across phase changes (stable stepper width).
+
+### Validation
+
+- `bun run build`
+- `bun run test:unit` (incl. `roundPhase.test.ts`)
+- `bun run test:e2e -- tests/e2e/predict-club.spec.ts`
+- Playwright screenshots desktop + mobile (375px) for ≥ 2 phases (live + claim).
+
+### Files touched
+
+- Add: `plugins/predict-club/domain/roundPhase.ts`
+- Add: `plugins/predict-club/presentation/RoundLifecycleStrip.tsx`
+- Add: `tests/unit/roundPhase.test.ts`
+- Edit: `plugins/predict-club/presentation/PredictionRoomPanel.tsx`
+- Edit: `package.json` (version)
+- (Optional) remove prototype `src/predict-club-lifecycle-prototype/*` +
+  `predict-club-lifecycle-prototype.html` + its entry in `vite.config.ts` once
+  Variant A has landed in production.
+
 ## Commit Strategy
 
 Use small commits:
