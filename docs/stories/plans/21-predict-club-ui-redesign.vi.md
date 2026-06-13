@@ -145,7 +145,7 @@ Acceptance:
 Validation: `bun run build` (cả hai entry build); route mới load được shell;
 `predict-club.html` cũ render không đổi.
 
-Trạng thái: planned.
+Trạng thái: done (checkpoint `a3da8fb`, bump `0.54.0`).
 
 ## Phase R2: Information Architecture & Primary Action Rail
 
@@ -173,7 +173,7 @@ Acceptance:
 Validation: `bun run build`; unit test theo state cho action selector; Playwright
 check primary action lúc disconnected vs connected.
 
-Trạng thái: planned.
+Trạng thái: done (checkpoint `c95c49e`, bump `0.55.0`).
 
 ## Phase R3: Decision Strip & Round Lifecycle (gộp Story 19 Phase 9)
 
@@ -206,7 +206,7 @@ Acceptance:
 Validation: `bun run build`; `tests/unit/roundPhase.test.ts`; Playwright
 screenshot ≥2 phase (live + claim) desktop + 375px.
 
-Trạng thái: planned. Bump mục tiêu `0.55.0`.
+Trạng thái: done (checkpoint `35114d5`, bump `0.56.0`).
 
 ## Phase R4: Prediction Room
 
@@ -226,7 +226,7 @@ nhãn chồng nhau.
 
 Validation: `bun run build`; Playwright screenshot cột trung tâm.
 
-Trạng thái: planned.
+Trạng thái: done (checkpoint `4199d51`, bump `0.57.0`).
 
 ## Phase R5: Risk & Execution
 
@@ -248,7 +248,7 @@ sai; không CTA primary thứ hai ở cột phải.
 Validation: `bun run build`; unit test cho formatting + quote-error mapping;
 Playwright trạng thái preview-unavailable.
 
-Trạng thái: planned.
+Trạng thái: done (checkpoint `69bcadb`, bump `0.58.0`).
 
 ## Phase R6: Funding Router, Offers & History (dock dưới)
 
@@ -268,7 +268,7 @@ Acceptance: route preview-only không bị nhầm là đã execute; bảng đọ
 
 Validation: `bun run build`; Playwright funding-modal + render bảng.
 
-Trạng thái: planned.
+Trạng thái: done (checkpoint `46ed27a`, bump `0.59.0`).
 
 ## Phase R7: Responsive & Mobile
 
@@ -286,7 +286,7 @@ overflow ngang.
 
 Validation: `bun run build`; Playwright ở 375px + breakpoint tablet.
 
-Trạng thái: planned.
+Trạng thái: done (checkpoint `4068f7c`, bump `0.60.0`).
 
 ## Phase R8: States, Motion, A11y & Test Hardening
 
@@ -310,7 +310,7 @@ trọng; build + focused tests pass trước commit.
 Validation: `bun run build`; `bun run test:unit`;
 `bun run test:e2e -- tests/e2e/predict-club.spec.ts`; `qmd update -c profile-docs`.
 
-Trạng thái: planned.
+Trạng thái: done (checkpoint `3ea4158`, bump `0.61.0`).
 
 ## File Đụng Tới (dự kiến)
 

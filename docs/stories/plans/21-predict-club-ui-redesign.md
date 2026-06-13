@@ -143,7 +143,7 @@ Acceptance:
 Validation: `bun run build` (both entries build); the new route loads its shell;
 old `predict-club.html` renders unchanged.
 
-Status: planned.
+Status: done (a3da8fb, 0.54.0).
 
 ## Phase R2: Information Architecture & Primary Action Rail
 
@@ -171,7 +171,7 @@ Acceptance:
 Validation: `bun run build`; state-driven unit test for the action selector;
 Playwright check for disconnected vs connected primary action.
 
-Status: planned.
+Status: done (c95c49e, 0.55.0).
 
 ## Phase R3: Decision Strip & Round Lifecycle (subsumes Story 19 Phase 9)
 
@@ -204,7 +204,7 @@ Acceptance:
 Validation: `bun run build`; `tests/unit/roundPhase.test.ts`; Playwright
 screenshots for ≥2 phases (live + claim) desktop + 375px.
 
-Status: planned. Bump target `0.55.0`.
+Status: done (35114d5, 0.56.0).
 
 ## Phase R4: Prediction Room
 
@@ -224,7 +224,7 @@ no overlapping labels.
 
 Validation: `bun run build`; Playwright screenshot center column.
 
-Status: planned.
+Status: done (4199d51, 0.57.0).
 
 ## Phase R5: Risk & Execution
 
@@ -246,7 +246,7 @@ second primary CTA in the right column.
 Validation: `bun run build`; unit tests for formatting + quote-error mapping;
 Playwright preview-unavailable state.
 
-Status: planned.
+Status: done (69bcadb, 0.58.0).
 
 ## Phase R6: Funding Router, Offers & History (bottom dock)
 
@@ -266,7 +266,7 @@ readable at density without overflow.
 
 Validation: `bun run build`; Playwright funding-modal + table render.
 
-Status: planned.
+Status: done (46ed27a, 0.59.0).
 
 ## Phase R7: Responsive & Mobile
 
@@ -285,7 +285,7 @@ no horizontal overflow.
 
 Validation: `bun run build`; Playwright at 375px + tablet breakpoint.
 
-Status: planned.
+Status: done (4068f7c, 0.60.0).
 
 ## Phase R8: States, Motion, A11y & Test Hardening
 
@@ -308,7 +308,11 @@ build + focused tests pass before commit.
 Validation: `bun run build`; `bun run test:unit`;
 `bun run test:e2e -- tests/e2e/predict-club.spec.ts`; `qmd update -c profile-docs`.
 
-Status: planned.
+Status: done — checkpoint `3ea4158` (bump 0.61.0). Shipped: global
+`prefers-reduced-motion` block on the next surface; `Your Exposure` gated behind
+wallet connection (no demo numbers shown as real); ARIA verified on stepper /
+action rail / collapsible. Deferred (low-risk, not blocking): broader Playwright
+expansion beyond existing predict-club spec.
 
 ## Files Touched (indicative)
 
