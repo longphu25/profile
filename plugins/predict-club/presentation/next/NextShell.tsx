@@ -25,7 +25,10 @@ function Placeholder({ label, hint }: { label: string; hint?: string }) {
  * the panels themselves are borderless. */
 export function NextShell() {
   return (
-    <div className="h-full min-h-0 flex flex-col gap-px bg-outline-variant overflow-hidden">
+    // R7: desktop is a fixed cockpit (overflow-hidden, fills viewport); mobile
+    // scrolls vertically so stacked bands never clip. The action rail + lifecycle
+    // stay at the top of the scroll so the next step is always the first thing seen.
+    <div className="h-full min-h-0 flex flex-col gap-px bg-outline-variant overflow-y-auto lg:overflow-hidden [padding-bottom:env(safe-area-inset-bottom)]">
       {/* Primary action — R2 (top priority, action-first IA) */}
       <ActionRail className="shrink-0" />
 
@@ -35,8 +38,9 @@ export function NextShell() {
       {/* Decision strip — R3 */}
       <DecisionStripNext className="shrink-0" />
 
-      {/* Center context row — R4 / R5. 3-col on desktop, stacked on mobile. */}
-      <div className="flex-1 min-h-0 grid gap-px bg-outline-variant grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)_20rem]">
+      {/* Center context row — R4 / R5. 3-col on desktop, stacked on mobile.
+       * min-h on mobile keeps each stacked panel usable; flex-1 only bites at lg. */}
+      <div className="grid gap-px bg-outline-variant grid-cols-1 lg:flex-1 lg:min-h-0 lg:grid-cols-[18rem_minmax(0,1fr)_20rem] [&>*]:min-h-[16rem] lg:[&>*]:min-h-0">
         <PanelShell bordered={false} title="Club" icon="groups">
           <Placeholder label="Club Panel" />
         </PanelShell>
@@ -45,7 +49,7 @@ export function NextShell() {
       </div>
 
       {/* Bottom dock — R6 (collapsible for guided mode) */}
-      <BottomDockNext className="shrink-0 max-h-[40vh]" />
+      <BottomDockNext className="shrink-0 lg:max-h-[40vh]" />
     </div>
   )
 }
