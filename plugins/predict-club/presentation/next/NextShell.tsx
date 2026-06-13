@@ -1,6 +1,7 @@
 import { ActionRail } from './ActionRail'
 import { DecisionStripNext } from './DecisionStripNext'
 import { PanelShell } from './PanelShell'
+import { PredictionRoomNext } from './PredictionRoomNext'
 import { RoundLifecycleStrip } from './RoundLifecycleStrip'
 
 /** Placeholder body for R1 — later phases replace each region with its real
@@ -37,9 +38,7 @@ export function NextShell() {
         <PanelShell bordered={false} title="Club" icon="groups">
           <Placeholder label="Club Panel" />
         </PanelShell>
-        <PanelShell bordered={false} title="Prediction Room" icon="analytics">
-          <Placeholder label="Prediction Room" hint="R4" />
-        </PanelShell>
+        <PredictionRoomNext />
         <PanelShell bordered={false} title="Risk & Execution" icon="gpp_maybe">
           <Placeholder label="Risk Panel" hint="R5" />
         </PanelShell>
