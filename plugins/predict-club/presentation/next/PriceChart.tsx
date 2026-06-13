@@ -21,6 +21,7 @@ import { formatUsd } from '../shared'
 const PAD = { top: 16, right: 64, bottom: 22, left: 8 } as const
 const MINT = '#00e0b3'
 const RED = '#ff5d73'
+const FWD = '#7fb0d0'
 const GRID = 'rgba(58, 74, 68, 0.5)'
 const AXIS_TEXT = 'rgba(185, 203, 194, 0.65)'
 
@@ -69,11 +70,18 @@ export function PriceChart() {
     nowMs: now,
   })
 
-  const series = useMemo(
-    () => oracleSnapshot.prices.map((p) => p.spot).filter((v) => Number.isFinite(v) && v > 0),
-    [oracleSnapshot.prices],
-  )
+  const { series, fwdSeries } = useMemo(() => {
+    const spot: number[] = []
+    const fwd: number[] = []
+    for (const p of oracleSnapshot.prices) {
+      if (!Number.isFinite(p.spot) || p.spot <= 0) continue
+      spot.push(p.spot)
+      fwd.push(Number.isFinite(p.forward) && p.forward > 0 ? p.forward : p.spot)
+    }
+    return { series: spot, fwdSeries: fwd }
+  }, [oracleSnapshot.prices])
   const latest = series.length > 0 ? series[series.length - 1] : null
+  const latestFwd = fwdSeries.length > 0 ? fwdSeries[fwdSeries.length - 1] : null
   const rising = series.length >= 2 ? series[series.length - 1] >= series[0] : true
   const stroke = rising ? MINT : RED
 
@@ -96,12 +104,12 @@ export function PriceChart() {
     )
   }
 
-  // Y range tracks the PRICE SERIES only (like the old OrderFlowChart), so small
-  // intrabar moves stay readable. Forcing the strike in would flatten the series
-  // whenever the strike sits far from spot; instead an off-range strike is shown
-  // as a clamped edge marker below.
-  let min = Math.min(...series)
-  let max = Math.max(...series)
+  // Y range tracks the PRICE SERIES (spot + forward) only (like the old
+  // OrderFlowChart), so small intrabar moves stay readable. Forcing the strike in
+  // would flatten the series whenever the strike sits far from spot; instead an
+  // off-range strike is shown as a clamped edge marker below.
+  let min = Math.min(...series, ...fwdSeries)
+  let max = Math.max(...series, ...fwdSeries)
   const span = max - min || Math.max(1, max * 0.001)
   min -= span * 0.12
   max += span * 0.12
@@ -112,6 +120,7 @@ export function PriceChart() {
   const yAt = (v: number) => PAD.top + (1 - (v - min) / (max - min)) * plotH
 
   const linePts = series.map((v, i) => `${xAt(i).toFixed(2)},${yAt(v).toFixed(2)}`).join(' ')
+  const fwdPts = fwdSeries.map((v, i) => `${xAt(i).toFixed(2)},${yAt(v).toFixed(2)}`).join(' ')
   const areaPts = `${PAD.left},${(PAD.top + plotH).toFixed(2)} ${linePts} ${(PAD.left + plotW).toFixed(2)},${(PAD.top + plotH).toFixed(2)}`
 
   // 3 horizontal gridlines at 25/50/75% of the range, labeled with the price.
@@ -176,6 +185,19 @@ export function PriceChart() {
 
           {/* Area + line */}
           <polygon points={areaPts} fill="url(#pc-king-fill)" />
+          {/* Forward curve (dashed, drawn under spot) when it diverges from spot. */}
+          {fwdPts && (
+            <polyline
+              points={fwdPts}
+              fill="none"
+              stroke={FWD}
+              strokeWidth="1.25"
+              strokeDasharray="4 3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.85"
+            />
+          )}
           <polyline
             points={linePts}
             fill="none"
@@ -244,19 +266,54 @@ export function PriceChart() {
               </text>
             </g>
           )}
+
+          {/* Forward end marker (hollow), only when it diverges from spot. */}
+          {latestFwd != null && latest != null && Math.abs(latestFwd - latest) > span * 0.02 && (
+            <circle
+              cx={PAD.left + plotW}
+              cy={yAt(latestFwd)}
+              r="3"
+              fill="none"
+              stroke={FWD}
+              strokeWidth="1.5"
+            />
+          )}
         </svg>
       )}
 
-      {/* Header overlay: asset + current spot (top-left). */}
-      <div className="pointer-events-none absolute left-md top-sm flex items-baseline gap-2">
-        <span className="font-headline text-headline-md font-black tracking-tight text-on-surface">
-          {asset}
-        </span>
-        {latest != null && (
-          <span className="font-data text-data-lg font-bold tabular-nums" style={{ color: stroke }}>
-            ${formatUsd(latest)}
+      {/* Header overlay: asset + current spot + legend (top-left). */}
+      <div className="pointer-events-none absolute left-md top-sm flex flex-col gap-1">
+        <div className="flex items-baseline gap-2">
+          <span className="font-headline text-headline-md font-black tracking-tight text-on-surface">
+            {asset}
           </span>
-        )}
+          {latest != null && (
+            <span
+              className="font-data text-data-lg font-bold tabular-nums"
+              style={{ color: stroke }}
+            >
+              ${formatUsd(latest)}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-md font-label text-label-caps uppercase tracking-wider">
+          <span className="flex items-center gap-1.5">
+            <span className="h-0.5 w-3 rounded-full" style={{ backgroundColor: stroke }} />
+            <span className="text-on-surface-variant">
+              Spot {latest != null ? `$${formatUsd(latest)}` : '-'}
+            </span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className="h-0 w-3 border-t border-dashed"
+              style={{ borderColor: FWD }}
+              aria-hidden="true"
+            />
+            <span className="text-on-surface-variant">
+              Forward {latestFwd != null ? `$${formatUsd(latestFwd)}` : '-'}
+            </span>
+          </span>
+        </div>
       </div>
 
       {/* Truthful countdown overlay (top-right) — only while live. */}
