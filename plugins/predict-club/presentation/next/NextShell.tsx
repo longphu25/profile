@@ -3,8 +3,12 @@ import { BottomDockNext } from './BottomDockNext'
 import { DecisionStripNext } from './DecisionStripNext'
 import { PanelShell } from './PanelShell'
 import { PredictionRoomNext } from './PredictionRoomNext'
+import { PrototypeSwitcher, useVariant, type VariantKey } from './PrototypeSwitcher'
 import { RiskPanelNext } from './RiskPanelNext'
 import { RoundLifecycleStrip } from './RoundLifecycleStrip'
+import { VariantA } from './VariantA'
+import { VariantB } from './VariantB'
+import { VariantC } from './VariantC'
 
 /** Placeholder body for R1 — later phases replace each region with its real
  * panel (ActionRail, RoundLifecycleStrip, DecisionStripNext, …). */
@@ -19,11 +23,32 @@ function Placeholder({ label, hint }: { label: string; hint?: string }) {
   )
 }
 
+const VARIANTS: Record<VariantKey, () => React.JSX.Element> = {
+  A: VariantA,
+  B: VariantB,
+  C: VariantC,
+}
+
 /** The redesigned region grid. One source of truth for desktop 3-column and
  * mobile single-column reflow. Regions are separated by a 1px gutter
  * (bg-outline-variant showing through `gap-px`) per the Terminal-First look, so
- * the panels themselves are borderless. */
+ * the panels themselves are borderless.
+ *
+ * THROWAWAY prototype hook: when `?variant=A|B|C` is present, render that
+ * redesign candidate full-bleed plus the floating switcher instead of the
+ * R1–R8 cockpit. No param → the existing cockpit, untouched. */
 export function NextShell() {
+  const variant = useVariant()
+  if (variant) {
+    const Variant = VARIANTS[variant]
+    return (
+      <div className="h-full min-h-0 overflow-y-auto bg-background">
+        <Variant />
+        <PrototypeSwitcher current={variant} />
+      </div>
+    )
+  }
+
   return (
     // R7: desktop is a fixed cockpit (overflow-hidden, fills viewport); mobile
     // scrolls vertically so stacked bands never clip. The action rail + lifecycle
