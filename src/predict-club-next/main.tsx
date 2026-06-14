@@ -40,7 +40,7 @@ const walletPluginPath = import.meta.env.DEV
 
 /**
  * Redesigned (Next) orchestrator. Loads the same predict-club plugin and mounts
- * the React-owned `PredictClub.Next.Shell` into the `#pc-next-root` slot. Wallet
+ * the React-owned `PredictClub.Next.Cockpit` into the `#pc-next-root` slot. Wallet
  * wiring mirrors `src/predict-club/main.tsx`; the data layer is shared, so this
  * surface never forks context or domain logic.
  */

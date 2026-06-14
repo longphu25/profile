@@ -14,7 +14,6 @@ import { RoundHistoryPanel } from './presentation/RoundHistoryPanel'
 import { ModalLayer } from './presentation/ModalLayer'
 import { QuickPredictPanelWrapper } from './presentation/QuickPredictPanelWrapper'
 import { PredictClubRoot } from './presentation/PredictClubRoot'
-import { NextShell } from './presentation/next/NextShell'
 import { CockpitShell } from './presentation/next/CockpitShell'
 import './style.css'
 
@@ -65,10 +64,8 @@ const PredictClubPlugin: Plugin = {
     host.registerComponent('PredictClub.QuickPredict', withProvider(QuickPredictPanelWrapper))
     host.registerComponent('PredictClub.ModalLayer', withProvider(ModalLayer))
 
-    // Redesign (Next) surface — React-owned region grid, shares the same context
-    host.registerComponent('PredictClub.Next.Shell', withProvider(NextShell))
-
-    // Cockpit rebuild (story 22, chart-king) — replaces Next.Shell at cutover.
+    // Cockpit rebuild (story 22, chart-king): the React-owned pro surface that
+    // shares the same context and domain logic. Mounted into #pc-next-root.
     host.registerComponent('PredictClub.Next.Cockpit', withProvider(CockpitShell))
 
     host.log('PredictClub plugin v2 initialized (multi-slot)')
