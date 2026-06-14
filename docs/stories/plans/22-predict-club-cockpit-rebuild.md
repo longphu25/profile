@@ -158,7 +158,7 @@ CTA bar; no horizontal overflow at 375px.
 Validation: `bun run build`; Playwright at 1440px and 375px (root width bounded,
 rail present desktop / CTA bar present mobile).
 
-Status: pending.
+Status: done.
 
 ### C1 — King chart (custom SVG)
 Objective: build the dominant zone.
@@ -177,7 +177,7 @@ countdown shows only when truthful; renders with zero console errors.
 Validation: `bun run build`; Playwright screenshot king zone desktop + 375px;
 assert countdown absent when not `executed`.
 
-Status: pending.
+Status: done.
 
 ### C2 — Docked action rail
 Objective: the single action path, docked beside the chart.
@@ -196,7 +196,7 @@ AND icon AND label; blocked execute shows reasons; disconnected shows Connect.
 Validation: `bun run build`; unit test for the action-model selector across
 statuses; Playwright disconnected (Connect, no submit buttons) vs the gated state.
 
-Status: pending.
+Status: done.
 
 ### C3 — Lifecycle + context rails
 Objective: the thin supporting bands above the chart.
@@ -213,7 +213,7 @@ aligned; no layout shift on phase change.
 Validation: `bun run build`; reuse `tests/unit/roundPhase.test.ts`; Playwright two
 phases (live + claim).
 
-Status: pending.
+Status: done.
 
 ### C4 — Exposure & risk rail
 Objective: risk readiness + exposure without a second primary button.
@@ -230,7 +230,7 @@ connected.
 Validation: `bun run build`; unit tests for formatting + quote-error mapping;
 Playwright preview-unavailable state.
 
-Status: pending.
+Status: done.
 
 ### C5 — Bottom dock (funding / offers / history)
 Objective: reference surfaces that do not steal focus from the chart.
@@ -246,7 +246,7 @@ readable at density; dock collapses without reflowing the chart.
 
 Validation: `bun run build`; Playwright funding modal + table render.
 
-Status: pending.
+Status: done.
 
 ### C6 — Mobile transform (chart hero + action sheet)
 Objective: a real mobile cockpit, not a stack.
@@ -265,7 +265,7 @@ animation to instant.
 Validation: `bun run build`; Playwright 375px + tablet; assert CTA bar visible
 without scroll.
 
-Status: pending.
+Status: done.
 
 ### C7 — States, motion polish, a11y, tests, cutover
 Objective: finish the surface and retire the old code.
@@ -286,7 +286,7 @@ reduced-motion-safe; old code removed; build + tests green.
 Validation: `bun run build`; `bun run test:unit`;
 `bun run test:e2e -- tests/e2e/predict-club.spec.ts`; updated variant spec.
 
-Status: pending.
+Status: done.
 
 ## Files Touched (indicative)
 

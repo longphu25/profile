@@ -159,7 +159,7 @@ tràn ngang ở 375px.
 Kiểm chứng: `bun run build`; Playwright ở 1440px và 375px (chiều rộng root bị
 chặn, thanh hiện trên desktop / thanh CTA hiện trên mobile).
 
-Trạng thái: chờ.
+Trạng thái: xong.
 
 ### C1 - Biểu đồ vua (SVG tự viết)
 Mục tiêu: dựng vùng trội.
@@ -178,7 +178,7 @@ ngược chỉ hiện khi trung thực; render với zero lỗi console.
 Kiểm chứng: `bun run build`; ảnh Playwright vùng vua desktop + 375px; xác nhận đếm
 ngược vắng mặt khi không `executed`.
 
-Trạng thái: chờ.
+Trạng thái: xong.
 
 ### C2 - Thanh hành động gắn
 Mục tiêu: luồng hành động duy nhất, gắn bên cạnh biểu đồ.
@@ -199,7 +199,7 @@ Kiểm chứng: `bun run build`; unit test cho bộ chọn action-model qua các
 Playwright trạng thái chưa kết nối (Connect, không nút submit) so với trạng thái bị
 chặn.
 
-Trạng thái: chờ.
+Trạng thái: xong.
 
 ### C3 - Thanh vòng đời + ngữ cảnh
 Mục tiêu: các dải phụ trợ mỏng trên biểu đồ.
@@ -216,7 +216,7 @@ hàng; không layout shift khi đổi pha.
 Kiểm chứng: `bun run build`; tái dùng `tests/unit/roundPhase.test.ts`; Playwright
 hai pha (live + claim).
 
-Trạng thái: chờ.
+Trạng thái: xong.
 
 ### C4 - Thanh exposure & rủi ro
 Mục tiêu: sẵn sàng rủi ro + exposure mà không có nút chính thứ hai.
@@ -234,7 +234,7 @@ kết nối.
 Kiểm chứng: `bun run build`; unit test cho định dạng + ánh xạ lỗi quote; Playwright
 trạng thái preview-unavailable.
 
-Trạng thái: chờ.
+Trạng thái: xong.
 
 ### C5 - Dock đáy (funding / offers / history)
 Mục tiêu: các bề mặt tham khảo không cướp tập trung khỏi biểu đồ.
@@ -250,7 +250,7 @@ Nghiệm thu: các route funding chỉ-preview không thể bị nhầm với đ
 
 Kiểm chứng: `bun run build`; Playwright modal funding + render bảng.
 
-Trạng thái: chờ.
+Trạng thái: xong.
 
 ### C6 - Biến đổi mobile (chart hero + action sheet)
 Mục tiêu: một cockpit mobile thật, không phải một chồng.
@@ -268,7 +268,7 @@ tràn ngang; sheet mở/đóng; reduced-motion thu hoạt ảnh sheet về tức
 Kiểm chứng: `bun run build`; Playwright 375px + tablet; xác nhận thanh CTA thấy
 được không cần cuộn.
 
-Trạng thái: chờ.
+Trạng thái: xong.
 
 ### C7 - Trạng thái, trau chuốt chuyển động, a11y, test, cutover
 Mục tiêu: hoàn thiện bề mặt và loại bỏ code cũ.
@@ -289,7 +289,7 @@ do và an toàn reduced-motion; code cũ đã gỡ; build + test xanh.
 Kiểm chứng: `bun run build`; `bun run test:unit`;
 `bun run test:e2e -- tests/e2e/predict-club.spec.ts`; spec biến thể đã cập nhật.
 
-Trạng thái: chờ.
+Trạng thái: xong.
 
 ## Tập Tin Chạm Tới (mang tính chỉ dẫn)
 

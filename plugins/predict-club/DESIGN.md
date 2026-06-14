@@ -182,3 +182,46 @@ The shape language is disciplined and professional.
 
 ### Cards & Panels
 - **Containers:** Defined by `background_surface` and a 1px border. Headers should have a distinct bottom border to separate them from the content.
+
+## Chart-King Focal Point (Cockpit surface)
+
+The rebuilt Next surface (the "cockpit") is organized around a single dominant
+focal point: the price chart. Everything else is a thin supporting band or a
+docked rail that frames it. This resolves the prior flat-hierarchy problem where
+no element read as primary.
+
+- **The chart owns the largest zone.** On desktop a `[minmax(0,1fr)_22rem]` grid
+  gives the chart all remaining width with a fixed-width action rail beside it.
+  On mobile the chart is the pinned hero at the top.
+- **Supporting context is thin, never competing.** Lifecycle (stepper) and
+  context (asset/strike/expiry) sit as single-row bands above the chart; the
+  exposure rail and reference dock sit beside or below. None of them claim the
+  visual weight of the chart.
+- **Custom SVG, not a library.** The king chart is a hand-built SVG so it is
+  fully themeable to the Terminal palette and stays small and fast. The Y-range
+  tracks the live price series (spot + forward) so small intrabar moves stay
+  readable; an out-of-range strike is clamped to the nearest edge with a
+  directional caret rather than stretching the axis to reach it.
+- **Truthfulness over decoration.** The chart shows live signals only when they
+  are real: the settlement countdown appears only while the round is `executed`
+  with a future expiry, and a "stale feed" badge appears when the oracle data is
+  older than the freshness threshold. Demo or fabricated values are never shown
+  as live.
+- **One primary action.** Execution lives only in the action rail; no other rail
+  carries a competing primary CTA. The exposure rail is read-only economics.
+
+## Motion
+
+Motion is **restrained and institutional**: it confirms genuine state changes and
+never decorates. The base tokens live in `presentation/next/motion.ts`
+(durations 0 / 120 / 220 / 360ms; standard, decelerate, and accelerate easings).
+
+- **Only on real state change.** Animation fires on phase advance, execute
+  confirm, claim-ready, and sheet/dock open. Numbers never bounce or shimmer on
+  oracle ticks; tabular-nums + JetBrains Mono keep updating values stable.
+- **Enters, not loops.** The mobile action sheet slides up, its backdrop fades,
+  and the desktop dock fades in on expand. There are no idle or looping
+  animations on the trading surface.
+- **Reduced-motion is honored globally.** A `prefers-reduced-motion: reduce`
+  guard collapses every transition and animation to nothing, so the surface is
+  fully usable without motion.
