@@ -86,19 +86,27 @@ export function PriceChart() {
   const stroke = rising ? MINT : RED
 
   const asset = oracleSnapshot.oracleState?.underlying_asset ?? round.market ?? 'BTC'
+  // A feed exists once an oracle is selected; before that the chart has no source
+  // to draw from, which is a different state from "feed up, prices still arriving".
+  const hasFeed = oracleSnapshot.oracleState != null || oracleSnapshot.selectedOracleId != null
+  const stale = !oracleSnapshot.isHealthy && oracleSnapshot.lastUpdateMs > 0
 
   if (series.length < 2) {
+    const noFeed = !hasFeed
     return (
       <div
         ref={wrapRef}
         data-pc-chart-canvas
-        className="flex h-full min-h-0 w-full flex-col items-center justify-center gap-2 bg-surface-container-lowest text-center"
+        className="flex h-full min-h-0 w-full flex-col items-center justify-center gap-2 bg-surface-container-lowest px-md text-center"
       >
-        <span className="material-symbols-outlined text-[32px] text-on-surface-variant/30">
-          show_chart
+        <span
+          className={`material-symbols-outlined text-[32px] ${noFeed ? 'text-error/40' : 'text-on-surface-variant/30'}`}
+          aria-hidden="true"
+        >
+          {noFeed ? 'cloud_off' : 'show_chart'}
         </span>
         <span className="font-data text-data-sm text-on-surface-variant/50">
-          Collecting live prices for {asset}
+          {noFeed ? 'No oracle feed connected' : `Collecting live prices for ${asset}`}
         </span>
       </div>
     )
@@ -316,20 +324,39 @@ export function PriceChart() {
         </div>
       </div>
 
-      {/* Truthful countdown overlay (top-right) — only while live. */}
-      {countdownSeconds != null && (
-        <div className="pointer-events-none absolute right-md top-sm flex items-center gap-1.5 rounded bg-surface-container-high/90 px-2 py-1">
-          <span
-            className="material-symbols-outlined text-[14px] text-primary-fixed-dim"
-            aria-hidden="true"
+      {/* Top-right overlays: truthful countdown (only while live) and, beneath it,
+          a stale-feed badge so a frozen series is never mistaken for live. */}
+      <div className="pointer-events-none absolute right-md top-sm flex flex-col items-end gap-1">
+        {countdownSeconds != null && (
+          <div className="flex items-center gap-1.5 rounded bg-surface-container-high/90 px-2 py-1">
+            <span
+              className="material-symbols-outlined text-[14px] text-primary-fixed-dim"
+              aria-hidden="true"
+            >
+              timer
+            </span>
+            <span className="font-data text-data-sm font-bold tabular-nums text-on-surface">
+              {formatTimer(countdownSeconds)}
+            </span>
+          </div>
+        )}
+        {stale && (
+          <div
+            className="flex items-center gap-1 rounded bg-surface-container-high/90 px-2 py-1"
+            role="status"
           >
-            timer
-          </span>
-          <span className="font-data text-data-sm font-bold tabular-nums text-on-surface">
-            {formatTimer(countdownSeconds)}
-          </span>
-        </div>
-      )}
+            <span
+              className="material-symbols-outlined text-[13px] text-tertiary-fixed-dim"
+              aria-hidden="true"
+            >
+              cloud_off
+            </span>
+            <span className="font-label text-[10px] uppercase tracking-wider text-tertiary-fixed-dim">
+              Stale feed
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
