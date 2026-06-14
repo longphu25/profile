@@ -73,6 +73,7 @@ export default defineConfig({
       'deepbook-predict.html',
       'predict-club.html',
       'predict-club-next.html',
+      'predict-surface-studio.html',
     ],
   },
   server: {
@@ -158,6 +159,7 @@ export default defineConfig({
         'deepbook-predict': resolve(__dirname, 'deepbook-predict.html'),
         'predict-club': resolve(__dirname, 'predict-club.html'),
         'predict-club-next': resolve(__dirname, 'predict-club-next.html'),
+        'predict-surface-studio': resolve(__dirname, 'predict-surface-studio.html'),
         'predict-club-lifecycle-prototype': resolve(
           __dirname,
           'predict-club-lifecycle-prototype.html',

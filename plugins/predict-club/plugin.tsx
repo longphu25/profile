@@ -15,6 +15,7 @@ import { ModalLayer } from './presentation/ModalLayer'
 import { QuickPredictPanelWrapper } from './presentation/QuickPredictPanelWrapper'
 import { PredictClubRoot } from './presentation/PredictClubRoot'
 import { CockpitShell } from './presentation/next/CockpitShell'
+import { StudioShell } from './presentation/studio/StudioShell'
 import './style.css'
 
 let activeHost: SuiHostAPI | null = null
@@ -67,6 +68,10 @@ const PredictClubPlugin: Plugin = {
     // Cockpit rebuild (story 22, chart-king): the React-owned pro surface that
     // shares the same context and domain logic. Mounted into #pc-next-root.
     host.registerComponent('PredictClub.Next.Cockpit', withProvider(CockpitShell))
+
+    // Surface Studio (story 23, decision-support): vol-surface terminal that
+    // reuses the same context/domain. Mounted into #pc-studio-root.
+    host.registerComponent('PredictClub.Surface.Studio', withProvider(StudioShell))
 
     host.log('PredictClub plugin v2 initialized (multi-slot)')
   },

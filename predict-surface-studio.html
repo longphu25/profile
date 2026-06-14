@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Predict Club — Redesign (Next)</title>
+    <title>Predict Surface Studio</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1&display=swap"
       rel="stylesheet"
@@ -30,9 +30,7 @@
       ::-webkit-scrollbar-thumb:hover {
         background: #83958d;
       }
-      /* R8: honor reduced-motion in one place for the whole Next surface —
-         collapses transitions/animations (animate-pulse, glow, width tweens)
-         to near-instant so motion-sensitive users get a static UI. */
+      /* Honor reduced-motion in one place for the whole Studio surface. */
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -57,20 +55,20 @@
         <div class="flex items-center gap-sm">
           <span
             class="font-headline text-headline-lg font-black text-primary-fixed tracking-tight"
-            >PREDICT CLUB</span
+            >PREDICT</span
           >
           <span
             class="font-label text-label-caps uppercase tracking-widest text-on-primary-fixed bg-primary-fixed-dim rounded px-xs py-[2px]"
-            >Next</span
+            >Surface Studio</span
           >
         </div>
         <a
-          href="/predict-surface-studio.html"
+          href="/predict-club-next.html"
           class="flex items-center gap-1 font-data text-data-sm text-on-surface-variant hover:text-primary-fixed transition-colors"
-          data-cockpit-link-studio
+          data-studio-link-cockpit
         >
-          <span class="material-symbols-outlined text-[18px]">grid_on</span>
-          Surface Studio
+          <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+          Cockpit
         </a>
       </div>
       <div class="flex items-center gap-lg">
@@ -79,12 +77,12 @@
         >
           <span class="flex items-center gap-1"
             ><span class="text-primary-fixed-dim">SUI:</span>
-            <span class="tabular-nums">—</span></span
+            <span class="tabular-nums">-</span></span
           >
           <div class="w-px h-4 bg-outline-variant"></div>
           <span class="flex items-center gap-1"
             ><span class="text-primary-fixed-dim">DUSDC:</span>
-            <span class="tabular-nums">—</span></span
+            <span class="tabular-nums">-</span></span
           >
         </div>
         <button
@@ -104,12 +102,12 @@
       </div>
     </header>
 
-    <!-- ═══════════════════════ WORKSPACE (React-owned region grid) ═══════════════════════ -->
-    <main id="pc-next-root" class="flex-1 min-h-0 overflow-hidden">
+    <!-- ═══════════════════════ WORKSPACE (React-owned region) ═══════════════════════ -->
+    <main id="pc-studio-root" class="flex-1 min-h-0 overflow-hidden">
       <div
         class="h-full grid place-items-center text-on-surface-variant font-data text-data-sm"
       >
-        Loading Predict Club (Next)…
+        Loading Predict Surface Studio…
       </div>
     </main>
 
@@ -119,10 +117,6 @@
       id="pc-slot-modal-layer"
       class="fixed inset-0 z-50 pointer-events-none [&>*]:pointer-events-auto"
     ></div>
-    <div
-      id="pc-slot-quick-predict"
-      class="fixed inset-0 z-50 pointer-events-none [&>*]:pointer-events-auto"
-    ></div>
-    <script type="module" src="/src/predict-club-next/main.tsx"></script>
+    <script type="module" src="/src/predict-surface-studio/main.tsx"></script>
   </body>
 </html>
