@@ -837,3 +837,25 @@ Nhưng architecture matches exactly với feedback Q6: "the Move object should c
 - Processed manually by team (không instant)
 - Không có programmatic faucet
 - Nếu blocked: ping team với specific blocker
+
+
+---
+
+## Future Ideas (Stretch / Next)
+
+### x402/MPP để monetize Predict data API
+
+Có thể dùng x402/MPP (Machine Payments Protocol) để monetize Predict data API — ví dụ:
+- Premium real-time SVI surface data (pay-per-query)
+- Risk scores / divergence alerts (subscription via micro-payments)
+- Historical oracle data + backtesting (metered access)
+
+Đây là concept rất xa, không phải core DeepBook functionality. Nhưng nếu build data layer cho Predict, x402 pattern (HTTP 402 → agent pays USDC → gets data) là interesting monetization path cho:
+- Bot builders muốn premium data feeds
+- AI agents cần real-time vol surface cho trading decisions
+- Third-party analytics platforms
+
+References:
+- suimpp.dev (MPP on Sui)
+- https://github.com/MystenLabs/x402 (outdated but Sui-native)
+- https://github.com/x402-foundation/x402/pull/2616 (working implementation)
