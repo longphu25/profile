@@ -750,3 +750,90 @@ async function validateOracleForRound(oracleId: string): Promise<{
   return { valid: true }
 }
 ```
+
+
+---
+
+## Q15: Oracle creation — self-serve NOT possible (confirmed)
+
+### Câu hỏi
+
+> Are there short-expiry oracles live on testnet? Can builders create one themselves?
+> `add_oracle_grid` is `public(package)` and requires `OracleSVICap`.
+
+### Trả lời (từ team)
+
+- **Self-serve is NOT possible** — `add_oracle_grid` requires `OracleSVICap`
+- Chỉ team Mysten mới tạo oracle mới
+- Lấy active oracles: `GET /predicts/0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a38028a/oracles`
+- Endpoint có thể trả về inactive oracles → filter bằng check on-chain object
+- Example TX showing oracle setup: https://testnet.suivision.xyz/txblock/E965YssePiRm4eqqnxunVGbknFF1eKxUsHTvezpYpXTs?tab=Changes
+
+### Implication
+
+Builders hoàn toàn phụ thuộc team Mysten cho:
+1. Tạo oracle mới (oracle grid)
+2. Price updates (keeper với OracleSVICap)
+3. Settlement (post-expiry price push)
+
+Không có path nào để tự lập oracle riêng trên testnet.
+
+---
+
+## Q16: Risk Guardian — AI chỉ tính score, có competitive không?
+
+### Câu hỏi
+
+> AI chỉ calculate risk score (0-100). Contract tự verify on-chain data trước khi act.
+> FREEZE dựa trên Pyth<>DeepBook divergence (on-chain math), không dựa AI.
+> Lo "Generic LLM wrappers that happen to hold SUI will not place".
+
+### Architecture đề xuất
+
+```
+[offchain] AI agent heartbeat:
+  - Input: oracles + DeepBook mid + volatility market data
+  - Output: 0-100 risk score
+  
+[onchain] GuardianPolicy (shared Move object):
+  [1] Nhận AI score → điều chỉnh params lending SAFETY direction only
+      - Contract checks: timestamp, Pyth<>DeepBook divergence
+      - Only allows params to move SAFER (one-way ratchet)
+  [2] FREEZE based on on-chain divergence (NOT AI decision)
+      - Pure math: abs(pyth_price - deepbook_mid) > threshold
+      - Unfreeze: only DAO/owner cap
+```
+
+### Phân tách responsibilities
+
+| Component | Role | Trust Level |
+|-----------|------|-------------|
+| AI agent (off-chain) | Calculate risk score, push to contract | Advisory — can only suggest safer |
+| Move contract (on-chain) | Verify divergence, enforce bounds, freeze | Authoritative — source of truth |
+| DAO/owner cap | Unfreeze, widen params | Governance — ultimate authority |
+
+### Tại sao competitive (based on earlier mentor feedback)
+
+- ✅ Not a "generic LLM wrapper" — AI is advisory, contract is enforcement
+- ✅ One-way ratchet: AI cannot harm, only push safer
+- ✅ FREEZE uses on-chain math, not AI output
+- ✅ Contract verifies independently before acting
+- ✅ Real problem: oracle divergence protection for lending vaults
+
+### Chưa có reply chính thức từ mentor cho câu hỏi này
+
+Nhưng architecture matches exactly với feedback Q6: "the Move object should confirm the breach from on-chain data itself, not just take the agent's word for it."
+
+---
+
+## Q17: DUSDC faucet — process via tally form
+
+### Confirmed flow
+
+> "Thanks for filling it, that's the right way to request DUSDC and it'll get processed from there.
+> Hang tight, it'll come through. You can keep building in the meantime."
+
+- Tally form: https://tally.so/r/Xx102L
+- Processed manually by team (không instant)
+- Không có programmatic faucet
+- Nếu blocked: ping team với specific blocker
