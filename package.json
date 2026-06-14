@@ -12,6 +12,7 @@
     "test:unit": "bun test tests/unit",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report test-results/html",
+    "probe:ui": "node scripts/predict-club-ui-smoke.mjs",
     "preview": "vite preview",
     "setup:codegraph": "bash scripts/setup-codegraph.sh",
     "codegraph:index": "codegraph init -i",
