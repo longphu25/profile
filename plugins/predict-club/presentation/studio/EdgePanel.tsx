@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { RealizedVol, SurfaceColumn } from '../../domain/volSurface'
+import type { MispriceCell, RealizedVol, SurfaceColumn } from '../../domain/volSurface'
 
 /**
  * Trader edge panel (plan 23, S2-S4).
@@ -41,10 +41,14 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 export function EdgePanel({
   column,
   realized,
+  mispriceCells,
+  mispriceLoading,
   className = '',
 }: {
   column: SurfaceColumn | null
   realized: RealizedVol | null
+  mispriceCells: MispriceCell[]
+  mispriceLoading: boolean
   className?: string
 }) {
   const iv = atmIv(column)
@@ -102,11 +106,99 @@ export function EdgePanel({
         </Row>
       </div>
 
-      <div className="border-t border-outline-variant px-md py-sm">
-        <span className="font-data text-data-sm text-on-surface-variant">
-          Mispricing and arb-free health arrive in S3-S4.
-        </span>
-      </div>
+      <MispricingLadder cells={mispriceCells} loading={mispriceLoading} forward={column?.forward} />
     </section>
+  )
+}
+
+function fmtProb(p: number | null): string {
+  return p == null ? '-' : `${(p * 100).toFixed(1)}%`
+}
+
+/**
+ * Mispricing ladder (S3): per-strike contract-implied vs SVI-fair win probability,
+ * with the signed edge. Positive edge = contract dearer than model (sell side),
+ * negative = cheaper (buy side). Color is paired with a sign + label, never alone.
+ */
+function MispricingLadder({
+  cells,
+  loading,
+  forward,
+}: {
+  cells: MispriceCell[]
+  loading: boolean
+  forward?: number
+}) {
+  const sorted = [...cells].sort((a, b) => b.strike - a.strike)
+  const hasAny = sorted.some((c) => c.edge != null)
+
+  return (
+    <div className="flex min-h-0 flex-col border-t border-outline-variant">
+      <div className="flex items-center justify-between px-md py-sm">
+        <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant">
+          Mispricing (ATM band)
+        </span>
+        {loading && (
+          <span className="font-data text-data-sm text-on-surface-variant">quoting...</span>
+        )}
+      </div>
+
+      {sorted.length === 0 ? (
+        <div className="px-md pb-sm font-data text-data-sm text-on-surface-variant">
+          {loading
+            ? 'Quoting the contract around the forward.'
+            : 'Pick an active expiry to quote its ATM band against the model.'}
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          {/* Column header. */}
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-md px-md py-1 font-label text-[10px] uppercase tracking-wide text-on-surface-variant">
+            <span>Strike</span>
+            <span className="text-right">Fair</span>
+            <span className="text-right">Contract</span>
+            <span className="text-right">Edge</span>
+          </div>
+          {sorted.map((cell) => {
+            const atm = forward != null && Math.abs(cell.strike - forward) < forward * 0.0025
+            const edge = cell.edge
+            const edgeColor =
+              edge == null
+                ? 'text-on-surface-variant'
+                : edge > 0
+                  ? 'text-primary-fixed-dim'
+                  : edge < 0
+                    ? 'text-error'
+                    : 'text-on-surface-variant'
+            const edgeSign = edge != null && edge > 0 ? '+' : ''
+            return (
+              <div
+                key={cell.strike}
+                className={`grid grid-cols-[1fr_auto_auto_auto] gap-md px-md py-1 font-data text-data-sm tabular-nums ${
+                  atm ? 'bg-surface-container' : ''
+                }`}
+              >
+                <span className="text-on-surface">
+                  {cell.strike >= 1000 ? `${(cell.strike / 1000).toFixed(1)}k` : cell.strike}
+                </span>
+                <span className="text-right text-on-surface-variant">
+                  {fmtProb(cell.fairProbability)}
+                </span>
+                <span className="text-right text-on-surface-variant">
+                  {fmtProb(cell.contractProbability)}
+                </span>
+                <span className={`text-right ${edgeColor}`}>
+                  {edge == null ? '-' : `${edgeSign}${(edge * 100).toFixed(1)}%`}
+                </span>
+              </div>
+            )
+          })}
+          {!hasAny && !loading && (
+            <div className="px-md py-sm font-data text-data-sm text-on-surface-variant">
+              Contract quotes unavailable for this band right now.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }

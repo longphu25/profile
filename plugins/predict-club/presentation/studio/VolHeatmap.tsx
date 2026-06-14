@@ -1,4 +1,4 @@
-import type { SurfaceColumn, SurfaceGrid } from '../../domain/volSurface'
+import type { MispriceCell, SurfaceColumn, SurfaceGrid } from '../../domain/volSurface'
 
 /**
  * Vol-surface heatmap (plan 23, S1-S2): a strike x expiry implied-vol matrix.
@@ -54,10 +54,12 @@ function HeatmapBody({
   grid,
   selectedOracleId,
   onSelect,
+  edgeByStrike,
 }: {
   grid: SurfaceGrid
   selectedOracleId: string | null
   onSelect: (oracleId: string) => void
+  edgeByStrike: Map<number, number>
 }) {
   const { strikes, columns, ivRange } = grid
   const templateColumns = `minmax(3.5rem, auto) repeat(${columns.length}, minmax(0, 1fr))`
@@ -112,6 +114,7 @@ function HeatmapBody({
           columns={columns}
           ivRange={ivRange}
           selectedOracleId={selectedOracleId}
+          edgeByStrike={edgeByStrike}
         />
       ))}
     </div>
@@ -123,11 +126,13 @@ function Row({
   columns,
   ivRange,
   selectedOracleId,
+  edgeByStrike,
 }: {
   strike: number
   columns: SurfaceColumn[]
   ivRange: SurfaceGrid['ivRange']
   selectedOracleId: string | null
+  edgeByStrike: Map<number, number>
 }) {
   return (
     <>
@@ -141,6 +146,7 @@ function Row({
         const cell = column.cells.find((c) => c.strike === strike)
         const iv = cell?.iv ?? null
         const selectedCol = column.oracleId === selectedOracleId
+        const edge = selectedCol ? (edgeByStrike.get(strike) ?? null) : null
         if (iv == null || !ivRange) {
           return (
             <div
@@ -156,13 +162,17 @@ function Row({
             </div>
           )
         }
+        const edgeLabel =
+          edge != null
+            ? `, mispricing edge ${edge > 0 ? '+' : ''}${(edge * 100).toFixed(1)} points`
+            : ''
         return (
           <div
             key={column.oracleId}
             role="gridcell"
             tabIndex={0}
-            aria-label={`Strike ${strike}, ${formatExpiryHeader(column)}: implied vol ${formatIv(iv)}`}
-            className={`flex items-center justify-center font-data text-data-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary-fixed focus-visible:ring-inset ${
+            aria-label={`Strike ${strike}, ${formatExpiryHeader(column)}: implied vol ${formatIv(iv)}${edgeLabel}`}
+            className={`relative flex items-center justify-center font-data text-data-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary-fixed focus-visible:ring-inset ${
               selectedCol ? 'ring-1 ring-primary-fixed ring-inset' : ''
             }`}
             style={{
@@ -171,6 +181,13 @@ function Row({
             }}
           >
             {formatIv(iv)}
+            {edge != null && (
+              <span
+                aria-hidden="true"
+                className="absolute right-[2px] top-[2px] h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: edge > 0 ? '#ff5d73' : '#04140f' }}
+              />
+            )}
           </div>
         )
       })}
@@ -183,15 +200,22 @@ export function VolHeatmap({
   loaded,
   selectedOracleId,
   onSelect,
+  mispriceCells,
   className = '',
 }: {
   grid: SurfaceGrid
   loaded: boolean
   selectedOracleId: string | null
   onSelect: (oracleId: string) => void
+  mispriceCells: MispriceCell[]
   className?: string
 }) {
   const hasCells = grid.columns.length > 0 && grid.strikes.length > 0 && grid.ivRange != null
+  // Edge by strike for the selected column only (the ATM band we quoted).
+  const edgeByStrike = new Map<number, number>()
+  for (const cell of mispriceCells) {
+    if (cell.edge != null) edgeByStrike.set(cell.strike, cell.edge)
+  }
 
   return (
     <section
@@ -224,7 +248,12 @@ export function VolHeatmap({
 
       <div className="min-h-0 flex-1 p-px">
         {hasCells ? (
-          <HeatmapBody grid={grid} selectedOracleId={selectedOracleId} onSelect={onSelect} />
+          <HeatmapBody
+            grid={grid}
+            selectedOracleId={selectedOracleId}
+            onSelect={onSelect}
+            edgeByStrike={edgeByStrike}
+          />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-sm p-lg text-center">
             <span

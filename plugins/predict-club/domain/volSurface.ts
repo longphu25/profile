@@ -34,6 +34,9 @@ export interface SurfaceColumn {
   /** Seconds until expiry at sample time (for the column header). */
   secondsToExpiry: number
   forward: number
+  /** The column's SVI curve, retained so the mispricing ladder (S3) and arb-free
+   * checker (S4) can compute fair value per strike. Null when the column is degraded. */
+  svi: SVIParams | null
   /** True when this column has no usable SVI: cells carry null IV (degraded, not faked). */
   degraded: boolean
   cells: SurfaceCell[]
@@ -62,4 +65,23 @@ export interface RealizedVol {
   sampleCount: number
   /** Window length in minutes, for honest labeling. */
   windowMinutes: number
+}
+
+/**
+ * One strike's mispricing (plan 23, S3): the contract-implied win probability
+ * (from a real devInspect quote) against the SVI fair-value probability. Edge is
+ * the signed difference; positive means the contract is pricing the outcome richer
+ * than the model (a sell-side edge), negative means cheaper (a buy-side edge).
+ */
+export interface MispriceCell {
+  oracleId: string
+  strike: number
+  /** SVI fair-value win probability for the UP side (model). */
+  fairProbability: number | null
+  /** Contract-implied win probability for the UP side (devInspect quote). */
+  contractProbability: number | null
+  /** contractProbability - fairProbability, or null when either side is missing. */
+  edge: number | null
+  /** Defined reason when the contract quote could not be obtained (degraded, not faked). */
+  reason?: string
 }

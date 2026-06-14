@@ -338,6 +338,88 @@ async function quoteNewPosition({
   }
 }
 
+export interface StrikeQuote {
+  /** Contract-implied win probability (cost per contract; each contract pays 1 on win). */
+  impliedProbability: number | null
+  /** DUSDC mint cost for the sampled quantity. */
+  estimatedCost: number | null
+  reason?: string
+}
+
+const STRIKE_QUOTE_CONTRACTS = 10
+
+/**
+ * Per-strike binary contract quote for the mispricing ladder (plan 23, S3).
+ *
+ * Runs the same devInspect `predict::get_trade_amounts` path as the cockpit quote,
+ * but for an arbitrary (oracle, expiry, strike, side) rather than the active round.
+ * The contract returns the mint cost for `quantity` contracts; cost-per-contract IS
+ * the contract-implied win probability (each contract pays 1 DUSDC on win). One
+ * devInspect round-trip per call - the caller (volSurfaceService) bounds and caches.
+ */
+export async function quoteBinaryStrike(params: {
+  oracleId: string
+  expiry: number
+  strikeUsd: number
+  isUp: boolean
+  tickSize?: number
+  minStrike?: number
+  walletAddress?: string | null
+}): Promise<StrikeQuote> {
+  const tickSize = params.tickSize ?? PRICE_SCALE
+  const minStrike = params.minStrike ?? 0
+  const strike = snapStrike(params.strikeUsd, tickSize, minStrike)
+  const quantity = BigInt(STRIKE_QUOTE_CONTRACTS) * CONTRACT_UNIT
+  const sender = params.walletAddress ?? FALLBACK_SENDER
+
+  const tx = new Transaction()
+  tx.setSender(sender)
+  const [marketKey] = tx.moveCall({
+    target: `${PACKAGE_ID}::market_key::new`,
+    arguments: [
+      tx.pure.id(params.oracleId),
+      tx.pure.u64(params.expiry),
+      tx.pure.u64(strike),
+      tx.pure.bool(params.isUp),
+    ],
+  })
+  tx.moveCall({
+    target: `${PACKAGE_ID}::predict::get_trade_amounts`,
+    arguments: [
+      tx.object(PREDICT_ID),
+      tx.object(params.oracleId),
+      marketKey,
+      tx.pure.u64(quantity),
+      tx.object(CLOCK_ID),
+    ],
+  })
+
+  try {
+    const inspected = await client.devInspectTransactionBlock({ sender, transactionBlock: tx })
+    const values = inspected.results?.[1]?.returnValues
+    if (!values || values.length < 1) {
+      return {
+        impliedProbability: null,
+        estimatedCost: null,
+        reason: sanitizeContractQuoteReason(inspected.error ?? 'No return values'),
+      }
+    }
+    const mintCost = parseU64ReturnValue(values[0][0])
+    const estimatedCost = fromDusdc(mintCost)
+    const impliedProbability = estimatedCost / STRIKE_QUOTE_CONTRACTS
+    return {
+      impliedProbability: Number.isFinite(impliedProbability) ? impliedProbability : null,
+      estimatedCost,
+    }
+  } catch (error) {
+    return {
+      impliedProbability: null,
+      estimatedCost: null,
+      reason: sanitizeContractQuoteReason(error),
+    }
+  }
+}
+
 export function sanitizeContractQuoteReason(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error ?? '')
   if (!raw || raw === 'undefined' || raw === 'null') return 'Contract quote unavailable'

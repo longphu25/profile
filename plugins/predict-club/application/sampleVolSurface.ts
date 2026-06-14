@@ -109,6 +109,7 @@ export function sampleVolSurface(
       expiryMs: input.expiryMs,
       secondsToExpiry,
       forward: input.forward,
+      svi: input.svi,
       degraded,
       cells,
     }
