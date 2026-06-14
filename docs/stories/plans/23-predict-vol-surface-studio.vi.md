@@ -307,7 +307,7 @@ tại; vắng lịch sử thì disable control với nhãn rõ, không crash.
 Kiểm chứng: `bun run build`; Playwright scrub và assert surface đổi rồi về live;
 assert state disabled khi lịch sử rỗng.
 
-Trạng thái: pending.
+Trạng thái: done.
 
 ### S6 — Prod-readiness (CORS), states, a11y, tests, docs
 Mục tiêu: deploy-ready end to end, đánh bóng, accessible, và thêm surface vào smoke

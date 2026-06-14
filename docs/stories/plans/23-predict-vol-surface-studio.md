@@ -310,7 +310,7 @@ crash.
 Validation: `bun run build`; Playwright scrubs and asserts the surface changes then
 returns to live; assert disabled state when history is empty.
 
-Status: pending.
+Status: done.
 
 ### S6 — Prod-readiness (CORS), states, a11y, tests, docs
 Objective: deploy-ready end to end, polished, accessible, and the surface added to

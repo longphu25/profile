@@ -13,6 +13,7 @@ import type { MispriceCell, RealizedVol } from '../../domain/volSurface'
 import { usePredictClub } from '../usePredictClub'
 import { EdgePanel } from './EdgePanel'
 import { SmileSlice } from './SmileSlice'
+import { TimeTravel } from './TimeTravel'
 import { VolHeatmap } from './VolHeatmap'
 
 /**
@@ -43,6 +44,8 @@ export function StudioShell() {
   const [realized, setRealized] = useState<RealizedVol | null>(null)
   const [mispriceCells, setMispriceCells] = useState<MispriceCell[]>([])
   const [mispriceLoading, setMispriceLoading] = useState(false)
+  // Time-travel index into surface.history; null = the live surface (S5).
+  const [timeIndex, setTimeIndex] = useState<number | null>(null)
 
   // Own the surface service lifecycle: start the SVI fan-out on mount, stop on
   // unmount, so cockpit-only users never pay for it.
@@ -72,7 +75,13 @@ export function StudioShell() {
     }
   }, [])
 
-  const { grid, loaded } = surface
+  const { loaded, history } = surface
+
+  // Clamp the time-travel index if the buffer shrank, then pick the displayed
+  // grid: a past snapshot when scrubbing, the live grid otherwise. The heatmap,
+  // smile, and arb-free health all read this one grid so they stay consistent.
+  const replaying = timeIndex != null && timeIndex < history.length
+  const grid = replaying ? history[timeIndex].grid : surface.grid
 
   // Default the selection to the nearest expiry once the grid arrives; keep the
   // user's choice if it is still a live column, else fall back to the first.
@@ -97,7 +106,9 @@ export function StudioShell() {
   // Refetched when the column changes (and on a slow timer for the same column),
   // bounded + cached inside getMispriceBand so testnet RPC survives.
   useEffect(() => {
-    if (!selectedColumn || selectedColumn.degraded || grid.strikes.length === 0) {
+    // Mispricing is a live-only signal: a contract quote for a past surface would
+    // be misleading, so scrubbing into history clears the band rather than faking it.
+    if (replaying || !selectedColumn || selectedColumn.degraded || grid.strikes.length === 0) {
       setMispriceCells([])
       return
     }
@@ -126,7 +137,7 @@ export function StudioShell() {
       active = false
       clearInterval(timer)
     }
-  }, [selectedColumn, grid.strikes, context.address])
+  }, [replaying, selectedColumn, grid.strikes, context.address])
 
   const liveExpiries = grid.columns.length
   const asset = oracleSnapshot.oracleState?.underlying_asset ?? 'BTC'
@@ -158,6 +169,12 @@ export function StudioShell() {
           </span>
         </span>
       </div>
+
+      <TimeTravel
+        history={history}
+        selectedIndex={replaying ? timeIndex : null}
+        onSelect={setTimeIndex}
+      />
 
       {/* Main: heatmap is king (left, fills), smile + edge stack right. */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-px overflow-y-auto bg-outline-variant lg:grid-cols-[minmax(0,1fr)_24rem] lg:overflow-hidden [&>*]:min-h-[16rem] lg:[&>*]:min-h-0">

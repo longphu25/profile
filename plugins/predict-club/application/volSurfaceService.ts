@@ -26,12 +26,22 @@ const PRICE_SCALE = 1e9
 const REFRESH_INTERVAL_MS = 60_000
 // Bound the fan-out: only sample this many nearest-expiry live oracles at once.
 const MAX_COLUMNS = 6
+// Bound the time-travel ring buffer: keep this many recent distinct surfaces.
+const MAX_HISTORY = 30
+
+/** One captured surface for time-travel (plan 23, S5): the grid plus when it was sampled. */
+export interface SurfaceHistoryEntry {
+  grid: SurfaceGrid
+  capturedAtMs: number
+}
 
 export interface VolSurfaceSnapshot {
   grid: SurfaceGrid
   /** True once at least one fan-out pass has completed (so the UI can tell empty from loading). */
   loaded: boolean
   lastUpdateMs: number
+  /** Recent distinct surfaces, oldest first, for the time-travel scrubber (S5). */
+  history: SurfaceHistoryEntry[]
 }
 
 type Listener = (snapshot: VolSurfaceSnapshot) => void
@@ -40,6 +50,7 @@ let snapshot: VolSurfaceSnapshot = {
   grid: { strikes: [], columns: [], ivRange: null, sampledAtMs: 0 },
   loaded: false,
   lastUpdateMs: 0,
+  history: [],
 }
 
 const listeners = new Set<Listener>()
@@ -53,6 +64,34 @@ let lastOracleKey = ''
 
 function emit() {
   for (const fn of listeners) fn(snapshot)
+}
+
+/**
+ * Fingerprint a grid for time-travel dedupe (S5): a surface is "new" only when a
+ * column's SVI actually changes. We key on each column's oracle id + its SVI
+ * onchain timestamp, so identical re-samples (same SVI, refreshed forward) do not
+ * flood the ring buffer. A degraded column (no SVI) contributes a stable marker.
+ */
+export function surfaceFingerprint(grid: SurfaceGrid): string {
+  return grid.columns.map((c) => `${c.oracleId}:${c.svi?.onchain_timestamp ?? 'none'}`).join('|')
+}
+
+/**
+ * Push a captured surface into the bounded ring buffer (S5), pure for testing.
+ * Appends only when the fingerprint differs from the last entry (distinct surface),
+ * and keeps at most `max` entries (oldest dropped). An empty grid is never stored.
+ */
+export function pushSurfaceHistory(
+  history: SurfaceHistoryEntry[],
+  grid: SurfaceGrid,
+  capturedAtMs: number,
+  max: number = MAX_HISTORY,
+): SurfaceHistoryEntry[] {
+  if (grid.columns.length === 0) return history
+  const last = history[history.length - 1]
+  if (last && surfaceFingerprint(last.grid) === surfaceFingerprint(grid)) return history
+  const next = [...history, { grid, capturedAtMs }]
+  return next.length > max ? next.slice(next.length - max) : next
 }
 
 function liveOracles(oracleSnapshot: ClubOracleSnapshot): OracleEntry[] {
@@ -126,6 +165,7 @@ async function refresh() {
         grid: { strikes: [], columns: [], ivRange: null, sampledAtMs: Date.now() },
         loaded: true,
         lastUpdateMs: Date.now(),
+        history: snapshot.history,
       }
       emit()
       return
@@ -148,7 +188,9 @@ async function refresh() {
     )
 
     const grid = sampleVolSurface(inputs, Date.now(), sampleConfig)
-    snapshot = { grid, loaded: true, lastUpdateMs: Date.now() }
+    const capturedAt = Date.now()
+    const history = pushSurfaceHistory(snapshot.history, grid, capturedAt)
+    snapshot = { grid, loaded: true, lastUpdateMs: capturedAt, history }
     emit()
   } finally {
     inFlight = false
@@ -195,5 +237,6 @@ export function stopVolSurfaceService() {
     grid: { strikes: [], columns: [], ivRange: null, sampledAtMs: 0 },
     loaded: false,
     lastUpdateMs: 0,
+    history: [],
   }
 }
