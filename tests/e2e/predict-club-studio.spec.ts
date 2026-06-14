@@ -78,6 +78,29 @@ test.describe('Predict Club — Surface Studio', () => {
     expect(pageErrorsByTest.get(page) ?? []).toEqual([])
   })
 
+  test('clicking a cell opens the trade ticket; disconnected shows Connect, hides Submit, Escape closes', async ({
+    page,
+  }) => {
+    if (!(await waitForGrid(page.locator('[data-pc-studio-heatmap] [role="grid"]')))) {
+      test.skip(true, 'no live SVI surface in this run')
+      return
+    }
+    // A cell with live IV opens the ticket; the gridcell itself carries tabindex=0
+    // (the active roving-tabindex cell), so the attribute sits on the cell element.
+    await page.locator('[data-pc-studio-heatmap] [role="gridcell"][tabindex="0"]').first().click()
+    const ticket = page.locator('[data-pc-studio-ticket]')
+    await expect(ticket).toBeVisible()
+    // Disconnected: the action is Connect Wallet, never a live Submit.
+    await expect(page.locator('[data-pc-studio-ticket-connect]')).toBeVisible()
+    await expect(page.locator('[data-pc-studio-ticket-submit]')).toHaveCount(0)
+    // The dialog handles Escape on its own keydown, so focus it first (the cell
+    // click does not necessarily leave focus inside the popover).
+    await ticket.focus()
+    await ticket.press('Escape')
+    await expect(ticket).toHaveCount(0)
+    expect(pageErrorsByTest.get(page) ?? []).toEqual([])
+  })
+
   test('no horizontal overflow at desktop or mobile width', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     const deskOverflow = await page.evaluate(

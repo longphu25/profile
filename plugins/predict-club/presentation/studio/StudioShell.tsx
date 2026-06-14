@@ -9,12 +9,21 @@ import {
 import { fetchRealizedVol } from '../../application/realizedVol'
 import { atmBandStrikes, getMispriceBand } from '../../application/mispricing'
 import { checkArbFree } from '../../application/arbFreeCheck'
-import type { MispriceCell, RealizedVol } from '../../domain/volSurface'
+import { buildStudioRiskInput, submitStudioTrade } from '../../application/submitStudioTrade'
+import { createSuiPredictGateway } from '../../infrastructure/suiPredictGateway'
+import { quoteBinaryStrike } from '../../infrastructure/deepbookPredictPricingService'
+import type { MispriceCell, RealizedVol, SurfaceCell, SurfaceColumn } from '../../domain/volSurface'
 import { usePredictClub } from '../usePredictClub'
 import { EdgePanel } from './EdgePanel'
 import { SmileSlice } from './SmileSlice'
 import { TimeTravel } from './TimeTravel'
+import { TradeTicket, type TradeTicketResult } from './TradeTicket'
 import { VolHeatmap } from './VolHeatmap'
+
+// Contract param fallbacks when the oracle entry omits them (mirrors the cockpit's
+// executeRound defaults so the Studio mint matches the cockpit's behavior).
+const DEFAULT_TICK_SIZE = 1_000_000_000
+const DEFAULT_MIN_STRIKE = 50_000_000_000_000
 
 /**
  * Surface Studio layout primitive for the decision-support terminal.
@@ -38,7 +47,7 @@ const MISPRICE_REFRESH_MS = 20_000
 const ATM_BAND_RADIUS = 3
 
 export function StudioShell() {
-  const { oracleSnapshot, context } = usePredictClub()
+  const { oracleSnapshot, context, host, predictManagerId, balances } = usePredictClub()
   const [surface, setSurface] = useState<VolSurfaceSnapshot>(getVolSurfaceSnapshot)
   const [selectedOracleId, setSelectedOracleId] = useState<string | null>(null)
   const [realized, setRealized] = useState<RealizedVol | null>(null)
@@ -46,6 +55,13 @@ export function StudioShell() {
   const [mispriceLoading, setMispriceLoading] = useState(false)
   // Time-travel index into surface.history; null = the live surface (S5).
   const [timeIndex, setTimeIndex] = useState<number | null>(null)
+  // Trade ticket (S7): the clicked cell + its column + the anchor rect to position
+  // the popover. Null when no ticket is open.
+  const [ticket, setTicket] = useState<{
+    cell: SurfaceCell
+    column: SurfaceColumn
+    anchorRect: DOMRect
+  } | null>(null)
 
   // Own the surface service lifecycle: start the SVI fan-out on mount, stop on
   // unmount, so cockpit-only users never pay for it.
@@ -139,6 +155,84 @@ export function StudioShell() {
     }
   }, [replaying, selectedColumn, grid.strikes, context.address])
 
+  // Run the solo-trade pipeline for the open ticket. Looks up the oracle entry for
+  // tick/min/expiry (cockpit fallbacks when omitted), resolves the manager id, builds
+  // the risk input for one solo trade, then gate -> build -> sign via submitStudioTrade.
+  const handleSubmit = async (
+    direction: 'UP' | 'DOWN',
+    amountDusdc: number,
+  ): Promise<TradeTicketResult> => {
+    if (!ticket) return { ok: false, error: 'No trade open' }
+    const address = context.address
+    if (!address || !host) return { ok: false, error: 'Wallet not connected' }
+    const { cell, column } = ticket
+
+    const gateway = createSuiPredictGateway()
+    const managerId = predictManagerId ?? (await gateway.fetchManagerId(address))
+    if (!managerId) return { ok: false, error: 'No PredictManager found - create one first' }
+
+    const oracleEntry = oracleSnapshot.oracles.find((o) => o.oracle_id === column.oracleId)
+    const tickSize = oracleEntry?.tick_size ?? DEFAULT_TICK_SIZE
+    const minStrike = oracleEntry?.min_strike ?? DEFAULT_MIN_STRIKE
+    const expiryMs = oracleEntry?.expiry ?? column.expiryMs
+
+    const riskInput = buildStudioRiskInput({
+      expiryMs,
+      oracleStatus: oracleEntry?.status ?? null,
+      oracleLastUpdateMs: oracleSnapshot.lastUpdateMs || null,
+      hasSvi: !column.degraded && column.svi != null,
+      hasForward: column.forward > 0,
+      memberDusdc: balances.dusdc,
+      amountDusdc,
+      walletConnected: true,
+      managerReady: true,
+    })
+
+    return submitStudioTrade(
+      {
+        direction,
+        strike: cell.strike,
+        amountDusdc,
+        oracleId: column.oracleId,
+        expiryMs,
+        walletAddress: address,
+        managerId,
+        tickSize,
+        minStrike,
+      },
+      {
+        riskInput,
+        gateway,
+        preflightQuote: async () => {
+          const quote = await quoteBinaryStrike({
+            oracleId: column.oracleId,
+            expiry: expiryMs,
+            strikeUsd: cell.strike,
+            isUp: direction === 'UP',
+            tickSize,
+            minStrike,
+            walletAddress: address,
+          })
+          // A null implied probability means the contract refused to price this
+          // strike (outside its bounds); quote.reason carries the friendly message.
+          return quote.impliedProbability != null
+            ? { ok: true }
+            : { ok: false, reason: quote.reason }
+        },
+        signAndExecute: async (tx) => {
+          const txResult = await host.signAndExecuteTransaction(tx)
+          return { digest: (txResult as { digest?: string }).digest ?? '' }
+        },
+      },
+    )
+  }
+
+  // The mispricing cell for the ticket's strike (when the clicked cell sits in the
+  // quoted ATM band), so the ticket can show the contract probability + edge.
+  const ticketMispriceCell = ticket
+    ? mispriceCells.find((c) => c.strike === ticket.cell.strike)
+    : undefined
+
   const liveExpiries = grid.columns.length
   const asset = oracleSnapshot.oracleState?.underlying_asset ?? 'BTC'
 
@@ -183,13 +277,13 @@ export function StudioShell() {
           loaded={loaded}
           selectedOracleId={effectiveOracleId}
           onSelect={setSelectedOracleId}
+          onCellSelect={(column, cell, anchorRect) => setTicket({ cell, column, anchorRect })}
           mispriceCells={mispriceCells}
           arbReport={arbReport}
           className="min-h-0"
         />
 
         <div className="flex min-h-0 flex-col gap-px bg-outline-variant">
-          <SmileSlice column={selectedColumn} className="min-h-0 flex-1" />
           <EdgePanel
             column={selectedColumn}
             realized={realized}
@@ -198,8 +292,25 @@ export function StudioShell() {
             arbReport={arbReport}
             className="shrink-0"
           />
+          <SmileSlice column={selectedColumn} className="min-h-0 flex-1" />
         </div>
       </div>
+
+      {ticket && (
+        <TradeTicket
+          cell={ticket.cell}
+          column={ticket.column}
+          mispriceCell={ticketMispriceCell}
+          balances={balances}
+          isConnected={context.isConnected}
+          managerReady={predictManagerId != null}
+          anchorRect={ticket.anchorRect}
+          asset={asset}
+          onConnect={() => host?.requestConnect()}
+          onSubmit={handleSubmit}
+          onClose={() => setTicket(null)}
+        />
+      )}
     </div>
   )
 }

@@ -150,6 +150,26 @@ async function main() {
       record('heatmap keyboard nav', true, 'no live cells - skipped')
     }
 
+    // Trade ticket (S7): clicking a live cell opens the popover. Disconnected, it
+    // must show Connect Wallet and hide the submit button (gating), and Escape
+    // closes it. Skipped when no live SVI surface populated the grid.
+    if (cellCount > 0) {
+      await page.locator('[data-pc-studio-heatmap] [role="gridcell"]').first().click()
+      const ticket = page.locator('[data-pc-studio-ticket]')
+      const opened = (await ticket.count()) > 0
+      const connect = await page.locator('[data-pc-studio-ticket-connect]').count()
+      const submit = await page.locator('[data-pc-studio-ticket-submit]').count()
+      record('trade ticket opens on cell click', opened)
+      record('disconnected ticket gates submit', connect > 0 && submit === 0, `connect=${connect} submit=${submit}`)
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(150)
+      record('Escape closes ticket', (await page.locator('[data-pc-studio-ticket]').count()) === 0)
+    } else {
+      record('trade ticket opens on cell click', true, 'no live cells - skipped')
+      record('disconnected ticket gates submit', true, 'no live cells - skipped')
+      record('Escape closes ticket', true, 'no live cells - skipped')
+    }
+
     // No horizontal overflow at desktop width.
     const deskOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

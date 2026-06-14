@@ -215,8 +215,9 @@ no element read as primary.
 The Studio is a separate Vite entry (`predict-surface-studio.html`) that reuses
 the predict-club data layer but stays fully independent of the cockpit. Where the
 cockpit answers "what is the price doing right now", the Studio answers "is the
-market mispriced, and is the surface internally consistent". It is a pro analytics
-panel, not an execution surface: it never carries a trade CTA.
+market mispriced, and is the surface internally consistent". It is analysis-first:
+every panel earns its place as decision-support, and the one action it offers (a
+trade ticket on a heatmap cell) is reached from that analysis, never the reverse.
 
 - **The heatmap is the focal grid.** A strike x expiry implied-vol matrix is the
   primary object: strikes run high-to-low top-to-bottom, expiries near-to-far
@@ -244,6 +245,18 @@ panel, not an execution surface: it never carries a trade CTA.
   `role="row"` wrappers via `display:contents` so the CSS grid layout is kept).
   Keyboard users get a roving tabindex: the data cells are one tab stop and arrow
   keys / Home / End move focus between them, Enter or Space selects the column.
+- **Trade ticket: edge informs, never advises.** Clicking a live heatmap cell opens
+  a ticket popover anchored to that strike x expiry. It shows the model fair
+  win-probability (always, from SVI) and the contract-implied probability when the
+  cell sits in the quoted band, and flags the side the model sees value on - but the
+  trader picks UP or DOWN; no payout is fabricated, only the stake and probabilities
+  are shown. Submit mints a standalone personal binary position directly (the same
+  `buildMintTx` the cockpit uses), not through a club round - the Studio owns no
+  round state. A read-only devInspect pre-flight runs the same quote path the
+  contract prices on, so a strike outside the contract's pricing bounds is caught
+  with zero gas and no wallet prompt instead of a doomed on-chain mint. The ticket is
+  an ARIA dialog: it traps Tab, a document-level Escape closes it regardless of
+  focus, and disconnected it shows Connect Wallet rather than a live submit.
 
 ## Motion
 

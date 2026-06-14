@@ -342,6 +342,50 @@ Kiểm chứng: `bun run build`; `bun run preview` smoke; `bun run test:unit`;
 
 Trạng thái: done.
 
+### S7 — Submit trực tiếp từ heatmap (trade ticket)
+Mục tiêu: cho trader đã connect ví hành động ngay trên surface đang đọc - click một ô
+heatmap (strike x expiry), chọn hướng, nhập size, và mint vị thế binary cá nhân thẳng
+từ Studio, thiết kế dễ cho người mới.
+
+Công việc:
+1. **Helper orchestration** (`application/submitStudioTrade.ts`, thuần + unit-test):
+   `recommendDirection` (gợi ý theo model-edge, null khi không có quote),
+   `buildStudioRiskInput` (indicators rỗng -> bias neutral nên gate rút về các điều kiện
+   an toàn thật), và `submitStudioTrade` (risk gate -> preflight quote read-only ->
+   `buildMintTx` -> ký). Mint vị thế độc lập qua gateway chung; không đụng máy móc club
+   round.
+2. **Trade ticket popover** (`presentation/studio/TradeTicket.tsx`): neo tại ô vừa
+   click. Hiện xác suất thắng fair của model (luôn có, từ SVI) và xác suất contract +
+   edge khi ô nằm trong band đã quote, làm nổi bên model thấy value, nhận size DUSDC kèm
+   chip nhanh, và gate theo state (chưa connect -> Connect Wallet; chưa có manager /
+   thiếu DUSDC -> chặn kèm lý do; đang submit -> spinner; thành công -> digest + link
+   explorer). ARIA dialog với Escape đóng ở cấp document để người dùng chuột tắt được.
+3. **Pre-flight contract (quyết định: không để strike chắc chết tới được ví).** Heatmap
+   cho click bất kỳ ô nào, nhưng contract chỉ định giá strike gần forward và abort
+   on-chain (`quote_spread_from_fair_price`) với phần còn lại. Một quote devInspect
+   read-only (đúng đường mispricing ladder đã chứng minh, 0 gas, không popup ví) chạy
+   trước khi ký; strike ngoài biên bị chặn với thông báo thân thiện "chọn strike gần hơn"
+   thay vì giao dịch revert.
+4. **Nhãn strike full-USD trên heatmap.** Row header strike hiện đầy đủ giá (`$63,951`)
+   thay vì làm tròn `64k`, nên các strike liền kề phân biệt được để ra quyết định thật.
+5. **IV smile mượt.** Lát smile resample đường SVI dày (vẽ trong không gian pixel thật
+   qua ResizeObserver, không kéo dãn tỉ lệ) nên đọc đúng là đường cong mượt, không phải
+   nối gãy khúc các ô thưa; edge panel nằm trên nó ở cột phải.
+6. Test + probe: unit test cho đơn vị strike (USD, chưa scale tới gateway), risk gate
+   chặn, preflight chặn ngoài biên, và signer-fail-thành-result; smoke probe và spec
+   Playwright thêm case gating ticket (click ô mở ticket, disconnected hiện Connect và ẩn
+   Submit, Escape đóng).
+
+Chấp nhận: ví đã connect mint được vị thế từ ô heatmap trên testnet (đã verify: một mint
+thật trả về digest); strike ngoài biên bị chặn trước khi ký với lý do rõ; build + unit +
+e2e + smoke xanh.
+
+Kiểm chứng: `bun run build`; `bun run test:unit`; `bun run test:e2e`;
+`bun scripts/predict-club-studio-smoke.mjs`; một mint thật trên testnet để xác nhận đường
+ký end to end.
+
+Trạng thái: done.
+
 ## Tệp đụng tới (dự kiến)
 
 Mới: `predict-surface-studio.html`, `src/predict-surface-studio/main.tsx`,

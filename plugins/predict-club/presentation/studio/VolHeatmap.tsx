@@ -1,6 +1,6 @@
 import { type KeyboardEvent, useRef, useState } from 'react'
 import type { ArbReport } from '../../application/arbFreeCheck'
-import type { MispriceCell, SurfaceColumn, SurfaceGrid } from '../../domain/volSurface'
+import type { MispriceCell, SurfaceCell, SurfaceColumn, SurfaceGrid } from '../../domain/volSurface'
 
 /**
  * Vol-surface heatmap (plan 23, S1-S2): a strike x expiry implied-vol matrix.
@@ -40,7 +40,7 @@ function formatIv(iv: number): string {
 }
 
 function formatStrike(strike: number): string {
-  return strike >= 1000 ? `${Math.round(strike / 1000)}k` : `${strike}`
+  return `$${Math.round(strike).toLocaleString('en-US')}`
 }
 
 function formatExpiryHeader(column: SurfaceColumn): string {
@@ -56,17 +56,19 @@ function HeatmapBody({
   grid,
   selectedOracleId,
   onSelect,
+  onCellSelect,
   edgeByStrike,
   arbKeys,
 }: {
   grid: SurfaceGrid
   selectedOracleId: string | null
   onSelect: (oracleId: string) => void
+  onCellSelect?: (column: SurfaceColumn, cell: SurfaceCell, anchorRect: DOMRect) => void
   edgeByStrike: Map<number, number>
   arbKeys: Set<string>
 }) {
   const { strikes, columns, ivRange } = grid
-  const templateColumns = `minmax(3.5rem, auto) repeat(${columns.length}, minmax(0, 1fr))`
+  const templateColumns = `minmax(5rem, auto) repeat(${columns.length}, minmax(0, 1fr))`
 
   // Roving tabindex: the data cells form one tab stop; arrow keys move focus
   // between them so a keyboard user is not trapped tabbing through every cell.
@@ -79,6 +81,16 @@ function HeatmapBody({
     const c = Math.max(0, Math.min(columns.length - 1, col))
     setActive([r, c])
     cellRefs.current[r]?.[c]?.focus()
+  }
+
+  // Selecting a cell drives the smile/edge (column select) and, when the cell has
+  // a live IV, opens the trade ticket anchored to it. No-data cells only navigate.
+  const fireCellSelect = (row: number, col: number, rect: DOMRect | null) => {
+    const column = columns[col]
+    if (!column) return
+    onSelect(column.oracleId)
+    const cell = column.cells.find((c) => c.strike === strikes[row])
+    if (cell && cell.iv != null && rect && onCellSelect) onCellSelect(column, cell, rect)
   }
 
   const onCellKeyDown = (e: KeyboardEvent<HTMLDivElement>, row: number, col: number) => {
@@ -110,7 +122,7 @@ function HeatmapBody({
       case 'Enter':
       case ' ':
         e.preventDefault()
-        onSelect(columns[col].oracleId)
+        fireCellSelect(row, col, cellRefs.current[row]?.[col]?.getBoundingClientRect() ?? null)
         break
     }
   }
@@ -175,6 +187,7 @@ function HeatmapBody({
           active={active}
           cellRefs={cellRefs}
           onCellKeyDown={onCellKeyDown}
+          onCellActivate={fireCellSelect}
         />
       ))}
     </div>
@@ -192,6 +205,7 @@ function Row({
   active,
   cellRefs,
   onCellKeyDown,
+  onCellActivate,
 }: {
   strike: number
   rowIndex: number
@@ -203,6 +217,7 @@ function Row({
   active: [number, number]
   cellRefs: React.RefObject<(HTMLDivElement | null)[][]>
   onCellKeyDown: (e: KeyboardEvent<HTMLDivElement>, row: number, col: number) => void
+  onCellActivate: (row: number, col: number, rect: DOMRect | null) => void
 }) {
   if (!cellRefs.current[rowIndex]) cellRefs.current[rowIndex] = []
   return (
@@ -252,6 +267,9 @@ function Row({
             role="gridcell"
             tabIndex={isActive ? 0 : -1}
             onKeyDown={(e) => onCellKeyDown(e, rowIndex, colIndex)}
+            onClick={(e) =>
+              onCellActivate(rowIndex, colIndex, e.currentTarget.getBoundingClientRect())
+            }
             aria-label={`Strike ${strike}, ${formatExpiryHeader(column)}: implied vol ${formatIv(iv)}${edgeLabel}${arbLabel}`}
             className={`relative flex items-center justify-center font-data text-data-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary-fixed focus-visible:ring-inset ${
               arb
@@ -293,6 +311,7 @@ export function VolHeatmap({
   loaded,
   selectedOracleId,
   onSelect,
+  onCellSelect,
   mispriceCells,
   arbReport,
   className = '',
@@ -301,6 +320,7 @@ export function VolHeatmap({
   loaded: boolean
   selectedOracleId: string | null
   onSelect: (oracleId: string) => void
+  onCellSelect?: (column: SurfaceColumn, cell: SurfaceCell, anchorRect: DOMRect) => void
   mispriceCells: MispriceCell[]
   arbReport: ArbReport
   className?: string
@@ -352,6 +372,7 @@ export function VolHeatmap({
             grid={grid}
             selectedOracleId={selectedOracleId}
             onSelect={onSelect}
+            onCellSelect={onCellSelect}
             edgeByStrike={edgeByStrike}
             arbKeys={arbKeys}
           />

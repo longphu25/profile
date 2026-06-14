@@ -347,6 +347,53 @@ the cockpit smoke probe).
 
 Status: done.
 
+### S7 — Direct submit from the heatmap (trade ticket)
+Objective: let a connected-wallet trader act on the surface they are reading - click
+a heatmap cell (a strike x expiry), pick a side, size it, and mint a personal binary
+position straight from the Studio, designed to be easy for a newcomer.
+
+Work:
+1. **Orchestration helper** (`application/submitStudioTrade.ts`, pure + unit-tested):
+   `recommendDirection` (model-edge hint, null when no quote), `buildStudioRiskInput`
+   (empty indicators -> neutral bias so the gate reduces to real safety conditions),
+   and `submitStudioTrade` (risk gate -> read-only preflight quote -> `buildMintTx` ->
+   sign). Mints a standalone position via the shared gateway; never touches the club
+   round machinery.
+2. **Trade ticket popover** (`presentation/studio/TradeTicket.tsx`): anchored at the
+   clicked cell. Shows the model fair win-probability (always, from SVI) and the
+   contract-implied probability + edge when the cell sits in the quoted band, flags
+   the side the model sees value on, takes a DUSDC size with quick chips, and gates by
+   state (disconnected -> Connect Wallet; no manager / insufficient DUSDC -> blocked
+   with reason; submitting -> spinner; success -> digest + explorer link). ARIA dialog
+   with a document-level Escape close so a mouse user can dismiss it.
+3. **Contract pre-flight (decision: do not let a doomed strike reach the wallet).** The
+   heatmap lets a trader click any cell, but the contract only prices strikes near the
+   forward and aborts on-chain (`quote_spread_from_fair_price`) for the rest. A
+   read-only devInspect quote (same proven path as the mispricing ladder, zero gas, no
+   wallet prompt) runs before signing; an out-of-bounds strike is blocked with a
+   friendly "pick a nearer strike" message instead of a reverting transaction.
+4. **Heatmap full-USD strike labels.** Strike row headers show the full price
+   (`$63,951`) instead of a rounded `64k`, so adjacent strikes are distinguishable for
+   a real decision.
+5. **Smooth IV smile.** The smile slice resamples the SVI curve densely (drawn in real
+   pixel space via a ResizeObserver, no aspect stretching) so it reads as the smooth
+   curve it is, not a jagged join of sparse cells; edge panel sits above it on the
+   right column.
+6. Tests + probe: unit tests for the strike unit (USD, unscaled to the gateway), risk
+   gate blocks, preflight bounds block, and signer-failure-as-result; the smoke probe
+   and Playwright spec gain a ticket-gating case (cell click opens the ticket,
+   disconnected shows Connect and hides Submit, Escape closes).
+
+Acceptance: a connected wallet can mint a position from a heatmap cell on testnet
+(verified: a live mint returned a digest); an out-of-bounds strike is blocked before
+signing with a clear reason; build + unit + e2e + smoke green.
+
+Validation: `bun run build`; `bun run test:unit`; `bun run test:e2e`;
+`bun scripts/predict-club-studio-smoke.mjs`; one live testnet mint to confirm the sign
+path end to end.
+
+Status: done.
+
 ## Files Touched (indicative)
 
 New: `predict-surface-studio.html`, `src/predict-surface-studio/main.tsx`,
