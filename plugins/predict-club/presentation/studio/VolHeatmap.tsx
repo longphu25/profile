@@ -1,3 +1,4 @@
+import type { ArbReport } from '../../application/arbFreeCheck'
 import type { MispriceCell, SurfaceColumn, SurfaceGrid } from '../../domain/volSurface'
 
 /**
@@ -55,11 +56,13 @@ function HeatmapBody({
   selectedOracleId,
   onSelect,
   edgeByStrike,
+  arbKeys,
 }: {
   grid: SurfaceGrid
   selectedOracleId: string | null
   onSelect: (oracleId: string) => void
   edgeByStrike: Map<number, number>
+  arbKeys: Set<string>
 }) {
   const { strikes, columns, ivRange } = grid
   const templateColumns = `minmax(3.5rem, auto) repeat(${columns.length}, minmax(0, 1fr))`
@@ -115,6 +118,7 @@ function HeatmapBody({
           ivRange={ivRange}
           selectedOracleId={selectedOracleId}
           edgeByStrike={edgeByStrike}
+          arbKeys={arbKeys}
         />
       ))}
     </div>
@@ -127,12 +131,14 @@ function Row({
   ivRange,
   selectedOracleId,
   edgeByStrike,
+  arbKeys,
 }: {
   strike: number
   columns: SurfaceColumn[]
   ivRange: SurfaceGrid['ivRange']
   selectedOracleId: string | null
   edgeByStrike: Map<number, number>
+  arbKeys: Set<string>
 }) {
   return (
     <>
@@ -147,6 +153,7 @@ function Row({
         const iv = cell?.iv ?? null
         const selectedCol = column.oracleId === selectedOracleId
         const edge = selectedCol ? (edgeByStrike.get(strike) ?? null) : null
+        const arb = arbKeys.has(`${column.oracleId}|${strike}`)
         if (iv == null || !ivRange) {
           return (
             <div
@@ -166,14 +173,19 @@ function Row({
           edge != null
             ? `, mispricing edge ${edge > 0 ? '+' : ''}${(edge * 100).toFixed(1)} points`
             : ''
+        const arbLabel = arb ? ', no-arbitrage violation' : ''
         return (
           <div
             key={column.oracleId}
             role="gridcell"
             tabIndex={0}
-            aria-label={`Strike ${strike}, ${formatExpiryHeader(column)}: implied vol ${formatIv(iv)}${edgeLabel}`}
+            aria-label={`Strike ${strike}, ${formatExpiryHeader(column)}: implied vol ${formatIv(iv)}${edgeLabel}${arbLabel}`}
             className={`relative flex items-center justify-center font-data text-data-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary-fixed focus-visible:ring-inset ${
-              selectedCol ? 'ring-1 ring-primary-fixed ring-inset' : ''
+              arb
+                ? 'ring-2 ring-error ring-inset'
+                : selectedCol
+                  ? 'ring-1 ring-primary-fixed ring-inset'
+                  : ''
             }`}
             style={{
               backgroundColor: rampColor(iv, ivRange.min, ivRange.max),
@@ -181,6 +193,14 @@ function Row({
             }}
           >
             {formatIv(iv)}
+            {arb && (
+              <span
+                aria-hidden="true"
+                className="material-symbols-outlined absolute left-[2px] top-[2px] text-[12px] leading-none text-error"
+              >
+                warning
+              </span>
+            )}
             {edge != null && (
               <span
                 aria-hidden="true"
@@ -201,6 +221,7 @@ export function VolHeatmap({
   selectedOracleId,
   onSelect,
   mispriceCells,
+  arbReport,
   className = '',
 }: {
   grid: SurfaceGrid
@@ -208,6 +229,7 @@ export function VolHeatmap({
   selectedOracleId: string | null
   onSelect: (oracleId: string) => void
   mispriceCells: MispriceCell[]
+  arbReport: ArbReport
   className?: string
 }) {
   const hasCells = grid.columns.length > 0 && grid.strikes.length > 0 && grid.ivRange != null
@@ -215,6 +237,11 @@ export function VolHeatmap({
   const edgeByStrike = new Map<number, number>()
   for (const cell of mispriceCells) {
     if (cell.edge != null) edgeByStrike.set(cell.strike, cell.edge)
+  }
+  // Arb violations keyed by (oracleId|strike) so any column's flagged cell shows it.
+  const arbKeys = new Set<string>()
+  for (const v of arbReport.violations) {
+    arbKeys.add(`${v.oracleId}|${v.strike}`)
   }
 
   return (
@@ -253,6 +280,7 @@ export function VolHeatmap({
             selectedOracleId={selectedOracleId}
             onSelect={onSelect}
             edgeByStrike={edgeByStrike}
+            arbKeys={arbKeys}
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-sm p-lg text-center">

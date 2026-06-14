@@ -8,6 +8,7 @@ import {
 } from '../../application/volSurfaceService'
 import { fetchRealizedVol } from '../../application/realizedVol'
 import { atmBandStrikes, getMispriceBand } from '../../application/mispricing'
+import { checkArbFree } from '../../application/arbFreeCheck'
 import type { MispriceCell, RealizedVol } from '../../domain/volSurface'
 import { usePredictClub } from '../usePredictClub'
 import { EdgePanel } from './EdgePanel'
@@ -88,6 +89,10 @@ export function StudioShell() {
     [grid.columns, effectiveOracleId],
   )
 
+  // Arb-free health is pure SVI math over the grid (no network), so recompute it
+  // whenever the sampled surface changes.
+  const arbReport = useMemo(() => checkArbFree(grid), [grid])
+
   // Mispricing for the selected column's ATM band: the one network-costly piece.
   // Refetched when the column changes (and on a slow timer for the same column),
   // bounded + cached inside getMispriceBand so testnet RPC survives.
@@ -162,6 +167,7 @@ export function StudioShell() {
           selectedOracleId={effectiveOracleId}
           onSelect={setSelectedOracleId}
           mispriceCells={mispriceCells}
+          arbReport={arbReport}
           className="min-h-0"
         />
 
@@ -172,6 +178,7 @@ export function StudioShell() {
             realized={realized}
             mispriceCells={mispriceCells}
             mispriceLoading={mispriceLoading}
+            arbReport={arbReport}
             className="shrink-0"
           />
         </div>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { ArbReport } from '../../application/arbFreeCheck'
 import type { MispriceCell, RealizedVol, SurfaceColumn } from '../../domain/volSurface'
 
 /**
@@ -43,12 +44,14 @@ export function EdgePanel({
   realized,
   mispriceCells,
   mispriceLoading,
+  arbReport,
   className = '',
 }: {
   column: SurfaceColumn | null
   realized: RealizedVol | null
   mispriceCells: MispriceCell[]
   mispriceLoading: boolean
+  arbReport: ArbReport
   className?: string
 }) {
   const iv = atmIv(column)
@@ -104,6 +107,9 @@ export function EdgePanel({
             </span>
           </span>
         </Row>
+        <Row label="Surface health">
+          <SurfaceHealth report={arbReport} />
+        </Row>
       </div>
 
       <MispricingLadder cells={mispriceCells} loading={mispriceLoading} forward={column?.forward} />
@@ -113,6 +119,51 @@ export function EdgePanel({
 
 function fmtProb(p: number | null): string {
   return p == null ? '-' : `${(p * 100).toFixed(1)}%`
+}
+
+/**
+ * Surface health (S4): the arb-free verdict for the whole grid. Clean = mint check;
+ * violations = error count + icon + label (never color alone); not-checked when no
+ * column carries usable SVI yet. The per-cell locations are flagged on the heatmap.
+ */
+function SurfaceHealth({ report }: { report: ArbReport }) {
+  if (!report.butterflyChecked && !report.calendarChecked) {
+    return (
+      <span className="flex items-center gap-sm text-on-surface-variant">
+        <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+          remove
+        </span>
+        <span className="font-label text-label-caps uppercase tracking-wide">not checked</span>
+      </span>
+    )
+  }
+  const count = report.violations.length
+  if (count === 0) {
+    return (
+      <span className="flex items-center gap-sm text-primary-fixed-dim">
+        <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+          check_circle
+        </span>
+        <span className="font-label text-label-caps uppercase tracking-wide">arb-free</span>
+      </span>
+    )
+  }
+  const butterfly = report.violations.filter((v) => v.rule === 'butterfly').length
+  const calendar = count - butterfly
+  const parts = [
+    butterfly > 0 ? `${butterfly} butterfly` : null,
+    calendar > 0 ? `${calendar} calendar` : null,
+  ].filter(Boolean)
+  return (
+    <span className="flex items-center gap-sm text-error" title={parts.join(', ')}>
+      <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+        warning
+      </span>
+      <span className="font-label text-label-caps uppercase tracking-wide">
+        {count} violation{count === 1 ? '' : 's'}
+      </span>
+    </span>
+  )
 }
 
 /**
