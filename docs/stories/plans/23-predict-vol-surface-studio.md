@@ -196,7 +196,7 @@ both ways; no console errors; no horizontal overflow at 1440px and 375px.
 Validation: `bun run build`; Playwright mounts `[data-pc-studio]` and asserts the
 cross-links resolve to the right entries.
 
-Status: pending.
+Status: done.
 
 ### S1 — Surface sampling + IV heatmap (core)
 Objective: the king zone of the studio: a live strike x expiry IV matrix from real
@@ -223,7 +223,7 @@ Validation: `bun run build`; unit tests for `sampleVolSurface` (known SVI -> kno
 IV within tolerance) and grid assembly; Playwright asserts an NxM cell grid with
 numeric content at 1440px.
 
-Status: pending.
+Status: done.
 
 ### S2 — Smile slice + IV vs realized vol
 Objective: the per-expiry smile and the first edge number.
@@ -243,7 +243,7 @@ column; IV-vs-realized spread shows a real number with sign and label, or a defi
 Validation: `bun run build`; unit test for realized-vol math (known series ->
 known stddev); Playwright selects a column and asserts the smile + spread update.
 
-Status: pending.
+Status: done.
 
 ### S3 — Mispricing overlay (PRIMARY edge) + cockpit badge
 Objective: the headline edge, in both the studio ladder and the cockpit action rail.
@@ -270,7 +270,7 @@ Validation: `bun run build`; unit test for cost->implied-prob->edge conversion a
 the cache key/TTL behavior; Playwright asserts ATM-band cells render an edge and a
 cockpit badge appears; manual note on devInspect call volume during a hover sweep.
 
-Status: pending.
+Status: done.
 
 ### S4 — Arb-free checker (surface health)
 Objective: flag when the surface is internally inconsistent.

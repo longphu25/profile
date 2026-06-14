@@ -24,6 +24,30 @@ export function ExposureRail({ className = '' }: { className?: string }) {
   const failed = riskEvaluation.checks.filter((c) => !c.passed).slice(0, 4)
   const shown = failed.length > 0 ? failed : riskEvaluation.checks.slice(0, 4)
 
+  // Model edge: contract-implied win prob (cost per contract) vs the SVI fair
+  // prob. Both are already in context (devInspect quote + local SVI math), so the
+  // badge needs no extra fetch and shows even before connect - a pure decision
+  // signal. Sign convention matches the Studio mispricing ladder: positive =
+  // contract dearer than model (sell side), negative = cheaper (buy side).
+  const contractProb = quote.status === 'ok' ? quote.contractPrice : null
+  const fairProb = fairValue.degraded ? null : fairValue.probability
+  const edge = contractProb != null && fairProb != null ? contractProb - fairProb : null
+  const edgeLabel =
+    edge == null
+      ? 'unavailable'
+      : edge > 0.005
+        ? 'contract rich'
+        : edge < -0.005
+          ? 'contract cheap'
+          : 'fair'
+  const edgeColor =
+    edge == null || (edge <= 0.005 && edge >= -0.005)
+      ? 'text-on-surface-variant'
+      : edge > 0
+        ? 'text-primary-fixed-dim'
+        : 'text-error'
+  const edgeSign = edge != null && edge > 0 ? '+' : ''
+
   const costLabel = `-${formatCompactDusdc(quote.estimatedCost ?? 0)}`
   const probabilityLabel = formatProbabilityLabel(fairValue.probability, {
     degraded: fairValue.degraded,
@@ -81,6 +105,38 @@ export function ExposureRail({ className = '' }: { className?: string }) {
             </li>
           ))}
         </ul>
+      </div>
+
+      {/* Model Edge: contract-implied vs SVI-fair win prob (no extra fetch). */}
+      <div className="flex flex-col gap-sm rounded-xl border border-outline-variant bg-surface-container-highest p-md">
+        <div className="flex items-center justify-between">
+          <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant">
+            Model Edge
+          </span>
+          <span className={`font-label text-label-caps uppercase tracking-wider ${edgeColor}`}>
+            {edgeLabel}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-data text-data-sm text-on-surface-variant">Fair vs contract</span>
+          <span className="flex items-center gap-sm font-data text-data-sm tabular-nums">
+            <span className="text-on-surface-variant">
+              {fairProb != null ? `${(fairProb * 100).toFixed(1)}%` : '-'}
+            </span>
+            <span className="text-on-surface-variant/40" aria-hidden="true">
+              /
+            </span>
+            <span className="text-on-surface">
+              {contractProb != null ? `${(contractProb * 100).toFixed(1)}%` : '-'}
+            </span>
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-data text-data-sm text-on-surface-variant">Edge</span>
+          <span className={`font-data text-data-md font-bold tabular-nums ${edgeColor}`}>
+            {edge == null ? '-' : `${edgeSign}${(edge * 100).toFixed(1)}%`}
+          </span>
+        </div>
       </div>
 
       {/* Your Exposure (wallet-gated) */}

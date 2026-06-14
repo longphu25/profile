@@ -106,7 +106,7 @@ export async function getMispriceCell(params: {
       quote.impliedProbability,
       quote.impliedProbability == null ? quote.reason : undefined,
     )
-    cache.set(key, { cell, ts: Date.now() })
+    cache.set(key, { cell, ts: now })
     inflight.delete(key)
     return cell
   })()

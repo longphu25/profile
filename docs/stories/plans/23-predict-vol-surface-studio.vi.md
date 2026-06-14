@@ -196,7 +196,7 @@ chiều; không lỗi console; không tràn ngang ở 1440px và 375px.
 Kiểm chứng: `bun run build`; Playwright mount `[data-pc-studio]` và assert cross-link
 trỏ đúng entry.
 
-Trạng thái: pending.
+Trạng thái: done.
 
 ### S1 — Sampling surface + heatmap IV (core)
 Mục tiêu: king zone của studio: một matrix IV strike x expiry sống từ SVI thật, không
@@ -222,7 +222,7 @@ toy; không lỗi console.
 Kiểm chứng: `bun run build`; unit test cho `sampleVolSurface` (SVI biết -> IV biết
 trong sai số) và ráp lưới; Playwright assert một lưới NxM ô có nội dung số ở 1440px.
 
-Trạng thái: pending.
+Trạng thái: done.
 
 ### S2 — Lát smile + IV so với realized vol
 Mục tiêu: smile theo từng expiry và con số edge đầu tiên.
@@ -242,7 +242,7 @@ unavailable" đã định nghĩa nếu lịch sử Binance rỗng.
 Kiểm chứng: `bun run build`; unit test cho toán realized-vol (chuỗi biết -> stddev
 biết); Playwright chọn một cột và assert smile + spread cập nhật.
 
-Trạng thái: pending.
+Trạng thái: done.
 
 ### S3 — Overlay mispricing (edge CHÍNH) + badge cockpit
 Mục tiêu: edge headline, ở cả ladder studio lẫn action rail cockpit.
@@ -269,7 +269,7 @@ Kiểm chứng: `bun run build`; unit test cho đổi cost->xác-suất-ngụ-ý
 key/TTL của cache; Playwright assert ô dải ATM render edge và badge cockpit xuất hiện;
 ghi chú thủ công về số lượng lời gọi devInspect trong một lượt hover quét.
 
-Trạng thái: pending.
+Trạng thái: done.
 
 ### S4 — Arb-free checker (sức khỏe surface)
 Mục tiêu: cảnh báo khi surface bất nhất nội tại.
