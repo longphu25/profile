@@ -27,6 +27,10 @@ candidate work slices, roadmap order, and implementation packets.
 | [17-scallop-plugin-extraction.md](17-scallop-plugin-extraction.md) | Extract Scallop borrow into standalone `sui-scallop` plugin, mount into predict-club via Host Component Registry. |
 | [18-predict-club-quick-predict.md](18-predict-club-quick-predict.md) | Quick Predict entry flow for faster round creation and prediction actions. |
 | [19-predict-club-ui-roadmap.md](19-predict-club-ui-roadmap.md) | Step-by-step roadmap for finishing the Predict Club interface, data contracts, risk/exposure, wallet UX, portfolio/vaults, funding, lifecycle, tests, and docs. |
+| [20-swap-multi-route-aggregator.md](20-swap-multi-route-aggregator.md) | Multi-route swap aggregator plan for best-execution funding across DeepBook and other Sui liquidity sources. |
+| [21-predict-club-ui-redesign.md](21-predict-club-ui-redesign.md) | Predict Club UI redesign (R1-R8): multi-region `next/` cockpit layout, superseded by plan 22. |
+| [22-predict-club-cockpit-rebuild.md](22-predict-club-cockpit-rebuild.md) | Chart-king pro cockpit rebuild (C0-C7): one focal chart, docked action rail, custom SVG king chart, mobile hero + sheet. |
+| [23-predict-vol-surface-studio.md](23-predict-vol-surface-studio.md) | Decision-support terminal: a dedicated vol-surface Studio (IV heatmap + smile + mispricing/IV-vs-realized/arb-free edge) plus a cockpit mispricing badge and deploy-ready CORS fix. |
 
 ## Recommended Build Order
 
@@ -49,3 +53,7 @@ candidate work slices, roadmap order, and implementation packets.
 17. Extract Scallop borrow into standalone `sui-scallop` plugin and mount back into predict-club via Host Component Registry for cross-plugin reuse.
 18. Keep Quick Predict aligned with the main Predict Club flow so shortcuts do not bypass risk or quote checks.
 19. Execute the Predict Club UI roadmap in phases: data contract, decision strip, risk/exposure, wallet/address UX, portfolio/vaults, funding, lifecycle, and tests/docs hardening.
+20. Add a multi-route swap aggregator for best-execution funding across DeepBook and other Sui liquidity sources.
+21. Redesign the Predict Club UI into a multi-region `next/` cockpit (R1-R8), later superseded by plan 22.
+22. Rebuild the cockpit chart-king and pro-first (C0-C7): one focal price chart, a single docked action rail, custom SVG king chart, mobile hero + action sheet.
+23. Add the decision-support layer: a dedicated vol-surface Studio (IV heatmap + smile + mispricing/IV-vs-realized/arb-free edge), a cockpit mispricing badge, and a deploy-ready CORS fix.
