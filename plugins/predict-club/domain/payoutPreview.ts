@@ -76,7 +76,7 @@ function normalizeSVIParams(svi: SVIParams) {
   }
 }
 
-function totalVarianceAtLogMoneyness(svi: SVIParams, logMoneyness: number): number {
+export function totalVarianceAtLogMoneyness(svi: SVIParams, logMoneyness: number): number {
   const params = normalizeSVIParams(svi)
   const diff = logMoneyness - params.m
   return (

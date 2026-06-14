@@ -1,18 +1,17 @@
 import { usePredictClub } from '../usePredictClub'
+import { VolHeatmap } from './VolHeatmap'
 
 /**
- * Surface Studio layout primitive (S0) for the decision-support terminal.
+ * Surface Studio layout primitive for the decision-support terminal.
  *
  * The Studio is a dedicated surface (its own Vite entry) that reuses the
  * predict-club data layer end to end. Story 22's chart-king cockpit stays
  * untouched; this surface owns the volatility surface view that the king chart
- * cannot host: a strike x expiry IV heatmap, a per-expiry smile slice, and the
- * trader edge panel (mispricing, IV vs realized vol, arb-free health).
+ * cannot host: a strike x expiry IV heatmap (S1), a per-expiry smile slice (S2),
+ * and the trader edge panel (mispricing, IV vs realized vol, arb-free health).
  *
- * S0 fills each zone with a labelled placeholder and proves the route mounts,
- * connects a wallet, and reads the shared oracle snapshot. Later phases (S1-S5)
- * replace the placeholders with VolHeatmap, SmileSlice, and EdgePanel. The grid,
- * breakpoints, and test hooks here are the contract those phases build against.
+ * S1 wires the live IV heatmap into the king zone; the smile and edge zones stay
+ * placeholders until S2-S4 fill them.
  */
 
 export function StudioShell() {
@@ -52,25 +51,7 @@ export function StudioShell() {
 
       {/* Main: heatmap is king (left, fills), smile + edge stack right (S1-S4). */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-px overflow-y-auto bg-outline-variant lg:grid-cols-[minmax(0,1fr)_24rem] lg:overflow-hidden [&>*]:min-h-[16rem] lg:[&>*]:min-h-0">
-        <section
-          data-pc-studio-heatmap
-          aria-label="Volatility surface"
-          className="flex min-h-0 flex-col items-center justify-center gap-sm bg-surface-container-lowest p-lg text-center"
-        >
-          <span
-            className="material-symbols-outlined text-[40px] text-on-surface-variant"
-            aria-hidden="true"
-          >
-            grid_on
-          </span>
-          <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant">
-            Vol surface heatmap
-          </span>
-          <span className="max-w-[24rem] font-data text-data-sm text-on-surface-variant">
-            Strike x expiry implied-vol matrix lands here in S1, sampled live from the oracle SVI
-            params.
-          </span>
-        </section>
+        <VolHeatmap className="min-h-0" />
 
         <div className="flex min-h-0 flex-col gap-px bg-outline-variant">
           <section
