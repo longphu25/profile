@@ -67,7 +67,7 @@ export function CockpitShell() {
             {dockOpen ? 'expand_more' : 'expand_less'}
           </span>
         </button>
-        {dockOpen && <DockTabs className="max-h-[40vh]" />}
+        {dockOpen && <DockTabs className="pc-anim-fade-in max-h-[40vh]" />}
       </section>
 
       {/* Mobile: always-visible compact CTA bar that opens the action sheet (C6). */}
@@ -110,11 +110,11 @@ export function CockpitShell() {
             type="button"
             aria-label="Close"
             onClick={() => setSheetOpen(false)}
-            className="absolute inset-0 bg-black/60"
+            className="pc-anim-backdrop-in absolute inset-0 bg-black/60"
           />
           <div
             data-pc-action-sheet
-            className="absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col gap-px overflow-hidden rounded-t-xl bg-outline-variant pb-[env(safe-area-inset-bottom)]"
+            className="pc-anim-sheet-in absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col gap-px overflow-hidden rounded-t-xl bg-outline-variant pb-[env(safe-area-inset-bottom)]"
           >
             <div className="flex items-center justify-between bg-surface-container-high px-md py-sm">
               <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant">

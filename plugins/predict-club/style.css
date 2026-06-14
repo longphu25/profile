@@ -1298,7 +1298,50 @@ select {
   *::before,
   *::after {
     transition: none !important;
+    animation: none !important;
   }
+}
+
+/* Cockpit (Next) motion: restrained enters, only on genuine state change.
+ * Durations/easings mirror the MOTION tokens in next/motion.ts. The
+ * reduced-motion guard above collapses these to nothing. */
+@keyframes pc-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes pc-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pc-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pc-anim-sheet-in {
+  animation: pc-sheet-in 220ms cubic-bezier(0, 0, 0, 1);
+}
+
+.pc-anim-backdrop-in {
+  animation: pc-backdrop-in 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.pc-anim-fade-in {
+  animation: pc-fade-in 220ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 @media (max-width: 1180px) {
