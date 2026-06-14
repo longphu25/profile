@@ -289,7 +289,7 @@ không bao giờ bịa từ dữ liệu thiếu.
 Kiểm chứng: `bun run build`; unit test cho kiểm tra butterfly + calendar trên lưới
 dựng tay (lành + từng loại vi phạm); Playwright assert status sức khỏe render.
 
-Trạng thái: pending.
+Trạng thái: done.
 
 ### S5 — Time-travel slider (đường cắt)
 Mục tiêu: replay các SVI update gần đây. Thứ đầu tiên bị cắt nếu thiếu thời gian.
@@ -340,7 +340,7 @@ env một dòng có tài liệu); mọi panel có non-happy state; a11y pass; bu
 Kiểm chứng: `bun run build`; `bun run preview` smoke; `bun run test:unit`;
 `bun run test:e2e`; `node scripts/predict-club-ui-smoke.mjs` (mở rộng cho studio).
 
-Trạng thái: pending.
+Trạng thái: done.
 
 ## Tệp đụng tới (dự kiến)
 

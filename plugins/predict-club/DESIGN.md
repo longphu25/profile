@@ -210,6 +210,41 @@ no element read as primary.
 - **One primary action.** Execution lives only in the action rail; no other rail
   carries a competing primary CTA. The exposure rail is read-only economics.
 
+## Surface Studio (decision-support surface)
+
+The Studio is a separate Vite entry (`predict-surface-studio.html`) that reuses
+the predict-club data layer but stays fully independent of the cockpit. Where the
+cockpit answers "what is the price doing right now", the Studio answers "is the
+market mispriced, and is the surface internally consistent". It is a pro analytics
+panel, not an execution surface: it never carries a trade CTA.
+
+- **The heatmap is the focal grid.** A strike x expiry implied-vol matrix is the
+  primary object: strikes run high-to-low top-to-bottom, expiries near-to-far
+  left-to-right, matching how a trader reads a vol matrix. It is a semantic CSS
+  grid, not SVG, so every cell is real text with its IV printed; color is a
+  SECOND encoding on top of the number, never the only signal (colorblind-safe,
+  AA-legible dark-on-hot text). The selected expiry column drives the smile slice.
+- **Edge is shown only when earned.** The edge panel pairs three independent
+  reads: mispricing (contract-implied win probability minus SVI fair value), IV
+  versus realized vol (with the realized window length labelled so it is not
+  oversold), and arb-free health. Each degrades to a defined unavailable state
+  rather than fabricating a number from missing data.
+- **Arb-free health is a first-class signal.** A butterfly check (digital
+  probability non-increasing in strike, so no negative implied density) per
+  expiry column and a calendar check (total variance non-decreasing in expiry at
+  matched moneyness) across columns flag an internally inconsistent surface.
+  Violations surface as a count plus per-cell flags on the heatmap (a red ring and
+  a warning icon, not color alone); a column lacking SVI is skipped, never guessed.
+- **Time-travel replays real history.** A bounded ring buffer of recent surface
+  snapshots backs a scrubber that re-renders the heatmap and smile at a past
+  snapshot; "Live" snaps back to current. The live-only mispricing signal is
+  cleared while scrubbing so a past surface never shows a present edge. With no
+  history the control degrades to a disabled "live only" label.
+- **Accessible matrix.** The heatmap is an ARIA grid (`role="grid"` with
+  `role="row"` wrappers via `display:contents` so the CSS grid layout is kept).
+  Keyboard users get a roving tabindex: the data cells are one tab stop and arrow
+  keys / Home / End move focus between them, Enter or Space selects the column.
+
 ## Motion
 
 Motion is **restrained and institutional**: it confirms genuine state changes and

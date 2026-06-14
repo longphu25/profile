@@ -1,7 +1,7 @@
 {
   "name": "profile",
   "private": true,
-  "version": "0.77.0",
+  "version": "0.78.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,7 @@
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report test-results/html",
     "probe:ui": "bun scripts/predict-club-ui-smoke.mjs",
+    "probe:studio": "bun scripts/predict-club-studio-smoke.mjs",
     "preview": "vite preview",
     "setup:codegraph": "bash scripts/setup-codegraph.sh",
     "codegraph:index": "codegraph init -i",

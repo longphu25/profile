@@ -1,3 +1,4 @@
+import { type KeyboardEvent, useRef, useState } from 'react'
 import type { ArbReport } from '../../application/arbFreeCheck'
 import type { MispriceCell, SurfaceColumn, SurfaceGrid } from '../../domain/volSurface'
 
@@ -67,10 +68,59 @@ function HeatmapBody({
   const { strikes, columns, ivRange } = grid
   const templateColumns = `minmax(3.5rem, auto) repeat(${columns.length}, minmax(0, 1fr))`
 
+  // Roving tabindex: the data cells form one tab stop; arrow keys move focus
+  // between them so a keyboard user is not trapped tabbing through every cell.
+  // `active` is the [row, col] of the cell that currently owns tabIndex 0.
+  const [active, setActive] = useState<[number, number]>([0, 0])
+  const cellRefs = useRef<(HTMLDivElement | null)[][]>([])
+
+  const focusCell = (row: number, col: number) => {
+    const r = Math.max(0, Math.min(strikes.length - 1, row))
+    const c = Math.max(0, Math.min(columns.length - 1, col))
+    setActive([r, c])
+    cellRefs.current[r]?.[c]?.focus()
+  }
+
+  const onCellKeyDown = (e: KeyboardEvent<HTMLDivElement>, row: number, col: number) => {
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault()
+        focusCell(row - 1, col)
+        break
+      case 'ArrowDown':
+        e.preventDefault()
+        focusCell(row + 1, col)
+        break
+      case 'ArrowLeft':
+        e.preventDefault()
+        focusCell(row, col - 1)
+        break
+      case 'ArrowRight':
+        e.preventDefault()
+        focusCell(row, col + 1)
+        break
+      case 'Home':
+        e.preventDefault()
+        focusCell(row, 0)
+        break
+      case 'End':
+        e.preventDefault()
+        focusCell(row, columns.length - 1)
+        break
+      case 'Enter':
+      case ' ':
+        e.preventDefault()
+        onSelect(columns[col].oracleId)
+        break
+    }
+  }
+
   return (
     <div
       role="grid"
       aria-label="Implied volatility by strike and expiry"
+      aria-rowcount={strikes.length + 1}
+      aria-colcount={columns.length + 1}
       className="grid h-full w-full gap-px bg-outline-variant"
       style={{
         gridTemplateColumns: templateColumns,
@@ -78,47 +128,53 @@ function HeatmapBody({
       }}
     >
       {/* Header row: corner + clickable expiry headers. */}
-      <div
-        role="columnheader"
-        className="flex items-center justify-center bg-surface-container px-xs py-1 font-label text-label-caps uppercase tracking-wider text-on-surface-variant"
-      >
-        K \ T
+      <div role="row" style={{ display: 'contents' }}>
+        <div
+          role="columnheader"
+          className="flex items-center justify-center bg-surface-container px-xs py-1 font-label text-label-caps uppercase tracking-wider text-on-surface-variant"
+        >
+          K \ T
+        </div>
+        {columns.map((column) => {
+          const selected = column.oracleId === selectedOracleId
+          return (
+            <button
+              key={column.oracleId}
+              type="button"
+              role="columnheader"
+              aria-pressed={selected}
+              onClick={() => onSelect(column.oracleId)}
+              className={`flex flex-col items-center justify-center px-xs py-1 font-data text-data-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary-fixed focus-visible:ring-inset ${
+                selected
+                  ? 'bg-primary-fixed-dim text-on-primary-fixed'
+                  : 'bg-surface-container text-on-surface hover:bg-surface-bright'
+              }`}
+            >
+              <span className="tabular-nums">{formatExpiryHeader(column)}</span>
+              {column.degraded && (
+                <span className="font-label text-[10px] uppercase tracking-wide text-error">
+                  no svi
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
-      {columns.map((column) => {
-        const selected = column.oracleId === selectedOracleId
-        return (
-          <button
-            key={column.oracleId}
-            type="button"
-            role="columnheader"
-            aria-pressed={selected}
-            onClick={() => onSelect(column.oracleId)}
-            className={`flex flex-col items-center justify-center px-xs py-1 font-data text-data-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary-fixed focus-visible:ring-inset ${
-              selected
-                ? 'bg-primary-fixed-dim text-on-primary-fixed'
-                : 'bg-surface-container text-on-surface hover:bg-surface-bright'
-            }`}
-          >
-            <span className="tabular-nums">{formatExpiryHeader(column)}</span>
-            {column.degraded && (
-              <span className="font-label text-[10px] uppercase tracking-wide text-error">
-                no svi
-              </span>
-            )}
-          </button>
-        )
-      })}
 
       {/* Strike rows. */}
-      {strikes.map((strike) => (
+      {strikes.map((strike, rowIndex) => (
         <Row
           key={strike}
           strike={strike}
+          rowIndex={rowIndex}
           columns={columns}
           ivRange={ivRange}
           selectedOracleId={selectedOracleId}
           edgeByStrike={edgeByStrike}
           arbKeys={arbKeys}
+          active={active}
+          cellRefs={cellRefs}
+          onCellKeyDown={onCellKeyDown}
         />
       ))}
     </div>
@@ -127,39 +183,54 @@ function HeatmapBody({
 
 function Row({
   strike,
+  rowIndex,
   columns,
   ivRange,
   selectedOracleId,
   edgeByStrike,
   arbKeys,
+  active,
+  cellRefs,
+  onCellKeyDown,
 }: {
   strike: number
+  rowIndex: number
   columns: SurfaceColumn[]
   ivRange: SurfaceGrid['ivRange']
   selectedOracleId: string | null
   edgeByStrike: Map<number, number>
   arbKeys: Set<string>
+  active: [number, number]
+  cellRefs: React.RefObject<(HTMLDivElement | null)[][]>
+  onCellKeyDown: (e: KeyboardEvent<HTMLDivElement>, row: number, col: number) => void
 }) {
+  if (!cellRefs.current[rowIndex]) cellRefs.current[rowIndex] = []
   return (
-    <>
+    <div role="row" style={{ display: 'contents' }}>
       <div
         role="rowheader"
         className="flex items-center justify-end bg-surface-container px-xs font-data text-data-sm tabular-nums text-on-surface-variant"
       >
         {formatStrike(strike)}
       </div>
-      {columns.map((column) => {
+      {columns.map((column, colIndex) => {
         const cell = column.cells.find((c) => c.strike === strike)
         const iv = cell?.iv ?? null
         const selectedCol = column.oracleId === selectedOracleId
         const edge = selectedCol ? (edgeByStrike.get(strike) ?? null) : null
         const arb = arbKeys.has(`${column.oracleId}|${strike}`)
+        const isActive = active[0] === rowIndex && active[1] === colIndex
+        const setRef = (el: HTMLDivElement | null) => {
+          cellRefs.current[rowIndex][colIndex] = el
+        }
         if (iv == null || !ivRange) {
           return (
             <div
               key={column.oracleId}
+              ref={setRef}
               role="gridcell"
-              tabIndex={0}
+              tabIndex={isActive ? 0 : -1}
+              onKeyDown={(e) => onCellKeyDown(e, rowIndex, colIndex)}
               aria-label={`Strike ${strike}, ${formatExpiryHeader(column)}: no data`}
               className={`flex items-center justify-center bg-surface-container-lowest font-data text-data-sm text-on-surface-variant outline-none focus-visible:ring-2 focus-visible:ring-primary-fixed-dim focus-visible:ring-inset ${
                 selectedCol ? 'ring-1 ring-primary-fixed-dim/40 ring-inset' : ''
@@ -177,8 +248,10 @@ function Row({
         return (
           <div
             key={column.oracleId}
+            ref={setRef}
             role="gridcell"
-            tabIndex={0}
+            tabIndex={isActive ? 0 : -1}
+            onKeyDown={(e) => onCellKeyDown(e, rowIndex, colIndex)}
             aria-label={`Strike ${strike}, ${formatExpiryHeader(column)}: implied vol ${formatIv(iv)}${edgeLabel}${arbLabel}`}
             className={`relative flex items-center justify-center font-data text-data-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary-fixed focus-visible:ring-inset ${
               arb
@@ -211,7 +284,7 @@ function Row({
           </div>
         )
       })}
-    </>
+    </div>
   )
 }
 

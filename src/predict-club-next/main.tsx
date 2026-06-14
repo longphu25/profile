@@ -18,10 +18,17 @@ import { useEffect, useRef, useState } from 'react'
 import '../predict-club/predict-club.css'
 
 type SuiNetwork = 'mainnet' | 'testnet' | 'devnet'
+// Prod: the public testnet fullnode sends no CORS headers, so a direct browser
+// call white-pages the app. Honor VITE_TESTNET_RPC_URL (a CORS-friendly proxy)
+// when set; otherwise fall back to the public fullnode (documented in .env.example).
+const prodRpcUrl = (network: SuiNetwork) => {
+  const override = import.meta.env.VITE_TESTNET_RPC_URL as string | undefined
+  return network === 'testnet' && override ? override : getJsonRpcFullnodeUrl(network)
+}
 const createSuiClient = (network: SuiNetwork) =>
   import.meta.env.DEV
     ? new SuiGrpcClient({ network, baseUrl: `/sui-rpc/${network}` })
-    : new SuiJsonRpcClient({ network, url: getJsonRpcFullnodeUrl(network) })
+    : new SuiJsonRpcClient({ network, url: prodRpcUrl(network) })
 
 const dAppKit = createDAppKit({
   networks: ['mainnet', 'testnet', 'devnet'],

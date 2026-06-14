@@ -291,7 +291,7 @@ Validation: `bun run build`; unit tests for butterfly + calendar checks on
 hand-built grids (healthy + each violation type); Playwright asserts the health
 status renders.
 
-Status: pending.
+Status: done.
 
 ### S5 — Time-travel slider (cut line)
 Objective: replay recent SVI updates. First thing cut if time is short.
@@ -342,9 +342,10 @@ documented one-line env requirement); all panels have non-happy states; a11y che
 pass; build + unit + e2e + smoke green.
 
 Validation: `bun run build`; `bun run preview` smoke; `bun run test:unit`;
-`bun run test:e2e`; `node scripts/predict-club-ui-smoke.mjs` (extended for studio).
+`bun run test:e2e`; `bun scripts/predict-club-studio-smoke.mjs` (studio sibling of
+the cockpit smoke probe).
 
-Status: pending.
+Status: done.
 
 ## Files Touched (indicative)
 
