@@ -1,4 +1,16 @@
+import { useEffect, useMemo, useState } from 'react'
+import {
+  getVolSurfaceSnapshot,
+  startVolSurfaceService,
+  stopVolSurfaceService,
+  subscribeVolSurface,
+  type VolSurfaceSnapshot,
+} from '../../application/volSurfaceService'
+import { fetchRealizedVol } from '../../application/realizedVol'
+import type { RealizedVol } from '../../domain/volSurface'
 import { usePredictClub } from '../usePredictClub'
+import { EdgePanel } from './EdgePanel'
+import { SmileSlice } from './SmileSlice'
 import { VolHeatmap } from './VolHeatmap'
 
 /**
@@ -10,15 +22,65 @@ import { VolHeatmap } from './VolHeatmap'
  * cannot host: a strike x expiry IV heatmap (S1), a per-expiry smile slice (S2),
  * and the trader edge panel (mispricing, IV vs realized vol, arb-free health).
  *
- * S1 wires the live IV heatmap into the king zone; the smile and edge zones stay
- * placeholders until S2-S4 fill them.
+ * StudioShell owns the surface-service lifecycle, the selected-expiry column, and
+ * the realized-vol fetch, so the heatmap, smile, and edge panels all read one
+ * consistent snapshot. The heatmap is presentational and reports column clicks up.
  */
+
+const REALIZED_REFRESH_MS = 60_000
 
 export function StudioShell() {
   const { oracleSnapshot } = usePredictClub()
-  const liveOracles = oracleSnapshot.oracles.filter(
-    (o) => o.status === 'active' && o.expiry > Date.now(),
+  const [surface, setSurface] = useState<VolSurfaceSnapshot>(getVolSurfaceSnapshot)
+  const [selectedOracleId, setSelectedOracleId] = useState<string | null>(null)
+  const [realized, setRealized] = useState<RealizedVol | null>(null)
+
+  // Own the surface service lifecycle: start the SVI fan-out on mount, stop on
+  // unmount, so cockpit-only users never pay for it.
+  useEffect(() => {
+    const unsub = subscribeVolSurface(setSurface)
+    startVolSurfaceService()
+    return () => {
+      unsub()
+      stopVolSurfaceService()
+    }
+  }, [])
+
+  // Realized vol from the shared Binance reference history; refreshed on a slow
+  // cadence (it is a slow-moving 1-minute-bar estimate, not a per-tick figure).
+  useEffect(() => {
+    let active = true
+    const load = () => {
+      fetchRealizedVol().then((rv) => {
+        if (active) setRealized(rv)
+      })
+    }
+    load()
+    const timer = setInterval(load, REALIZED_REFRESH_MS)
+    return () => {
+      active = false
+      clearInterval(timer)
+    }
+  }, [])
+
+  const { grid, loaded } = surface
+
+  // Default the selection to the nearest expiry once the grid arrives; keep the
+  // user's choice if it is still a live column, else fall back to the first.
+  const effectiveOracleId = useMemo(() => {
+    if (grid.columns.length === 0) return null
+    if (selectedOracleId && grid.columns.some((c) => c.oracleId === selectedOracleId)) {
+      return selectedOracleId
+    }
+    return grid.columns[0].oracleId
+  }, [grid.columns, selectedOracleId])
+
+  const selectedColumn = useMemo(
+    () => grid.columns.find((c) => c.oracleId === effectiveOracleId) ?? null,
+    [grid.columns, effectiveOracleId],
   )
+
+  const liveExpiries = grid.columns.length
   const asset = oracleSnapshot.oracleState?.underlying_asset ?? 'BTC'
 
   return (
@@ -38,7 +100,7 @@ export function StudioShell() {
         <span className="h-3 w-px bg-outline-variant" />
         <span className="flex items-center gap-1">
           <span className="text-primary-fixed-dim">Live expiries</span>
-          <span className="tabular-nums text-on-surface">{liveOracles.length}</span>
+          <span className="tabular-nums text-on-surface">{liveExpiries}</span>
         </span>
         <span className="h-3 w-px bg-outline-variant" />
         <span className="flex items-center gap-1">
@@ -49,47 +111,19 @@ export function StudioShell() {
         </span>
       </div>
 
-      {/* Main: heatmap is king (left, fills), smile + edge stack right (S1-S4). */}
+      {/* Main: heatmap is king (left, fills), smile + edge stack right. */}
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-px overflow-y-auto bg-outline-variant lg:grid-cols-[minmax(0,1fr)_24rem] lg:overflow-hidden [&>*]:min-h-[16rem] lg:[&>*]:min-h-0">
-        <VolHeatmap className="min-h-0" />
+        <VolHeatmap
+          grid={grid}
+          loaded={loaded}
+          selectedOracleId={effectiveOracleId}
+          onSelect={setSelectedOracleId}
+          className="min-h-0"
+        />
 
         <div className="flex min-h-0 flex-col gap-px bg-outline-variant">
-          <section
-            data-pc-studio-smile
-            aria-label="Smile slice"
-            className="flex min-h-0 flex-1 flex-col items-center justify-center gap-sm bg-surface-container-lowest p-md text-center"
-          >
-            <span
-              className="material-symbols-outlined text-[28px] text-on-surface-variant"
-              aria-hidden="true"
-            >
-              show_chart
-            </span>
-            <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant">
-              Smile slice
-            </span>
-            <span className="max-w-[20rem] font-data text-data-sm text-on-surface-variant">
-              Per-expiry IV smile arrives in S2.
-            </span>
-          </section>
-          <section
-            data-pc-studio-edge
-            aria-label="Trader edge"
-            className="flex min-h-0 flex-1 flex-col items-center justify-center gap-sm bg-surface-container-lowest p-md text-center"
-          >
-            <span
-              className="material-symbols-outlined text-[28px] text-on-surface-variant"
-              aria-hidden="true"
-            >
-              bolt
-            </span>
-            <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant">
-              Edge panel
-            </span>
-            <span className="max-w-[20rem] font-data text-data-sm text-on-surface-variant">
-              Mispricing, IV vs realized vol, and arb-free health fill in across S2-S4.
-            </span>
-          </section>
+          <SmileSlice column={selectedColumn} className="min-h-0 flex-1" />
+          <EdgePanel column={selectedColumn} realized={realized} className="shrink-0" />
         </div>
       </div>
     </div>
