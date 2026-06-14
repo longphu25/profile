@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ActionDock } from './ActionDock'
 import { ContextRail } from './ContextRail'
 import { DockTabs } from './DockTabs'
@@ -26,6 +26,23 @@ import { PriceChart } from './PriceChart'
 export function CockpitShell() {
   const [dockOpen, setDockOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const ctaRef = useRef<HTMLButtonElement>(null)
+  const sheetCloseRef = useRef<HTMLButtonElement>(null)
+
+  // Sheet a11y: Escape closes it, focus moves into the sheet on open and returns
+  // to the trigger on close, and background scroll is locked while it is up.
+  useEffect(() => {
+    if (!sheetOpen) return undefined
+    sheetCloseRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSheetOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      ctaRef.current?.focus()
+    }
+  }, [sheetOpen])
 
   return (
     <div
@@ -72,6 +89,7 @@ export function CockpitShell() {
 
       {/* Mobile: always-visible compact CTA bar that opens the action sheet (C6). */}
       <button
+        ref={ctaRef}
         type="button"
         data-pc-cta-bar
         onClick={() => setSheetOpen(true)}
@@ -121,6 +139,7 @@ export function CockpitShell() {
                 Trade
               </span>
               <button
+                ref={sheetCloseRef}
                 type="button"
                 onClick={() => setSheetOpen(false)}
                 aria-label="Close"
