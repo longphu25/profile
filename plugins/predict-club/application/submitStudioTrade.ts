@@ -22,7 +22,12 @@ import type { SuiPredictGateway } from './executeTradeplan'
 // The model-vs-contract gap (in win-probability points) below which we offer no
 // directional hint. Matches the cockpit's "fair vs contract" edge label band so
 // the two surfaces agree on what counts as a real edge.
-const DIRECTION_EDGE_EPS = 0.005
+export const DIRECTION_EDGE_EPS = 0.005
+
+// A wider gap that reads as a clear opportunity, not just a faint edge. The heatmap
+// uses it to draw a stronger (chip-backed) cell signal so a glance separates the few
+// real opportunities from the merely-nonzero ones.
+export const STRONG_EDGE_EPS = 0.02
 
 /**
  * Suggest a side from model edge: when the SVI fair win-probability for UP sits
@@ -38,6 +43,30 @@ export function recommendDirection(
   const diff = fairProbability - contractProbability
   if (Math.abs(diff) < DIRECTION_EDGE_EPS) return null
   return diff > 0 ? 'UP' : 'DOWN'
+}
+
+/**
+ * Which side an edge favors, framed from the heatmap cell's `edge = contract - fair`.
+ * A contract priced cheaper than the model (`edge < 0`) makes UP the value side; a
+ * contract priced richer (`edge > 0`) makes DOWN the value side. Null inside the
+ * noise band. Agrees with `recommendDirection` (which reads fair - contract).
+ */
+export function edgeSide(edge: number | null): Direction | null {
+  if (edge == null || Math.abs(edge) < DIRECTION_EDGE_EPS) return null
+  return edge < 0 ? 'UP' : 'DOWN'
+}
+
+/**
+ * Bucket an edge by magnitude for the cell signal: 'none' below the noise band,
+ * 'weak' a faint edge worth a quiet mark, 'strong' a clear opportunity worth a
+ * louder one. Lets the heatmap keep the grid scannable by marking only real edges.
+ */
+export function edgeTier(edge: number | null): 'none' | 'weak' | 'strong' {
+  if (edge == null) return 'none'
+  const mag = Math.abs(edge)
+  if (mag >= STRONG_EDGE_EPS) return 'strong'
+  if (mag >= DIRECTION_EDGE_EPS) return 'weak'
+  return 'none'
 }
 
 export interface StudioRiskParams {

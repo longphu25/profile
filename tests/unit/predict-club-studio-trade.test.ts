@@ -2,7 +2,11 @@ import { describe, expect, test } from 'bun:test'
 import type { Transaction } from '@mysten/sui/transactions'
 import {
   buildStudioRiskInput,
+  DIRECTION_EDGE_EPS,
+  edgeSide,
+  edgeTier,
   recommendDirection,
+  STRONG_EDGE_EPS,
   submitStudioTrade,
   type StudioTradeParams,
 } from '../../plugins/predict-club/application/submitStudioTrade'
@@ -73,6 +77,49 @@ describe('recommendDirection', () => {
   test('a missing side gives no hint (never guesses)', () => {
     expect(recommendDirection(0.6, null)).toBeNull()
     expect(recommendDirection(null, 0.6)).toBeNull()
+  })
+})
+
+describe('edgeSide', () => {
+  // edge = contract - fair. A contract cheaper than the model (edge < 0) makes UP
+  // the value side; richer (edge > 0) makes DOWN the value side. Agrees with
+  // recommendDirection, which reads fair - contract.
+  test('a negative edge (contract cheap) favors UP', () => {
+    expect(edgeSide(-0.03)).toBe('UP')
+  })
+
+  test('a positive edge (contract rich) favors DOWN', () => {
+    expect(edgeSide(0.03)).toBe('DOWN')
+  })
+
+  test('an edge within the noise band gives no side', () => {
+    expect(edgeSide(DIRECTION_EDGE_EPS / 2)).toBeNull()
+    expect(edgeSide(-DIRECTION_EDGE_EPS / 2)).toBeNull()
+  })
+
+  test('a null edge gives no side', () => {
+    expect(edgeSide(null)).toBeNull()
+  })
+})
+
+describe('edgeTier', () => {
+  test('below the noise band is none', () => {
+    expect(edgeTier(DIRECTION_EDGE_EPS / 2)).toBe('none')
+    expect(edgeTier(null)).toBe('none')
+  })
+
+  test('at the weak threshold is weak (sign-agnostic)', () => {
+    expect(edgeTier(DIRECTION_EDGE_EPS)).toBe('weak')
+    expect(edgeTier(-DIRECTION_EDGE_EPS)).toBe('weak')
+  })
+
+  test('just below the strong threshold is still weak', () => {
+    expect(edgeTier(STRONG_EDGE_EPS - 0.0001)).toBe('weak')
+  })
+
+  test('at or above the strong threshold is strong (sign-agnostic)', () => {
+    expect(edgeTier(STRONG_EDGE_EPS)).toBe('strong')
+    expect(edgeTier(-STRONG_EDGE_EPS)).toBe('strong')
   })
 })
 
