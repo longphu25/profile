@@ -1,6 +1,8 @@
+import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
 import { Transaction } from '@mysten/sui/transactions'
 import type { Direction } from '../domain/types'
 import { TESTNET_RPC_URL } from '../../../src/constants/predict-club'
+import { sanitizeMintError } from './deepbookPredictPricingService'
 import { cachedGet } from './rpcCache'
 
 const PREDICT_SERVER = 'https://predict-server.testnet.mystenlabs.com'
@@ -8,10 +10,13 @@ const PREDICT_SERVER = 'https://predict-server.testnet.mystenlabs.com'
 const MANAGERS_TTL_MS = 20_000
 const PREDICT_ID = '0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a38028a'
 const PREDICT_PACKAGE = '0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138'
+const CLOCK_ID = '0x6'
 const DUSDC_TYPE =
   '0xe95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC'
 const DUSDC_DECIMALS = 6
 const STRIKE_SCALE = 1e9
+
+const client = new SuiJsonRpcClient({ url: TESTNET_RPC_URL, network: 'testnet' })
 
 export interface SuiPredictGateway {
   buildMintTx(params: {
@@ -53,6 +58,26 @@ export interface SuiPredictGateway {
 
   /** Fetch the manager ID owned by this wallet, or null if none. */
   fetchManagerId(walletAddress: string): Promise<string | null>
+
+  /**
+   * Read-only pre-flight that runs the REAL mint PTB through devInspect (zero gas,
+   * no wallet prompt). Unlike the pricing read (`get_trade_amounts`), this exercises
+   * `predict::mint` and so trips the same mint-time guards a live mint would -
+   * notably `assert_mintable_ask` (abort 7), which the pricing read never runs. A
+   * far in/out-of-the-money strike thus fails here, before the user is asked to sign.
+   * Returns ok:false + a friendly reason when the simulated mint aborts.
+   */
+  simulateMintBinary(params: {
+    walletAddress: string
+    managerId: string
+    direction: Direction
+    strike: number
+    amountDusdc: number
+    oracleId: string
+    expiry: number
+    tickSize: number
+    minStrike: number
+  }): Promise<{ ok: boolean; reason?: string }>
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -95,6 +120,78 @@ function mergeDusdcAndSplit(tx: Transaction, coins: { coinObjectId: string }[], 
   return depositCoin
 }
 
+interface BinaryMintParams {
+  walletAddress: string
+  managerId: string
+  direction: Direction
+  strike: number
+  amountDusdc: number
+  oracleId: string
+  expiry: number
+  tickSize: number
+  minStrike: number
+}
+
+// The single source of truth for the binary mint PTB. Both the real mint
+// (buildMintTx -> sign) and the read-only pre-flight (simulateMintBinary ->
+// devInspect) compose it through here, so the simulated transaction is byte-for-byte
+// the one the wallet signs - the only difference is devInspect vs execute. That is
+// what makes the pre-flight trustworthy: it runs predict::mint and trips the same
+// assert_mintable_ask guard a live mint would.
+async function composeBinaryMintTx(params: BinaryMintParams): Promise<Transaction> {
+  const {
+    walletAddress,
+    managerId,
+    direction,
+    strike,
+    amountDusdc,
+    oracleId,
+    expiry,
+    tickSize,
+    minStrike,
+  } = params
+
+  const amountRaw = Math.floor(amountDusdc * 10 ** DUSDC_DECIMALS)
+  const strikeRaw = snapStrike(strike, tickSize, minStrike)
+  const coins = await fetchDusdcCoins(walletAddress)
+  if (coins.length === 0) throw new Error('No DUSDC coins found in wallet')
+
+  const tx = new Transaction()
+  tx.setSender(walletAddress)
+
+  const depositCoin = mergeDusdcAndSplit(tx, coins, amountRaw)
+
+  // Deposit into manager
+  tx.moveCall({
+    target: `${PREDICT_PACKAGE}::predict_manager::deposit`,
+    typeArguments: [DUSDC_TYPE],
+    arguments: [tx.object(managerId), depositCoin],
+  })
+
+  // Build market key
+  const isUp = direction === 'UP'
+  const [marketKey] = tx.moveCall({
+    target: `${PREDICT_PACKAGE}::market_key::${isUp ? 'up' : 'down'}`,
+    arguments: [tx.pure.id(oracleId), tx.pure.u64(expiry), tx.pure.u64(strikeRaw)],
+  })
+
+  // Mint
+  tx.moveCall({
+    target: `${PREDICT_PACKAGE}::predict::mint`,
+    typeArguments: [DUSDC_TYPE],
+    arguments: [
+      tx.object(PREDICT_ID),
+      tx.object(managerId),
+      tx.object(oracleId),
+      marketKey,
+      tx.pure.u64(amountRaw),
+      tx.object(CLOCK_ID),
+    ],
+  })
+
+  return tx
+}
+
 // ── factory ───────────────────────────────────────────────────────────────────
 
 export function createSuiPredictGateway(): SuiPredictGateway {
@@ -120,57 +217,32 @@ export function createSuiPredictGateway(): SuiPredictGateway {
     },
 
     async buildMintTx(params) {
-      const {
-        walletAddress,
-        managerId,
-        direction,
-        strike,
-        amountDusdc,
-        oracleId,
-        expiry,
-        tickSize,
-        minStrike,
-      } = params
+      return composeBinaryMintTx(params)
+    },
 
-      const amountRaw = Math.floor(amountDusdc * 10 ** DUSDC_DECIMALS)
-      const strikeRaw = snapStrike(strike, tickSize, minStrike)
-      const coins = await fetchDusdcCoins(walletAddress)
-      if (coins.length === 0) throw new Error('No DUSDC coins found in wallet')
-
-      const tx = new Transaction()
-      tx.setSender(walletAddress)
-
-      const depositCoin = mergeDusdcAndSplit(tx, coins, amountRaw)
-
-      // Deposit into manager
-      tx.moveCall({
-        target: `${PREDICT_PACKAGE}::predict_manager::deposit`,
-        typeArguments: [DUSDC_TYPE],
-        arguments: [tx.object(managerId), depositCoin],
-      })
-
-      // Build market key
-      const isUp = direction === 'UP'
-      const [marketKey] = tx.moveCall({
-        target: `${PREDICT_PACKAGE}::market_key::${isUp ? 'up' : 'down'}`,
-        arguments: [tx.pure.id(oracleId), tx.pure.u64(expiry), tx.pure.u64(strikeRaw)],
-      })
-
-      // Mint
-      tx.moveCall({
-        target: `${PREDICT_PACKAGE}::predict::mint`,
-        typeArguments: [DUSDC_TYPE],
-        arguments: [
-          tx.object(PREDICT_ID),
-          tx.object(managerId),
-          tx.object(oracleId),
-          marketKey,
-          tx.pure.u64(amountRaw),
-          tx.object.clock(),
-        ],
-      })
-
-      return tx
+    async simulateMintBinary(params) {
+      // Read-only pre-flight: build the exact mint PTB and devInspect it, so the
+      // contract runs predict::mint -> assert_mintable_ask with zero gas and no
+      // wallet prompt. The pricing read (get_trade_amounts) skips that guard, which
+      // is why a far-from-ATM strike could pass the old pre-flight and still abort
+      // at sign time (assert_mintable_ask, code 7). Simulating the real mint closes
+      // that gap. Any build error (e.g. no DUSDC coins) is reported as not-ok too.
+      let tx: Transaction
+      try {
+        tx = await composeBinaryMintTx(params)
+      } catch (error) {
+        return { ok: false, reason: sanitizeMintError(error) }
+      }
+      try {
+        const inspected = await client.devInspectTransactionBlock({
+          sender: params.walletAddress,
+          transactionBlock: tx,
+        })
+        if (inspected.error) return { ok: false, reason: sanitizeMintError(inspected.error) }
+        return { ok: true }
+      } catch (error) {
+        return { ok: false, reason: sanitizeMintError(error) }
+      }
     },
 
     async buildMintRangeTx(params) {

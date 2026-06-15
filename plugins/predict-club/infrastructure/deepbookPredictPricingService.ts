@@ -435,6 +435,35 @@ export function sanitizeContractQuoteReason(error: unknown): string {
   return raw
 }
 
+export const MINTABLE_BOUNDS_REASON =
+  'This strike is too deep in or out of the money for the contract to mint right now. Pick a strike nearer the current price.'
+
+/**
+ * Map a mint failure (a devInspect abort or a rejected sign) to a friendly,
+ * actionable message. The two contract guards a Studio strike can trip are the
+ * pricing-bounds abort (quote_spread_from_fair_price) and the ask-band
+ * mintability abort (assert_mintable_ask); both reduce to "pick a nearer strike".
+ * Wallet rejections and balance shortfalls get their own plain phrasing. Anything
+ * else falls back to a clean line rather than a raw MoveAbort dump.
+ */
+export function sanitizeMintError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '')
+  if (!raw || raw === 'undefined' || raw === 'null') return 'Mint failed, please try again.'
+  if (raw.includes('assert_mintable_ask') || raw.includes('mintable_ask')) {
+    return MINTABLE_BOUNDS_REASON
+  }
+  if (raw.includes('quote_spread_from_fair_price')) return PRICING_BOUNDS_REASON
+  const lower = raw.toLowerCase()
+  if (lower.includes('rejected') || lower.includes('user denied') || lower.includes('cancelled')) {
+    return 'You rejected the transaction in your wallet.'
+  }
+  if (lower.includes('insufficient')) return 'Not enough balance to mint this position.'
+  if (raw.includes('MoveAbort') || raw.includes('ExecutionError') || raw.length > 200) {
+    return 'The contract rejected this mint. Try a strike nearer the current price or a different expiry.'
+  }
+  return raw
+}
+
 function sanitizeDataUnavailableReason(error: unknown, fallback: string): string {
   const raw = error instanceof Error ? error.message : String(error ?? '')
   if (!raw || raw === 'undefined' || raw === 'null') return fallback
