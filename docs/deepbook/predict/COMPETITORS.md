@@ -174,3 +174,54 @@ Different angles — both valid. Theirs is more aggressive (AI makes money), our
 - DeepMarket Twitter: https://x.com/Deepmarket64083/status/2066229398559240224
 - MemWal (Walrus memory): https://staging.memory.walrus.xyz/
 - MemWal source: https://github.com/MystenLabs/MemWal
+
+
+---
+
+## DeepPulse (@deeppulse0)
+
+**URL**: https://x.com/deeppulse0
+**Type**: Autonomous AI market-making agent
+**Target**: DeepBook CLOB (spot), NOT Predict
+**Track**: Agentic Web or DeepBook
+
+### What it does
+
+AI market-maker that provides 24/7 liquidity on DeepBook spot order book:
+
+| Feature | Detail |
+|---------|--------|
+| Pricing model | Avellaneda-Stoikov (optimal bid/ask quotes) |
+| Execution | Atomic via Sui PTBs |
+| Risk management | Circuit breakers |
+| Audit trail | Walrus-verified decision logs |
+| Goal | Tighter spreads, deeper liquidity |
+
+### Relevance
+
+- **Not a direct competitor** — spot CLOB market-making, not prediction markets
+- Same track (DeepBook) but different vertical
+- Shares pattern: autonomous agent + Walrus logs + circuit breakers
+- Shows judges expect: verifiable AI decisions + risk controls
+
+### Pattern overlap with our approach
+
+| Concept | DeepPulse | Us |
+|---------|-----------|-----|
+| Autonomous on-chain action | ✅ Place/cancel orders | ✅ Tighten/freeze vault |
+| Audit trail (Walrus) | ✅ Decision logs | ❌ (could add) |
+| Circuit breaker | ✅ Stop trading | ✅ Freeze lending |
+| Risk model | Avellaneda-Stoikov (spread) | ML risk score (divergence) |
+| Target | DeepBook spot liquidity | DeepBook Predict positions |
+
+---
+
+## Competitive Landscape Summary
+
+| Project | Focus | Track | Threat level |
+|---------|-------|-------|-------------|
+| **DeepMarket** | Predict trading + provable AI agents | DeepBook/Agentic | 🔴 High (direct) |
+| **DeepPulse** | Spot CLOB market-making AI | DeepBook/Agentic | 🟡 Medium (same track, different vertical) |
+| **Velfi** | Programmable payments | Agentic Web | 🟢 Low (different domain) |
+| **suimpp** | Machine payments protocol | DeFi & Payments | 🟢 Low (different domain) |
+| **predict-cli** (SeventhOdyssey) | Rust CLI for Predict | Builder Tooling | 🟡 Medium (same protocol, different product) |
