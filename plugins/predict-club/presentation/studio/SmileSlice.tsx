@@ -1,28 +1,37 @@
 import { useEffect, useRef, useState } from 'react'
 import { type SVIParams, totalVarianceAtLogMoneyness } from '../../domain/payoutPreview'
-import type { SurfaceColumn } from '../../domain/volSurface'
+import type { MispriceCell, SurfaceColumn } from '../../domain/volSurface'
 
 /**
  * Per-expiry volatility smile (plan 23, S2): IV plotted against strike for the
  * selected expiry column. This is the 1-D slice of the heatmap a trader reads to
  * judge skew - the shape of implied vol across moneyness for one expiry.
  *
- * Custom themeable SVG (same approach as the cockpit king chart, no chart lib).
- * The curve is resampled densely straight off the SVI total-variance function, so
- * it renders as the smooth smile SVI actually is, not a jagged polyline through the
- * dozen sampled strikes. The SVG is drawn in real pixel space (a ResizeObserver
- * feeds it the container size) so circles stay round and slopes keep their true
- * aspect - no preserveAspectRatio stretching. Degrades to a defined empty state
- * when the column has no SVI.
+ * A one-line plain-language read sits above the chart so the panel is useful even
+ * at a glance. The chart is a custom themeable SVG (same approach as the cockpit
+ * king chart, no chart lib): the curve is resampled densely straight off the SVI
+ * total-variance function, so it renders as the smooth smile SVI actually is, not
+ * a jagged polyline through the dozen sampled strikes. It is drawn in real pixel
+ * space (a ResizeObserver feeds it the container size) so circles stay round and
+ * slopes keep their true aspect. Degrades to a defined empty state with no SVI.
  */
 
 const MINT = '#00e0b3'
 const FWD = '#7fb0d0'
 const GRID = 'rgba(58,74,68,0.5)'
 const AXIS_TEXT = 'rgba(185,203,194,0.65)'
+// BUY = contract cheaper than the model (edge < 0), so the side is underpriced and
+// worth buying; SELL = contract richer (edge > 0), worth selling. Green/red is paired
+// with a BUY/SELL word + arrow so the signal never rides on color alone (colorblind-safe).
+const BUY = '#34d399'
+const SELL = '#ff5d73'
 const PAD = { top: 20, right: 16, bottom: 28, left: 46 }
 const SECONDS_PER_YEAR = 365 * 24 * 60 * 60
 const CURVE_SAMPLES = 96
+const SKEW_FLAT_PTS = 0.5
+// Below this absolute edge (in win-probability points) the contract and model agree
+// closely enough that we offer no BUY/SELL flag - matches the cockpit's edge band.
+const EDGE_FLAG_EPS = 0.01
 
 function formatIv(iv: number): string {
   return `${(iv * 100).toFixed(1)}%`
@@ -49,6 +58,90 @@ function ivAtStrike(svi: SVIParams, forward: number, secondsToExpiry: number, st
   if (!Number.isFinite(w) || w <= 0) return null
   const iv = Math.sqrt(w / (secondsToExpiry / SECONDS_PER_YEAR))
   return Number.isFinite(iv) ? iv : null
+}
+
+interface SmileStats {
+  atmIv: number | null
+  lowIv: number | null
+  highIv: number | null
+  minStrike: number
+  maxStrike: number
+  skewPts: number | null
+}
+
+// One read of the smile: ATM vol, the wings (low/high strike IV), and the skew in
+// vol points (downside minus upside). Positive skew = downside vol richer.
+function smileStats(column: SurfaceColumn): SmileStats | null {
+  if (!column.svi) return null
+  const sampled = column.cells.filter((c) => c.iv != null).map((c) => c.strike)
+  if (sampled.length < 2) return null
+  const minStrike = Math.min(...sampled)
+  const maxStrike = Math.max(...sampled)
+  const { svi, forward, secondsToExpiry } = column
+  const atmIv = ivAtStrike(svi, forward, secondsToExpiry, forward)
+  const lowIv = ivAtStrike(svi, forward, secondsToExpiry, minStrike)
+  const highIv = ivAtStrike(svi, forward, secondsToExpiry, maxStrike)
+  const skewPts = lowIv != null && highIv != null ? (lowIv - highIv) * 100 : null
+  return { atmIv, lowIv, highIv, minStrike, maxStrike, skewPts }
+}
+
+// An actionable edge flag on the smile: the strike, which side reads BUY or SELL,
+// and the signed edge in win-probability points (contract - model). Drawn as a
+// colored, labeled marker on the curve so a trader sees where the model and the
+// contract disagree, not just the smile shape.
+interface EdgeMarker {
+  strike: number
+  side: 'BUY' | 'SELL'
+  edge: number
+  /** SVI fair-value win probability (model), for the legend read. */
+  fair: number | null
+  /** Contract-implied win probability (devInspect quote), for the legend read. */
+  contract: number | null
+}
+
+// Pick the single best BUY and best SELL strike out of the quoted ATM band. BUY =
+// contract cheaper than the model (edge < 0, underpriced); SELL = contract richer
+// (edge > 0). Only the most extreme each side is flagged so the small chart stays
+// readable, and only when the gap clears EDGE_FLAG_EPS (otherwise the two agree).
+function edgeMarkers(cells: MispriceCell[]): EdgeMarker[] {
+  let bestBuy: EdgeMarker | null = null
+  let bestSell: EdgeMarker | null = null
+  for (const c of cells) {
+    if (c.edge == null || Math.abs(c.edge) < EDGE_FLAG_EPS) continue
+    if (c.edge < 0 && (bestBuy == null || c.edge < bestBuy.edge)) {
+      bestBuy = {
+        strike: c.strike,
+        side: 'BUY',
+        edge: c.edge,
+        fair: c.fairProbability,
+        contract: c.contractProbability,
+      }
+    } else if (c.edge > 0 && (bestSell == null || c.edge > bestSell.edge)) {
+      bestSell = {
+        strike: c.strike,
+        side: 'SELL',
+        edge: c.edge,
+        fair: c.fairProbability,
+        contract: c.contractProbability,
+      }
+    }
+  }
+  return [bestBuy, bestSell].filter((m): m is EdgeMarker => m != null)
+}
+
+// A plain-language read of the smile for the description line above the chart.
+function smileDescription(stats: SmileStats): string {
+  if (stats.atmIv == null) return 'Implied vol across strikes for this expiry.'
+  const atm = formatIv(stats.atmIv)
+  if (stats.skewPts == null) return `At-the-money implied vol is ${atm} for this expiry.`
+  const mag = Math.abs(stats.skewPts).toFixed(1)
+  if (stats.skewPts > SKEW_FLAT_PTS) {
+    return `ATM vol ${atm}. Downside strikes price ${mag} vol points richer than upside - the market is paying up for protection.`
+  }
+  if (stats.skewPts < -SKEW_FLAT_PTS) {
+    return `ATM vol ${atm}. Upside strikes price ${mag} vol points richer than downside - demand is skewed to calls.`
+  }
+  return `ATM vol ${atm}. Wings are within ${mag} vol points of each other - a near-symmetric smile.`
 }
 
 // Track the rendered pixel size of the plot host so the SVG can draw 1:1 (no
@@ -90,11 +183,20 @@ function EmptyState({ message }: { message: string }) {
 
 export function SmileSlice({
   column,
+  mispriceCells = [],
   className = '',
 }: {
   column: SurfaceColumn | null
+  mispriceCells?: MispriceCell[]
   className?: string
 }) {
+  const [expanded, setExpanded] = useState(false)
+  const stats = column && !column.degraded ? smileStats(column) : null
+  // Edge flags only apply to the selected column's quoted ATM band; ignore quotes
+  // from any other column so a stale set never paints the wrong smile.
+  const markers =
+    column && stats ? edgeMarkers(mispriceCells.filter((c) => c.oracleId === column.oracleId)) : []
+
   return (
     <section
       data-pc-studio-smile
@@ -105,45 +207,189 @@ export function SmileSlice({
         <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant">
           IV smile
         </span>
-        {column && (
-          <span className="font-data text-data-sm tabular-nums text-on-surface-variant">
-            {formatExpiry(column.secondsToExpiry)} expiry
-          </span>
-        )}
+        <div className="flex items-center gap-sm">
+          {column && (
+            <span className="font-data text-data-sm tabular-nums text-on-surface-variant">
+              {formatExpiry(column.secondsToExpiry)} expiry
+            </span>
+          )}
+          {stats && (
+            <button
+              type="button"
+              data-pc-studio-smile-expand
+              onClick={() => setExpanded(true)}
+              aria-label="Expand smile detail"
+              className="flex h-6 w-6 items-center justify-center rounded-sm text-on-surface-variant outline-none transition-colors hover:bg-surface-container hover:text-on-surface focus-visible:ring-2 focus-visible:ring-primary-fixed"
+            >
+              <span
+                className="material-symbols-outlined text-[18px] leading-none"
+                aria-hidden="true"
+              >
+                open_in_full
+              </span>
+            </button>
+          )}
+        </div>
       </header>
-      <div className="min-h-0 flex-1 px-sm pb-sm">
-        <SmileBody column={column} />
-      </div>
+
+      {!column ? (
+        <div className="min-h-0 flex-1 px-md pb-md">
+          <EmptyState message="Pick an expiry column in the heatmap to see its IV smile." />
+        </div>
+      ) : column.degraded || !column.svi ? (
+        <div className="min-h-0 flex-1 px-md pb-md">
+          <EmptyState message="This expiry has no SVI surface yet, so its smile is unavailable." />
+        </div>
+      ) : !stats ? (
+        <div className="min-h-0 flex-1 px-md pb-md">
+          <EmptyState message="Not enough strikes sampled for a smile at this expiry." />
+        </div>
+      ) : (
+        <>
+          <p className="shrink-0 px-md pb-sm font-data text-data-sm leading-snug text-on-surface-variant">
+            {smileDescription(stats)}
+          </p>
+          {markers.length > 0 && <EdgeLegend markers={markers} />}
+          {/* Cap the chart height so the smile reads at a natural aspect instead of
+              stretching tall and sparse to fill the panel; the curve stays compact and
+              legible, and the expand button opens the full-size modal for detail. */}
+          <div className="min-h-0 flex-1 px-sm pb-sm">
+            <div className="mx-auto h-full max-h-[14rem] w-full">
+              <SmileChartHost column={column} stats={stats} markers={markers} />
+            </div>
+          </div>
+        </>
+      )}
+
+      {expanded && column?.svi && stats && (
+        <SmileModal
+          column={column}
+          stats={stats}
+          markers={markers}
+          onClose={() => setExpanded(false)}
+        />
+      )}
     </section>
   )
 }
 
-function SmileBody({ column }: { column: SurfaceColumn | null }) {
+function SmileModal({
+  column,
+  stats,
+  markers,
+  onClose,
+}: {
+  column: SurfaceColumn
+  stats: SmileStats
+  markers: EdgeMarker[]
+  onClose: () => void
+}) {
   const [hostRef, { width, height }] = useElementSize()
+  const dialogRef = useRef<HTMLDivElement | null>(null)
 
-  if (!column) {
-    return <EmptyState message="Pick an expiry column in the heatmap to see its IV smile." />
-  }
-  if (column.degraded || !column.svi) {
-    return <EmptyState message="This expiry has no SVI surface yet, so its smile is unavailable." />
-  }
+  useEffect(() => {
+    dialogRef.current?.focus()
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
 
-  // The drawn strike range comes from the sampled cells (the heatmap's band), but
-  // the curve itself is resampled densely off the SVI function across that range.
-  const sampledStrikes = column.cells.filter((c) => c.iv != null).map((c) => c.strike)
-  if (sampledStrikes.length < 2) {
-    return <EmptyState message="Not enough strikes sampled for a smile at this expiry." />
-  }
+  return (
+    <div
+      data-pc-studio-smile-modal
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-lg backdrop-blur-md"
+      onClick={onClose}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`IV smile, ${formatExpiry(column.secondsToExpiry)} expiry`}
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-[80vh] w-full max-w-[44rem] flex-col gap-sm rounded-md bg-surface-container-lowest p-md shadow-lg outline-none"
+      >
+        <header className="flex shrink-0 items-start justify-between gap-md">
+          <div className="flex flex-col gap-px">
+            <span className="font-label text-label-caps uppercase tracking-wider text-on-surface-variant">
+              IV smile - {formatExpiry(column.secondsToExpiry)} expiry
+            </span>
+            <span className="font-data text-data-sm leading-snug text-on-surface-variant">
+              {smileDescription(stats)}
+            </span>
+          </div>
+          <button
+            type="button"
+            data-pc-studio-smile-close
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-on-surface-variant outline-none transition-colors hover:bg-surface-container hover:text-on-surface focus-visible:ring-2 focus-visible:ring-primary-fixed"
+          >
+            <span className="material-symbols-outlined text-[20px] leading-none" aria-hidden="true">
+              close
+            </span>
+          </button>
+        </header>
 
+        <div ref={hostRef} className="min-h-[20rem] flex-1">
+          {width > 0 && height > 0 && (
+            <SmileChart
+              svi={column.svi as SVIParams}
+              forward={column.forward}
+              secondsToExpiry={column.secondsToExpiry}
+              minStrike={stats.minStrike}
+              maxStrike={stats.maxStrike}
+              markers={markers}
+              width={width}
+              height={height}
+            />
+          )}
+        </div>
+
+        <footer className="flex shrink-0 flex-wrap items-center gap-md px-px font-data text-[11px] text-on-surface-variant">
+          <span className="flex items-center gap-1">
+            <span className="h-[2px] w-4 rounded-full" style={{ backgroundColor: MINT }} />
+            IV curve
+          </span>
+          <span className="flex items-center gap-1">
+            <span
+              className="h-[2px] w-4 rounded-full"
+              style={{ backgroundColor: FWD, opacity: 0.8 }}
+            />
+            forward (ATM)
+          </span>
+          <span className="tabular-nums">
+            Wings: {stats.lowIv != null ? formatIv(stats.lowIv) : '-'} /{' '}
+            {stats.highIv != null ? formatIv(stats.highIv) : '-'}
+          </span>
+        </footer>
+      </div>
+    </div>
+  )
+}
+
+function SmileChartHost({
+  column,
+  stats,
+  markers,
+}: {
+  column: SurfaceColumn
+  stats: SmileStats
+  markers: EdgeMarker[]
+}) {
+  const [hostRef, { width, height }] = useElementSize()
   return (
     <div ref={hostRef} className="h-full w-full">
       {width > 0 && height > 0 && (
         <SmileChart
-          svi={column.svi}
+          svi={column.svi as SVIParams}
           forward={column.forward}
           secondsToExpiry={column.secondsToExpiry}
-          minStrike={Math.min(...sampledStrikes)}
-          maxStrike={Math.max(...sampledStrikes)}
+          minStrike={stats.minStrike}
+          maxStrike={stats.maxStrike}
+          markers={markers}
           width={width}
           height={height}
         />
@@ -158,6 +404,7 @@ function SmileChart({
   secondsToExpiry,
   minStrike,
   maxStrike,
+  markers,
   width,
   height,
 }: {
@@ -166,6 +413,7 @@ function SmileChart({
   secondsToExpiry: number
   minStrike: number
   maxStrike: number
+  markers: EdgeMarker[]
   width: number
   height: number
 }) {
@@ -202,6 +450,9 @@ function SmileChart({
   const fwdInRange = forward >= minStrike && forward <= maxStrike
   const fwdX = xAt(Math.max(minStrike, Math.min(maxStrike, forward)))
   const atmIv = ivAtStrike(svi, forward, secondsToExpiry, forward)
+  // Where the ATM % label sits (above the forward point). Edge flags that land near
+  // the forward must clear this so the SELL word never paints over the ATM number.
+  const atmLabelY = fwdInRange && atmIv != null ? yAt(atmIv) - 9 : null
 
   const yTicks = [minIv + (maxIv - minIv) * 0.2, minIv + (maxIv - minIv) * 0.8]
 
@@ -316,6 +567,123 @@ function SmileChart({
           </text>
         </g>
       )}
+
+      {/* BUY / SELL edge flags: where the contract and model most disagree in the
+          quoted band. Each is a small dot on the curve plus an opaque pill carrying
+          the side word AND the edge in win-prob points, so the flag reads regardless
+          of the gradient underneath (the old green word was lost against the teal
+          fill) and the signal never rides on color alone. BUY (green) = contract
+          cheaper than model; SELL (red) = richer. The pill is clamped inside the plot
+          so the small chart never clips it, and a SELL pill near the forward flips
+          below its dot so it does not cover the ATM % label. */}
+      {markers.map((m) => {
+        const iv = ivAtStrike(svi, forward, secondsToExpiry, m.strike)
+        if (iv == null || m.strike < minStrike || m.strike > maxStrike) return null
+        const mx = xAt(m.strike)
+        const my = yAt(iv)
+        const color = m.side === 'BUY' ? BUY : SELL
+        const pts = (Math.abs(m.edge) * 100).toFixed(1)
+        const arrow = m.side === 'BUY' ? '▼' : '▲'
+        const label = `${arrow} ${m.side} ${pts}pt`
+        const pillH = 13
+        const pillW = label.length * 5.0 + 8
+        // SELL sits above the dot, BUY below, so the two flags never stack. A SELL pill
+        // near the forward would cover the ATM % label (also above the forward), so flip
+        // it below when it lands within ~28px horizontally of the forward.
+        let above = m.side === 'SELL'
+        if (above && atmLabelY != null && Math.abs(mx - fwdX) < 28) above = false
+        const gap = 7
+        let pillCy = above ? my - gap - pillH / 2 : my + gap + pillH / 2
+        const minCy = PAD.top + pillH / 2 + 1
+        const maxCy = PAD.top + plotH - pillH / 2 - 1
+        pillCy = Math.max(minCy, Math.min(maxCy, pillCy))
+        let pillX = mx - pillW / 2
+        pillX = Math.max(PAD.left + 1, Math.min(PAD.left + plotW - pillW - 1, pillX))
+        return (
+          <g key={`${m.side}-${m.strike}`}>
+            <circle cx={mx} cy={my} r="3" fill={color} stroke="#04140f" strokeWidth="1" />
+            <rect
+              x={pillX}
+              y={pillCy - pillH / 2}
+              width={pillW}
+              height={pillH}
+              rx="3"
+              fill={color}
+            />
+            <text
+              x={pillX + pillW / 2}
+              y={pillCy + 3.1}
+              textAnchor="middle"
+              fontSize="9"
+              fontWeight="700"
+              fill="#04140f"
+              className="uppercase tabular-nums"
+            >
+              {label}
+            </text>
+          </g>
+        )
+      })}
     </svg>
+  )
+}
+
+function formatProb(p: number | null): string {
+  return p == null ? '-' : `${(p * 100).toFixed(0)}%`
+}
+
+// A richer, screen-reader-friendly read of the BUY/SELL flags above the chart, so the
+// signal is legible without parsing the SVG and explains WHY it fires. Each card names
+// the side + strike, then prints the model fair win-probability against the contract's
+// implied probability (the two numbers whose gap IS the edge), and the signed edge in
+// win-probability points. BUY (green) = contract cheaper than the model (underpriced);
+// SELL (red) = richer. The number pair never rides on color alone.
+function EdgeLegend({ markers }: { markers: EdgeMarker[] }) {
+  return (
+    <div
+      className="flex shrink-0 flex-wrap items-stretch gap-sm px-md pb-sm"
+      role="list"
+      aria-label="Mispricing edge flags"
+    >
+      {markers.map((m) => {
+        const color = m.side === 'BUY' ? BUY : SELL
+        const pts = (Math.abs(m.edge) * 100).toFixed(1)
+        const verb = m.side === 'BUY' ? 'cheaper than' : 'richer than'
+        return (
+          <div
+            key={`${m.side}-${m.strike}`}
+            role="listitem"
+            className="flex flex-col gap-px rounded-sm border-l-2 px-sm py-1"
+            style={{ backgroundColor: `${color}1a`, borderColor: color }}
+            aria-label={`${m.side} ${formatStrike(m.strike)}: model ${formatProb(m.fair)}, contract ${formatProb(m.contract)}, ${verb} model by ${pts} points`}
+          >
+            <span
+              className="flex items-center gap-1 font-label text-[10px] uppercase tracking-wide"
+              style={{ color }}
+            >
+              <span
+                className="material-symbols-outlined text-[12px] leading-none"
+                aria-hidden="true"
+              >
+                {m.side === 'BUY' ? 'trending_down' : 'trending_up'}
+              </span>
+              {m.side} {formatStrike(m.strike)}
+            </span>
+            <span className="flex items-center gap-2 font-data text-[10px] tabular-nums text-on-surface-variant">
+              <span aria-hidden="true">
+                model <span className="text-on-surface">{formatProb(m.fair)}</span>
+              </span>
+              <span aria-hidden="true">
+                contract <span className="text-on-surface">{formatProb(m.contract)}</span>
+              </span>
+              <span aria-hidden="true" className="font-semibold" style={{ color }}>
+                {m.edge > 0 ? '+' : '-'}
+                {pts}pt
+              </span>
+            </span>
+          </div>
+        )
+      })}
+    </div>
   )
 }
