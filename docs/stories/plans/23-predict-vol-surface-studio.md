@@ -394,6 +394,50 @@ path end to end.
 
 Status: done.
 
+### S8 — Cell signal + hover/focus tooltip (which cell to click)
+Objective: the grid printed IV% on every cell alike, so a newcomer could not tell which
+cell was worth acting on. Give the few cells that carry a real model edge an always-on,
+eye-catching mark that says "this one is worth a trade", and surface the full per-cell
+detail on hover/focus, so the grid stays scannable (chart-is-king) while only the rare
+opportunity cells are highlighted.
+
+Work:
+1. **Edge tiers + value side helpers** (`application/submitStudioTrade.ts`, pure +
+   unit-tested): export `DIRECTION_EDGE_EPS` (0.5pp noise floor, was module-private) and a
+   new `STRONG_EDGE_EPS` (2pp); add `edgeSide(edge)` (the value side framed from
+   `edge = contract - fair`: `edge < 0` favors UP, `edge > 0` favors DOWN, null inside the
+   noise band, agreeing with `recommendDirection`) and `edgeTier(edge)`
+   ('none' / 'weak' / 'strong' by magnitude).
+2. **Always-on cell signal** (`presentation/studio/VolHeatmap.tsx`): replace the old edge
+   dot with a caret + edge points in the cell's bottom-right corner - `▲2.3` (UP has
+   value) / `▼1.8` (DOWN has value). The caret is the primary encoding (colorblind-safe);
+   color is a second layer. 'weak' draws faint; 'strong' adds a chip background so a glance
+   separates the few clear opportunities from the merely-nonzero. Below 0.5pp: no mark, so
+   the grid stays clean. The signal only exists where there is a contract quote (the
+   selected column's ATM band), so it is naturally sparse - by design, not a gap.
+3. **Hover/focus tooltip for every cell** (`data-pc-studio-cell-tip`): a floating panel,
+   anchored to the cell rect and clamped to the viewport (mirrors how `TradeTicket` places
+   its popover), showing strike, moneyness vs spot, IV, model UP win-probability
+   (`computeFairValue`, free SVI math present for every cell), the contract edge + value
+   side when the cell sits in the quoted band, IV-vs-realized (rich / cheap / fair), and a
+   "Click to trade" call to action. The tooltip is `aria-hidden`; its facts also extend
+   each cell's `aria-label` (moneyness + model win-prob) so a screen-reader user hears the
+   same depth without it being read twice. Roving tabindex + the S6 ARIA grid are unchanged.
+4. Tests + probe: unit tests for `edgeSide` / `edgeTier` at the tier boundaries; the smoke
+   probe and Playwright spec gain a tooltip case (focus a live cell shows the panel with
+   strike + model probability, blur hides it). The caret signal itself is not asserted
+   headless - it needs a live contract quote.
+
+Acceptance: hovering or focusing any live cell shows the detail tooltip; only cells with a
+real model edge (>= 0.5pp) carry the caret signal, with the >= 2pp ones visibly stronger;
+the grid stays uncluttered; build + unit + e2e + smoke green. Presentational only - no
+transaction signing, no contract change.
+
+Validation: `bun run build`; `bun run test:unit`; `bun run test:e2e`;
+`bun scripts/predict-club-studio-smoke.mjs`.
+
+Status: done.
+
 ## Files Touched (indicative)
 
 New: `predict-surface-studio.html`, `src/predict-surface-studio/main.tsx`,

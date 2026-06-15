@@ -257,6 +257,16 @@ trade ticket on a heatmap cell) is reached from that analysis, never the reverse
   with zero gas and no wallet prompt instead of a doomed on-chain mint. The ticket is
   an ARIA dialog: it traps Tab, a document-level Escape closes it regardless of
   focus, and disconnected it shows Connect Wallet rather than a live submit.
+- **Mark only the cells that earn it; reveal depth on demand.** The grid prints IV
+  on every cell alike, so an always-on signal is reserved for the few cells that
+  carry a real model edge: a caret (the value side, the primary colorblind-safe
+  encoding) plus the edge in points, faint at a weak edge and chip-backed at a
+  strong one, nothing below the noise floor. The signal only exists where a contract
+  quote does (the selected column's ATM band), so it stays sparse by design, never
+  fabricated to fill the grid. Full per-cell detail (moneyness, model win-probability
+  from free SVI math, the quoted edge and value side, IV-vs-realized) lives in a
+  hover/focus tooltip that is aria-hidden, with the same facts folded into each
+  cell's aria-label so a screen reader hears the depth without it being read twice.
 
 ## Motion
 

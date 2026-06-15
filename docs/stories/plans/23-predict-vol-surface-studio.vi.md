@@ -386,6 +386,44 @@ ký end to end.
 
 Trạng thái: done.
 
+### S8 — Tín hiệu trên ô + tooltip hover/focus (ô nào đáng click)
+Mục tiêu: lưới in IV% lên mọi ô như nhau, nên người mới không biết ô NÀO đáng hành động.
+Gắn cho số ít ô mang edge model thật một dấu hiệu luôn-hiện, hút mắt, nói "ô này đáng đặt
+lệnh", và hiện chi tiết đầy đủ từng ô khi hover/focus, để lưới vẫn dễ quét (chart-is-king)
+mà chỉ vài ô có cơ hội mới được tô đậm.
+
+Công việc:
+1. **Helper edge tier + bên value** (`application/submitStudioTrade.ts`, thuần + unit-test):
+   export `DIRECTION_EDGE_EPS` (sàn nhiễu 0.5pp, trước là module-private) và `STRONG_EDGE_EPS`
+   mới (2pp); thêm `edgeSide(edge)` (bên value xét từ `edge = contract - fair`: `edge < 0`
+   nghiêng UP, `edge > 0` nghiêng DOWN, null trong dải nhiễu, khớp `recommendDirection`) và
+   `edgeTier(edge)` ('none' / 'weak' / 'strong' theo độ lớn).
+2. **Tín hiệu luôn-hiện trên ô** (`presentation/studio/VolHeatmap.tsx`): thay chấm edge cũ
+   bằng caret + điểm edge ở góc dưới-phải ô - `▲2.3` (UP có value) / `▼1.8` (DOWN có value).
+   Caret là encoding chính (colorblind-safe); màu là lớp thứ hai. 'weak' vẽ mờ; 'strong' thêm
+   nền chip để liếc một cái là tách được vài cơ hội rõ khỏi nhóm chỉ-khác-không. Dưới 0.5pp:
+   không dấu, giữ lưới sạch. Tín hiệu chỉ tồn tại nơi có quote contract (band ATM của cột đang
+   chọn) nên tự nhiên thưa - là chủ đích, không phải thiếu sót.
+3. **Tooltip hover/focus cho mọi ô** (`data-pc-studio-cell-tip`): panel nổi, neo theo rect ô
+   và clamp trong viewport (mirror cách `TradeTicket` neo popover), hiện strike, moneyness so
+   spot, IV, xác suất thắng UP của model (`computeFairValue`, toán SVI miễn phí có cho mọi ô),
+   edge contract + bên value khi ô nằm trong band đã quote, IV-vs-realized (rich / cheap /
+   fair), và CTA "Click to trade". Tooltip `aria-hidden`; các fact của nó cũng nối vào
+   `aria-label` từng ô (moneyness + model win-prob) để người dùng screen-reader nghe cùng
+   chiều sâu mà không bị đọc hai lần. Roving tabindex + ARIA grid của S6 giữ nguyên.
+4. Test + probe: unit test cho `edgeSide` / `edgeTier` tại các biên tier; smoke probe và spec
+   Playwright thêm case tooltip (focus ô sống hiện panel kèm strike + xác suất model, blur ẩn).
+   Bản thân caret signal không assert headless - nó cần quote contract sống.
+
+Chấp nhận: hover hoặc focus ô sống bất kỳ hiện tooltip chi tiết; chỉ ô có edge model thật
+(>= 0.5pp) mang caret signal, ô >= 2pp nổi rõ hơn; lưới vẫn gọn; build + unit + e2e + smoke
+xanh. Thuần presentational - không ký giao dịch, không đổi contract.
+
+Kiểm chứng: `bun run build`; `bun run test:unit`; `bun run test:e2e`;
+`bun scripts/predict-club-studio-smoke.mjs`.
+
+Trạng thái: done.
+
 ## Tệp đụng tới (dự kiến)
 
 Mới: `predict-surface-studio.html`, `src/predict-surface-studio/main.tsx`,
