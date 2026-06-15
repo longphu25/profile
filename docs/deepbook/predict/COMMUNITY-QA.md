@@ -951,3 +951,63 @@ Trust-minimized = same category as Gauntlet/Chaos Labs
 ### Lesson (definitive)
 
 **On testnet, funds locked by orphaned oracle = permanent loss.** No admin override demonstrated, no manual settlement path available. Budget test DUSDC accordingly — never deploy all funds to a single oracle.
+
+
+---
+
+## Q20: Swap trực tiếp trên DeepBook testnet (market makers active)
+
+### Context
+
+> "If the mods are slow to respond and you're in a hurry, feel free to swap directly on DeepBook testnet. We have market makers providing liquidity there."
+
+### Code example (from team)
+
+```typescript
+const tx = new Transaction()
+
+// swapExactQuoteForBase: sell exact SUI (quote) → get DEEP (base)
+const [baseOutCoin, quoteOutCoin, deepOutCoin] = tx.add(
+  client.deepbook.deepBook.swapExactQuoteForBase({
+    poolKey,           // e.g. 'DEEP_SUI'
+    amount: 1,        // sell 1 SUI (quote)
+    deepAmount: 0,    // DEEP fee amount (0 if not paying with DEEP)
+    minOut: 0,        // minimum base out (0 = no slippage protection)
+  }),
+)
+
+// MUST transfer all 3 return coins or get UnusedValueWithoutDrop error
+tx.transferObjects(
+  [baseOutCoin, quoteOutCoin, deepOutCoin],
+  signer.toSuiAddress(),
+)
+```
+
+### Key details
+
+| Detail | Value |
+|--------|-------|
+| Pool used | `DEEP_SUI` (confirmed liquidity) |
+| Return values | **3 coins** (base, quote, deep) — transfer ALL |
+| `deepAmount` | 0 = not paying fees with DEEP |
+| `minOut` | 0 = no slippage protection (testnet OK) |
+| Market makers | Active on testnet, providing liquidity |
+
+### ⚠️ Note: This gets DEEP, not dUSDC
+
+- This example swaps SUI → DEEP via DeepBook spot
+- To get **dUSDC** (Predict quote asset): still need tally form faucet
+- Unless there's a dUSDC pool with liquidity (check available pools)
+- Pattern is the same: `swapExactQuoteForBase` / `swapExactBaseForQuote`
+
+### Available testnet pools (check via SDK)
+
+```typescript
+import { DeepBookClient } from '@mysten/deepbook-v3'
+
+const client = new DeepBookClient({ client: suiClient, network: 'testnet' })
+// Check client.pools for available trading pairs
+```
+
+Or via indexer: `https://deepbook-indexer.mainnet.mystenlabs.com/pools` (mainnet)
+Testnet equivalent may differ.
