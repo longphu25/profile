@@ -1,5 +1,5 @@
 ---
-inclusion: always
+inclusion: manual
 ---
 
 # 9Router Codex Policy

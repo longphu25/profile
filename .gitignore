@@ -46,3 +46,4 @@ package_summaries/
 .env
 .env.local
 .env.*.local
+*.bak
