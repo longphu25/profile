@@ -78,6 +78,27 @@ test.describe('Predict Club — Surface Studio', () => {
     expect(pageErrorsByTest.get(page) ?? []).toEqual([])
   })
 
+  test('focusing a cell opens the detail tooltip; blur closes it', async ({ page }) => {
+    if (!(await waitForGrid(page.locator('[data-pc-studio-heatmap] [role="grid"]')))) {
+      test.skip(true, 'no live SVI surface in this run')
+      return
+    }
+    // Focusing the active roving-tabindex cell opens the floating detail panel,
+    // which always carries the strike and the model win-probability (free SVI
+    // math, present for any cell). The tooltip is aria-hidden, so assert on its
+    // data hook + text, not a role.
+    const cell = page.locator('[data-pc-studio-heatmap] [role="gridcell"][tabindex="0"]').first()
+    await cell.focus()
+    const tip = page.locator('[data-pc-studio-cell-tip]')
+    await expect(tip).toBeVisible()
+    await expect(tip.getByText(/model up/i)).toBeVisible()
+    // Blurring the cell clears the tooltip (a plain grid div is not focusable, so
+    // blur the cell directly rather than moving focus to a non-focusable element).
+    await cell.evaluate((el) => (el as HTMLElement).blur())
+    await expect(tip).toHaveCount(0)
+    expect(pageErrorsByTest.get(page) ?? []).toEqual([])
+  })
+
   test('clicking a cell opens the trade ticket; disconnected shows Connect, hides Submit, Escape closes', async ({
     page,
   }) => {

@@ -150,6 +150,25 @@ async function main() {
       record('heatmap keyboard nav', true, 'no live cells - skipped')
     }
 
+    // Cell tooltip (S8): focusing a live cell shows the floating detail panel with
+    // the strike and a model probability line; blur hides it. Skipped when there is
+    // no live SVI surface. Runs before the ticket check, since clicking opens the
+    // ticket and would steal focus from the cell.
+    if (cellCount > 0) {
+      await page.locator('[data-pc-studio-heatmap] [role="gridcell"]').first().focus()
+      await page.waitForTimeout(150)
+      const tip = page.locator('[data-pc-studio-cell-tip]')
+      const tipShown = (await tip.count()) > 0
+      const tipText = tipShown ? await tip.first().innerText() : ''
+      record('cell tooltip shows on focus', tipShown && /\$/.test(tipText), `text=${tipText.replace(/\s+/g, ' ').trim().slice(0, 40)}`)
+      await page.locator('[data-pc-studio-heatmap] [role="gridcell"]').first().blur()
+      await page.waitForTimeout(150)
+      record('cell tooltip hides on blur', (await page.locator('[data-pc-studio-cell-tip]').count()) === 0)
+    } else {
+      record('cell tooltip shows on focus', true, 'no live cells - skipped')
+      record('cell tooltip hides on blur', true, 'no live cells - skipped')
+    }
+
     // Trade ticket (S7): clicking a live cell opens the popover. Disconnected, it
     // must show Connect Wallet and hide the submit button (gating), and Escape
     // closes it. Skipped when no live SVI surface populated the grid.

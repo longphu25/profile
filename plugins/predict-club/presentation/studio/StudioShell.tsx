@@ -11,7 +11,6 @@ import { atmBandStrikes, getMispriceBand } from '../../application/mispricing'
 import { checkArbFree } from '../../application/arbFreeCheck'
 import { buildStudioRiskInput, submitStudioTrade } from '../../application/submitStudioTrade'
 import { createSuiPredictGateway } from '../../infrastructure/suiPredictGateway'
-import { quoteBinaryStrike } from '../../infrastructure/deepbookPredictPricingService'
 import type { MispriceCell, RealizedVol, SurfaceCell, SurfaceColumn } from '../../domain/volSurface'
 import { usePredictClub } from '../usePredictClub'
 import { EdgePanel } from './EdgePanel'
@@ -24,6 +23,60 @@ import { VolHeatmap } from './VolHeatmap'
 // executeRound defaults so the Studio mint matches the cockpit's behavior).
 const DEFAULT_TICK_SIZE = 1_000_000_000
 const DEFAULT_MIN_STRIKE = 50_000_000_000_000
+
+// Minted-position markers persist in localStorage keyed by wallet address, so a
+// trader still sees where they hold after a refresh. Scoped per address so switching
+// accounts never shows another wallet's positions. The chain stays the source of
+// truth; this is a fast local hint, so any storage error degrades to an empty set.
+const MINTED_STORE_PREFIX = 'predict-club:studio:minted:'
+// On a refresh the dapp-kit wallet reconnects asynchronously, so context.address is
+// null for the first frames. Without a fallback the marker load would key on null and
+// show nothing until the wallet rehydrates (and if it never auto-reconnects, never).
+// We remember the last address that minted so the marker paints immediately on load
+// and is replaced the moment the live address resolves (same address - no change;
+// different address - that wallet's own set).
+const MINTED_LAST_ADDRESS_KEY = `${MINTED_STORE_PREFIX}lastAddress`
+
+function mintedStorageKey(address: string | null): string | null {
+  return address ? `${MINTED_STORE_PREFIX}${address.toLowerCase()}` : null
+}
+
+function readLastMintedAddress(): string | null {
+  try {
+    return localStorage.getItem(MINTED_LAST_ADDRESS_KEY)
+  } catch {
+    return null
+  }
+}
+
+// Load the marker set for an address, falling back to the last minting address when
+// the live address is null (wallet not yet reconnected after a refresh).
+function loadMintedKeys(address: string | null): Set<string> {
+  const effective = address ?? readLastMintedAddress()
+  const storageKey = mintedStorageKey(effective)
+  if (!storageKey) return new Set()
+  try {
+    const raw = localStorage.getItem(storageKey)
+    if (!raw) return new Set()
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed)
+      ? new Set(parsed.filter((x): x is string => typeof x === 'string'))
+      : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function persistMintedKeys(address: string | null, keys: Set<string>): void {
+  const storageKey = mintedStorageKey(address)
+  if (!storageKey) return
+  try {
+    localStorage.setItem(storageKey, JSON.stringify([...keys]))
+    if (address) localStorage.setItem(MINTED_LAST_ADDRESS_KEY, address.toLowerCase())
+  } catch {
+    // Storage unavailable or over quota: the in-memory set still drives the UI.
+  }
+}
 
 /**
  * Surface Studio layout primitive for the decision-support terminal.
@@ -55,6 +108,12 @@ export function StudioShell() {
   const [mispriceLoading, setMispriceLoading] = useState(false)
   // Time-travel index into surface.history; null = the live surface (S5).
   const [timeIndex, setTimeIndex] = useState<number | null>(null)
+  // Cells the trader has minted a position on, keyed `oracleId|strike` (same key
+  // shape as the arb-violation set). The heatmap tints these so a trader can see at a
+  // glance where they already hold a position. Persisted in localStorage per wallet
+  // address so the marker survives a refresh; the chain stays the source of truth, so
+  // this is only a fast local hint.
+  const [mintedKeys, setMintedKeys] = useState<Set<string>>(() => loadMintedKeys(context.address))
   // Trade ticket (S7): the clicked cell + its column + the anchor rect to position
   // the popover. Null when no ticket is open.
   const [ticket, setTicket] = useState<{
@@ -91,6 +150,13 @@ export function StudioShell() {
     }
   }, [])
 
+  // Reload the minted markers when the wallet address changes (connect or account
+  // switch after mount). The initial state already seeds from storage, so this only
+  // re-syncs on a later address change, keeping each wallet's markers separate.
+  useEffect(() => {
+    setMintedKeys(loadMintedKeys(context.address))
+  }, [context.address])
+
   const { loaded, history } = surface
 
   // Clamp the time-travel index if the buffer shrank, then pick the displayed
@@ -113,6 +179,43 @@ export function StudioShell() {
     () => grid.columns.find((c) => c.oracleId === effectiveOracleId) ?? null,
     [grid.columns, effectiveOracleId],
   )
+
+  // Rebind stored minted strikes to the current grid rows. The strike axis is
+  // re-derived from the live (drifting) forward on every sample, so a strike stored
+  // at mint time rarely equals a current row integer after a refresh - an exact key
+  // match would then find no cell and the marker would vanish. Snap each stored
+  // strike to the nearest row within ~one step so the marker survives the drift; rows
+  // for an expired oracle (no longer in the grid) are dropped.
+  const resolvedMintedKeys = useMemo(() => {
+    const strikes = grid.strikes
+    if (mintedKeys.size === 0 || strikes.length === 0) return mintedKeys
+    let spacing = Number.POSITIVE_INFINITY
+    for (let i = 0; i < strikes.length - 1; i += 1) {
+      const d = Math.abs(strikes[i] - strikes[i + 1])
+      if (d > 0 && d < spacing) spacing = d
+    }
+    const tol = Number.isFinite(spacing) ? spacing : Number.POSITIVE_INFINITY
+    const oracleIds = new Set(grid.columns.map((c) => c.oracleId))
+    const resolved = new Set<string>()
+    for (const key of mintedKeys) {
+      const sep = key.lastIndexOf('|')
+      if (sep < 0) continue
+      const oracleId = key.slice(0, sep)
+      const strike = Number(key.slice(sep + 1))
+      if (!oracleIds.has(oracleId) || !Number.isFinite(strike)) continue
+      let nearest = strikes[0]
+      let best = Math.abs(strikes[0] - strike)
+      for (const s of strikes) {
+        const d = Math.abs(s - strike)
+        if (d < best) {
+          best = d
+          nearest = s
+        }
+      }
+      if (best <= tol) resolved.add(`${oracleId}|${nearest}`)
+    }
+    return resolved
+  }, [mintedKeys, grid.strikes, grid.columns])
 
   // Arb-free health is pure SVI math over the grid (no network), so recompute it
   // whenever the sampled surface changes.
@@ -188,7 +291,7 @@ export function StudioShell() {
       managerReady: true,
     })
 
-    return submitStudioTrade(
+    const result = await submitStudioTrade(
       {
         direction,
         strike: cell.strike,
@@ -204,20 +307,22 @@ export function StudioShell() {
         riskInput,
         gateway,
         preflightQuote: async () => {
-          const quote = await quoteBinaryStrike({
+          // Simulate the REAL mint PTB read-only (devInspect): it runs predict::mint
+          // and trips every mint-time guard a live sign would, including
+          // assert_mintable_ask (abort 7) for a strike too deep in/out of the money.
+          // The old pricing read (get_trade_amounts) skipped that guard, so a doomed
+          // strike could pass pre-flight and still abort after the user signed.
+          return gateway.simulateMintBinary({
+            walletAddress: address,
+            managerId,
+            direction,
+            strike: cell.strike,
+            amountDusdc,
             oracleId: column.oracleId,
             expiry: expiryMs,
-            strikeUsd: cell.strike,
-            isUp: direction === 'UP',
             tickSize,
             minStrike,
-            walletAddress: address,
           })
-          // A null implied probability means the contract refused to price this
-          // strike (outside its bounds); quote.reason carries the friendly message.
-          return quote.impliedProbability != null
-            ? { ok: true }
-            : { ok: false, reason: quote.reason }
         },
         signAndExecute: async (tx) => {
           const txResult = await host.signAndExecuteTransaction(tx)
@@ -225,6 +330,19 @@ export function StudioShell() {
         },
       },
     )
+
+    // On a confirmed mint, mark this cell so the heatmap tints it, and persist the
+    // marker per wallet so it survives a refresh. The chain stays the source of truth;
+    // this is a fast local hint of where the trader already holds.
+    if (result.ok) {
+      setMintedKeys((prev) => {
+        const next = new Set(prev)
+        next.add(`${column.oracleId}|${cell.strike}`)
+        persistMintedKeys(address, next)
+        return next
+      })
+    }
+    return result
   }
 
   // The mispricing cell for the ticket's strike (when the clicked cell sits in the
@@ -280,10 +398,17 @@ export function StudioShell() {
           onCellSelect={(column, cell, anchorRect) => setTicket({ cell, column, anchorRect })}
           mispriceCells={mispriceCells}
           arbReport={arbReport}
+          mintedKeys={resolvedMintedKeys}
+          realized={realized}
           className="min-h-0"
         />
 
-        <div className="flex min-h-0 flex-col gap-px bg-outline-variant">
+        <div className="flex min-h-0 flex-col gap-px overflow-y-auto bg-outline-variant">
+          <SmileSlice
+            column={selectedColumn}
+            mispriceCells={mispriceCells}
+            className="min-h-[20rem] flex-1"
+          />
           <EdgePanel
             column={selectedColumn}
             realized={realized}
@@ -292,7 +417,6 @@ export function StudioShell() {
             arbReport={arbReport}
             className="shrink-0"
           />
-          <SmileSlice column={selectedColumn} className="min-h-0 flex-1" />
         </div>
       </div>
 
