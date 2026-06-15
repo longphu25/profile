@@ -192,3 +192,36 @@ No API keys, no accounts, no subscriptions. Sub-second settlement.
 **Không trực tiếp liên quan.** Đây là payment protocol cho API monetization, không phải trading.
 
 Stretch concept (future): monetize Predict data API qua x402/MPP (premium SVI data, risk scores). Xem thêm note trong `docs/deepbook/predict/COMMUNITY-QA.md`.
+
+
+---
+
+## Agentic Web — Sub-track 1: Autonomous Risk Guardian
+
+### Official Must-Haves
+
+| # | Requirement |
+|---|-------------|
+| 1 | Live price feed |
+| 2 | Visible AI risk score |
+| 3 | At least one autonomous on-chain action |
+| 4 | Human override mechanism |
+
+### Track Submission Rules
+
+- **1 project = 1 track** — form only allows 1 submission
+- "Problem statements" = guidance for broader track (flexible)
+- "Must-haves" = **strict requirements** for specific sub-track
+- If don't meet sub-track must-haves → submit to broader Agentic Web instead
+
+### Reference Firms (for risk model)
+
+- **Gauntlet** — leading quantitative risk management, DeFi parameter optimization
+- **Chaos Labs** — on-chain risk monitoring, stress testing
+
+### Trust Model Guidance (from mentor)
+
+- "Trust-minimized" is acceptable (same tier as Gauntlet/Chaos Labs)
+- Cannot re-derive AI score on-chain — this is expected and accepted
+- Key: contract verifies critical decisions independently (freeze = on-chain math only)
+- AI only advisory (push safer), contract is enforcement

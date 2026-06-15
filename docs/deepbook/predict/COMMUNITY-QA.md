@@ -859,3 +859,95 @@ References:
 - suimpp.dev (MPP on Sui)
 - https://github.com/MystenLabs/x402 (outdated but Sui-native)
 - https://github.com/x402-foundation/x402/pull/2616 (working implementation)
+
+
+---
+
+## Q18: Risk Guardian Sub-track 1 — MUST-HAVES & mentor validation
+
+### Sub-track 1 official must-haves
+
+> "Must have: live price feed, visible AI risk score, at least one autonomous on-chain action, human override mechanism"
+
+| # | Must-Have | Description |
+|---|-----------|-------------|
+| 1 | Live price feed | Pyth/DeepBook real-time streaming |
+| 2 | Visible AI risk score | UI displays 0-100 score |
+| 3 | At least one autonomous on-chain action | Contract auto-tightens or freezes without human trigger |
+| 4 | Human override mechanism | DAO/owner can unfreeze/widen |
+
+**Important**: must-haves = required expectations for specific sub-track. Missing any → may fit broader Agentic Web but NOT sub-track 1.
+
+### Mentor validation (confirmed competitive)
+
+> "You are on the right path. Since this concept fits right into the sub-track, the product direction is correct."
+
+### To avoid "generic LLM wrapper" — build robust specialized ML model
+
+**Required differentiation:**
+
+1. **Specialized AI risk model** — not generic analysis tool
+2. **Clear scoring criteria** — not just oracle health:
+   - Liquidity depth (on-chain via DeepBook + off-chain CEXs)
+   - Volatility velocity
+   - Price divergence (Pyth vs DeepBook mid)
+3. **Provable robustness:**
+   - Documented ML methodology
+   - Backtests for crypto flash crash cases
+   - Listed input metrics with justification
+4. **Reference**: Gauntlet / Chaos Labs (leading quantitative risk management firms)
+
+### Validated trust model: trust-minimized (not trustless)
+
+```
+Trust-minimized = same category as Gauntlet/Chaos Labs
+- Cannot re-derive AI score on-chain (impossible)
+- Accept this tradeoff explicitly
+- Mitigate with contract-level verification for critical actions
+```
+
+**Two-tier enforcement (confirmed valid by mentor):**
+
+```
+[Tier 1] ML risk adjustments (advisory):
+  - Off-chain ML computes risk score
+  - Pushes score to contract
+  - Contract APPROVES or DECLINES based on own checks
+  - Can only make params SAFER (one-way ratchet)
+
+[Tier 2] FREEZE (autonomous, no ML):
+  - Contract-only calculation: abs(pyth_price - deepbook_mid) > threshold
+  - No AI involved in freeze decision
+  - Pure on-chain math → trustless
+  - Unfreeze: only DAO/owner cap
+```
+
+### Track submission clarification
+
+- 1 project = 1 track (form allows only 1 submission)
+- "Problem statements" = guidance for broader track (flexible)
+- "Must-haves" = **required** for specific sub-track (strict)
+- Broader Agentic Web idea without sub-track must-haves → submit to general Agentic Web
+
+---
+
+## Q19: Oracle orphaned — final resolution
+
+### Outcome (from thread Q12/Q14)
+
+- Team: "Let me double-check with the team and get back to you" — escalated internally
+- Builder: "We'll go ahead with new testing. Funds locked by Predict = written off as lost."
+
+### Final status
+
+| Item | Status |
+|------|--------|
+| Oracle settled? | **No** — still stuck |
+| Funds recoverable? | **No** — permanently locked |
+| Team fix timeline? | Unknown — "double-checking" |
+| Builder action | Rebuilt on fresh oracle, accepted loss |
+| DUSDC lost | Cannot return to faucet pool |
+
+### Lesson (definitive)
+
+**On testnet, funds locked by orphaned oracle = permanent loss.** No admin override demonstrated, no manual settlement path available. Budget test DUSDC accordingly — never deploy all funds to a single oracle.
