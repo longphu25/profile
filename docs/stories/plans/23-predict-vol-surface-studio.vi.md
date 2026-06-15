@@ -424,6 +424,51 @@ Kiểm chứng: `bun run build`; `bun run test:unit`; `bun run test:e2e`;
 
 Trạng thái: done.
 
+### S9 — Drawer vị thế / lịch sử + claim
+Mục tiêu: sau khi mint, vị thế gần như biến mất khỏi Studio - trader không thấy mình đang
+giữ gì, vị thế nào đã settle, hay claim tiền thắng ở đâu. Dấu vết duy nhất là `mintedKeys`
+trong localStorage tô màu ô heatmap, vốn chỉ là gợi ý chứ không phải sự thật, không có chi
+tiết và không có đường claim. Cho trader một khung xem vị thế / lịch sử mở ra để thấy đúng
+những gì đang giữ và claim các vị thế đã settle thắng.
+
+Công việc:
+1. **Đọc vị thế từ chain, không từ localStorage** (`infrastructure/deepbookPredictPricingService.ts`):
+   export `fetchManagerBinaryPositions(walletAddress, managerId)`, tái dùng đúng read chain
+   `fetchManagerSnapshot` sẵn có và giữ lại nhánh binary. Chain là nguồn sự thật; `mintedKeys`
+   giữ nguyên vai trò tô heatmap, không đụng. Thêm `sanitizeClaimError` cạnh `sanitizeMintError`
+   để map các abort claim (chưa settle / thua / đã claim) sang câu thân thiện.
+2. **Claim được hay không do contract quyết qua devInspect** (`infrastructure/suiPredictGateway.ts`):
+   tách một `composeClaimTx` làm nguồn sự thật duy nhất ra khỏi `buildClaimTx`, rồi thêm
+   `simulateClaim` devInspect đúng PTB đó (0 gas, không hỏi ví), mirror `simulateMintBinary`.
+   UI không bao giờ đoán từ giá settlement mà nó không nắm chắc.
+3. **Helper view thuần** (`domain/studioPositions.ts`, unit-test): `classifyPosition` (live vs
+   expired so cùng mốc ms mà surface dùng), `positionSideLabel` (ABOVE/BELOW sang UP/DOWN),
+   `positionStrikeUsd`, `positionMoneyness`, `positionKey` (định danh ổn định để refetch giữ
+   nguyên trạng thái claim đã resolve của từng dòng).
+4. **Drawer trượt vào** (`presentation/studio/PositionsDrawer.tsx`): ARIA dialog bên phải
+   (`data-pc-studio-positions`, trap Tab, Escape ở cấp document, backdrop click-outside - đúng
+   pattern TradeTicket) nhóm Live (có countdown) và Settled. Mỗi dòng settled chạy pre-flight
+   claim; ok hiện nút Claim (`data-pc-studio-positions-claim`), not-ok hiện lý do của contract.
+   Có trạng thái chưa-connect và rỗng. Claim ký PTB thật rồi refresh.
+5. **Wiring** (`presentation/studio/StudioShell.tsx`): nút Positions ở status band
+   (`data-pc-studio-positions-open`) kèm badge số vị thế live; vị thế refetch khi đổi
+   wallet/manager, sau khi mint hoặc claim thành công, và trên timer chậm; `simulateClaim` +
+   `handleClaim` được inject vào drawer.
+6. Test + probe: unit test cho các helper thuần + `sanitizeClaimError`; smoke probe và spec
+   Playwright thêm case drawer (nút status-band mở sheet, chưa connect hiện empty state connect,
+   Escape đóng). Bản thân claim không assert headless - nó cần ví đã connect với một vị thế
+   settle thắng.
+
+Chấp nhận: nút Positions mở drawer liệt kê vị thế binary thật, nhóm live (có countdown) và
+settled; vị thế settle thắng hiện nút Claim do chính pre-flight của contract gate, claim ký
+một lần rồi refresh; vị thế thua / chưa settle / đã claim hiện lý do, không bịa payout; build +
+unit + e2e + smoke xanh. Claim ký giao dịch thật (cùng hạng rủi ro mint); pre-flight chỉ đọc.
+
+Kiểm chứng: `bun run build`; `bun run test:unit`; `bun run test:e2e`;
+`bun scripts/predict-club-studio-smoke.mjs`.
+
+Trạng thái: done.
+
 ## Tệp đụng tới (dự kiến)
 
 Mới: `predict-surface-studio.html`, `src/predict-surface-studio/main.tsx`,

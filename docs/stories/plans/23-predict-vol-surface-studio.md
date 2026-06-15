@@ -438,6 +438,55 @@ Validation: `bun run build`; `bun run test:unit`; `bun run test:e2e`;
 
 Status: done.
 
+### S9 — Positions / history drawer + claim
+Objective: after minting, a position effectively vanished from the Studio - the trader
+could not see what they held, which positions had settled, or claim a win. The only trace
+was the localStorage `mintedKeys` tinting heatmap cells, which is a hint, not the truth, and
+carries no detail and no claim path. Give the trader a positions/history view they can open
+to see their real holdings and claim settled winners.
+
+Work:
+1. **Read positions from chain, not localStorage** (`infrastructure/deepbookPredictPricingService.ts`):
+   export `fetchManagerBinaryPositions(walletAddress, managerId)`, which reuses the existing
+   `fetchManagerSnapshot` chain read and keeps the binary leg. The chain is the source of
+   truth; `mintedKeys` keeps its old heatmap-tint role, untouched. Add `sanitizeClaimError`
+   beside `sanitizeMintError` to map claim aborts (not settled / lost / already claimed) to
+   plain language.
+2. **Claimability decided by the contract via devInspect** (`infrastructure/suiPredictGateway.ts`):
+   factor a single `composeClaimTx` source of truth out of `buildClaimTx`, then add
+   `simulateClaim` that devInspects that exact PTB (zero gas, no wallet prompt), mirroring
+   `simulateMintBinary`. The UI never guesses from a settlement price it does not hold.
+3. **Pure view helpers** (`domain/studioPositions.ts`, unit-tested): `classifyPosition`
+   (live vs expired against the same ms clock the surface uses), `positionSideLabel`
+   (ABOVE/BELOW to UP/DOWN), `positionStrikeUsd`, `positionMoneyness`, `positionKey` (stable
+   identity so a refetch keeps each row's resolved claim status).
+4. **Slide-in drawer** (`presentation/studio/PositionsDrawer.tsx`): a right-side ARIA dialog
+   (`data-pc-studio-positions`, traps Tab, document-level Escape, click-outside backdrop -
+   the TradeTicket pattern) grouping Live (with countdown) and Settled. Each settled row runs
+   the claim pre-flight; ok shows a Claim button (`data-pc-studio-positions-claim`), not-ok
+   shows the contract's reason. Disconnected and empty states are defined. Claim signs the
+   real PTB then refreshes.
+5. **Wiring** (`presentation/studio/StudioShell.tsx`): a Positions button in the status band
+   (`data-pc-studio-positions-open`) with a live-count badge; positions refetch on
+   wallet/manager change, after a confirmed mint or claim, and on a slow timer; `simulateClaim`
+   + `handleClaim` injected into the drawer.
+6. Tests + probe: unit tests for the pure helpers + `sanitizeClaimError`; the smoke probe and
+   Playwright spec gain a drawer case (status-band button opens the sheet, disconnected shows
+   the connect empty state, Escape closes). Claim itself is not asserted headless - it needs a
+   connected wallet with a settled winning position.
+
+Acceptance: the Positions button opens a drawer listing real binary positions grouped into
+live (with countdown) and settled; a settled winner shows a Claim button gated by the
+contract's own pre-flight, and claiming signs once and refreshes; losing / unsettled /
+already-claimed positions show a reason, never a fabricated payout; build + unit + e2e +
+smoke green. Claim signs a real transaction (same risk tier as mint); the pre-flight is
+read-only.
+
+Validation: `bun run build`; `bun run test:unit`; `bun run test:e2e`;
+`bun scripts/predict-club-studio-smoke.mjs`.
+
+Status: done.
+
 ## Files Touched (indicative)
 
 New: `predict-surface-studio.html`, `src/predict-surface-studio/main.tsx`,

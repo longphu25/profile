@@ -2,7 +2,7 @@ import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
 import { Transaction } from '@mysten/sui/transactions'
 import type { Direction } from '../domain/types'
 import { TESTNET_RPC_URL } from '../../../src/constants/predict-club'
-import { sanitizeMintError } from './deepbookPredictPricingService'
+import { sanitizeClaimError, sanitizeMintError } from './deepbookPredictPricingService'
 import { cachedGet } from './rpcCache'
 
 const PREDICT_SERVER = 'https://predict-server.testnet.mystenlabs.com'
@@ -78,6 +78,25 @@ export interface SuiPredictGateway {
     tickSize: number
     minStrike: number
   }): Promise<{ ok: boolean; reason?: string }>
+
+  /**
+   * Read-only pre-flight that runs the REAL claim PTB through devInspect (zero gas,
+   * no wallet prompt). The contract decides whether a position can be claimed - it
+   * is settled, the trader won, and it has not been claimed yet. Simulating the real
+   * `predict::claim` lets the drawer offer a Claim button only when the chain agrees,
+   * instead of guessing from a settlement price the UI does not authoritatively hold.
+   * Returns ok:false + a friendly reason when the simulated claim aborts.
+   */
+  simulateClaim(params: {
+    walletAddress: string
+    managerId: string
+    oracleId: string
+    expiry: number
+    strike: number
+    isUp: boolean
+    tickSize: number
+    minStrike: number
+  }): Promise<{ ok: boolean; reason?: string }>
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -130,6 +149,50 @@ interface BinaryMintParams {
   expiry: number
   tickSize: number
   minStrike: number
+}
+
+interface BinaryClaimParams {
+  walletAddress: string
+  managerId: string
+  oracleId: string
+  expiry: number
+  strike: number
+  isUp: boolean
+  tickSize: number
+  minStrike: number
+}
+
+// The single source of truth for the binary claim PTB. Both the real claim
+// (buildClaimTx -> sign) and the read-only pre-flight (simulateClaim -> devInspect)
+// compose it through here, so the simulated transaction is byte-for-byte the one the
+// wallet signs - only devInspect vs execute differs. That is what makes the
+// pre-flight trustworthy: it runs predict::claim and trips the same settle/payout
+// guards a live claim would, before the user is asked to sign.
+function composeClaimTx(params: BinaryClaimParams): Transaction {
+  const { walletAddress, managerId, oracleId, expiry, strike, isUp, tickSize, minStrike } = params
+
+  const strikeRaw = snapStrike(strike, tickSize, minStrike)
+  const tx = new Transaction()
+  tx.setSender(walletAddress)
+
+  const [marketKey] = tx.moveCall({
+    target: `${PREDICT_PACKAGE}::market_key::${isUp ? 'up' : 'down'}`,
+    arguments: [tx.pure.id(oracleId), tx.pure.u64(expiry), tx.pure.u64(strikeRaw)],
+  })
+
+  tx.moveCall({
+    target: `${PREDICT_PACKAGE}::predict::claim`,
+    typeArguments: [DUSDC_TYPE],
+    arguments: [
+      tx.object(PREDICT_ID),
+      tx.object(managerId),
+      tx.object(oracleId),
+      marketKey,
+      tx.object(CLOCK_ID),
+    ],
+  })
+
+  return tx
 }
 
 // The single source of truth for the binary mint PTB. Both the real mint
@@ -302,31 +365,32 @@ export function createSuiPredictGateway(): SuiPredictGateway {
     },
 
     async buildClaimTx(params) {
-      const { walletAddress, managerId, oracleId, expiry, strike, isUp, tickSize, minStrike } =
-        params
+      return composeClaimTx(params)
+    },
 
-      const strikeRaw = snapStrike(strike, tickSize, minStrike)
-      const tx = new Transaction()
-      tx.setSender(walletAddress)
-
-      const [marketKey] = tx.moveCall({
-        target: `${PREDICT_PACKAGE}::market_key::${isUp ? 'up' : 'down'}`,
-        arguments: [tx.pure.id(oracleId), tx.pure.u64(expiry), tx.pure.u64(strikeRaw)],
-      })
-
-      tx.moveCall({
-        target: `${PREDICT_PACKAGE}::predict::claim`,
-        typeArguments: [DUSDC_TYPE],
-        arguments: [
-          tx.object(PREDICT_ID),
-          tx.object(managerId),
-          tx.object(oracleId),
-          marketKey,
-          tx.object.clock(),
-        ],
-      })
-
-      return tx
+    async simulateClaim(params) {
+      // Read-only pre-flight: build the exact claim PTB and devInspect it, so the
+      // contract runs predict::claim with zero gas and no wallet prompt. The contract
+      // is the source of truth on whether a position can be claimed (settled + won +
+      // not yet claimed); this surfaces that verdict before the user signs, so a
+      // losing / unsettled / already-claimed position shows a reason instead of a
+      // doomed on-chain claim. Any build error is reported as not-ok too.
+      let tx: Transaction
+      try {
+        tx = composeClaimTx(params)
+      } catch (error) {
+        return { ok: false, reason: sanitizeClaimError(error) }
+      }
+      try {
+        const inspected = await client.devInspectTransactionBlock({
+          sender: params.walletAddress,
+          transactionBlock: tx,
+        })
+        if (inspected.error) return { ok: false, reason: sanitizeClaimError(inspected.error) }
+        return { ok: true }
+      } catch (error) {
+        return { ok: false, reason: sanitizeClaimError(error) }
+      }
     },
   }
 }

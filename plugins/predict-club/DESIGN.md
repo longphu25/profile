@@ -267,6 +267,18 @@ trade ticket on a heatmap cell) is reached from that analysis, never the reverse
   from free SVI math, the quoted edge and value side, IV-vs-realized) lives in a
   hover/focus tooltip that is aria-hidden, with the same facts folded into each
   cell's aria-label so a screen reader hears the depth without it being read twice.
+- **Positions drawer: the chain is the source of truth, the contract decides claims.**
+  After minting, the trader opens a right-side drawer listing their real binary
+  positions read straight from their PredictManager on chain - not the localStorage
+  mint hint, which only tints the heatmap. Positions group into Live (with a countdown
+  to expiry) and Settled. Whether a settled position can be claimed is decided by the
+  contract through a read-only devInspect pre-flight of the real claim PTB, never
+  guessed from a settlement price the UI does not authoritatively hold: a Claim button
+  appears only where the chain agrees, and a losing / unsettled / already-claimed
+  position shows the contract's own reason instead. No profit or loss is fabricated -
+  only the stake, strike, side, expiry, and the claim verdict are shown. The drawer is
+  an ARIA dialog (traps Tab, document-level Escape, click-outside backdrop, the same
+  pattern as the trade ticket); claiming signs one real transaction and refreshes.
 
 ## Motion
 

@@ -122,6 +122,21 @@ test.describe('Predict Club — Surface Studio', () => {
     expect(pageErrorsByTest.get(page) ?? []).toEqual([])
   })
 
+  test('opens the positions drawer from the status band; Escape closes it', async ({ page }) => {
+    // The drawer does not depend on a live SVI surface, so this runs unconditionally.
+    // Disconnected, it shows the connect empty state rather than a position list.
+    await page.locator('[data-pc-studio-positions-open]').click()
+    const drawer = page.locator('[data-pc-studio-positions]')
+    await expect(drawer).toBeVisible()
+    await expect(page.locator('[data-pc-studio-positions-connect]')).toBeVisible()
+    // The dialog handles Escape on its own keydown; focus it first since the
+    // status-band click does not leave focus inside the drawer.
+    await drawer.focus()
+    await drawer.press('Escape')
+    await expect(drawer).toHaveCount(0)
+    expect(pageErrorsByTest.get(page) ?? []).toEqual([])
+  })
+
   test('no horizontal overflow at desktop or mobile width', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 })
     const deskOverflow = await page.evaluate(

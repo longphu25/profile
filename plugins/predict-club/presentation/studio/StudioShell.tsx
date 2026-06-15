@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   getVolSurfaceSnapshot,
   startVolSurfaceService,
@@ -11,9 +11,20 @@ import { atmBandStrikes, getMispriceBand } from '../../application/mispricing'
 import { checkArbFree } from '../../application/arbFreeCheck'
 import { buildStudioRiskInput, submitStudioTrade } from '../../application/submitStudioTrade'
 import { createSuiPredictGateway } from '../../infrastructure/suiPredictGateway'
+import {
+  fetchManagerBinaryPositions,
+  type ManagerPosition,
+  sanitizeClaimError,
+} from '../../infrastructure/deepbookPredictPricingService'
+import {
+  classifyPosition,
+  positionSideLabel,
+  positionStrikeUsd,
+} from '../../domain/studioPositions'
 import type { MispriceCell, RealizedVol, SurfaceCell, SurfaceColumn } from '../../domain/volSurface'
 import { usePredictClub } from '../usePredictClub'
 import { EdgePanel } from './EdgePanel'
+import { PositionsDrawer, type ClaimActionResult } from './PositionsDrawer'
 import { SmileSlice } from './SmileSlice'
 import { TimeTravel } from './TimeTravel'
 import { TradeTicket, type TradeTicketResult } from './TradeTicket'
@@ -96,6 +107,10 @@ function persistMintedKeys(address: string | null, keys: Set<string>): void {
 
 const REALIZED_REFRESH_MS = 60_000
 const MISPRICE_REFRESH_MS = 20_000
+// Positions read from chain are slow-moving (a trader mints/claims rarely), so
+// refetch on a slow cadence plus the event-driven refreshes (wallet change, after
+// a confirmed mint/claim) rather than per oracle tick.
+const POSITIONS_REFRESH_MS = 30_000
 // Strikes on each side of the forward to quote by default (band = 2*radius + 1).
 const ATM_BAND_RADIUS = 3
 
@@ -121,6 +136,12 @@ export function StudioShell() {
     column: SurfaceColumn
     anchorRect: DOMRect
   } | null>(null)
+  // Positions/history drawer (S9): the trader's real binary positions read from
+  // their PredictManager (the chain is the source of truth, not the localStorage
+  // mint hint). Open state drives the slide-in sheet; the list refetches on wallet
+  // change, after a confirmed mint/claim, and on a slow timer while connected.
+  const [positions, setPositions] = useState<ManagerPosition[]>([])
+  const [positionsOpen, setPositionsOpen] = useState(false)
 
   // Own the surface service lifecycle: start the SVI fan-out on mount, stop on
   // unmount, so cockpit-only users never pay for it.
@@ -156,6 +177,28 @@ export function StudioShell() {
   useEffect(() => {
     setMintedKeys(loadMintedKeys(context.address))
   }, [context.address])
+
+  // Read the trader's real binary positions from their PredictManager. The chain is
+  // the source of truth for the drawer (the mint hint in localStorage only tints the
+  // heatmap). Refetched on wallet/manager change, after a confirmed mint or claim,
+  // and on a slow timer while connected; cleared when disconnected.
+  const refreshPositions = useCallback(() => {
+    const address = context.address
+    if (!address) {
+      setPositions([])
+      return
+    }
+    fetchManagerBinaryPositions(address, predictManagerId).then((next) => {
+      setPositions(next)
+    })
+  }, [context.address, predictManagerId])
+
+  useEffect(() => {
+    refreshPositions()
+    if (!context.address) return
+    const timer = setInterval(refreshPositions, POSITIONS_REFRESH_MS)
+    return () => clearInterval(timer)
+  }, [refreshPositions, context.address])
 
   const { loaded, history } = surface
 
@@ -341,8 +384,69 @@ export function StudioShell() {
         persistMintedKeys(address, next)
         return next
       })
+      // The new position now lives on chain, so refresh the drawer's source of truth.
+      refreshPositions()
     }
     return result
+  }
+
+  // Read-only claim pre-flight for one position: build the real claim PTB and
+  // devInspect it so the contract decides claimability (settled + won + unclaimed),
+  // with zero gas and no wallet prompt. Looks up tick/min from the oracle entry (same
+  // cockpit fallbacks as the mint path) so the simulated key matches the minted one.
+  const simulateClaim = async (position: ManagerPosition) => {
+    const address = context.address
+    if (!address) return { ok: false, reason: 'Wallet not connected' }
+    const gateway = createSuiPredictGateway()
+    const managerId = predictManagerId ?? (await gateway.fetchManagerId(address))
+    if (!managerId) return { ok: false, reason: 'No PredictManager found' }
+    const side = positionSideLabel(position)
+    const strike = positionStrikeUsd(position)
+    if (side == null || strike == null) return { ok: false, reason: 'Position not claimable' }
+    const oracleEntry = oracleSnapshot.oracles.find((o) => o.oracle_id === position.oracleId)
+    return gateway.simulateClaim({
+      walletAddress: address,
+      managerId,
+      oracleId: position.oracleId,
+      expiry: position.expiry,
+      strike,
+      isUp: side === 'UP',
+      tickSize: oracleEntry?.tick_size ?? DEFAULT_TICK_SIZE,
+      minStrike: oracleEntry?.min_strike ?? DEFAULT_MIN_STRIKE,
+    })
+  }
+
+  // Claim a settled, winning position: build the claim PTB and sign it (a real
+  // on-chain transaction, the one place the drawer leaves read-only). The contract
+  // re-checks claimability, so a doomed claim is already filtered by the pre-flight.
+  // Refreshes the drawer after so the claimed position reflects its new state.
+  const handleClaim = async (position: ManagerPosition): Promise<ClaimActionResult> => {
+    const address = context.address
+    if (!address || !host) return { ok: false, error: 'Wallet not connected' }
+    const gateway = createSuiPredictGateway()
+    const managerId = predictManagerId ?? (await gateway.fetchManagerId(address))
+    if (!managerId) return { ok: false, error: 'No PredictManager found' }
+    const side = positionSideLabel(position)
+    const strike = positionStrikeUsd(position)
+    if (side == null || strike == null) return { ok: false, error: 'Position not claimable' }
+    const oracleEntry = oracleSnapshot.oracles.find((o) => o.oracle_id === position.oracleId)
+    try {
+      const tx = await gateway.buildClaimTx({
+        walletAddress: address,
+        managerId,
+        oracleId: position.oracleId,
+        expiry: position.expiry,
+        strike,
+        isUp: side === 'UP',
+        tickSize: oracleEntry?.tick_size ?? DEFAULT_TICK_SIZE,
+        minStrike: oracleEntry?.min_strike ?? DEFAULT_MIN_STRIKE,
+      })
+      const txResult = await host.signAndExecuteTransaction(tx)
+      refreshPositions()
+      return { ok: true, digest: (txResult as { digest?: string }).digest ?? '' }
+    } catch (error) {
+      return { ok: false, error: sanitizeClaimError(error) }
+    }
   }
 
   // The mispricing cell for the ticket's strike (when the clicked cell sits in the
@@ -353,6 +457,23 @@ export function StudioShell() {
 
   const liveExpiries = grid.columns.length
   const asset = oracleSnapshot.oracleState?.underlying_asset ?? 'BTC'
+
+  // Count of still-running positions, for the status-band badge. The drawer does the
+  // full live/expired split itself; this is just the at-a-glance number.
+  const livePositions = useMemo(
+    () => positions.filter((p) => classifyPosition(p, Date.now()) === 'live').length,
+    [positions],
+  )
+
+  // Forward price per oracle, so the drawer can show each position's moneyness
+  // against the current price. Derived from the live grid columns.
+  const forwardByOracle = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const column of grid.columns) {
+      if (column.forward > 0) map.set(column.oracleId, column.forward)
+    }
+    return map
+  }, [grid.columns])
 
   return (
     <div
@@ -380,6 +501,23 @@ export function StudioShell() {
             {oracleSnapshot.isHealthy ? 'live' : 'stale'}
           </span>
         </span>
+        <span className="ml-auto h-3 w-px bg-outline-variant" />
+        <button
+          type="button"
+          data-pc-studio-positions-open
+          onClick={() => setPositionsOpen(true)}
+          className="flex items-center gap-1 rounded-sm px-sm py-1 font-label text-label-caps uppercase tracking-wide text-on-surface outline-none transition-colors hover:bg-surface-container focus-visible:ring-2 focus-visible:ring-primary-fixed focus-visible:ring-inset"
+        >
+          <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+            receipt_long
+          </span>
+          Positions
+          {livePositions > 0 && (
+            <span className="rounded-full bg-primary-fixed-dim px-1.5 font-data text-[10px] tabular-nums text-on-primary-fixed">
+              {livePositions}
+            </span>
+          )}
+        </button>
       </div>
 
       <TimeTravel
@@ -433,6 +571,19 @@ export function StudioShell() {
           onConnect={() => host?.requestConnect()}
           onSubmit={handleSubmit}
           onClose={() => setTicket(null)}
+        />
+      )}
+
+      {positionsOpen && (
+        <PositionsDrawer
+          positions={positions}
+          isConnected={context.isConnected}
+          forwardByOracle={forwardByOracle}
+          asset={asset}
+          simulateClaim={simulateClaim}
+          onClaim={handleClaim}
+          onConnect={() => host?.requestConnect()}
+          onClose={() => setPositionsOpen(false)}
         />
       )}
     </div>

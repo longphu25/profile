@@ -464,6 +464,44 @@ export function sanitizeMintError(error: unknown): string {
   return raw
 }
 
+/**
+ * Map a claim failure (a devInspect abort or a rejected sign) to a friendly,
+ * actionable message. The contract guards a Studio claim can trip are: the position
+ * has not settled yet (the round is still live, so there is nothing to claim), the
+ * position lost (no payout to claim), or it was already claimed. Wallet rejections
+ * get their own phrasing. Anything else falls back to a clean line rather than a raw
+ * MoveAbort dump. The exact guard names mirror the predict module's claim path.
+ */
+export function sanitizeClaimError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '')
+  if (!raw || raw === 'undefined' || raw === 'null') return 'Nothing to claim on this position.'
+  const lower = raw.toLowerCase()
+  if (
+    raw.includes('not_settled') ||
+    raw.includes('not_expired') ||
+    raw.includes('assert_settled')
+  ) {
+    return 'Not settled yet - this position is still live.'
+  }
+  if (raw.includes('already_claimed') || raw.includes('assert_claimable')) {
+    return 'Already claimed.'
+  }
+  if (
+    raw.includes('zero_payout') ||
+    raw.includes('no_payout') ||
+    raw.includes('nothing_to_claim')
+  ) {
+    return 'This position lost - nothing to claim.'
+  }
+  if (lower.includes('rejected') || lower.includes('user denied') || lower.includes('cancelled')) {
+    return 'You rejected the transaction in your wallet.'
+  }
+  if (raw.includes('MoveAbort') || raw.includes('ExecutionError') || raw.length > 200) {
+    return 'This position lost or has already been claimed.'
+  }
+  return raw
+}
+
 function sanitizeDataUnavailableReason(error: unknown, fallback: string): string {
   const raw = error instanceof Error ? error.message : String(error ?? '')
   if (!raw || raw === 'undefined' || raw === 'null') return fallback
@@ -537,6 +575,21 @@ async function fetchManagerSnapshot(
     rangePositionsSize: Number(fields.range_positions?.fields?.size ?? 0),
     positions,
   }
+}
+
+/**
+ * The trader's binary positions in their PredictManager, read straight from chain.
+ * The Studio's positions drawer needs only the binary (UP/DOWN) leg, so this reuses
+ * the manager snapshot read (binary + range + balances) and keeps just the binary
+ * positions - the chain stays the source of truth, not the localStorage mint hint.
+ * Returns an empty array when no manager exists or the read fails.
+ */
+export async function fetchManagerBinaryPositions(
+  walletAddress: string,
+  managerId: string | null,
+): Promise<ManagerPosition[]> {
+  const snapshot = await fetchManagerSnapshot(walletAddress, managerId).catch(() => null)
+  return snapshot?.positions.filter((p) => p.kind === 'binary') ?? []
 }
 
 async function fetchLatestManagerId(walletAddress: string): Promise<string | null> {

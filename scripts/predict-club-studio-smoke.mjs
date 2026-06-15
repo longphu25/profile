@@ -189,6 +189,28 @@ async function main() {
       record('Escape closes ticket', true, 'no live cells - skipped')
     }
 
+    // Positions drawer (S9): the status-band button opens the slide-in sheet, and
+    // Escape closes it. Disconnected, the drawer shows the connect empty state. This
+    // does not depend on a live SVI surface, so it runs unconditionally.
+    const positionsOpen = await page.locator('[data-pc-studio-positions-open]').count()
+    record('positions button present', positionsOpen > 0)
+    if (positionsOpen > 0) {
+      await page.locator('[data-pc-studio-positions-open]').click()
+      await page.waitForTimeout(150)
+      const drawer = page.locator('[data-pc-studio-positions]')
+      const drawerShown = (await drawer.count()) > 0
+      const connect = await page.locator('[data-pc-studio-positions-connect]').count()
+      record('positions drawer opens', drawerShown)
+      record('disconnected drawer shows connect', drawerShown && connect > 0, `connect=${connect}`)
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(150)
+      record('Escape closes positions drawer', (await page.locator('[data-pc-studio-positions]').count()) === 0)
+    } else {
+      record('positions drawer opens', false, 'no positions button')
+      record('disconnected drawer shows connect', false, 'no positions button')
+      record('Escape closes positions drawer', false, 'no positions button')
+    }
+
     // No horizontal overflow at desktop width.
     const deskOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
