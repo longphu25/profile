@@ -1,5 +1,5 @@
 import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
-import { Transaction } from '@mysten/sui/transactions'
+import { Transaction, coinWithBalance } from '@mysten/sui/transactions'
 import { parseToUnits } from '@mysten/sui/utils'
 import type { Direction } from '../domain/types'
 import { TESTNET_RPC_URL } from '../../../src/constants/predict-club'
@@ -118,37 +118,6 @@ export function dusdcToUnits(amountDusdc: number): bigint {
   return parseToUnits(amountDusdc.toFixed(DUSDC_DECIMALS), DUSDC_DECIMALS)
 }
 
-async function fetchDusdcCoins(
-  walletAddress: string,
-): Promise<{ coinObjectId: string; balance: string }[]> {
-  const res = await fetch(TESTNET_RPC_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'suix_getCoins',
-      params: [walletAddress, DUSDC_TYPE, null, 50],
-    }),
-  })
-  const data = (await res.json()) as {
-    result?: { data: { coinObjectId: string; balance: string }[] }
-  }
-  return data.result?.data ?? []
-}
-
-function mergeDusdcAndSplit(tx: Transaction, coins: { coinObjectId: string }[], amountRaw: bigint) {
-  const primary = coins[0].coinObjectId
-  if (coins.length > 1) {
-    tx.mergeCoins(
-      tx.object(primary),
-      coins.slice(1).map((c) => tx.object(c.coinObjectId)),
-    )
-  }
-  const [depositCoin] = tx.splitCoins(tx.object(primary), [tx.pure.u64(amountRaw)])
-  return depositCoin
-}
-
 interface BinaryMintParams {
   walletAddress: string
   managerId: string
@@ -226,13 +195,16 @@ async function composeBinaryMintTx(params: BinaryMintParams): Promise<Transactio
 
   const amountRaw = dusdcToUnits(amountDusdc)
   const strikeRaw = snapStrike(strike, tickSize, minStrike)
-  const coins = await fetchDusdcCoins(walletAddress)
-  if (coins.length === 0) throw new Error('No DUSDC coins found in wallet')
 
   const tx = new Transaction()
   tx.setSender(walletAddress)
 
-  const depositCoin = mergeDusdcAndSplit(tx, coins, amountRaw)
+  // coinWithBalance resolves at build-time: it lists the sender's DUSDC coins,
+  // merges and splits to the exact amount. This runs inside both the devInspect
+  // pre-flight (gateway client) and the wallet sign (dApp Kit client) - both expose
+  // client.core, so the intent resolves to a concrete PTB before the wallet sees it.
+  // Insufficient balance throws here and is mapped by sanitizeMintError.
+  const depositCoin = tx.add(coinWithBalance({ type: DUSDC_TYPE, balance: amountRaw }))
 
   // Deposit into manager
   tx.moveCall({
@@ -334,13 +306,11 @@ export function createSuiPredictGateway(): SuiPredictGateway {
       const amountRaw = dusdcToUnits(amountDusdc)
       const lowerRaw = snapStrike(lowerStrike, tickSize, minStrike)
       const upperRaw = snapStrike(upperStrike, tickSize, minStrike)
-      const coins = await fetchDusdcCoins(walletAddress)
-      if (coins.length === 0) throw new Error('No DUSDC coins found in wallet')
 
       const tx = new Transaction()
       tx.setSender(walletAddress)
 
-      const depositCoin = mergeDusdcAndSplit(tx, coins, amountRaw)
+      const depositCoin = tx.add(coinWithBalance({ type: DUSDC_TYPE, balance: amountRaw }))
 
       tx.moveCall({
         target: `${PREDICT_PACKAGE}::predict_manager::deposit`,
