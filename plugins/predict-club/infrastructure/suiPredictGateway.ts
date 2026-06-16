@@ -1,5 +1,6 @@
 import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
 import { Transaction } from '@mysten/sui/transactions'
+import { parseToUnits } from '@mysten/sui/utils'
 import type { Direction } from '../domain/types'
 import { TESTNET_RPC_URL } from '../../../src/constants/predict-club'
 import { sanitizeClaimError, sanitizeMintError } from './deepbookPredictPricingService'
@@ -108,6 +109,15 @@ function snapStrike(usd: number, tickSize: number, minStrike: number): number {
   return minStrike + Math.round(offset / tickSize) * tickSize
 }
 
+// Convert a human DUSDC amount to base units with exact bigint math. Float scaling
+// (Math.floor(amount * 1e6)) can underpay - 0.07 * 1e6 lands at 69999.99... and floors
+// to 69999. parseToUnits parses a decimal string with no floating point. toFixed clamps
+// to DUSDC_DECIMALS first so a float like 0.30000000000000004 cannot trip parseToUnits'
+// "too many decimal places" guard.
+export function dusdcToUnits(amountDusdc: number): bigint {
+  return parseToUnits(amountDusdc.toFixed(DUSDC_DECIMALS), DUSDC_DECIMALS)
+}
+
 async function fetchDusdcCoins(
   walletAddress: string,
 ): Promise<{ coinObjectId: string; balance: string }[]> {
@@ -127,7 +137,7 @@ async function fetchDusdcCoins(
   return data.result?.data ?? []
 }
 
-function mergeDusdcAndSplit(tx: Transaction, coins: { coinObjectId: string }[], amountRaw: number) {
+function mergeDusdcAndSplit(tx: Transaction, coins: { coinObjectId: string }[], amountRaw: bigint) {
   const primary = coins[0].coinObjectId
   if (coins.length > 1) {
     tx.mergeCoins(
@@ -214,7 +224,7 @@ async function composeBinaryMintTx(params: BinaryMintParams): Promise<Transactio
     minStrike,
   } = params
 
-  const amountRaw = Math.floor(amountDusdc * 10 ** DUSDC_DECIMALS)
+  const amountRaw = dusdcToUnits(amountDusdc)
   const strikeRaw = snapStrike(strike, tickSize, minStrike)
   const coins = await fetchDusdcCoins(walletAddress)
   if (coins.length === 0) throw new Error('No DUSDC coins found in wallet')
@@ -321,7 +331,7 @@ export function createSuiPredictGateway(): SuiPredictGateway {
         minStrike,
       } = params
 
-      const amountRaw = Math.floor(amountDusdc * 10 ** DUSDC_DECIMALS)
+      const amountRaw = dusdcToUnits(amountDusdc)
       const lowerRaw = snapStrike(lowerStrike, tickSize, minStrike)
       const upperRaw = snapStrike(upperStrike, tickSize, minStrike)
       const coins = await fetchDusdcCoins(walletAddress)
