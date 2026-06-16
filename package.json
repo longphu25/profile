@@ -16,6 +16,7 @@
     "probe:studio": "bun scripts/predict-club-studio-smoke.mjs",
     "preview": "vite preview",
     "setup:codegraph": "bash scripts/setup-codegraph.sh",
+    "setup:mirrors": "bash scripts/setup-agent-mirrors.sh",
     "codegraph:index": "codegraph init -i",
     "codegraph:status": "codegraph status",
     "codegen": "sui-ts-codegen generate",
