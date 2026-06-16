@@ -92,3 +92,26 @@ plugins/<name>/
 - Use `Promise.allSettled` for parallel fallible operations (never let one failure block others).
 - Cache with TTL for repeated expensive calls.
 - Debounce user input before triggering network requests.
+
+## Writing & Commit Conventions
+
+These apply to all code, docs, and commits regardless of which agent does the work.
+
+- **No em-dash (`—`) in any visible string**, ever: UI copy, docs, comments, commit
+  messages. Use a comma, a colon, parentheses, or a period. This is a hard ban from the
+  project design rules, not a style preference.
+- **Safe imports across `domain/` and `infrastructure/` boundaries.** Anything used only
+  as a type must be `import type { ... }`, never a value import. Reason:
+  `infrastructure/deepbookPredictPricingService.ts` builds a Sui RPC client at module
+  level; a value import drags that runtime side effect into pure `domain/` modules and
+  unit tests. `domain/` must never value-import `infrastructure/`. Verify with a grep
+  after adding any cross-boundary import.
+- **Bilingual docs.** When a doc has a Vietnamese companion, keep the `.md` (English) and
+  `.vi.md` (Vietnamese) pair in sync. New reference docs in `docs/` follow the same pair.
+- **Commit messages** follow Conventional Commits (`@commitlint/config-conventional`);
+  the subject line stays at or under 100 characters. Prefer small, revertable commits
+  split by logical concern over one large mixed commit.
+- **Money path is high-risk.** Any change touching transaction building, coin selection,
+  unit scaling, or claim/mint guards must use exact bigint math for on-chain amounts
+  (`parseToUnits`, never `Math.floor(x * 10 ** decimals)`), and should be verified with
+  the existing devInspect pre-flight before a real sign.
