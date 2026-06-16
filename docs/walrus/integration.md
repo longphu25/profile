@@ -213,9 +213,9 @@ Relay handles the multi-step upload process internally.
 
 ```json
 {
-  "@mysten/walrus": "^1.1.0",
-  "@mysten/walrus-wasm": "(bundled with @mysten/walrus)",
-  "@mysten/sui": "^2.14.1"
+  "@mysten/walrus": "^1.2.0",
+  "@mysten/walrus-wasm": "^0.3.0 (bundled with @mysten/walrus)",
+  "@mysten/sui": "^2.18.0"
 }
 ```
 

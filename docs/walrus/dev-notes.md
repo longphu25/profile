@@ -16,6 +16,14 @@ const client = new SuiGrpcClient({ network: 'testnet', baseUrl: RPC_URL })
   .$extend(walrus({ wasmUrl: walrusWasmUrl }))
 ```
 
+**`storageNodeUrlScheme` (1.1.7+):** `walrus({ ... })` nhận thêm option
+`storageNodeUrlScheme?: 'http' | 'https'` (mặc định `'https'`). Đặt `'http'` cho
+local dev khi storage node không terminate TLS — không cần nữa ở testnet/mainnet công khai.
+
+```ts
+.$extend(walrus({ wasmUrl: walrusWasmUrl, storageNodeUrlScheme: 'http' })) // local only
+```
+
 ## Upload Modes
 
 | Mode | Method | Blob Owner | Cost | Signing |
@@ -94,6 +102,28 @@ const blobs = res.result.data.filter(
   obj => obj.data.type.includes('::blob::Blob')
 )
 ```
+
+## Type tags on generated Move structs (1.2.0+)
+
+The generated `MoveStruct` / `MoveEnum` / `MoveTuple` classes (from the contract bindings
+the SDK ships) gained two methods for building Move type-tag strings — useful when you
+need a type argument for a `moveCall` or a normalized type to compare against on-chain data.
+
+```ts
+// Build the tag string (sync). typeArguments is the full positional list in Move
+// declaration order; REQUIRED when the struct has unfilled `phantom` params.
+const tag = SomeStruct.typeTag({ typeArguments: [WAL_TYPE] })
+// May contain MVR names — valid in a tx's typeArguments, NOT for on-chain comparison.
+
+// Resolve MVR names → normalized address-only form (async). Use this when you will
+// compare the tag against on-chain data or pass it to a query.
+const resolved = await SomeStruct.resolveTypeTag({ client, typeArguments: [WAL_TYPE] })
+```
+
+**When which:** `typeTag()` for building a transaction (MVR names are fine there);
+`resolveTypeTag({ client, ... })` whenever the tag is compared against chain data or used
+in a query — it routes MVR names through `client.core.mvr.resolveType` and returns the
+address-only form. Arity of `typeArguments` is validated at runtime.
 
 ## Key Gotchas
 

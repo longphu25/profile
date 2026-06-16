@@ -207,6 +207,48 @@ Not all indexer pools are in the SDK. SDK pools (mainnet):
 `SUI_USDC`, `DEEP_SUI`, `DEEP_USDC`, `WAL_SUI`, `WAL_USDC`,
 `WUSDT_USDC`, `WUSDC_USDC`, `NS_SUI`, `NS_USDC`, etc.
 
+### Adoptable primitives (v1.3.0–1.5.0)
+
+> Signatures below verified against installed `@mysten/deepbook-v3@1.5.0` source.
+> `^1.5.0` is the newest stable (published 2026-06-15) — the project is current; these
+> are SDK calls that replace hand-built PTBs in the spot/hedging plugins. **Not used by
+> predict-club** (binary-options via the `predict` Move contract, no DeepBook order book).
+
+**Cancel orders without aborting on stale ids (1.3.0).** `cancelLiveOrder` /
+`cancelLiveOrders` skip already-filled / cancelled / expired / not-owned orders instead of
+aborting the whole PTB — safe batch-cancel.
+
+```typescript
+// deepBook.cancelLiveOrder(poolKey, balanceManagerKey, orderId) => (tx) => void
+// deepBook.cancelLiveOrders(poolKey, balanceManagerKey, orderIds: string[]) => (tx) => void
+dbClient.deepBook.cancelLiveOrders('SUI_USDC', 'MANAGER_1', staleOrderIds)(tx)
+```
+
+**Read-only client queries (1.3.1 sender fix + 1.4.0).** These run via devInspect and
+need no signing — pre-check viability and read book depth before building an order.
+
+```typescript
+await dbClient.accountOpenOrders('SUI_USDC', 'MANAGER_1') // Promise<string[]>
+await dbClient.midPrice('SUI_USDC')                        // Promise<number>
+await dbClient.getLevel2Range('SUI_USDC', priceLow, priceHigh, isBid) // Promise<Level2Range>
+await dbClient.getLevel2TicksFromMid('SUI_USDC', ticks)    // Promise<Level2TicksFromMid>
+await dbClient.vaultBalances('SUI_USDC')                   // Promise<VaultBalances>
+```
+
+`getLevel2Range` returns `{ prices, quantities }` (BCS-decoded, decimal-scaled) — a ready
+order-book depth read, no custom indexer call. 1.3.1 fixed these failing under JSON-RPC
+with *"Missing transaction sender"* by setting a sender on every read-only query.
+
+**Either-direction swap builders (return coin results to chain).** Beyond
+`swapExactBaseForQuote` / `swapExactQuoteForBase` (above), `swapExactQuantity` picks
+direction by an `isBaseToCoin`-style flag; `*WithManager` variants route through a
+BalanceManager.
+
+```typescript
+// swapExactQuantity(params: SwapParams & { ... }) => (tx) => readonly [baseOut, quoteOut, deepOut]
+// swapExactBaseForQuoteWithManager / swapExactQuoteForBaseWithManager / swapExactQuantityWithManager
+```
+
 ---
 
 ## Fee Structure
