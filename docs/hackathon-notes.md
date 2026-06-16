@@ -225,3 +225,81 @@ Stretch concept (future): monetize Predict data API qua x402/MPP (premium SVI da
 - Cannot re-derive AI score on-chain — this is expected and accepted
 - Key: contract verifies critical decisions independently (freeze = on-chain math only)
 - AI only advisory (push safer), contract is enforcement
+
+
+---
+
+## Critical Deadlines
+
+| Item | Date/Time |
+|------|-----------|
+| **Submission deadline** | **June 21, 2026 — 6:00 PM Pacific Time** |
+| **Demo video max** | **5 minutes** (strict limit) |
+| **After deadline** | FINAL — no edits, no grace period, no admin corrections |
+| **Judging** | No community voting this year — judges only |
+
+### Submission rules
+
+- All info, links, features, updates submitted/edited AFTER deadline = **not considered**
+- Review submission carefully before June 21 6PM PT
+- No grace period for missing criteria
+
+---
+
+## University Award
+
+- $2,500 × 10 winning teams
+- Requirement: ≥50% of team members = students
+- Mark as student in DeepSurge profile
+- Solo student builder qualifies (100% = student)
+- Handbook: https://go.sui.io/overflow26-participant-handbook
+
+---
+
+## Enoki Notes
+
+### No sponsorship available
+
+> "Unfortunately there is no sponsorship provided for Enoki fees"
+
+- Enoki mainnet = paid subscription
+- No hackathon credits/discounts mentioned
+- Alternative: keep zkLogin on testnet, publish with prize money if win
+
+### Enoki zkLogin salt error troubleshooting
+
+Error: `{"code":"salt_failure","message":"Failed to get salt from service","data":{"error":"invalid token"}}`
+
+**Root cause** (from experienced builder):
+- NOT caused by sponsored tx config (salt = pre-tx step)
+- NOT plan/tier issue (would show rate-limit error)
+- Most likely: JWT doesn't match configured auth provider for Enoki app
+
+**Fix checklist:**
+1. Send **raw Google id_token** (not access_token)
+2. `aud` in JWT = Google Client ID in same Enoki app/API key
+3. `nonce` claim present in JWT
+4. Enoki API key enabled for zkLogin + target network
+5. Auth Provider Client ID matches in Enoki portal
+6. If all match → share Enoki Request-Id with Mysten support
+
+### Alternative: Privy supports Sui
+
+https://docs.privy.io/controls/policies/example-policies/sui
+
+- Alternative to Enoki for embedded wallets
+- May be more cost-effective
+
+---
+
+## More Projects in Ecosystem
+
+| Project | What | URL | Track |
+|---------|------|-----|-------|
+| Suize Deploy | Walrus-hosted websites (Vercel on Sui) | https://deploy.suize.io/ | Walrus |
+| Suize Agents | x402 merchant directory | https://agents.suize.io/ | Agentic Web |
+| Suize Rails | Payment rails on Sui | https://suize.io | Payments |
+| 0xSec | Security platform for agentic solutions | https://0xsec.xyz | Agentic Web |
+| Reeg | Game-based trading (charts as track) | https://reeg.xyz | DeepBook? |
+| JellyNet | Walrus + zkLogin via Enoki | — | Walrus |
+| DeepPulse | AI market-making for DeepBook CLOB | https://x.com/deeppulse0 | DeepBook |
