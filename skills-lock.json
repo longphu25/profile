@@ -12,6 +12,11 @@
       "skillPath": "accessing-data/SKILL.md",
       "computedHash": "f868381cb3e81f7d0ac02701881c0f06a3fdc2b08634210de27b5de2dfaeecef"
     },
+    "blossom-carousel-react": {
+      "source": "blossom-carousel.com",
+      "sourceType": "well-known",
+      "computedHash": "0395cbd3e94a255efa27f47149370d157daac43e21d20343264de084a6de2f93"
+    },
     "brandkit": {
       "source": "Leonxlnx/taste-skill",
       "sourceType": "github",
