@@ -1,0 +1,11 @@
+{
+  "chain": "solana",
+  "group": "core",
+  "name": "SolanaWalletProfile",
+  "label": "Wallet Profile",
+  "version": "1.0.0",
+  "description": "Connect Solana wallet (Phantom), view SOL balance. Default network: devnet.",
+  "network": "devnet",
+  "dependencies": ["@solana/web3.js"],
+  "pages": ["solana.html"]
+}

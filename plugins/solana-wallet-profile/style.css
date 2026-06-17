@@ -1,0 +1,388 @@
+/* Solana Wallet Profile Plugin — scoped styles */
+
+.sol-wp {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #e2e8f0;
+  padding: 16px;
+}
+
+.sol-wp__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sol-wp__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.sol-wp__badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.sol-wp__badge--connected {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.sol-wp__badge--required {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.sol-wp__desc {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 0 16px;
+}
+
+.sol-wp__connect-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #9945ff 0%, #14f195 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.sol-wp__connect-btn:hover {
+  opacity: 0.9;
+}
+
+.sol-wp__connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sol-wp__profile-card {
+  background: rgba(30, 30, 34, 0.8);
+  border: 1px solid #2a2a2e;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.sol-wp__address-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sol-wp__address {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  color: #e2e8f0;
+}
+
+.sol-wp__copy-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.sol-wp__copy-btn:hover {
+  color: #14f195;
+}
+
+.sol-wp__wallet-name {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.sol-wp__network-select {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.sol-wp__network-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #2a2a2e;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sol-wp__network-btn--active {
+  background: rgba(153, 69, 255, 0.15);
+  border-color: #9945ff;
+  color: #9945ff;
+}
+
+.sol-wp__balance-section {
+  margin-top: 12px;
+}
+
+.sol-wp__balance-title {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sol-wp__balance-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #1e1e22;
+}
+
+.sol-wp__balance-item:last-child {
+  border-bottom: none;
+}
+
+.sol-wp__balance-symbol {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.sol-wp__balance-amount {
+  font-size: 13px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: #94a3b8;
+}
+
+.sol-wp__explorer-link {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  color: #9945ff;
+  text-decoration: none;
+  margin-top: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #2a2a2e;
+  transition: all 0.2s;
+}
+
+.sol-wp__explorer-link:hover {
+  background: rgba(153, 69, 255, 0.1);
+  border-color: #9945ff;
+}
+
+.sol-wp__disconnect-btn {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-top: 12px;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  background: transparent;
+  color: #ef4444;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sol-wp__disconnect-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.sol-wp__error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #fca5a5;
+  margin-top: 8px;
+}
+
+.sol-wp__loading {
+  text-align: center;
+  padding: 12px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.sol-wp__footer {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #1e1e22;
+  font-size: 11px;
+  color: #475569;
+  text-align: center;
+}
+
+/* Wallet list popup */
+.sol-wp__popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.sol-wp__popup {
+  background: #1a1a1e;
+  border: 1px solid #2a2a2e;
+  border-radius: 16px;
+  padding: 24px;
+  min-width: 320px;
+  max-width: 400px;
+}
+
+.sol-wp__popup-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.sol-wp__wallet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sol-wp__wallet-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #2a2a2e;
+  border-radius: 10px;
+  background: transparent;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  text-align: left;
+}
+
+.sol-wp__wallet-item:hover {
+  background: rgba(153, 69, 255, 0.08);
+  border-color: #9945ff;
+}
+
+.sol-wp__wallet-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.sol-wp__wallet-item-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sol-wp__popup-cancel {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  background: #2a2a2e;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Stored wallets picker */
+
+.sol-wp__stored {
+  margin-top: 12px;
+}
+
+.sol-wp__stored-toggle {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px dashed #2a2a2e;
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sol-wp__stored-toggle:hover {
+  border-color: #9945ff;
+  color: #9945ff;
+}
+
+.sol-wp__stored-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.sol-wp__stored-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid #2a2a2e;
+  border-radius: 8px;
+  background: #111113;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  text-align: left;
+}
+
+.sol-wp__stored-item:hover {
+  border-color: #9945ff;
+  background: rgba(153, 69, 255, 0.05);
+}
+
+.sol-wp__stored-addr {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+}
+
+.sol-wp__stored-date {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.sol-wp__switch {
+  margin-top: 12px;
+}
+
+.sol-wp__switch-btn {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: 1px solid #2a2a2e;
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sol-wp__switch-btn:hover {
+  border-color: #9945ff;
+  color: #9945ff;
+}
