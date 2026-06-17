@@ -12,9 +12,11 @@ import { checkArbFree } from '../../application/arbFreeCheck'
 import { buildStudioRiskInput, submitStudioTrade } from '../../application/submitStudioTrade'
 import { createSuiPredictGateway } from '../../infrastructure/suiPredictGateway'
 import {
-  fetchManagerBinaryPositions,
+  fetchManagerGroups,
+  type ManagerGroup,
   type ManagerPosition,
   sanitizeClaimError,
+  sanitizeRedeemError,
 } from '../../infrastructure/deepbookPredictPricingService'
 import {
   classifyPosition,
@@ -50,6 +52,14 @@ const MINTED_LAST_ADDRESS_KEY = `${MINTED_STORE_PREFIX}lastAddress`
 
 function mintedStorageKey(address: string | null): string | null {
   return address ? `${MINTED_STORE_PREFIX}${address.toLowerCase()}` : null
+}
+
+// Compact wallet-balance figure for the status band: two decimals under 1000, no
+// decimals above so a large SUI balance stays a single glanceable number.
+function formatBalance(value: number): string {
+  return value >= 1000
+    ? Math.round(value).toLocaleString('en-US')
+    : value.toLocaleString('en-US', { maximumFractionDigits: 2 })
 }
 
 function readLastMintedAddress(): string | null {
@@ -137,10 +147,12 @@ export function StudioShell() {
     anchorRect: DOMRect
   } | null>(null)
   // Positions/history drawer (S9): the trader's real binary positions read from
-  // their PredictManager (the chain is the source of truth, not the localStorage
-  // mint hint). Open state drives the slide-in sheet; the list refetches on wallet
-  // change, after a confirmed mint/claim, and on a slow timer while connected.
-  const [positions, setPositions] = useState<ManagerPosition[]>([])
+  // their PredictManagers, grouped per manager (the chain/indexer is the source of
+  // truth, not the localStorage mint hint). A wallet can own several managers; the
+  // drawer lists every one (even an empty manager) so the trader sees it exists.
+  // Open state drives the slide-in sheet; the list refetches on wallet change, after
+  // a confirmed mint/claim, and on a slow timer while connected.
+  const [managerGroups, setManagerGroups] = useState<ManagerGroup[]>([])
   const [positionsOpen, setPositionsOpen] = useState(false)
 
   // Own the surface service lifecycle: start the SVI fan-out on mount, stop on
@@ -185,11 +197,16 @@ export function StudioShell() {
   const refreshPositions = useCallback(() => {
     const address = context.address
     if (!address) {
-      setPositions([])
+      setManagerGroups([])
       return
     }
-    fetchManagerBinaryPositions(address, predictManagerId).then((next) => {
-      setPositions(next)
+    // Read across ALL of the wallet's PredictManagers, not just the latest: a wallet
+    // can hold several (each create_manager mints a fresh one) and positions scatter
+    // across them. Groups keep each manager distinct (even an empty one) so the drawer
+    // can list every manager; each position carries its owning managerId, so claim and
+    // unwind below target the right manager rather than always the latest.
+    fetchManagerGroups(address).then((next) => {
+      setManagerGroups(next)
     })
   }, [context.address, predictManagerId])
 
@@ -398,7 +415,11 @@ export function StudioShell() {
     const address = context.address
     if (!address) return { ok: false, reason: 'Wallet not connected' }
     const gateway = createSuiPredictGateway()
-    const managerId = predictManagerId ?? (await gateway.fetchManagerId(address))
+    // Target the manager that owns this position, not just the latest: the wallet may
+    // hold several and the position was read from a specific one. Fall back to the
+    // latest only for a position that somehow carries no owning manager.
+    const managerId =
+      position.managerId ?? predictManagerId ?? (await gateway.fetchManagerId(address))
     if (!managerId) return { ok: false, reason: 'No PredictManager found' }
     const side = positionSideLabel(position)
     const strike = positionStrikeUsd(position)
@@ -411,6 +432,7 @@ export function StudioShell() {
       expiry: position.expiry,
       strike,
       isUp: side === 'UP',
+      quantity: position.quantity,
       tickSize: oracleEntry?.tick_size ?? DEFAULT_TICK_SIZE,
       minStrike: oracleEntry?.min_strike ?? DEFAULT_MIN_STRIKE,
     })
@@ -424,7 +446,8 @@ export function StudioShell() {
     const address = context.address
     if (!address || !host) return { ok: false, error: 'Wallet not connected' }
     const gateway = createSuiPredictGateway()
-    const managerId = predictManagerId ?? (await gateway.fetchManagerId(address))
+    const managerId =
+      position.managerId ?? predictManagerId ?? (await gateway.fetchManagerId(address))
     if (!managerId) return { ok: false, error: 'No PredictManager found' }
     const side = positionSideLabel(position)
     const strike = positionStrikeUsd(position)
@@ -438,6 +461,7 @@ export function StudioShell() {
         expiry: position.expiry,
         strike,
         isUp: side === 'UP',
+        quantity: position.quantity,
         tickSize: oracleEntry?.tick_size ?? DEFAULT_TICK_SIZE,
         minStrike: oracleEntry?.min_strike ?? DEFAULT_MIN_STRIKE,
       })
@@ -449,6 +473,69 @@ export function StudioShell() {
     }
   }
 
+  // Read-only unwind pre-flight for a still-live position: build the real redeem PTB
+  // and devInspect it so the contract decides whether the position can be sold back to
+  // the AMM right now (it aborts once the oracle settles, where the claim path takes
+  // over). Zero gas, no wallet prompt - mirrors the claim pre-flight.
+  const simulateRedeem = async (position: ManagerPosition) => {
+    const address = context.address
+    if (!address) return { ok: false, reason: 'Wallet not connected' }
+    const gateway = createSuiPredictGateway()
+    const managerId =
+      position.managerId ?? predictManagerId ?? (await gateway.fetchManagerId(address))
+    if (!managerId) return { ok: false, reason: 'No PredictManager found' }
+    const side = positionSideLabel(position)
+    const strike = positionStrikeUsd(position)
+    if (side == null || strike == null) return { ok: false, reason: 'Position cannot be unwound' }
+    const oracleEntry = oracleSnapshot.oracles.find((o) => o.oracle_id === position.oracleId)
+    return gateway.simulateRedeem({
+      walletAddress: address,
+      managerId,
+      oracleId: position.oracleId,
+      expiry: position.expiry,
+      strike,
+      isUp: side === 'UP',
+      quantity: position.quantity,
+      tickSize: oracleEntry?.tick_size ?? DEFAULT_TICK_SIZE,
+      minStrike: oracleEntry?.min_strike ?? DEFAULT_MIN_STRIKE,
+    })
+  }
+
+  // Unwind (cancel) a still-live position: build the redeem PTB and sign it (a real
+  // on-chain transaction). Sells the position back to the AMM at the current fair
+  // value; proceeds land in the manager balance. The pre-flight already filtered a
+  // doomed unwind. Refreshes the drawer after so the position reflects its new state.
+  const handleRedeem = async (position: ManagerPosition): Promise<ClaimActionResult> => {
+    const address = context.address
+    if (!address || !host) return { ok: false, error: 'Wallet not connected' }
+    const gateway = createSuiPredictGateway()
+    const managerId =
+      position.managerId ?? predictManagerId ?? (await gateway.fetchManagerId(address))
+    if (!managerId) return { ok: false, error: 'No PredictManager found' }
+    const side = positionSideLabel(position)
+    const strike = positionStrikeUsd(position)
+    if (side == null || strike == null) return { ok: false, error: 'Position cannot be unwound' }
+    const oracleEntry = oracleSnapshot.oracles.find((o) => o.oracle_id === position.oracleId)
+    try {
+      const tx = await gateway.buildRedeemTx({
+        walletAddress: address,
+        managerId,
+        oracleId: position.oracleId,
+        expiry: position.expiry,
+        strike,
+        isUp: side === 'UP',
+        quantity: position.quantity,
+        tickSize: oracleEntry?.tick_size ?? DEFAULT_TICK_SIZE,
+        minStrike: oracleEntry?.min_strike ?? DEFAULT_MIN_STRIKE,
+      })
+      const txResult = await host.signAndExecuteTransaction(tx)
+      refreshPositions()
+      return { ok: true, digest: (txResult as { digest?: string }).digest ?? '' }
+    } catch (error) {
+      return { ok: false, error: sanitizeRedeemError(error) }
+    }
+  }
+
   // The mispricing cell for the ticket's strike (when the clicked cell sits in the
   // quoted ATM band), so the ticket can show the contract probability + edge.
   const ticketMispriceCell = ticket
@@ -457,6 +544,14 @@ export function StudioShell() {
 
   const liveExpiries = grid.columns.length
   const asset = oracleSnapshot.oracleState?.underlying_asset ?? 'BTC'
+
+  // Flat list across every manager, for the status-band live count. The drawer
+  // consumes the grouped form directly (so it can show each manager, even empty);
+  // this flattening is only for the at-a-glance badge.
+  const positions = useMemo(
+    () => managerGroups.flatMap((group) => group.positions),
+    [managerGroups],
+  )
 
   // Count of still-running positions, for the status-band badge. The drawer does the
   // full live/expired split itself; this is just the at-a-glance number.
@@ -501,6 +596,20 @@ export function StudioShell() {
             {oracleSnapshot.isHealthy ? 'live' : 'stale'}
           </span>
         </span>
+        {context.isConnected && (
+          <>
+            <span className="h-3 w-px bg-outline-variant" />
+            <span className="flex items-center gap-1">
+              <span className="text-primary-fixed-dim">SUI</span>
+              <span className="tabular-nums text-on-surface">{formatBalance(balances.sui)}</span>
+            </span>
+            <span className="h-3 w-px bg-outline-variant" />
+            <span className="flex items-center gap-1">
+              <span className="text-primary-fixed-dim">DUSDC</span>
+              <span className="tabular-nums text-on-surface">{formatBalance(balances.dusdc)}</span>
+            </span>
+          </>
+        )}
         <span className="ml-auto h-3 w-px bg-outline-variant" />
         <button
           type="button"
@@ -576,12 +685,14 @@ export function StudioShell() {
 
       {positionsOpen && (
         <PositionsDrawer
-          positions={positions}
+          groups={managerGroups}
           isConnected={context.isConnected}
           forwardByOracle={forwardByOracle}
           asset={asset}
           simulateClaim={simulateClaim}
           onClaim={handleClaim}
+          simulateRedeem={simulateRedeem}
+          onRedeem={handleRedeem}
           onConnect={() => host?.requestConnect()}
           onClose={() => setPositionsOpen(false)}
         />
