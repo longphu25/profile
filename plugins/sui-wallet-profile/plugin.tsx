@@ -70,6 +70,8 @@ const KNOWN_DECIMALS: Record<string, number> = {
   SUI: 9,
   USDC: 6,
   USDT: 6,
+  DUSDC: 6,
+  PLP: 6,
   WAL: 9,
   DEEP: 6,
   NS: 6,
@@ -675,6 +677,21 @@ function PredictExtension({
 }) {
   if (!profile) return null
 
+  // While the manager snapshot is still resolving, the vault/balance fields are
+  // null because the chain read is in flight - not because they are genuinely
+  // unavailable. Show "Loading…" in that window so the popup never reads a freshly
+  // connected wallet as empty. Once the manager resolves (Ready/Unavailable), the
+  // null fields fall back to their real "Unavailable".
+  const loading = profile.manager?.status === 'Loading'
+  const amount = (value: number | null | undefined, suffix = '') =>
+    loading && (value === null || value === undefined)
+      ? 'Loading…'
+      : formatOptionalAmount(value, suffix)
+  const percent = (value: number | null | undefined) =>
+    loading && (value === null || value === undefined) ? 'Loading…' : formatOptionalPercent(value)
+  const count = (value: number | null | undefined) =>
+    loading && (value === null || value === undefined) ? 'Loading…' : formatOptionalCount(value)
+
   const managerId = profile.manager?.id ?? null
   const binaryPositions =
     profile.binaryPositions ??
@@ -690,10 +707,10 @@ function PredictExtension({
     <section className="swp__section swp__predict">
       <div className="swp__section-title">Predict Club</div>
       <div className="swp__metric-grid">
-        <DataMetric label="Open" value={formatOptionalCount(totalPositions)} />
-        <DataMetric label="Binary" value={formatOptionalCount(binaryPositions)} />
-        <DataMetric label="RANGE" value={formatOptionalCount(rangePositions)} />
-        <DataMetric label="LP share" value={formatOptionalPercent(profile.vault?.walletLpShare)} />
+        <DataMetric label="Open" value={count(totalPositions)} />
+        <DataMetric label="Binary" value={count(binaryPositions)} />
+        <DataMetric label="RANGE" value={count(rangePositions)} />
+        <DataMetric label="LP share" value={percent(profile.vault?.walletLpShare)} />
       </div>
       <div className="swp__data-list">
         <DataRow
@@ -706,37 +723,22 @@ function PredictExtension({
             )
           }
         />
-        <DataRow
-          label="Manager balance"
-          value={formatOptionalAmount(profile.manager?.quoteBalance, ' DUSDC')}
-        />
+        <DataRow label="Manager balance" value={amount(profile.manager?.quoteBalance, ' DUSDC')} />
         <DataRow
           label="Vault liquidity"
-          value={formatOptionalAmount(profile.vault?.availableLiquidity, ' DUSDC')}
+          value={amount(profile.vault?.availableLiquidity, ' DUSDC')}
         />
-        <DataRow
-          label="Max payout"
-          value={formatOptionalAmount(profile.vault?.totalMaxPayout, ' DUSDC')}
-        />
-        <DataRow
-          label="Wallet LP share"
-          value={formatOptionalPercent(profile.vault?.walletLpShare)}
-        />
+        <DataRow label="Max payout" value={amount(profile.vault?.totalMaxPayout, ' DUSDC')} />
+        <DataRow label="Wallet LP share" value={percent(profile.vault?.walletLpShare)} />
       </div>
       <div className="swp__section-title">Vault Backing</div>
       <div className="swp__metric-grid">
-        <DataMetric
-          label="Liquidity"
-          value={formatOptionalAmount(profile.vault?.availableLiquidity, ' DUSDC')}
-        />
-        <DataMetric
-          label="Max payout"
-          value={formatOptionalAmount(profile.vault?.totalMaxPayout, ' DUSDC')}
-        />
-        <DataMetric label="MTM" value={formatOptionalAmount(profile.vault?.totalMtm, ' DUSDC')} />
+        <DataMetric label="Liquidity" value={amount(profile.vault?.availableLiquidity, ' DUSDC')} />
+        <DataMetric label="Max payout" value={amount(profile.vault?.totalMaxPayout, ' DUSDC')} />
+        <DataMetric label="MTM" value={amount(profile.vault?.totalMtm, ' DUSDC')} />
         <DataMetric
           label="Withdrawal"
-          value={formatOptionalAmount(profile.vault?.availableWithdrawal, ' DUSDC')}
+          value={amount(profile.vault?.availableWithdrawal, ' DUSDC')}
         />
       </div>
       {profile.positions?.length ? (

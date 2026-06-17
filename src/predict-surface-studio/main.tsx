@@ -16,6 +16,7 @@ import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
 import { suiHostAPI, registerActions, updateSuiContext } from '../sui-dashboard/sui-host'
 import { useEffect, useRef, useState } from 'react'
 import '../predict-club/predict-club.css'
+import { fetchWalletBalances } from '../../plugins/predict-club/infrastructure/walletBalanceService'
 
 type SuiNetwork = 'mainnet' | 'testnet' | 'devnet'
 // Prod: the public testnet fullnode sends no CORS headers, so a direct browser
@@ -201,6 +202,54 @@ export function PredictSurfaceStudioOrchestrator() {
       btn.textContent = 'Connect Wallet'
       btn.classList.remove('connected')
       btn.setAttribute('title', 'Connect wallet')
+    }
+  }, [connection.isConnected, account?.address])
+
+  // Reflect wallet balances on the static SUI/DUSDC pill in the HTML nav. The pill
+  // lives outside the plugin's React tree, so the orchestrator drives it directly:
+  // "loading..." while a fetch is in flight, the figure once it resolves, "-" when
+  // disconnected. Polls on the same 30s cadence as the in-shell balances.
+  useEffect(() => {
+    const suiEl = document.querySelector('[data-wallet-sui]')
+    const dusdcEl = document.querySelector('[data-wallet-dusdc]')
+    if (!suiEl || !dusdcEl) return
+
+    if (!connection.isConnected || !account) {
+      suiEl.textContent = '-'
+      dusdcEl.textContent = '-'
+      return
+    }
+
+    const fmt = (value: number) =>
+      value >= 1000
+        ? Math.round(value).toLocaleString('en-US')
+        : value.toLocaleString('en-US', { maximumFractionDigits: 2 })
+
+    let cancelled = false
+    const load = (address: string) => {
+      // Only show the loading hint when there is no figure yet, so a poll refresh
+      // does not flicker the last good value back to "loading...".
+      if (suiEl.textContent === '-' || suiEl.textContent === '') suiEl.textContent = 'loading...'
+      if (dusdcEl.textContent === '-' || dusdcEl.textContent === '')
+        dusdcEl.textContent = 'loading...'
+      fetchWalletBalances(address)
+        .then((balances) => {
+          if (cancelled) return
+          suiEl.textContent = fmt(balances.sui)
+          dusdcEl.textContent = fmt(balances.dusdc)
+        })
+        .catch(() => {
+          if (cancelled) return
+          if (suiEl.textContent === 'loading...') suiEl.textContent = '-'
+          if (dusdcEl.textContent === 'loading...') dusdcEl.textContent = '-'
+        })
+    }
+
+    load(account.address)
+    const intervalId = setInterval(() => load(account.address), 30_000)
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
     }
   }, [connection.isConnected, account?.address])
 
