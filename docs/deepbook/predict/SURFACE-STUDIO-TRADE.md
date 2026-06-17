@@ -13,6 +13,8 @@ Companion docs:
 - `docs/deepbook/predict-club-data-contract.md` - oracle/SVI/price data shapes and
   the quote-error mapping table.
 - `docs/deepbook/mint-position-guide.md` - the raw PTB mint flow and scaling rules.
+- `docs/deepbook/predict/SURFACE-STUDIO-POSITIONS.md` - the positions drawer, claim,
+  unwind, and multi-manager read this trade ticket feeds into.
 - `plugins/predict-club/DESIGN.md` - the Surface Studio section (product intent).
 
 ## Design Intent

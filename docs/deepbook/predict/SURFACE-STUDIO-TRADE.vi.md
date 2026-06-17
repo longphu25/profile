@@ -13,6 +13,8 @@ Tài liệu liên quan:
 - `docs/deepbook/predict-club-data-contract.md` - hình dạng dữ liệu oracle/SVI/price
   và bảng map lỗi quote.
 - `docs/deepbook/mint-position-guide.md` - luồng mint PTB thô và quy tắc scale.
+- `docs/deepbook/predict/SURFACE-STUDIO-POSITIONS.md` - drawer positions/history:
+  claim (redeem_permissionless), unwind (redeem) và hỗ trợ nhiều manager.
 - `plugins/predict-club/DESIGN.md` - mục Surface Studio (ý đồ sản phẩm).
 
 ## Ý đồ thiết kế

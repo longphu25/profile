@@ -216,11 +216,60 @@ AI market-maker that provides 24/7 liquidity on DeepBook spot order book:
 
 ---
 
+## CRASH by Suize (crash.suize.io)
+
+**URL**: crash.suize.io (NXDOMAIN as of 2026-06-17; parent suize.io and wallet.suize.io serve the "Suize, the AI wallet" landing on Vercel, not the game). Analyzed from a final-UI screenshot the user supplied, not a live bundle.
+**Type**: Consumer-skinned binary price bet ("Will BTC be higher when the round locks? Tap UP or DOWN")
+**Track**: Consumer DeFi / prediction
+
+### What it actually is
+
+Despite the "CRASH" name, this is NOT an Aviator-style multiplier crash game. It is a binary UP/DOWN bet on BTC spot versus a single reference line, settled at a fixed round-lock time. Mechanically it is the same family as our predict-club (binary ABOVE/BELOW a strike, settle at oracle expiry), wrapped in a much friendlier consumer surface.
+
+| UI element (screenshot) | Mechanic | predict-club analog |
+|---|---|---|
+| "Will BTC be higher when the round locks?" | Binary on spot vs a line | binary mint, `is_up` |
+| LINE $62,073 (UP wins above, DOWN wins below) | The strike | `strike` |
+| TODAY'S ROUND, ROUND LOCKS AT SETTLE 03:47 | Countdown to settle | oracle `expiry` |
+| UP $17 (3.4x) / DOWN $6.6 (1.3x) | Asymmetric odds = contract pricing | mint cost to payout from the quote path |
+| WAGER $1 / $5 / $25 / $100 / Custom | Stake in dollars, preset chips | `amountDusdc` |
+| "Cash out, take +$10" (winning now, value now $26, paid $16) | Exit a live position early at fair value | `predict::redeem` (Studio Unwind) |
+| "IF DOWN WINS AT SETTLE +$21, pays $37 total" | Settled payout if you hold to the end | `predict::redeem_permissionless` (Studio Claim) |
+| THE HOUSE, TOTAL POOL / TVL $1,013,561, share price $1.0023 live | LP vault taking the other side | PLP vault (vault value / PLP supply / share price) |
+| ADD TO THE HOUSE / WITHDRAW FROM HOUSE | LP stake/unstake | PLP supply / withdraw |
+| "Every bet pays the house. Own a slice of it." / "You earn when players lose, but lose when they win. The house edge is statistical, not guaranteed." | Honest LP-side framing | the PLP economics we already surface |
+| YIELD +0.2252% ALL-TIME, your stake $5.0 | LP yield, paid by bet flow | vault NAV drift |
+| RECENT: -$4.96 DOWN, +$0.19 DOWN, ... | Recent settled rounds ticker | settled-position history |
+| SAMPLE BETS, ILLUSTRATIVE (whale.bait, darkpool, ...) | Fabricated social proof (labelled) | n/a (we do not fake activity) |
+
+### Key takeaway
+
+This is a **consumer-friendly reskin of the exact protocol we already implement**, not a new mechanic to reverse engineer. The differences are all presentation, not protocol:
+
+- One round per day, one reference line (vs our full strike x expiry grid).
+- "UP / DOWN" wording instead of "ABOVE / BELOW"; dollar wager chips instead of contract quantity.
+- "Join the house" (LP into the vault) is a primary, prominent CTA, not a buried tab.
+- Plain-language outcome ("IF DOWN WINS AT SETTLE +$21") instead of options jargon.
+
+### On "suggest a position to raise win rate"
+
+There is no honest signal that raises the win rate of a fair binary settle: the settlement price is exogenous (BTC spot), so no client-side computation predicts it. The only truthful edge is **mispricing**, which the Surface Studio already computes (contract-implied probability minus SVI fair value): it flags which side is mispriced, never which way BTC will move. Any "win predictor" beyond that would be fabricated.
+
+### What we could borrow (presentation only)
+
+- A one-line, one-round "simple mode" surface over the same contracts, for non-traders.
+- Dollar-denominated wager chips ($1/$5/$25/$100) as a quick-stake row.
+- Foregrounding the LP/"own the house" CTA so the vault side is a first-class action.
+- Plain-language outcome copy on every position (we already added Win/Lose rule lines in the positions drawer).
+
+---
+
 ## Competitive Landscape Summary
 
 | Project | Focus | Track | Threat level |
 |---------|-------|-------|-------------|
 | **DeepMarket** | Predict trading + provable AI agents | DeepBook/Agentic | 🔴 High (direct) |
+| **CRASH by Suize** | Consumer-skinned binary BTC UP/DOWN + LP "house" | Consumer DeFi | 🟡 Medium (same mechanic, consumer skin) |
 | **DeepPulse** | Spot CLOB market-making AI | DeepBook/Agentic | 🟡 Medium (same track, different vertical) |
 | **Velfi** | Programmable payments | Agentic Web | 🟢 Low (different domain) |
 | **suimpp** | Machine payments protocol | DeFi & Payments | 🟢 Low (different domain) |

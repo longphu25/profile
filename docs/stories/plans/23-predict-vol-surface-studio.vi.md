@@ -469,6 +469,54 @@ Kiểm chứng: `bun run build`; `bun run test:unit`; `bun run test:e2e`;
 
 Trạng thái: done.
 
+### S10 - Gỡ vị thế, ghi chú thắng/thua, số dư header, đa manager
+Mục tiêu: drawer S9 cho thấy và claim được, nhưng còn ba khoảng trống mà trader gặp ngay khi
+dùng thật. (a) Không có cách thoát một vị thế còn sống trước hạn. (b) Một dòng UP/DOWN + strike
+không nói rõ giá nào thì thắng, giá nào thì thua. (c) Lịch sử "chỉ hiện 2 vị thế" trong khi
+trader đã đặt rất nhiều: một ví có thể sở hữu NHIỀU PredictManager (mỗi lần `create_manager` tạo
+một cái mới), nhưng app chỉ đọc manager mới nhất. Cộng thêm header chưa hiện số dư SUI/DUSDC.
+
+Công việc:
+1. **Gỡ vị thế live** (`infrastructure/suiPredictGateway.ts`): `predict::redeem` bán vị thế còn
+   sống về AMM theo fair value hiện tại trước hạn (đối nghịch với `redeem_permissionless` của
+   claim). Tách `composeRedeemTx(params, fn)` dùng chung cho cả hai nhánh redeem (cùng 7 tham số,
+   chỉ khác tên hàm), rồi thêm `buildRedeemTx` + `simulateRedeem` (devInspect đúng PTB unwind) và
+   `sanitizeRedeemError`. `redeem` abort `assert_quoteable_oracle` sau khi oracle settle, nên chỉ
+   hợp lệ khi vị thế còn sống - đối xứng với claim chỉ hợp lệ sau settle.
+2. **Ghi chú thắng/thua + lean** (`domain/studioPositions.ts`, unit-test): `positionOutcomeRule`
+   trả câu trần thuật (UP thắng "settles above $X", DOWN thắng "settles below $X") và
+   `positionLean` cho biết forward hiện tại đang nghiêng thắng/thua/ngang strike. Đây là điều kiện
+   dễ đọc và một lean sống, KHÔNG phải dự đoán - contract quyết lúc settle.
+3. **Đa manager** (`infrastructure/deepbookPredictPricingService.ts`): `ManagerPosition` thêm
+   `managerId` để mỗi vị thế biết manager nào sở hữu. Thêm `fetchAllManagerIds` (mọi manager, mới
+   nhất trước) và `fetchAllManagersBinaryPositions` (đọc song mọi manager, một manager lỗi chỉ rơi
+   về rỗng chứ không hỏng cả list). `positionKey` thêm `managerId` để hai lệnh giống hệt ở hai
+   manager không đụng key.
+4. **Drawer + wiring** (`presentation/studio/{PositionsDrawer,StudioShell}.tsx`): drawer mặc định
+   LIỆT KÊ riêng từng manager (header "Manager N · short id", manager mới nhất gắn nhãn newest),
+   kèm toggle `Combine all` / `List separately` chỉ hiện khi ví có >1 manager - người dùng tự chọn
+   gộp, drawer không tự gộp. `ActionSlot` dùng chung cho cả nút Claim (settled) lẫn Unwind (live).
+   Cả bốn handler claim/unwind nhắm `position.managerId` trước (fallback latest) nên ký đúng manager
+   sở hữu. `refreshPositions` đọc qua tất cả manager.
+5. **Số dư header** (`predict-surface-studio.html`, `src/predict-surface-studio/main.tsx`): pill
+   SUI/DUSDC trên nav (`data-wallet-sui`/`data-wallet-dusdc`) do orchestrator điều khiển trực tiếp
+   vì nó nằm ngoài cây React của plugin: "loading..." khi đang fetch, con số khi resolve, "-" khi
+   chưa connect, poll 30s; popup wallet-profile hiện "Loading…" cho các trường null thay vì 0.
+6. **Sửa decimals PLP/DUSDC** (`plugins/sui-wallet-profile/plugin.tsx`): `KNOWN_DECIMALS` thiếu
+   DUSDC/PLP nên mặc định 9, làm số PLP lệch 1000 lần (0.01 thay vì 9.98). Thêm cả hai là 6.
+
+Chấp nhận: trader gỡ được vị thế live (qua pre-flight, ký một lần rồi refresh); mỗi dòng đọc rõ
+điều kiện thắng/thua; ví nhiều manager liệt kê đủ từng manager với tùy chọn gộp; claim/unwind nhắm
+đúng manager sở hữu vị thế; header hiện SUI/DUSDC; build + unit (148) + smoke (20) xanh. Unwind ký
+giao dịch thật (cùng hạng rủi ro mint/claim); pre-flight chỉ đọc.
+
+Kiểm chứng: `bun run build`; `bun run test:unit`;
+`bun scripts/predict-club-studio-smoke.mjs`.
+
+Tham chiếu kỹ thuật: `docs/deepbook/predict/SURFACE-STUDIO-POSITIONS.md` (+ `.vi.md`).
+
+Trạng thái: done.
+
 ## Tệp đụng tới (dự kiến)
 
 Mới: `predict-surface-studio.html`, `src/predict-surface-studio/main.tsx`,

@@ -487,6 +487,58 @@ Validation: `bun run build`; `bun run test:unit`; `bun run test:e2e`;
 
 Status: done.
 
+### S10 - Positions drawer follow-ups: unwind, win/lose notes, header balances, multi-manager
+Objective: round out the drawer after S9. Four gaps surfaced in use: (a) the header pill
+never showed the wallet's SUI / DUSDC; (b) a settled win could be claimed but a still-live
+position could not be exited early; (c) a trader could not read what price wins or loses a
+bet without inferring it from UP/DOWN + a strike; (d) history showed only a fraction of the
+trader's positions because a wallet can hold several PredictManagers and the app read only
+the latest. The probe (`scripts/predict-club-probe.mjs`) also revealed `predict::claim` does
+not exist - the settled payout is `predict::redeem_permissionless`.
+
+Work:
+1. **Claim is `redeem_permissionless`, not `claim`** (`infrastructure/suiPredictGateway.ts`):
+   factor a shared `composeRedeemTx(params, fn)` taking the 7-arg shape
+   (Predict, PredictManager, OracleSVI, MarketKey, U64 quantity, Clock, TxContext); `claim`
+   composes `redeem_permissionless` (settled payout), `unwind` composes `redeem` (live
+   re-sell). The missing U64 quantity param is threaded through every claim/redeem path.
+2. **Unwind a live position** (gateway + `StudioShell.tsx` + `PositionsDrawer.tsx`): add
+   `buildRedeemTx` / `simulateRedeem` mirroring the claim pair. A live row runs an unwind
+   pre-flight; ok shows an Unwind button (`data-pc-studio-positions-unwind`) that sells the
+   position back to the AMM at the current fair value (`predict::redeem`), not-ok shows the
+   contract's reason. `sanitizeRedeemError` sits beside `sanitizeClaimError`.
+3. **Plain win/lose notes** (`domain/studioPositions.ts`, unit-tested): `positionOutcomeRule`
+   (UP wins "settles above $X", DOWN wins "settles below $X") and `positionLean` (live lean:
+   winning / losing / atStrike within 0.05%). Rendered per row so the trader reads the bet
+   condition directly.
+4. **Header balances** (`predict-surface-studio.html` + `src/predict-surface-studio/main.tsx`):
+   the static SUI / DUSDC pill is driven by the orchestrator ("loading..." while a fetch is
+   in flight, the figure once resolved, "-" disconnected), polled on the same 30s cadence as
+   the in-shell balances. The wallet-profile popup shows "Loading..." for null manager fields
+   while loading, and `KNOWN_DECIMALS` gained DUSDC: 6 / PLP: 6 (fixing a 1000x PLP display).
+5. **Multi-manager history** (`infrastructure/deepbookPredictPricingService.ts` + wiring):
+   `ManagerPosition` now carries `managerId`; add `fetchAllManagerIds` and
+   `fetchAllManagersBinaryPositions` (read every manager concurrently, each position tagged
+   with its owner). The drawer **lists managers separately by default** (one labelled group
+   each, newest tagged) and offers a `Combine all` / `List separately` toggle
+   (`data-pc-studio-positions-combine`) - the drawer never silently merges; combining is the
+   trader's choice. Claim / unwind target `position.managerId` (the owning manager), not
+   always the latest, so a position in an older manager redeems correctly. `positionKey`
+   gained `managerId` so identical bets across two managers do not collide.
+
+Acceptance: the header shows SUI / DUSDC with a loading state; a live position can be unwound
+(contract-gated) and a settled winner claimed, each via a read-only pre-flight then one
+signed transaction; each row reads its win/lose condition in plain language and a live lean;
+the drawer lists all of the wallet's managers and lets the trader combine them, with claim /
+unwind hitting the right manager; build + unit + smoke green.
+
+Validation: `bun run build`; `bun run test:unit`;
+`bun scripts/predict-club-studio-smoke.mjs`. Live claim/unwind sign-step verifiable only with
+a connected wallet holding a settled winner / a live position. Reference:
+`docs/deepbook/predict/SURFACE-STUDIO-POSITIONS.md`.
+
+Status: done.
+
 ## Files Touched (indicative)
 
 New: `predict-surface-studio.html`, `src/predict-surface-studio/main.tsx`,

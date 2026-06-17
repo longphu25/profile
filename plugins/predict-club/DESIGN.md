@@ -279,6 +279,23 @@ trade ticket on a heatmap cell) is reached from that analysis, never the reverse
   only the stake, strike, side, expiry, and the claim verdict are shown. The drawer is
   an ARIA dialog (traps Tab, document-level Escape, click-outside backdrop, the same
   pattern as the trade ticket); claiming signs one real transaction and refreshes.
+- **A live position can be unwound, a settled one claimed, both contract-gated.** A
+  still-live row offers an Unwind button that sells the position back to the AMM at the
+  current fair value before expiry (`predict::redeem`), the mirror of the settled-payout
+  claim (`predict::redeem_permissionless`). Each is gated by its own read-only
+  devInspect pre-flight, so a doomed action never reaches the wallet, and each signs a
+  single real transaction. Every row also states its win/lose condition in plain
+  language (UP wins "settles above $X", DOWN wins "settles below $X") plus, while live,
+  which way the current forward leans. This is the bet condition and a live lean, never
+  a prediction: the contract settles.
+- **Every PredictManager is surfaced, the trader chooses whether to combine.** A wallet
+  can hold several PredictManagers (each `create_manager` mints a fresh one) and
+  positions scatter across them, so the drawer reads them all and, by default, lists
+  each manager as its own labelled group (newest tagged) rather than silently merging.
+  A `Combine all` / `List separately` toggle folds them into one Live/Settled view only
+  when the trader asks. Each position carries its owning manager, so a claim or unwind
+  targets the right manager rather than always the latest, and the header pill shows the
+  wallet's live SUI / DUSDC with a loading state.
 
 ## Motion
 
