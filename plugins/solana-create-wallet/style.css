@@ -1,0 +1,246 @@
+/* Solana Create Wallet Plugin — scoped styles */
+
+.sol-cw {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #e2e8f0;
+  padding: 16px;
+}
+
+.sol-cw__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.sol-cw__desc {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 0 16px;
+}
+
+.sol-cw__warning {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #fbbf24;
+  margin-bottom: 16px;
+}
+
+.sol-cw__actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.sol-cw__btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #2a2a2e;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sol-cw__btn:hover {
+  border-color: #9945ff;
+  background: rgba(153, 69, 255, 0.08);
+}
+
+.sol-cw__btn--primary {
+  background: linear-gradient(135deg, #9945ff 0%, #14f195 100%);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+}
+
+.sol-cw__btn--primary:hover {
+  opacity: 0.9;
+}
+
+.sol-cw__btn--danger {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.sol-cw__btn--danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.sol-cw__card {
+  background: rgba(30, 30, 34, 0.8);
+  border: 1px solid #2a2a2e;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.sol-cw__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.sol-cw__card-label {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sol-cw__card-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  background: rgba(153, 69, 255, 0.15);
+  color: #9945ff;
+}
+
+.sol-cw__mono {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: #e2e8f0;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.sol-cw__mnemonic {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: #14f195;
+  word-break: break-all;
+  line-height: 1.6;
+  background: rgba(20, 241, 149, 0.05);
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(20, 241, 149, 0.2);
+}
+
+.sol-cw__field {
+  margin-bottom: 8px;
+}
+
+.sol-cw__field-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.sol-cw__copy-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.sol-cw__copy-btn:hover {
+  color: #14f195;
+}
+
+.sol-cw__divider {
+  border: none;
+  border-top: 1px solid #1e1e22;
+  margin: 16px 0;
+}
+
+.sol-cw__stored-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sol-cw__stored-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid #2a2a2e;
+  border-radius: 8px;
+  background: #111113;
+}
+
+.sol-cw__stored-addr {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: #e2e8f0;
+}
+
+.sol-cw__stored-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.sol-cw__small-btn {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #2a2a2e;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sol-cw__small-btn:hover {
+  border-color: #9945ff;
+  color: #9945ff;
+}
+
+.sol-cw__small-btn--del:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.sol-cw__import-area {
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #2a2a2e;
+  background: #1a1a1e;
+  color: #e2e8f0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.sol-cw__import-area:focus {
+  border-color: #9945ff;
+}
+
+.sol-cw__error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #fca5a5;
+  margin-top: 8px;
+}
+
+.sol-cw__success {
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #34d399;
+  margin-top: 8px;
+}
+
+.sol-cw__section-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}

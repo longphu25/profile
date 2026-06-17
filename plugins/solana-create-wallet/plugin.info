@@ -1,0 +1,11 @@
+{
+  "chain": "solana",
+  "group": "core",
+  "name": "SolanaCreateWallet",
+  "label": "Create Wallet",
+  "version": "1.0.0",
+  "description": "Generate Ed25519 keypairs for Solana. Mnemonic or random. Stored in localStorage for devnet/testnet only. Export/import support.",
+  "network": "devnet",
+  "dependencies": ["@noble/curves", "@noble/hashes", "@scure/bip39"],
+  "pages": ["solana.html"]
+}
