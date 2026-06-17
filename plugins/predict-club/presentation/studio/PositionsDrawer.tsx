@@ -11,6 +11,8 @@ import {
   positionOutcomeRule,
   positionSideLabel,
   positionStrikeUsd,
+  settledVerdict,
+  summarizeManagerPnl,
 } from '../../domain/studioPositions'
 
 /**
@@ -49,6 +51,17 @@ interface PreflightState {
 
 function formatUsd(value: number): string {
   return value >= 1000 ? `$${Math.round(value).toLocaleString('en-US')}` : `$${value}`
+}
+
+// Realized PnL is signed money: a leading +/- makes a profit or loss legible at a
+// glance, and the magnitude rounds the same way as formatUsd. Near-zero collapses to a
+// bare $0 (no misleading sign) so a flat book does not read as a tiny win or loss.
+function formatSignedUsd(value: number): string {
+  const rounded = Math.abs(value) >= 1000 ? Math.round(value) : value
+  if (rounded === 0) return '$0'
+  const sign = rounded > 0 ? '+' : '-'
+  const mag = Math.abs(rounded)
+  return mag >= 1000 ? `${sign}$${mag.toLocaleString('en-US')}` : `${sign}$${mag}`
 }
 
 // A coarse countdown to expiry for a live position. Positions carry expiry in ms,
@@ -115,6 +128,12 @@ export function PositionsDrawer({
 
   const live = positions.filter((p) => classifyPosition(p, nowMs) === 'live')
   const settled = positions.filter((p) => classifyPosition(p, nowMs) === 'expired')
+
+  // Realized PnL + settled sample size across all managers: the money scoreboard the
+  // drawer leads with, since a win/loss tally misreads a +EV book that wins rarely but
+  // profitably. Null PnL means the indexer priced no group, so the row hides rather
+  // than fake a $0.
+  const pnl = summarizeManagerPnl(groups, nowMs)
 
   // The wallet's managers come straight from the grouped read (newest first), so an
   // empty manager still appears - the trader sees every manager exists, not only the
@@ -393,17 +412,50 @@ export function PositionsDrawer({
             />
           ) : (
             <>
-              {/* Roll-up: live count plus the settled breakdown by contract verdict.
-                  Always across ALL managers, so the at-a-glance totals do not change
-                  when the trader switches between the combined and per-manager views. */}
-              <div className="flex flex-wrap gap-x-md gap-y-1 rounded-sm bg-surface-container-low px-sm py-2 font-data text-[11px] tabular-nums">
-                <SummaryStat label="Live" value={live.length} tone="muted" />
-                <SummaryStat label="Win" value={summary.claimable} tone="win" />
-                <SummaryStat label="Claimed" value={summary.claimed} tone="muted" />
-                <SummaryStat label="No payout" value={summary.noPayout} tone="loss" />
-                {summary.checking > 0 && (
-                  <SummaryStat label="Checking" value={summary.checking} tone="muted" />
+              {/* Roll-up: realized PnL + settled sample size lead (the money scoreboard),
+                  then the live count and the settled breakdown by contract verdict. PnL
+                  leads because counting winning rounds misreads a +EV book; money won or
+                  lost over a sample is the honest measure. Always across ALL managers, so
+                  the totals do not shift between the combined and per-manager views. */}
+              <div className="flex flex-col gap-1 rounded-sm bg-surface-container-low px-sm py-2">
+                {pnl.realizedPnl != null && (
+                  <div className="flex flex-wrap items-baseline gap-x-md gap-y-0.5 font-data text-[11px] tabular-nums">
+                    <span className="flex items-baseline gap-1">
+                      <span className="uppercase tracking-wide text-on-surface-variant">
+                        Realized PnL
+                      </span>
+                      <span
+                        className={
+                          pnl.realizedPnl > 0
+                            ? 'text-primary-fixed-dim'
+                            : pnl.realizedPnl < 0
+                              ? 'text-error'
+                              : 'text-on-surface'
+                        }
+                      >
+                        {formatSignedUsd(pnl.realizedPnl)}
+                      </span>
+                    </span>
+                    <SummaryStat label="Settled" value={pnl.settledCount} tone="muted" />
+                    {pnl.partial && (
+                      <span className="flex items-center gap-0.5 text-tertiary-fixed-dim">
+                        <span className="material-symbols-outlined text-[12px]" aria-hidden="true">
+                          warning
+                        </span>
+                        history incomplete
+                      </span>
+                    )}
+                  </div>
                 )}
+                <div className="flex flex-wrap gap-x-md gap-y-1 font-data text-[11px] tabular-nums">
+                  <SummaryStat label="Live" value={live.length} tone="muted" />
+                  <SummaryStat label="Win" value={summary.claimable} tone="win" />
+                  <SummaryStat label="Claimed" value={summary.claimed} tone="muted" />
+                  <SummaryStat label="No payout" value={summary.noPayout} tone="loss" />
+                  {summary.checking > 0 && (
+                    <SummaryStat label="Checking" value={summary.checking} tone="muted" />
+                  )}
+                </div>
               </div>
 
               {/* Manager controls, only when the wallet holds more than one. The drawer
@@ -556,6 +608,67 @@ function SummaryStat({
   )
 }
 
+// The exact settled-position verdict, read from the indexer lifecycle (not a devInspect
+// abort string). Won shows the payout, lost shows the realized loss, claimed marks a
+// prior redemption, awaiting marks a position whose oracle has not settled yet. The
+// figure is omitted when the indexer did not price it, rather than fabricated.
+function SettledVerdict({
+  verdict,
+}: {
+  verdict: {
+    kind: 'won' | 'lost' | 'claimed' | 'awaiting' | 'unknown'
+    realizedPnl: number | null
+    payout: number | null
+  }
+}) {
+  const { kind, realizedPnl, payout } = verdict
+  const config = {
+    won: {
+      icon: 'trophy',
+      color: 'text-primary-fixed-dim',
+      label: 'Won',
+      detail: payout != null && payout > 0 ? `payout ${formatUsd(payout)}` : 'claimable',
+    },
+    lost: {
+      icon: 'cancel',
+      color: 'text-error',
+      label: 'Lost',
+      detail: realizedPnl != null ? formatSignedUsd(realizedPnl) : 'no payout',
+    },
+    claimed: {
+      icon: 'check_circle',
+      color: 'text-on-surface-variant',
+      label: 'Claimed',
+      detail:
+        realizedPnl != null
+          ? formatSignedUsd(realizedPnl)
+          : payout != null && payout > 0
+            ? `payout ${formatUsd(payout)}`
+            : 'redeemed',
+    },
+    awaiting: {
+      icon: 'hourglass_empty',
+      color: 'text-tertiary-fixed-dim',
+      label: 'Awaiting settlement',
+      detail: 'oracle has not settled this round yet',
+    },
+    unknown: { icon: '', color: '', label: '', detail: '' },
+  }[kind]
+
+  return (
+    <div
+      className={`flex items-center gap-1 border-t border-outline-variant pt-1.5 font-data text-[11px] tabular-nums ${config.color}`}
+      role="status"
+    >
+      <span className="material-symbols-outlined text-[13px]" aria-hidden="true">
+        {config.icon}
+      </span>
+      <span className="uppercase tracking-wide">{config.label}</span>
+      {config.detail && <span className="text-on-surface-variant">· {config.detail}</span>}
+    </div>
+  )
+}
+
 function PositionRow({
   position,
   nowMs,
@@ -587,6 +700,10 @@ function PositionRow({
   const isLive = classifyPosition(position, nowMs) === 'live'
   const rule = positionOutcomeRule(position)
   const lean = positionLean(position, forward)
+  // For an expired row, the indexer's lifecycle data gives the exact verdict (won and by
+  // how much, lost and by how much, already claimed, or still awaiting settlement),
+  // instead of the vague abort string the devInspect pre-flight alone can produce.
+  const verdict = !isLive ? settledVerdict(position) : null
 
   return (
     <div className="flex flex-col gap-sm rounded-sm bg-surface-container-low px-sm py-2">
@@ -671,6 +788,10 @@ function PositionRow({
           )}
         </div>
       )}
+
+      {/* Settled verdict from the indexer lifecycle: the exact outcome and figure, so the
+          row says won/claimed/lost/awaiting and by how much instead of a vague abort. */}
+      {verdict && verdict.kind !== 'unknown' && <SettledVerdict verdict={verdict} />}
 
       {/* Claim affordance, settled rows only. */}
       {!isLive && (

@@ -538,7 +538,7 @@ export function sanitizeClaimError(error: unknown): string {
     return 'You rejected the transaction in your wallet.'
   }
   if (raw.includes('MoveAbort') || raw.includes('ExecutionError') || raw.length > 200) {
-    return 'This position lost or has already been claimed.'
+    return 'No payout: this position settled with nothing to claim (lost or already redeemed).'
   }
   return raw
 }

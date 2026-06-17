@@ -1,4 +1,4 @@
-import type { ManagerPosition } from '../infrastructure/deepbookPredictPricingService'
+import type { ManagerGroup, ManagerPosition } from '../infrastructure/deepbookPredictPricingService'
 
 /**
  * Pure view helpers for the Surface Studio positions/history drawer (plan 23, S9).
@@ -115,4 +115,82 @@ export function positionLean(
   const forwardAbove = forward > strike
   if (side === 'UP') return forwardAbove ? 'winning' : 'losing'
   return forwardAbove ? 'losing' : 'winning'
+}
+
+/**
+ * The precise verdict for an expired position, read from the indexer's lifecycle data
+ * rather than guessed from a devInspect abort. A claim abort only exposes a function
+ * name and a code, so on its own it collapses every settled position into a vague
+ * "lost or already claimed"; the indexer instead carries the exact status plus the
+ * realized PnL and payout, so the drawer can say which it is and by how much.
+ *
+ * `kind` is the machine-readable verdict; `claimable` is true only for a settled-and-won
+ * position that still holds a payout (the devInspect pre-flight is the final gate before
+ * the button signs, this just decides whether to even offer it). `realizedPnl` and
+ * `payout` are the figures to show; they are null when the indexer did not price this
+ * position (an on-chain fallback read), where `kind` is 'unknown' and the drawer falls
+ * back to the contract pre-flight verdict as before.
+ */
+export type SettledVerdictKind = 'won' | 'lost' | 'claimed' | 'awaiting' | 'unknown'
+
+export function settledVerdict(position: ManagerPosition): {
+  kind: SettledVerdictKind
+  claimable: boolean
+  realizedPnl: number | null
+  payout: number | null
+} {
+  const realizedPnl = position.realizedPnl ?? null
+  const payout = position.totalPayout ?? null
+  const won = (payout != null && payout > 0) || (realizedPnl != null && realizedPnl > 0)
+  switch (position.status) {
+    case 'awaiting_settlement':
+      return { kind: 'awaiting', claimable: false, realizedPnl, payout }
+    case 'settled':
+      // Settled is the claimable state, but a settled-and-lost leg can also land here
+      // with a zero payout; the payout/PnL figures separate a real win from a loss.
+      return won
+        ? { kind: 'won', claimable: true, realizedPnl, payout }
+        : { kind: 'lost', claimable: false, realizedPnl, payout }
+    case 'redeemed':
+      // Already claimed or sold back: a positive realized PnL means it was a winning
+      // claim, a non-positive one means the leg closed at a loss.
+      return won
+        ? { kind: 'claimed', claimable: false, realizedPnl, payout }
+        : { kind: 'lost', claimable: false, realizedPnl, payout }
+    default:
+      // 'open' should not reach here (the drawer only asks about expired rows), and an
+      // on-chain fallback read carries no lifecycle, so defer to the contract pre-flight.
+      return { kind: 'unknown', claimable: false, realizedPnl, payout }
+  }
+}
+
+/**
+ * Roll up realized PnL and settled sample size across a wallet's PredictManagers, so
+ * the drawer can lead with money won/lost rather than a win/loss tally. A +EV strategy
+ * can lose most rounds yet profit overall (it bets cheap, long-odds sides), so counting
+ * winning rounds is the wrong scoreboard; realized PnL over a sample is the right one.
+ *
+ * `realizedPnl` sums only the groups the indexer actually priced; it is null when NO
+ * group carries a figure, so the drawer hides the row instead of showing a fake $0.
+ * `settledCount` is the number of expired positions (the sample behind that PnL), and
+ * `partial` bubbles up when any group fell back to an open-only on-chain read, so the
+ * trader knows the settled history (and thus the PnL) may be incomplete.
+ */
+export function summarizeManagerPnl(
+  groups: ManagerGroup[],
+  nowMs: number,
+): { realizedPnl: number | null; settledCount: number; partial: boolean } {
+  let realizedPnl: number | null = null
+  let settledCount = 0
+  let partial = false
+  for (const group of groups) {
+    if (group.realizedPnl != null && Number.isFinite(group.realizedPnl)) {
+      realizedPnl = (realizedPnl ?? 0) + group.realizedPnl
+    }
+    if (group.partial) partial = true
+    for (const position of group.positions) {
+      if (classifyPosition(position, nowMs) === 'expired') settledCount += 1
+    }
+  }
+  return { realizedPnl, settledCount, partial }
 }

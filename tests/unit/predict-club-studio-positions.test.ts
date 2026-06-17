@@ -7,9 +7,14 @@ import {
   positionOutcomeRule,
   positionSideLabel,
   positionStrikeUsd,
+  settledVerdict,
+  summarizeManagerPnl,
 } from '../../plugins/predict-club/domain/studioPositions'
 import { sanitizeClaimError } from '../../plugins/predict-club/infrastructure/deepbookPredictPricingService'
-import type { ManagerPosition } from '../../plugins/predict-club/infrastructure/deepbookPredictPricingService'
+import type {
+  ManagerGroup,
+  ManagerPosition,
+} from '../../plugins/predict-club/infrastructure/deepbookPredictPricingService'
 
 const NOW = 1_700_000_000_000
 const MINUTE_MS = 60_000
@@ -184,7 +189,98 @@ describe('sanitizeClaimError', () => {
 
   test('an opaque MoveAbort dump degrades to a clean line', () => {
     expect(sanitizeClaimError(new Error('MoveAbort(SomeModule, 9)'))).toBe(
-      'This position lost or has already been claimed.',
+      'No payout: this position settled with nothing to claim (lost or already redeemed).',
     )
+  })
+})
+
+function managerGroup(overrides: Partial<ManagerGroup> = {}): ManagerGroup {
+  return {
+    managerId: '0xmanager',
+    index: 0,
+    positions: [],
+    ...overrides,
+  }
+}
+
+describe('summarizeManagerPnl', () => {
+  test('sums realized PnL across the groups the indexer priced', () => {
+    const groups = [
+      managerGroup({ managerId: '0xa', realizedPnl: 120 }),
+      managerGroup({ managerId: '0xb', index: 1, realizedPnl: -30 }),
+    ]
+    expect(summarizeManagerPnl(groups, NOW).realizedPnl).toBeCloseTo(90, 12)
+  })
+
+  test('realizedPnl is null (not a fake $0) when no group carries a figure', () => {
+    const groups = [managerGroup({ realizedPnl: undefined })]
+    expect(summarizeManagerPnl(groups, NOW).realizedPnl).toBeNull()
+  })
+
+  test('counts only expired positions as the settled sample', () => {
+    const groups = [
+      managerGroup({
+        positions: [
+          binaryPosition({ expiry: NOW - MINUTE_MS }),
+          binaryPosition({ expiry: NOW - 2 * MINUTE_MS }),
+          binaryPosition({ expiry: NOW + MINUTE_MS }),
+        ],
+      }),
+    ]
+    expect(summarizeManagerPnl(groups, NOW).settledCount).toBe(2)
+  })
+
+  test('partial bubbles up when any group fell back to an open-only read', () => {
+    const groups = [
+      managerGroup({ managerId: '0xa' }),
+      managerGroup({ managerId: '0xb', index: 1, partial: true }),
+    ]
+    expect(summarizeManagerPnl(groups, NOW).partial).toBe(true)
+  })
+
+  test('an empty wallet has null PnL, no sample, and is not partial', () => {
+    const summary = summarizeManagerPnl([], NOW)
+    expect(summary.realizedPnl).toBeNull()
+    expect(summary.settledCount).toBe(0)
+    expect(summary.partial).toBe(false)
+  })
+})
+
+describe('settledVerdict', () => {
+  test('a settled position with a payout reads as won and is claimable', () => {
+    const v = settledVerdict(binaryPosition({ status: 'settled', totalPayout: 18, realizedPnl: 8 }))
+    expect(v.kind).toBe('won')
+    expect(v.claimable).toBe(true)
+    expect(v.payout).toBe(18)
+  })
+
+  test('a settled position with no payout reads as lost, not claimable', () => {
+    const v = settledVerdict(binaryPosition({ status: 'settled', totalPayout: 0, realizedPnl: -10 }))
+    expect(v.kind).toBe('lost')
+    expect(v.claimable).toBe(false)
+    expect(v.realizedPnl).toBe(-10)
+  })
+
+  test('a redeemed position with positive PnL reads as already claimed', () => {
+    const v = settledVerdict(binaryPosition({ status: 'redeemed', realizedPnl: 12 }))
+    expect(v.kind).toBe('claimed')
+    expect(v.claimable).toBe(false)
+  })
+
+  test('a redeemed position closed at a loss reads as lost', () => {
+    const v = settledVerdict(binaryPosition({ status: 'redeemed', realizedPnl: -4, totalPayout: 0 }))
+    expect(v.kind).toBe('lost')
+  })
+
+  test('an awaiting-settlement position is not yet a win or loss', () => {
+    const v = settledVerdict(binaryPosition({ status: 'awaiting_settlement' }))
+    expect(v.kind).toBe('awaiting')
+    expect(v.claimable).toBe(false)
+  })
+
+  test('an on-chain fallback read (no lifecycle) is unknown, deferring to pre-flight', () => {
+    const v = settledVerdict(binaryPosition({ status: 'unknown' }))
+    expect(v.kind).toBe('unknown')
+    expect(v.claimable).toBe(false)
   })
 })
