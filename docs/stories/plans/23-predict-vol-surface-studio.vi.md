@@ -517,6 +517,54 @@ Tham chiếu kỹ thuật: `docs/deepbook/predict/SURFACE-STUDIO-POSITIONS.md` (
 
 Trạng thái: done.
 
+### S11 - Trừ vig khỏi edge mispricing + đo thành-bại bằng realized PnL
+
+Mục tiêu: hai nguyên nhân gốc khiến trader thấy "tín hiệu toàn fail": (A) edge chưa trừ
+overround (vig), nên một edge nhỏ dương có thể toàn bộ là phí nhà cái; (B) thành-bại đo bằng
+số ván thắng thay vì realized PnL, nên chiến lược +EV đánh bên xác suất thấp (trả cao) luôn
+trông như "thua hoài". Sửa cả hai bằng thông tin bổ sung (không gate tín hiệu hiện có).
+
+Công việc:
+1. **Quote cả hai bên** (`application/mispricing.ts`): `getMispriceCell` giờ fire
+   `Promise.all([quoteUP, quoteDOWN])` mỗi strike. `buildMispriceCell` nhận thêm
+   `contractProbabilityDown`, tính `overround = pUp + pDown - 1` và
+   `netEdge = devigUp - fairProbability` (với `devigUp = pUp / (pUp + pDown)`).
+   Edge thô (`edge = contractProbability - fairProbability`) giữ nguyên nên
+   `edgeTier`/`edgeSide` và caret heatmap không đổi. Null khi thiếu quote DOWN.
+2. **Domain types** (`domain/volSurface.ts`): `MispriceCell` thêm ba field nullable:
+   `contractProbabilityDown`, `overround`, `netEdge`. Field cũ giữ nguyên ngữ nghĩa.
+3. **EdgePanel ladder** (`presentation/studio/EdgePanel.tsx`): thêm dòng overround header
+   ("vig X.X%") và cột Net hiện `netEdge` bên cạnh cột Edge hiện có. Cột edge thô không đổi.
+   Grid thêm một cột. "-" khi null.
+4. **PnL roll-up** (`domain/studioPositions.ts`): `summarizeManagerPnl(groups)` trả
+   `{ realizedPnl, settledCount, partial }`. Dùng `group.realizedPnl` từ indexer
+   (đã descale). Null khi không group nào có field (ẩn PnL, không hiện $0).
+5. **PositionsDrawer** (`presentation/studio/PositionsDrawer.tsx`): PnL + Settled count
+   render phía trên các stat đếm ván hiện có. Xanh/đỏ theo dấu. Ẩn khi null. Stat đếm ván
+   vẫn giữ (context hữu ích).
+6. **Tests** (`tests/unit/`): `summarizeManagerPnl` (tổng, null, partial). `buildMispriceCell`
+   overround/netEdge đúng, null fallback, edge thô không đổi.
+7. **Probe** (`scripts/predict-club-probe.mjs`): in quote DOWN + overround + netEdge cho một
+   strike ATM, xác nhận overround > 0 và netEdge < edge thô trên testnet.
+8. **Docs** (`docs/deepbook/predict/MISPRICING-EDGE.md` + `.vi.md`): định nghĩa
+   overround/devig/netEdge, cập nhật bảng field MispriceCell.
+
+Ràng buộc:
+- "Chỉ cảnh báo": caret/chip vẫn dùng edge thô. Net-edge là thông tin thêm.
+- Overround/netEdge chỉ tính khi CẢ HAI quote có; không suy từ một bên.
+- PnL hiển thị số indexer đã descale, không có bigint money-write-path mới.
+- `import type` khi băng qua biên domain/infrastructure.
+- Không em-dash trong mọi chuỗi hiển thị.
+- Concurrency: MAX_CONCURRENCY=3, tối đa 6 inflight devInspect (2/strike). Band ATM hẹp.
+
+Kiểm chứng: `bun run build`; `bun run test:unit` (case mới + cũ pass);
+`bun scripts/predict-club-studio-smoke.mjs` (20/20);
+`bun scripts/predict-club-probe.mjs` (overround > 0, netEdge < edge thô trên testnet).
+
+Tham chiếu: `docs/deepbook/predict/MISPRICING-EDGE.md`.
+
+Trạng thái: planned.
+
 ## Tệp đụng tới (dự kiến)
 
 Mới: `predict-surface-studio.html`, `src/predict-surface-studio/main.tsx`,

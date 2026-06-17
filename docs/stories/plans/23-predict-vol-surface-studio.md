@@ -539,6 +539,56 @@ a connected wallet holding a settled winner / a live position. Reference:
 
 Status: done.
 
+### S11 - De-vig the mispricing edge + measure success by realized PnL
+
+Objective: two root causes make traders feel "signals always fail": (A) edge does not
+subtract the overround (vig), so a small positive edge may be entirely house fee;
+(B) success is measured by win-count instead of realized PnL, so a +EV strategy that wins
+rarely (low-prob, high-payout) looks like "always losing". Fix both with information-only
+additions (no gating of existing signals).
+
+Work:
+1. **Quote both sides** (`application/mispricing.ts`): `getMispriceCell` now fires
+   `Promise.all([quoteUP, quoteDOWN])` per strike. `buildMispriceCell` gains
+   `contractProbabilityDown`, computes `overround = pUp + pDown - 1` and
+   `netEdge = devigUp - fairProbability` (where `devigUp = pUp / (pUp + pDown)`).
+   Edge-raw (`edge = contractProbability - fairProbability`) stays unchanged so
+   `edgeTier`/`edgeSide` and caret heatmap are unaffected. Null when DOWN quote missing.
+2. **Domain types** (`domain/volSurface.ts`): `MispriceCell` gains three nullable fields:
+   `contractProbabilityDown`, `overround`, `netEdge`. Existing fields keep their semantics.
+3. **EdgePanel ladder** (`presentation/studio/EdgePanel.tsx`): add an overround header line
+   ("vig X.X%") and a Net column showing `netEdge` beside the existing Edge column. Edge-raw
+   column unchanged. Grid gains one column. "-" when null.
+4. **PnL roll-up** (`domain/studioPositions.ts`): `summarizeManagerPnl(groups)` returns
+   `{ realizedPnl, settledCount, partial }`. Uses `group.realizedPnl` from indexer
+   (already descaled). Null when no group has the field (hides PnL, does not show $0).
+5. **PositionsDrawer** (`presentation/studio/PositionsDrawer.tsx`): PnL + Settled count
+   rendered above the existing win-count stats. Green/red coloring. Hidden when null. Win-count
+   stats remain (still useful context).
+6. **Tests** (`tests/unit/`): `summarizeManagerPnl` cases (sum, null, partial). `buildMispriceCell`
+   overround/netEdge correctness, null fallback, edge-raw unchanged.
+7. **Probe** (`scripts/predict-club-probe.mjs`): print DOWN quote + overround + netEdge for one
+   ATM strike, confirming overround > 0 and netEdge < raw edge on testnet.
+8. **Docs** (`docs/deepbook/predict/MISPRICING-EDGE.md` + `.vi.md`): overround/devig/netEdge
+   definitions, MispriceCell field table update.
+
+Constraints:
+- "Warn only" approach: caret/chip use edge-raw as before. Net-edge is informational.
+- Overround/netEdge only computed when BOTH quotes present; never inferred from one side.
+- PnL display uses already-descaled indexer values, no new bigint money-write-path.
+- `import type` across domain/infrastructure boundary.
+- No em-dash in any visible string.
+- Concurrency note: MAX_CONCURRENCY=3 means up to 6 inflight devInspect (2 per strike).
+  ATM band is narrow, so bounded.
+
+Validation: `bun run build`; `bun run test:unit` (new + old pass);
+`bun scripts/predict-club-studio-smoke.mjs` (20/20);
+`bun scripts/predict-club-probe.mjs` (overround > 0, netEdge < raw edge on testnet).
+
+Reference: `docs/deepbook/predict/MISPRICING-EDGE.md`.
+
+Status: planned.
+
 ## Files Touched (indicative)
 
 New: `predict-surface-studio.html`, `src/predict-surface-studio/main.tsx`,
