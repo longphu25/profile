@@ -58,10 +58,61 @@ export function positionMoneyness(
 }
 
 /**
- * A stable identity for a position across refetches: oracle, expiry, side, strike.
- * Used as the React key and to key the per-position claim pre-flight state, so a
- * re-fetched list does not lose a row's resolved claim status or remount it.
+ * A stable identity for a position across refetches: manager, oracle, expiry, side,
+ * strike. Used as the React key and to key the per-position claim pre-flight state, so
+ * a re-fetched list does not lose a row's resolved claim status or remount it. The
+ * manager prefix keeps two identical bets held in different PredictManagers from
+ * colliding on one key when the drawer combines managers into a single list.
  */
 export function positionKey(position: ManagerPosition): string {
-  return `${position.oracleId}|${position.expiry}|${position.side ?? 'NONE'}|${position.strike ?? 0}`
+  return `${position.managerId ?? 'NONE'}|${position.oracleId}|${position.expiry}|${position.side ?? 'NONE'}|${position.strike ?? 0}`
+}
+
+/**
+ * The plain win/lose rule for a binary position, so a trader can read what the
+ * payout depends on without inferring it from UP/DOWN + a strike. A binary bet pays
+ * out when the settlement price lands on the chosen side of the strike at expiry:
+ * UP (ABOVE) wins above the strike, DOWN (BELOW) wins below it. The contract decides
+ * the actual payout at settlement (and a claim pre-flight confirms it); this is only
+ * the human-readable condition, never a guess at the outcome. Null for a range
+ * position or one missing its side/strike.
+ */
+export function positionOutcomeRule(
+  position: ManagerPosition,
+): { winsWhen: string; losesWhen: string } | null {
+  const side = positionSideLabel(position)
+  const strike = positionStrikeUsd(position)
+  if (side == null || strike == null) return null
+  const at = strike >= 1000 ? `$${Math.round(strike).toLocaleString('en-US')}` : `$${strike}`
+  return side === 'UP'
+    ? { winsWhen: `settles above ${at}`, losesWhen: `settles at or below ${at}` }
+    : { winsWhen: `settles below ${at}`, losesWhen: `settles at or above ${at}` }
+}
+
+/**
+ * Where the current forward sits relative to the win condition, as a coarse hint at
+ * how the bet is leaning right now: 'winning' when the live forward is already on the
+ * paying side of the strike, 'losing' when it is on the wrong side, 'atStrike' when
+ * effectively level. This is a live lean, NOT a prediction or the settled result -
+ * the contract decides at expiry. Null when the side, strike, or forward is missing.
+ */
+export function positionLean(
+  position: ManagerPosition,
+  forward: number | null,
+): 'winning' | 'losing' | 'atStrike' | null {
+  const side = positionSideLabel(position)
+  const strike = positionStrikeUsd(position)
+  if (
+    side == null ||
+    strike == null ||
+    forward == null ||
+    !Number.isFinite(forward) ||
+    forward <= 0
+  )
+    return null
+  // Within 0.05% of the strike reads as level rather than a misleading win/lose.
+  if (Math.abs(forward / strike - 1) < 0.0005) return 'atStrike'
+  const forwardAbove = forward > strike
+  if (side === 'UP') return forwardAbove ? 'winning' : 'losing'
+  return forwardAbove ? 'losing' : 'winning'
 }

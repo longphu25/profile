@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test'
 import {
   classifyPosition,
   positionKey,
+  positionLean,
   positionMoneyness,
+  positionOutcomeRule,
   positionSideLabel,
   positionStrikeUsd,
 } from '../../plugins/predict-club/domain/studioPositions'
@@ -16,6 +18,7 @@ const MINUTE_MS = 60_000
 function binaryPosition(overrides: Partial<ManagerPosition> = {}): ManagerPosition {
   return {
     id: '0xpos',
+    managerId: '0xmanager',
     kind: 'binary',
     oracleId: '0xoracle',
     expiry: NOW + 30 * MINUTE_MS,
@@ -98,6 +101,57 @@ describe('positionKey', () => {
     const a = positionKey(binaryPosition({ strike: 65_000 }))
     const b = positionKey(binaryPosition({ strike: 66_000 }))
     expect(a).not.toBe(b)
+  })
+
+  test('differs by manager so the same bet in two managers never collides', () => {
+    const a = positionKey(binaryPosition({ managerId: '0xmanagerA' }))
+    const b = positionKey(binaryPosition({ managerId: '0xmanagerB' }))
+    expect(a).not.toBe(b)
+  })
+})
+
+describe('positionOutcomeRule', () => {
+  test('UP wins above the strike, loses at or below', () => {
+    const rule = positionOutcomeRule(binaryPosition({ side: 'ABOVE', strike: 65_000 }))
+    expect(rule).toEqual({
+      winsWhen: 'settles above $65,000',
+      losesWhen: 'settles at or below $65,000',
+    })
+  })
+
+  test('DOWN wins below the strike, loses at or above', () => {
+    const rule = positionOutcomeRule(binaryPosition({ side: 'BELOW', strike: 65_000 }))
+    expect(rule).toEqual({
+      winsWhen: 'settles below $65,000',
+      losesWhen: 'settles at or above $65,000',
+    })
+  })
+
+  test('null when the side or strike is missing', () => {
+    expect(positionOutcomeRule(binaryPosition({ side: undefined }))).toBeNull()
+    expect(positionOutcomeRule(binaryPosition({ strike: undefined }))).toBeNull()
+  })
+})
+
+describe('positionLean', () => {
+  test('UP leans winning when the forward is above the strike', () => {
+    expect(positionLean(binaryPosition({ side: 'ABOVE', strike: 65_000 }), 66_000)).toBe('winning')
+  })
+
+  test('UP leans losing when the forward is below the strike', () => {
+    expect(positionLean(binaryPosition({ side: 'ABOVE', strike: 65_000 }), 64_000)).toBe('losing')
+  })
+
+  test('DOWN leans winning when the forward is below the strike', () => {
+    expect(positionLean(binaryPosition({ side: 'BELOW', strike: 65_000 }), 64_000)).toBe('winning')
+  })
+
+  test('reads as at the strike when the forward is effectively level', () => {
+    expect(positionLean(binaryPosition({ strike: 65_000 }), 65_010)).toBe('atStrike')
+  })
+
+  test('null when the forward is missing', () => {
+    expect(positionLean(binaryPosition(), null)).toBeNull()
   })
 })
 
