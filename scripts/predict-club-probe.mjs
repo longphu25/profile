@@ -24,6 +24,10 @@ const TARGETS = {
   rangeKeyNew: `${PACKAGE_ID}::range_key::new`,
   getTradeAmounts: `${PACKAGE_ID}::predict::get_trade_amounts`,
   getRangeTradeAmounts: `${PACKAGE_ID}::predict::get_range_trade_amounts`,
+  marketKeyUp: `${PACKAGE_ID}::market_key::up`,
+  marketKeyDown: `${PACKAGE_ID}::market_key::down`,
+  redeem: `${PACKAGE_ID}::predict::redeem`,
+  redeemPermissionless: `${PACKAGE_ID}::predict::redeem_permissionless`,
 }
 
 const args = parseArgs(process.argv.slice(2))
@@ -65,10 +69,22 @@ async function main() {
   const manager = managers[0] ?? null
   printManagers(managers)
 
+  // Grouped multi-manager read exactly as the Studio drawer sees it (summary ->
+  // events -> on-chain fallback), so the full lifecycle history across every manager
+  // is validated against the live wallet, not just the latest manager's open leg.
+  const groups = await fetchManagerGroupsProbe(managers)
+  printManagerGroups(groups, Date.now())
+
   let managerObject = null
   if (manager) {
     managerObject = await readManagerObject(manager.manager_id)
     printManagerObject(managerObject)
+    const positions = await fetchBinaryPositions(managerObject.positionsTableId).catch((error) => {
+      console.log(`\nBinary positions read failed: ${error instanceof Error ? error.message : String(error)}`)
+      return []
+    })
+    const checked = await checkClaims(positions, manager.manager_id, Date.now())
+    printPositions(checked)
   }
 
   printOracleState(oracleState)
@@ -259,6 +275,263 @@ async function readManagerQuoteBalance(balanceTableId) {
   const content = object.data?.content
   if (!content || content.dataType !== 'moveObject') return 0n
   return BigInt(content.fields.value ?? 0)
+}
+
+async function fetchAllDynamicFields(parentId) {
+  const all = []
+  let cursor = null
+  do {
+    const page = await client.getDynamicFields({ parentId, cursor })
+    all.push(...page.data)
+    cursor = page.hasNextPage ? page.nextCursor : null
+  } while (cursor)
+  return all
+}
+
+// Mirror of suiPredictGateway fetchBinaryPositions: read each position object in
+// the manager's positions table and keep the binary (UP/DOWN) leg with quantity > 0.
+// Keeps the raw strike so the claim PTB can reuse it byte-for-byte (no oracle lookup).
+async function fetchBinaryPositions(tableId) {
+  if (!tableId) return []
+  const fields = await fetchAllDynamicFields(tableId)
+  const objects = await Promise.all(
+    fields.map((field) =>
+      client.getObject({ id: field.objectId, options: { showContent: true } }),
+    ),
+  )
+  return objects
+    .map((object) => {
+      const content = object.data?.content
+      if (!content || content.dataType !== 'moveObject') return null
+      const f = content.fields
+      const quantity = BigInt(f.value ?? 0)
+      if (quantity <= 0n) return null
+      const name = f.name?.fields
+      const strikeRaw = Number(name?.strike ?? 0)
+      const isUp = name?.direction === 0
+      return {
+        id: object.data?.objectId ?? '',
+        oracleId: String(name?.oracle_id ?? ''),
+        expiry: Number(name?.expiry ?? 0),
+        isUp,
+        side: isUp ? 'ABOVE' : 'BELOW',
+        strikeRaw,
+        strikeUsd: strikeRaw / PRICE_SCALE,
+        quantity,
+      }
+    })
+    .filter(Boolean)
+}
+
+// --- Grouped multi-manager read (mirrors infrastructure/deepbookPredictPricingService
+// fetchManagerGroups) -------------------------------------------------------------
+// A wallet can own several PredictManagers and positions scatter across them, so the
+// drawer reads every manager. Positions come from the indexer's aggregated
+// `positions/summary`; when that 500s ("missing mark quote results" on a manager the
+// indexer cannot mark right now) it falls back to the raw `positions` event log (full
+// minted/redeemed history, no mark-quote math to fail on), and only then to the
+// on-chain read (open positions only). This probe prints the same chain so the
+// production read can be validated against a live wallet without the browser.
+
+async function fetchManagerBinaryFromSummary(managerId) {
+  const res = await fetch(`${PREDICT_SERVER}/managers/${managerId}/positions/summary`)
+  if (!res.ok) throw new Error(`positions/summary ${res.status}`)
+  const rows = await res.json()
+  if (!Array.isArray(rows)) return []
+  return rows.map((row) => ({
+    oracleId: String(row.oracle_id ?? ''),
+    expiry: Number(row.expiry ?? 0),
+    side: row.is_up ? 'ABOVE' : 'BELOW',
+    strikeUsd: Number(BigInt(row.strike ?? 0)) / PRICE_SCALE,
+    quantity: BigInt(row.open_quantity ?? 0),
+    status: row.status ?? 'open',
+  }))
+}
+
+async function fetchManagerBinaryFromEvents(managerId) {
+  const res = await fetch(`${PREDICT_SERVER}/managers/${managerId}/positions`)
+  if (!res.ok) throw new Error(`positions ${res.status}`)
+  const body = await res.json()
+  const minted = Array.isArray(body?.minted) ? body.minted : []
+  const redeemed = Array.isArray(body?.redeemed) ? body.redeemed : []
+  const keyOf = (e) => [e.oracle_id, e.expiry, e.strike, e.is_up].join('|')
+  const net = new Map()
+  for (const e of minted) {
+    const entry = net.get(keyOf(e))
+    const qty = BigInt(e.quantity ?? 0)
+    if (entry) entry.minted += qty
+    else net.set(keyOf(e), { event: e, minted: qty, redeemed: 0n })
+  }
+  for (const e of redeemed) {
+    const entry = net.get(keyOf(e))
+    if (entry) entry.redeemed += BigInt(e.quantity ?? 0)
+  }
+  return [...net.values()].map(({ event, minted: m, redeemed: r }) => {
+    const open = m > r ? m - r : 0n
+    return {
+      oracleId: String(event.oracle_id ?? ''),
+      expiry: Number(event.expiry ?? 0),
+      side: event.is_up ? 'ABOVE' : 'BELOW',
+      strikeUsd: Number(BigInt(event.strike ?? 0)) / PRICE_SCALE,
+      quantity: open,
+      status: open === 0n ? 'redeemed' : 'open',
+    }
+  })
+}
+
+async function fetchManagerGroupsProbe(managers) {
+  return Promise.all(
+    managers.map(async (manager, index) => {
+      const managerId = manager.manager_id
+      let positions = []
+      let source = 'summary'
+      try {
+        positions = await fetchManagerBinaryFromSummary(managerId)
+      } catch {
+        try {
+          positions = await fetchManagerBinaryFromEvents(managerId)
+          source = 'events'
+        } catch {
+          source = 'failed'
+        }
+      }
+      return { managerId, index, positions, source }
+    }),
+  )
+}
+
+function printManagerGroups(groups, nowMs) {
+  console.log('\nManager groups (drawer read: summary -> events -> on-chain)')
+  console.log('----------------------------------------------------------')
+  if (groups.length === 0) {
+    console.log('No PredictManager found for this wallet.')
+    return
+  }
+  for (const group of groups) {
+    const tag = group.index === 0 ? ' [newest]' : ''
+    const live = group.positions.filter((p) => p.expiry > nowMs).length
+    const settled = group.positions.length - live
+    console.log(
+      `\n  Manager ${group.index + 1}${tag} ${group.managerId.slice(0, 10)}... ` +
+        `via=${group.source} total=${group.positions.length} live=${live} settled=${settled}`,
+    )
+    for (const p of group.positions) {
+      const when = new Date(p.expiry).toISOString()
+      const state = p.expiry > nowMs ? 'LIVE' : p.status
+      console.log(
+        `    ${p.side} strike=${p.strikeUsd} open=${formatDusdc(p.quantity)} ${state} expiry=${when}`,
+      )
+    }
+  }
+  const totalPositions = groups.reduce((sum, g) => sum + g.positions.length, 0)
+  console.log(`\nManagers: ${groups.length}, positions across all: ${totalPositions}`)
+}
+
+// Byte-for-byte mirror of the wallet-signed payout path, using the position's raw
+// strike directly so no oracle tick/min lookup is needed. The on-chain claim-after-
+// settlement function is predict::redeem_permissionless (NOT claim - that name does
+// not exist; plain redeem is the sell-back-while-live path and aborts on a settled
+// oracle via assert_quoteable_oracle). It takes the position quantity as a U64
+// between the MarketKey and the Clock.
+function composeRedeemTx({ walletAddress, managerId, oracleId, expiry, strikeRaw, isUp, quantity }) {
+  const tx = new Transaction()
+  tx.setSender(walletAddress)
+  const [marketKey] = tx.moveCall({
+    target: isUp ? TARGETS.marketKeyUp : TARGETS.marketKeyDown,
+    arguments: [tx.pure.id(oracleId), tx.pure.u64(expiry), tx.pure.u64(strikeRaw)],
+  })
+  tx.moveCall({
+    target: TARGETS.redeemPermissionless,
+    typeArguments: [DUSDC_TYPE],
+    arguments: [
+      tx.object(PREDICT_ID),
+      tx.object(managerId),
+      tx.object(oracleId),
+      marketKey,
+      tx.pure.u64(quantity),
+      tx.object(CLOCK_ID),
+    ],
+  })
+  return tx
+}
+
+// Read-only pre-flight: build the redeem PTB and devInspect predict::redeem. The
+// contract is the source of truth on claimability (settled + won + not yet claimed);
+// 0 gas, no wallet prompt.
+async function simulateClaim(position, managerId) {
+  let tx
+  try {
+    tx = composeRedeemTx({
+      walletAddress: wallet,
+      managerId,
+      oracleId: position.oracleId,
+      expiry: position.expiry,
+      strikeRaw: position.strikeRaw,
+      isUp: position.isUp,
+      quantity: position.quantity,
+    })
+  } catch (error) {
+    return { ok: false, reason: sanitizeClaimError(error) }
+  }
+  try {
+    const inspected = await client.devInspectTransactionBlock({
+      sender: wallet,
+      transactionBlock: tx,
+    })
+    if (inspected.error) return { ok: false, reason: sanitizeClaimError(inspected.error) }
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, reason: sanitizeClaimError(error) }
+  }
+}
+
+function sanitizeClaimError(error) {
+  const raw = error instanceof Error ? error.message : String(error ?? '')
+  if (!raw || raw === 'undefined' || raw === 'null') return 'Nothing to claim on this position.'
+  if (raw.includes('not_settled') || raw.includes('not_expired') || raw.includes('assert_settled')) {
+    return 'Not settled yet - this position is still live.'
+  }
+  if (raw.includes('already_claimed') || raw.includes('assert_claimable')) return 'Already claimed.'
+  if (raw.includes('zero_payout') || raw.includes('no_payout') || raw.includes('nothing_to_claim')) {
+    return 'This position lost - nothing to claim.'
+  }
+  if (raw.includes('MoveAbort') || raw.includes('ExecutionError') || raw.length > 200) {
+    return 'This position lost or has already been claimed.'
+  }
+  return raw
+}
+
+// Live (expiry > now) vs expired; expired positions get the devInspect claim verdict.
+async function checkClaims(positions, managerId, nowMs) {
+  return Promise.all(
+    positions.map(async (position) => {
+      const status = position.expiry > nowMs ? 'live' : 'expired'
+      if (status === 'live') {
+        return { ...position, status, claimable: null, reason: 'Still live - not yet expired.' }
+      }
+      const verdict = await simulateClaim(position, managerId)
+      return { ...position, status, claimable: verdict.ok, reason: verdict.reason ?? null }
+    }),
+  )
+}
+
+function printPositions(checked) {
+  console.log('\nBinary positions (chain truth)')
+  console.log('------------------------------')
+  if (checked.length === 0) {
+    console.log('No binary positions in this manager.')
+    return
+  }
+  for (const p of checked) {
+    const when = new Date(p.expiry).toISOString()
+    const verdict =
+      p.status === 'live' ? 'LIVE' : p.claimable ? 'CLAIMABLE' : `not claimable (${p.reason})`
+    console.log(
+      `${p.side} strike=${p.strikeUsd} qty=${formatDusdc(p.quantity)} expiry=${when} -> ${verdict}`,
+    )
+  }
+  const claimable = checked.filter((p) => p.claimable === true).length
+  console.log(`\nClaimable now: ${claimable} of ${checked.length} position(s).`)
 }
 
 function buildQuoteInput(state) {
