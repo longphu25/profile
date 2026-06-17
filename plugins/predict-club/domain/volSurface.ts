@@ -80,7 +80,18 @@ export interface MispriceCell {
   fairProbability: number | null
   /** Contract-implied win probability for the UP side (devInspect quote). */
   contractProbability: number | null
-  /** contractProbability - fairProbability, or null when either side is missing. */
+  /** Contract-implied win probability for the DOWN side (a second devInspect quote);
+   * needed to measure the house margin the UP price alone cannot reveal. */
+  contractProbabilityDown: number | null
+  /** pUpContract + pDownContract - 1: the house margin (overround) baked into both
+   * prices. Null until both sides are quoted; an edge smaller than this is mostly vig. */
+  overround: number | null
+  /** Edge after removing the overround: devigUp - fairProbability, where
+   * devigUp = pUp / (pUp + pDown). The part of the gap that is real mispricing rather
+   * than the house margin. Null when either contract side or the fair value is missing. */
+  netEdge: number | null
+  /** contractProbability - fairProbability, or null when either side is missing. The
+   * raw gap (NOT net of vig); kept unchanged so the heatmap caret reads as before. */
   edge: number | null
   /** Defined reason when the contract quote could not be obtained (degraded, not faked). */
   reason?: string

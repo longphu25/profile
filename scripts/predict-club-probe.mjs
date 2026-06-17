@@ -111,6 +111,41 @@ async function main() {
   try {
     const quote = await quoteNewPosition(quoteInput, wallet)
     console.log(JSON.stringify(quote, null, 2))
+
+    // Quote the opposite side too, so the house margin (overround) the one-sided quote
+    // cannot reveal becomes visible. Production reads this same pair to de-vig the edge:
+    // overround = pUp + pDown - 1, and the net edge subtracts that margin before the
+    // model comparison. Binary only (a range market has no single opposite side).
+    if (quoteInput.kind !== 'range') {
+      const opposite = await quoteNewPosition(
+        { ...quoteInput, isUp: !quoteInput.isUp },
+        wallet,
+      )
+      const pSide = quote.contractPriceDusdc
+      const pOpposite = opposite.contractPriceDusdc
+      const bothSides =
+        pSide != null && pOpposite != null && pSide + pOpposite > 0
+      console.log('\nOverround (both sides)')
+      console.log('----------------------')
+      console.log(
+        JSON.stringify(
+          {
+            impliedProbabilitySide: pSide,
+            impliedProbabilityOpposite: pOpposite,
+            overround: bothSides ? pSide + pOpposite - 1 : null,
+            devigSide: bothSides ? pSide / (pSide + pOpposite) : null,
+            fairProbabilitySide: fair?.probability ?? null,
+            netEdge:
+              bothSides && fair?.probability != null
+                ? pSide / (pSide + pOpposite) - fair.probability
+                : null,
+            note: 'overround is the house margin; an edge smaller than it is mostly vig.',
+          },
+          null,
+          2,
+        ),
+      )
+    }
   } catch (error) {
     console.log(
       JSON.stringify(

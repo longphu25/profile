@@ -182,6 +182,12 @@ function MispricingLadder({
 }) {
   const sorted = [...cells].sort((a, b) => b.strike - a.strike)
   const hasAny = sorted.some((c) => c.edge != null)
+  // Average overround across the band: the house margin baked into the contract prices.
+  // It is the bar an edge must clear to be real value, so it leads the ladder as a
+  // warning. Null when no cell quoted both sides (we never fabricate a vig).
+  const overrounds = sorted.map((c) => c.overround).filter((v): v is number => v != null)
+  const avgOverround =
+    overrounds.length > 0 ? overrounds.reduce((a, b) => a + b, 0) / overrounds.length : null
 
   return (
     <div className="flex min-h-0 flex-col border-t border-outline-variant">
@@ -194,6 +200,17 @@ function MispricingLadder({
         )}
       </div>
 
+      {avgOverround != null && (
+        <div className="flex flex-col gap-0.5 px-md pb-sm">
+          <span className="font-data text-data-sm tabular-nums text-on-surface-variant">
+            Overround (vig) {(avgOverround * 100).toFixed(1)}%
+          </span>
+          <span className="font-data text-[10px] text-on-surface-variant">
+            Edge below this is mostly the house margin, not real value. Read the Net column.
+          </span>
+        </div>
+      )}
+
       {sorted.length === 0 ? (
         <div className="px-md pb-sm font-data text-data-sm text-on-surface-variant">
           {loading
@@ -203,11 +220,12 @@ function MispricingLadder({
       ) : (
         <div className="flex flex-col">
           {/* Column header. */}
-          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-md px-md py-1 font-label text-[10px] uppercase tracking-wide text-on-surface-variant">
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-md px-md py-1 font-label text-[10px] uppercase tracking-wide text-on-surface-variant">
             <span>Strike</span>
             <span className="text-right">Fair</span>
             <span className="text-right">Contract</span>
             <span className="text-right">Edge</span>
+            <span className="text-right">Net</span>
           </div>
           {sorted.map((cell) => {
             const atm = forward != null && Math.abs(cell.strike - forward) < forward * 0.0025
@@ -221,10 +239,22 @@ function MispricingLadder({
                     ? 'text-error'
                     : 'text-on-surface-variant'
             const edgeSign = edge != null && edge > 0 ? '+' : ''
+            // Net-of-vig edge: the raw gap minus the house margin, the part actually
+            // worth trading. Same sign convention and coloring as the raw edge.
+            const net = cell.netEdge
+            const netColor =
+              net == null
+                ? 'text-on-surface-variant'
+                : net > 0
+                  ? 'text-primary-fixed-dim'
+                  : net < 0
+                    ? 'text-error'
+                    : 'text-on-surface-variant'
+            const netSign = net != null && net > 0 ? '+' : ''
             return (
               <div
                 key={cell.strike}
-                className={`grid grid-cols-[1fr_auto_auto_auto] gap-md px-md py-1 font-data text-data-sm tabular-nums ${
+                className={`grid grid-cols-[1fr_auto_auto_auto_auto] gap-md px-md py-1 font-data text-data-sm tabular-nums ${
                   atm ? 'bg-surface-container' : ''
                 }`}
               >
@@ -239,6 +269,9 @@ function MispricingLadder({
                 </span>
                 <span className={`text-right ${edgeColor}`}>
                   {edge == null ? '-' : `${edgeSign}${(edge * 100).toFixed(1)}%`}
+                </span>
+                <span className={`text-right ${netColor}`}>
+                  {net == null ? '-' : `${netSign}${(net * 100).toFixed(1)}%`}
                 </span>
               </div>
             )

@@ -13,6 +13,9 @@ import { quoteBinaryStrike } from '../infrastructure/deepbookPredictPricingServi
  *
  * Edge = contractProbability - fairProbability. Positive = the contract prices the
  * UP outcome richer than the model (sell-side edge); negative = cheaper (buy-side).
+ * That raw edge does NOT subtract the house margin, so each cell also carries an
+ * overround (from quoting both sides) and a net-of-vig edge: the raw edge is the
+ * headline, the net edge is the part actually worth trading.
  */
 
 const CACHE_TTL_MS = 20_000
@@ -36,19 +39,46 @@ export function _clearMispriceCache(): void {
   inflight.clear()
 }
 
-/** Pure: assemble a cell from a fair probability and a contract probability. */
+/** Pure: assemble a cell from a fair probability and both contract sides. The raw
+ * `edge` keeps its original definition (contract UP minus model) so the heatmap caret
+ * is unchanged; `overround` and `netEdge` are added only when the DOWN side is also
+ * quoted, so we can separate the house margin from real mispricing without guessing. */
 export function buildMispriceCell(
   oracleId: string,
   strike: number,
   fairProbability: number | null,
   contractProbability: number | null,
+  contractProbabilityDown: number | null = null,
   reason?: string,
 ): MispriceCell {
   const edge =
     fairProbability != null && contractProbability != null
       ? contractProbability - fairProbability
       : null
-  return { oracleId, strike, fairProbability, contractProbability, edge, reason }
+  // The overround is the amount both contract prices sum above a fair 1.0; it is the
+  // house margin. devigUp renormalizes the UP side so the two sides sum to 1, and the
+  // net edge measures that de-vigged probability against the model. Both need a real
+  // quote on each side, so they stay null on a one-sided read rather than fake a value.
+  const bothSides =
+    contractProbability != null &&
+    contractProbabilityDown != null &&
+    contractProbability + contractProbabilityDown > 0
+  const overround = bothSides ? contractProbability + contractProbabilityDown - 1 : null
+  const netEdge =
+    bothSides && fairProbability != null
+      ? contractProbability / (contractProbability + contractProbabilityDown) - fairProbability
+      : null
+  return {
+    oracleId,
+    strike,
+    fairProbability,
+    contractProbability,
+    contractProbabilityDown,
+    overround,
+    netEdge,
+    edge,
+    reason,
+  }
 }
 
 function fairProbabilityUp(
@@ -90,21 +120,36 @@ export async function getMispriceCell(params: {
   const fair = fairProbabilityUp(params.svi, params.forward, params.expiryMs, params.strike)
 
   const promise = (async (): Promise<MispriceCell> => {
-    const quote = await quoteBinaryStrike({
-      oracleId: params.oracleId,
-      expiry: params.expiryMs,
-      strikeUsd: params.strike,
-      isUp: true,
-      tickSize: params.tickSize,
-      minStrike: params.minStrike,
-      walletAddress: params.walletAddress,
-    })
+    // Quote both sides: the UP price alone cannot reveal the house margin, so DOWN is
+    // quoted too. Each worker now issues two devInspect calls (MAX_CONCURRENCY=3, so up
+    // to 6 in flight); the ATM band is small and cached, so this stays bounded.
+    const [up, down] = await Promise.all([
+      quoteBinaryStrike({
+        oracleId: params.oracleId,
+        expiry: params.expiryMs,
+        strikeUsd: params.strike,
+        isUp: true,
+        tickSize: params.tickSize,
+        minStrike: params.minStrike,
+        walletAddress: params.walletAddress,
+      }),
+      quoteBinaryStrike({
+        oracleId: params.oracleId,
+        expiry: params.expiryMs,
+        strikeUsd: params.strike,
+        isUp: false,
+        tickSize: params.tickSize,
+        minStrike: params.minStrike,
+        walletAddress: params.walletAddress,
+      }),
+    ])
     const cell = buildMispriceCell(
       params.oracleId,
       params.strike,
       fair,
-      quote.impliedProbability,
-      quote.impliedProbability == null ? quote.reason : undefined,
+      up.impliedProbability,
+      down.impliedProbability,
+      up.impliedProbability == null ? up.reason : undefined,
     )
     cache.set(key, { cell, ts: now })
     inflight.delete(key)

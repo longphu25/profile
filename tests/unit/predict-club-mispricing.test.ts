@@ -63,9 +63,39 @@ describe('Predict Club mispricing math', () => {
   })
 
   test('carries a defined reason through when the contract side is degraded', () => {
-    const cell = buildMispriceCell('orc', 100, 0.5, null, 'out of bounds')
+    const cell = buildMispriceCell('orc', 100, 0.5, null, null, 'out of bounds')
     expect(cell.reason).toBe('out of bounds')
     expect(cell.edge).toBeNull()
+  })
+
+  test('overround is pUp + pDown - 1, the house margin, when both sides quote', () => {
+    const cell = buildMispriceCell('orc', 100, 0.5, 0.55, 0.5)
+    // 0.55 + 0.5 - 1 = 0.05 vig baked into the two prices.
+    expect(cell.overround).toBeCloseTo(0.05, 12)
+  })
+
+  test('netEdge de-vigs the contract before comparing to the model', () => {
+    // devigUp = 0.55 / (0.55 + 0.5) = 0.5238..., minus fair 0.5 = 0.0238...
+    const cell = buildMispriceCell('orc', 100, 0.5, 0.55, 0.5)
+    expect(cell.netEdge).toBeCloseTo(0.55 / 1.05 - 0.5, 12)
+    // The raw edge (0.55 - 0.5 = 0.05) overstates the value: most of it is vig.
+    expect(cell.edge).toBeCloseTo(0.05, 12)
+    expect(Math.abs(cell.netEdge as number)).toBeLessThan(Math.abs(cell.edge as number))
+  })
+
+  test('overround and netEdge are null (never faked) when the DOWN side is missing', () => {
+    const cell = buildMispriceCell('orc', 100, 0.5, 0.55)
+    expect(cell.contractProbabilityDown).toBeNull()
+    expect(cell.overround).toBeNull()
+    expect(cell.netEdge).toBeNull()
+    // The raw edge still computes from the UP side, unchanged.
+    expect(cell.edge).toBeCloseTo(0.05, 12)
+  })
+
+  test('netEdge is null when the model fair value is missing', () => {
+    const cell = buildMispriceCell('orc', 100, null, 0.55, 0.5)
+    expect(cell.overround).toBeCloseTo(0.05, 12)
+    expect(cell.netEdge).toBeNull()
   })
 })
 
@@ -98,17 +128,18 @@ describe('Predict Club mispricing cache + in-flight coalescing', () => {
   }
 
   test('serves a fresh cache entry without re-quoting within the TTL', async () => {
+    // Each cell quotes both sides (UP + DOWN), so a single miss is two calls.
     await getMispriceCell({ ...base, strike: 100, nowMs: 1_000 })
-    expect(quoteCalls).toBe(1)
+    expect(quoteCalls).toBe(2)
     await getMispriceCell({ ...base, strike: 100, nowMs: 5_000 })
-    expect(quoteCalls).toBe(1)
+    expect(quoteCalls).toBe(2)
   })
 
   test('re-quotes once the TTL has elapsed', async () => {
     await getMispriceCell({ ...base, strike: 100, nowMs: 1_000 })
-    expect(quoteCalls).toBe(1)
-    await getMispriceCell({ ...base, strike: 100, nowMs: 1_000 + 20_001 })
     expect(quoteCalls).toBe(2)
+    await getMispriceCell({ ...base, strike: 100, nowMs: 1_000 + 20_001 })
+    expect(quoteCalls).toBe(4)
   })
 
   test('coalesces concurrent callers for the same key into one quote', async () => {
@@ -116,7 +147,7 @@ describe('Predict Club mispricing cache + in-flight coalescing', () => {
       getMispriceCell({ ...base, strike: 100, nowMs: 1_000 }),
       getMispriceCell({ ...base, strike: 100, nowMs: 1_000 }),
     ])
-    expect(quoteCalls).toBe(1)
+    expect(quoteCalls).toBe(2)
     expect(a.contractProbability).toBe(b.contractProbability)
   })
 
@@ -124,7 +155,7 @@ describe('Predict Club mispricing cache + in-flight coalescing', () => {
     const cells = await getMispriceBand({ ...base, strikes: [105, 100, 95] })
     expect(cells).toHaveLength(3)
     expect(cells.map((c) => c.strike)).toEqual([105, 100, 95])
-    expect(quoteCalls).toBe(3)
+    expect(quoteCalls).toBe(6)
   })
 
   test('a degraded contract quote yields a null edge with a reason', async () => {
