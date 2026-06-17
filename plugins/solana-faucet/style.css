@@ -1,0 +1,391 @@
+/* Solana Faucet Plugin — scoped styles */
+
+.sol-faucet {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #e2e8f0;
+  padding: 16px;
+}
+
+.sol-faucet__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.sol-faucet__desc {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 0 16px;
+}
+
+.sol-faucet__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sol-faucet__input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #2a2a2e;
+  background: #1a1a1e;
+  color: #e2e8f0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.sol-faucet__input:focus {
+  border-color: #9945ff;
+}
+
+.sol-faucet__input::placeholder {
+  color: #555;
+}
+
+.sol-faucet__row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sol-faucet__amount-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #2a2a2e;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sol-faucet__amount-btn--active {
+  background: rgba(153, 69, 255, 0.15);
+  border-color: #9945ff;
+  color: #9945ff;
+}
+
+.sol-faucet__submit {
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #9945ff 0%, #14f195 100%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.sol-faucet__submit:hover {
+  opacity: 0.9;
+}
+
+.sol-faucet__submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sol-faucet__status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.sol-faucet__status--success {
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  color: #34d399;
+}
+
+.sol-faucet__status--error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.sol-faucet__status--loading {
+  background: rgba(153, 69, 255, 0.1);
+  border: 1px solid rgba(153, 69, 255, 0.3);
+  color: #a78bfa;
+}
+
+.sol-faucet__tx-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: #9945ff;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.sol-faucet__tx-link:hover {
+  text-decoration: underline;
+}
+
+.sol-faucet__network-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.sol-faucet__net-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #2a2a2e;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sol-faucet__net-btn--active {
+  background: rgba(153, 69, 255, 0.15);
+  border-color: #9945ff;
+  color: #9945ff;
+}
+
+.sol-faucet__net-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Alternatives when rate limited */
+
+.sol-faucet__alternatives {
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(30, 30, 34, 0.8);
+  border: 1px solid #2a2a2e;
+  border-radius: 8px;
+}
+
+.sol-faucet__alt-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0 0 8px;
+}
+
+.sol-faucet__alt-item {
+  margin-bottom: 8px;
+}
+
+.sol-faucet__alt-item code {
+  display: block;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: #14f195;
+  background: rgba(20, 241, 149, 0.05);
+  padding: 6px 8px;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.sol-faucet__alt-note {
+  display: block;
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Stored wallet picker */
+
+.sol-faucet__stored {
+  margin-top: 4px;
+}
+
+.sol-faucet__stored-toggle {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px dashed #2a2a2e;
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sol-faucet__stored-toggle:hover {
+  border-color: #9945ff;
+  color: #9945ff;
+}
+
+.sol-faucet__stored-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.sol-faucet__stored-item {
+  padding: 5px 10px;
+  border: 1px solid #2a2a2e;
+  border-radius: 6px;
+  background: #111113;
+  color: #e2e8f0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sol-faucet__stored-item:hover {
+  border-color: #9945ff;
+}
+
+.sol-faucet__stored-item--active {
+  border-color: #14f195;
+  background: rgba(20, 241, 149, 0.08);
+  color: #14f195;
+}
+
+/* === Auto Faucet Cron === */
+
+.sol-faucet__cron {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #1e1e22;
+}
+
+.sol-faucet__cron-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sol-faucet__cron-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.sol-faucet__cron-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+  font-weight: 600;
+  animation: pulse-cron 2s infinite;
+}
+
+@keyframes pulse-cron {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.sol-faucet__cron-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 12px;
+}
+
+.sol-faucet__cron-config {
+  margin-bottom: 10px;
+}
+
+.sol-faucet__cron-label {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.sol-faucet__submit--stop {
+  background: #ef4444;
+}
+
+.sol-faucet__submit--stop:hover {
+  opacity: 0.9;
+}
+
+.sol-faucet__cron-logs {
+  margin-top: 12px;
+  background: rgba(30, 30, 34, 0.8);
+  border: 1px solid #2a2a2e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sol-faucet__cron-logs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #1e1e22;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.sol-faucet__cron-clear {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.sol-faucet__cron-clear:hover {
+  color: #ef4444;
+}
+
+.sol-faucet__cron-log-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.sol-faucet__cron-log {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  border-bottom: 1px solid #1a1a1e;
+}
+
+.sol-faucet__cron-log:last-child {
+  border-bottom: none;
+}
+
+.sol-faucet__cron-log--success {
+  color: #34d399;
+}
+
+.sol-faucet__cron-log--error {
+  color: #fca5a5;
+}
+
+.sol-faucet__cron-log-time {
+  color: #64748b;
+  min-width: 70px;
+}
+
+.sol-faucet__cron-log-net {
+  font-weight: 600;
+  min-width: 55px;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.sol-faucet__cron-log-msg {
+  flex: 1;
+}
+
+.sol-faucet__cron-log-link {
+  color: #9945ff;
+  text-decoration: none;
+  font-size: 10px;
+}
+
+.sol-faucet__cron-log-link:hover {
+  text-decoration: underline;
+}

@@ -1,0 +1,11 @@
+{
+  "chain": "solana",
+  "group": "core",
+  "name": "SolanaFaucet",
+  "label": "Faucet",
+  "version": "1.0.0",
+  "description": "Request SOL from devnet/testnet faucet. Airdrop up to 2 SOL per request.",
+  "network": "devnet",
+  "dependencies": ["@solana/web3.js"],
+  "pages": ["solana.html"]
+}
