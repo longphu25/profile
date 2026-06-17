@@ -56,6 +56,7 @@ export async function claimForParticipant(
       expiry: round.config.expiry,
       strike: strikeUsd,
       isUp: participant.direction === 'UP',
+      quantity: participant.quantity,
       tickSize: round.config.tickSize,
       minStrike: round.config.minStrike,
     })

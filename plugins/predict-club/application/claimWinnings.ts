@@ -14,6 +14,7 @@ export interface ClaimParams {
   expiry: number
   strike: number
   isUp: boolean
+  quantity: number
   tickSize: number
   minStrike: number
 }
@@ -35,6 +36,7 @@ export async function claimWinnings(
     expiry: params.expiry,
     strike: params.strike,
     isUp: params.isUp,
+    quantity: params.quantity,
     tickSize: params.tickSize,
     minStrike: params.minStrike,
   })

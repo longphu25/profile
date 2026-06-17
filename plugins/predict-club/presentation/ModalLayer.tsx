@@ -877,6 +877,7 @@ function ModalFooterContent({ modal }: { modal: ModalKind }) {
                 expiry: 0,
                 strike: club.activeRound.strike,
                 isUp: club.activeRound.direction === 'UP',
+                quantity: club.activeRound.totalPledgedDusdc,
                 tickSize: 1_000_000_000,
                 minStrike: 50_000_000_000_000,
               })
