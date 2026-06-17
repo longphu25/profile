@@ -12,6 +12,12 @@
       "skillPath": "accessing-data/SKILL.md",
       "computedHash": "f868381cb3e81f7d0ac02701881c0f06a3fdc2b08634210de27b5de2dfaeecef"
     },
+    "archify": {
+      "source": "tt-a1i/archify",
+      "sourceType": "github",
+      "skillPath": "archify/SKILL.md",
+      "computedHash": "37116e4a7a0fa8a7e545376d643c099f191bd6546abc70e6711b0e4042c29db3"
+    },
     "blossom-carousel-react": {
       "source": "blossom-carousel.com",
       "sourceType": "well-known",
