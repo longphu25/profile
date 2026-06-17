@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+
+:root {
+  --sol-purple: #9945ff;
+  --sol-green: #14f195;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #ededed;
+}
+
+.sol-app__header {
+  border-bottom: 1px solid #1e1e22;
+  padding: 12px 24px;
+}
+
+.sol-app__header-inner {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.sol-app__title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.sol-app__subtitle {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.sol-app__tabs {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 12px 24px 0;
+  display: flex;
+  gap: 4px;
+}
+
+.sol-app__tab {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sol-app__tab:hover {
+  color: #e2e8f0;
+  background: #111113;
+}
+
+.sol-app__tab--active {
+  background: #111113;
+  color: #e2e8f0;
+  font-weight: 500;
+}
+
+.sol-app__main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 24px 24px;
+  background: #111113;
+  border-radius: 0 12px 12px 12px;
+  min-height: 400px;
+}
