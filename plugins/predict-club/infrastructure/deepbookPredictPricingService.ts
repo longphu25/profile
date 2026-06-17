@@ -33,16 +33,37 @@ export interface ContractQuotePreview {
   redeemPayoutRaw?: string
 }
 
+// The lifecycle of a position as the indexer reports it. 'open' is still running,
+// 'awaiting_settlement' has expired but the oracle has not posted a settlement price
+// yet, 'settled' is claimable (won, not yet redeemed), 'redeemed' has been claimed or
+// sold back. 'unknown' covers a manager whose indexer view erred and only an on-chain
+// read was possible (open quantity only, no lifecycle).
+export type PositionStatus = 'open' | 'awaiting_settlement' | 'settled' | 'redeemed' | 'unknown'
+
 export interface ManagerPosition {
   id: string
+  // The PredictManager this position lives in. A wallet can own several managers,
+  // and a claim/unwind must target the manager that actually holds the position, so
+  // each position carries its owner rather than assuming the latest manager.
+  managerId: string
   kind: 'binary' | 'range'
   oracleId: string
   expiry: number
+  // Open (still-held) quantity in DUSDC. A redeemed/settled-and-closed position reads
+  // 0 here but still appears in history (status carries the lifecycle).
   quantity: number
   side?: 'ABOVE' | 'BELOW'
   strike?: number
   lowerStrike?: number
   upperStrike?: number
+  // Indexer-sourced lifecycle + economics, so the drawer can show full history (not
+  // just open positions) without fanning out on-chain reads. Absent on an on-chain
+  // fallback read (status defaults to 'unknown').
+  status?: PositionStatus
+  mintedQuantity?: number
+  realizedPnl?: number
+  unrealizedPnl?: number
+  totalPayout?: number
 }
 
 export interface PredictManagerSnapshot {
@@ -52,6 +73,22 @@ export interface PredictManagerSnapshot {
   positionsSize: number
   rangePositionsSize: number
   positions: ManagerPosition[]
+}
+
+// One PredictManager and its positions, for the per-manager grouped drawer view. A
+// wallet can own several managers; the drawer lists every one (even an empty manager,
+// so the trader sees it exists) and lets the trader fold them into a combined view.
+export interface ManagerGroup {
+  managerId: string
+  // 0 = newest (managers arrive newest-first). The drawer tags index 0 "newest".
+  index: number
+  positions: ManagerPosition[]
+  // Indexer headline economics for the manager, when available.
+  accountValue?: number
+  realizedPnl?: number
+  // Set when this manager's positions came from the on-chain fallback (its indexer
+  // view erred), so the drawer can note the history may be partial (open only).
+  partial?: boolean
 }
 
 export interface VaultSnapshot {
@@ -466,11 +503,15 @@ export function sanitizeMintError(error: unknown): string {
 
 /**
  * Map a claim failure (a devInspect abort or a rejected sign) to a friendly,
- * actionable message. The contract guards a Studio claim can trip are: the position
- * has not settled yet (the round is still live, so there is nothing to claim), the
- * position lost (no payout to claim), or it was already claimed. Wallet rejections
- * get their own phrasing. Anything else falls back to a clean line rather than a raw
- * MoveAbort dump. The exact guard names mirror the predict module's claim path.
+ * actionable message. The on-chain payout call is predict::redeem_permissionless
+ * (settled-position redemption), not a non-existent predict::claim. The states a
+ * Studio claim can hit are: the position has not settled yet (the round is still
+ * live, nothing to claim), the position lost (no payout), or it was already claimed.
+ * Wallet rejections get their own phrasing. A settled-losing position aborts inside
+ * redeem_permissionless and lands on the MoveAbort fallback below - confirmed against
+ * the package via scripts/predict-club-probe.mjs. The named-guard branches above the
+ * fallback are best-effort string matches (the raw abort exposes a function name and
+ * code, not these tokens), so the fallback is what carries the common losing case.
  */
 export function sanitizeClaimError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error ?? '')
@@ -498,6 +539,32 @@ export function sanitizeClaimError(error: unknown): string {
   }
   if (raw.includes('MoveAbort') || raw.includes('ExecutionError') || raw.length > 200) {
     return 'This position lost or has already been claimed.'
+  }
+  return raw
+}
+
+/**
+ * Map an unwind (early-exit) failure to a friendly message. Unwinding sells a still
+ * live position back to the AMM via predict::redeem. The defining state is the oracle
+ * no longer being quoteable - once it settles, redeem aborts with
+ * assert_quoteable_oracle (confirmed against the package via
+ * scripts/predict-club-probe.mjs), and the trader should claim instead of unwind.
+ * Wallet rejections get their own phrasing; anything else falls back to a clean line
+ * rather than a raw MoveAbort dump.
+ */
+export function sanitizeRedeemError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error ?? '')
+  if (!raw || raw === 'undefined' || raw === 'null')
+    return 'This position cannot be unwound right now.'
+  const lower = raw.toLowerCase()
+  if (raw.includes('assert_quoteable_oracle') || raw.includes('not_quoteable')) {
+    return 'This round has settled - claim instead of unwinding.'
+  }
+  if (lower.includes('rejected') || lower.includes('user denied') || lower.includes('cancelled')) {
+    return 'You rejected the transaction in your wallet.'
+  }
+  if (raw.includes('MoveAbort') || raw.includes('ExecutionError') || raw.length > 200) {
+    return 'This position cannot be unwound right now.'
   }
   return raw
 }
@@ -560,9 +627,11 @@ async function fetchManagerSnapshot(
   const rangePositionsTableId = fields.range_positions?.fields?.id?.id
   const balanceTableId = fields.balance_manager?.fields?.balances?.fields?.id?.id
   const positions = [
-    ...(positionsTableId ? await fetchBinaryPositions(positionsTableId).catch(() => []) : []),
+    ...(positionsTableId
+      ? await fetchBinaryPositions(positionsTableId, managerId).catch(() => [])
+      : []),
     ...(rangePositionsTableId
-      ? await fetchRangePositions(rangePositionsTableId).catch(() => [])
+      ? await fetchRangePositions(rangePositionsTableId, managerId).catch(() => [])
       : []),
   ]
   const quoteBalance = await readManagerQuoteBalance(balanceTableId).catch(() => 0n)
@@ -592,22 +661,230 @@ export async function fetchManagerBinaryPositions(
   return snapshot?.positions.filter((p) => p.kind === 'binary') ?? []
 }
 
-async function fetchLatestManagerId(walletAddress: string): Promise<string | null> {
-  const res = await fetch(`${PREDICT_SERVER}/managers?owner=${encodeURIComponent(walletAddress)}`)
-  if (!res.ok) return null
-  const managers = await res.json()
-  if (!Array.isArray(managers)) return null
-  const found = managers
+/**
+ * Every PredictManager the wallet owns, newest first. A wallet can hold more than
+ * one manager (each `create_manager` call mints a fresh one), and positions are
+ * scattered across them - so the drawer reads them all rather than only the latest.
+ * Ordered newest-first (by checkpoint, then tx_index) so the freshest manager leads.
+ * Returns an empty array when the wallet has none or the lookup fails.
+ */
+export async function fetchAllManagerIds(walletAddress: string): Promise<string[]> {
+  const res = await fetch(
+    `${PREDICT_SERVER}/managers?owner=${encodeURIComponent(walletAddress)}`,
+  ).catch(() => null)
+  if (!res || !res.ok) return []
+  const managers = await res.json().catch(() => null)
+  if (!Array.isArray(managers)) return []
+  return managers
     .filter((manager) => manager.owner?.toLowerCase() === walletAddress.toLowerCase())
     .sort((left, right) =>
       right.checkpoint === left.checkpoint
         ? right.tx_index - left.tx_index
         : right.checkpoint - left.checkpoint,
-    )[0]
-  return found?.manager_id ?? null
+    )
+    .map((manager) => manager.manager_id)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0)
 }
 
-async function fetchBinaryPositions(tableId: string): Promise<ManagerPosition[]> {
+// Map the indexer's lifecycle string to our enum. The indexer reports the full
+// lifecycle (open / awaiting_settlement / settled / redeemed); anything else degrades
+// to 'open' so an unknown future status is not silently dropped from history.
+function toPositionStatus(raw: unknown): PositionStatus {
+  const value = String(raw ?? '')
+  if (value === 'redeemed') return 'redeemed'
+  if (value === 'settled') return 'settled'
+  if (value === 'awaiting_settlement') return 'awaiting_settlement'
+  return 'open'
+}
+
+// One manager's binary positions read from the public indexer (the same
+// `/managers/{id}/positions/summary` view the workshop's listPositions.ts uses). The
+// indexer returns the FULL lifecycle (open + awaiting + settled + redeemed) with P&L
+// and payout precomputed, so the drawer shows real history rather than only the open
+// leg an on-chain dynamic-field read would surface - and it is one HTTP GET per
+// manager, so reading several managers never bursts the fullnode into a 429. Throws on
+// an indexer error so the caller can fall back to the on-chain read for that manager.
+async function fetchManagerBinaryPositionsFromIndexer(
+  managerId: string,
+): Promise<ManagerPosition[]> {
+  const res = await fetch(`${PREDICT_SERVER}/managers/${managerId}/positions/summary`)
+  if (!res.ok) throw new Error(`positions/summary ${res.status}`)
+  const rows = await res.json()
+  if (!Array.isArray(rows)) return []
+  return rows.map((row: any): ManagerPosition => {
+    const mintedQuantity = fromDusdc(BigInt(row.minted_quantity ?? 0))
+    const openQuantity = fromDusdc(BigInt(row.open_quantity ?? 0))
+    return {
+      id: [managerId, row.oracle_id, row.expiry, row.strike, row.is_up].join('|'),
+      managerId,
+      kind: 'binary',
+      oracleId: String(row.oracle_id ?? ''),
+      expiry: Number(row.expiry ?? 0),
+      side: row.is_up ? 'ABOVE' : 'BELOW',
+      strike: Number(BigInt(row.strike ?? 0)) / PRICE_SCALE,
+      quantity: openQuantity,
+      status: toPositionStatus(row.status),
+      mintedQuantity,
+      realizedPnl: fromDusdc(BigInt(row.realized_pnl ?? 0)),
+      unrealizedPnl: fromDusdc(BigInt(row.unrealized_pnl ?? 0)),
+      totalPayout: fromDusdc(BigInt(row.total_payout ?? 0)),
+    }
+  })
+}
+
+// A raw mint/redeem event from `/managers/{id}/positions` (the unaggregated view). The
+// summary endpoint can 500 ("missing mark quote results") when a manager holds a
+// position the indexer cannot mark right now, but this raw events view always returns,
+// so it is the better fallback than the on-chain read (which only surfaces still-open
+// positions and hides all settled/redeemed history).
+interface RawPositionEvent {
+  oracle_id?: string
+  expiry?: number | string
+  strike?: number | string
+  is_up?: boolean
+  quantity?: number | string
+}
+
+// One manager's binary positions reconstructed from the raw mint/redeem event log
+// (`/managers/{id}/positions`), used when the aggregated `positions/summary` endpoint
+// 500s. Nets minted minus redeemed per (oracle, expiry, strike, side): a position with
+// remaining open quantity is 'open'; one fully redeemed (net 0) stays in history as
+// 'redeemed' so settled/closed positions are not silently dropped. This is the fix for
+// a manager whose summary view errs: the on-chain fallback filters out closed positions
+// (quantity <= 0), so the trader saw only the few still-open ones, not their full
+// history. The raw log has no mark-quote computation, so it does not share the 500.
+async function fetchManagerBinaryPositionsFromEvents(
+  managerId: string,
+): Promise<ManagerPosition[]> {
+  const res = await fetch(`${PREDICT_SERVER}/managers/${managerId}/positions`)
+  if (!res.ok) throw new Error(`positions ${res.status}`)
+  const body = await res.json()
+  const minted: RawPositionEvent[] = Array.isArray(body?.minted) ? body.minted : []
+  const redeemed: RawPositionEvent[] = Array.isArray(body?.redeemed) ? body.redeemed : []
+
+  // Key a position by its economic identity so a mint and its matching redeem net out.
+  const keyOf = (e: RawPositionEvent) => [e.oracle_id, e.expiry, e.strike, e.is_up].join('|')
+
+  const net = new Map<string, { event: RawPositionEvent; minted: bigint; redeemed: bigint }>()
+  for (const event of minted) {
+    const key = keyOf(event)
+    const entry = net.get(key)
+    const qty = BigInt(event.quantity ?? 0)
+    if (entry) entry.minted += qty
+    else net.set(key, { event, minted: qty, redeemed: 0n })
+  }
+  for (const event of redeemed) {
+    const entry = net.get(keyOf(event))
+    if (entry) entry.redeemed += BigInt(event.quantity ?? 0)
+    // A redeem with no matching mint (should not happen) is ignored rather than
+    // inventing a negative position.
+  }
+
+  return [...net.values()].map(({ event, minted: mintedQty, redeemed: redeemedQty }) => {
+    const open = mintedQty > redeemedQty ? mintedQty - redeemedQty : 0n
+    return {
+      id: [managerId, event.oracle_id, event.expiry, event.strike, event.is_up].join('|'),
+      managerId,
+      kind: 'binary' as const,
+      oracleId: String(event.oracle_id ?? ''),
+      expiry: Number(event.expiry ?? 0),
+      side: event.is_up ? ('ABOVE' as const) : ('BELOW' as const),
+      strike: Number(BigInt(event.strike ?? 0)) / PRICE_SCALE,
+      quantity: fromDusdc(open),
+      // No remaining quantity means the position was fully sold/redeemed; otherwise it
+      // is still open. The raw log carries no settlement verdict, so an open expired
+      // position keeps 'open' and the drawer's devInspect pre-flight decides claimability.
+      status: open === 0n ? 'redeemed' : 'open',
+      mintedQuantity: fromDusdc(mintedQty),
+    }
+  })
+}
+
+// The indexer's headline economics for a manager (account value + realized P&L), so
+// the per-manager group can show a one-line summary. Returns nulls when the indexer
+// view errs rather than failing the whole read.
+async function fetchManagerHeadline(
+  managerId: string,
+): Promise<{ accountValue?: number; realizedPnl?: number }> {
+  try {
+    const res = await fetch(`${PREDICT_SERVER}/managers/${managerId}/summary`)
+    if (!res.ok) return {}
+    const summary = await res.json()
+    return {
+      accountValue: fromDusdc(BigInt(summary.account_value ?? 0)),
+      realizedPnl: fromDusdc(BigInt(summary.realized_pnl ?? 0)),
+    }
+  } catch {
+    return {}
+  }
+}
+
+/**
+ * Every PredictManager the wallet owns, each with its binary positions, for the
+ * grouped drawer. Positions come from the indexer (full lifecycle, one GET per
+ * manager - no on-chain fan-out, so no 429); a manager whose indexer view errs falls
+ * back to the on-chain read (open positions only, flagged `partial`). Every manager is
+ * returned, even an empty one, so the trader sees it exists. Newest manager first.
+ */
+export async function fetchManagerGroups(walletAddress: string): Promise<ManagerGroup[]> {
+  const managerIds = await fetchAllManagerIds(walletAddress)
+  if (managerIds.length === 0) return []
+  return Promise.all(
+    managerIds.map(async (managerId, index): Promise<ManagerGroup> => {
+      const [headline, positions] = await Promise.all([
+        fetchManagerHeadline(managerId),
+        fetchManagerBinaryPositionsFromIndexer(managerId).then(
+          (rows) => ({ rows, partial: false }),
+          // The aggregated summary endpoint erred (observed: "missing mark quote
+          // results" on a manager whose live position the indexer cannot mark). Fall
+          // back to the raw mint/redeem event log, which carries the FULL history
+          // (settled/redeemed included) and shares no mark-quote computation, so it
+          // returns where the summary 500s. Only if that also fails do we drop to the
+          // on-chain read, which surfaces open positions only (flagged partial).
+          async () =>
+            fetchManagerBinaryPositionsFromEvents(managerId).then(
+              (rows) => ({ rows, partial: false }),
+              async () => ({
+                rows: await fetchManagerBinaryPositions(walletAddress, managerId).catch(() => []),
+                partial: true,
+              }),
+            ),
+        ),
+      ])
+      return {
+        managerId,
+        index,
+        positions: positions.rows,
+        partial: positions.partial,
+        accountValue: headline.accountValue,
+        realizedPnl: headline.realizedPnl,
+      }
+    }),
+  )
+}
+
+/**
+ * The wallet's binary positions across ALL of its PredictManagers, flattened, each
+ * tagged with its owning manager (`position.managerId`). Kept as a thin wrapper over
+ * `fetchManagerGroups` for callers that want one flat list rather than the grouped
+ * view; the drawer uses the grouped form directly.
+ */
+export async function fetchAllManagersBinaryPositions(
+  walletAddress: string,
+): Promise<ManagerPosition[]> {
+  const groups = await fetchManagerGroups(walletAddress)
+  return groups.flatMap((group) => group.positions)
+}
+
+async function fetchLatestManagerId(walletAddress: string): Promise<string | null> {
+  const [latest] = await fetchAllManagerIds(walletAddress)
+  return latest ?? null
+}
+
+async function fetchBinaryPositions(
+  tableId: string,
+  managerId: string,
+): Promise<ManagerPosition[]> {
   const fields = await fetchAllDynamicFields(tableId)
   const objects = await Promise.all(
     fields.map((field: DynamicFieldInfo) =>
@@ -624,6 +901,7 @@ async function fetchBinaryPositions(tableId: string): Promise<ManagerPosition[]>
       const name = fields.name?.fields
       return {
         id: object.data?.objectId ?? '',
+        managerId,
         kind: 'binary' as const,
         oracleId: String(name?.oracle_id ?? ''),
         expiry: Number(name?.expiry ?? 0),
@@ -635,7 +913,7 @@ async function fetchBinaryPositions(tableId: string): Promise<ManagerPosition[]>
     .filter((position: ManagerPosition | null): position is ManagerPosition => Boolean(position))
 }
 
-async function fetchRangePositions(tableId: string): Promise<ManagerPosition[]> {
+async function fetchRangePositions(tableId: string, managerId: string): Promise<ManagerPosition[]> {
   const fields = await fetchAllDynamicFields(tableId)
   const objects = await Promise.all(
     fields.map((field: DynamicFieldInfo) =>
@@ -654,6 +932,7 @@ async function fetchRangePositions(tableId: string): Promise<ManagerPosition[]> 
       const high = Number(name?.high_strike ?? name?.upper_strike ?? name?.strike_high ?? 0)
       return {
         id: object.data?.objectId ?? '',
+        managerId,
         kind: 'range' as const,
         oracleId: String(name?.oracle_id ?? ''),
         expiry: Number(name?.expiry ?? 0),
