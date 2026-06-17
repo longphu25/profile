@@ -587,7 +587,7 @@ Validation: `bun run build`; `bun run test:unit` (new + old pass);
 
 Reference: `docs/deepbook/predict/MISPRICING-EDGE.md`.
 
-Status: planned.
+Status: done.
 
 ## Files Touched (indicative)
 

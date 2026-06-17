@@ -296,6 +296,20 @@ trade ticket on a heatmap cell) is reached from that analysis, never the reverse
   when the trader asks. Each position carries its owning manager, so a claim or unwind
   targets the right manager rather than always the latest, and the header pill shows the
   wallet's live SUI / DUSDC with a loading state.
+- **The drawer leads with realized PnL, not a win/loss tally.** Counting winning rounds
+  misreads a positive-expectancy book: a strategy that bets cheap, long-odds sides loses
+  most rounds yet can profit overall. So the roll-up leads with realized PnL (summed from
+  the indexer, green above zero and red below) plus the settled sample size behind it; the
+  win / claimed / no-payout counts stay as secondary context. When the indexer prices no
+  manager the PnL row hides rather than show a misleading $0, and a manager that fell back
+  to an open-only read flags the history as incomplete.
+- **The mispricing ladder shows the house margin and the edge net of it.** The raw edge
+  (contract-implied minus model probability) does not subtract the overround baked into
+  the contract price, so a small edge can be all vig. Quoting both sides exposes that
+  margin (`overround = pUp + pDown - 1`), and the ladder shows it as a header warning plus
+  a Net column (`netEdge`, the de-vigged edge) beside the raw Edge column. This is
+  information only: the heatmap caret still reads the raw edge unchanged, so a trader can
+  weigh value against the margin without the surface deciding for them.
 
 ## Motion
 

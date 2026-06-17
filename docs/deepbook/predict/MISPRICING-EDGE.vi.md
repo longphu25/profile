@@ -78,6 +78,36 @@ Studio thể hiện cái này bằng một caret chỉ về bên có value cộn
 nhiễu. Caret là tín hiệu chính an toàn cho người mù màu; con số là lớp mã hóa thứ
 hai.
 
+## Overround và net-of-vig edge
+
+Edge thô ở trên có một điểm mù: xác suất hợp đồng ngụ ý đã chứa biên nhà cái, nên một
+edge dương nhỏ có thể toàn bộ là biên đó chứ không phải value thật. Muốn thấy biên đó
+phải quote CẢ HAI bên:
+
+```
+pUp   = xác suất hợp đồng ngụ ý cho UP   (một lần devInspect quote)
+pDown = xác suất hợp đồng ngụ ý cho DOWN (một lần devInspect quote nữa)
+overround = pUp + pDown - 1
+```
+
+Một thị trường hai kết cục công bằng sẽ định giá hai bên cộng đúng thành 1. Phần vượt
+quá 1 là overround, là vig, là biên nhà cái nướng vào cả hai giá. Trên một quote
+testnet thật con số này dương: hợp đồng bán cả hai bên hơi đắt để cái book có lợi thế
+trước trader.
+
+Net-of-vig edge bỏ biên đó đi trước khi so với mô hình:
+
+```
+devigUp = pUp / (pUp + pDown)        chuẩn hoá để hai bên cộng thành 1
+netEdge = devigUp - fairProbability  phần mispricing KHÔNG phải biên nhà cái
+```
+
+`netEdge` là phần lệch giá thật sự đáng đánh. Edge thô vẫn là tiêu đề (và vẫn lái
+caret heatmap như cũ), nhưng Studio hiện overround cùng một cột `Net` bên cạnh để
+trader phân biệt mispricing thật với vig. Quy tắc nhanh: một edge nhỏ hơn overround
+thì phần lớn là biên nhà cái, không phải value. Cả `overround` và `netEdge` đều null
+khi thiếu một bên quote, nên tín hiệu suy giảm chứ không bịa ra biên.
+
 ## Cái này KHÔNG phải là gì (ranh giới trung thực)
 
 - **Không phải dự đoán hướng BTC.** Không con số nào nói BTC sẽ tăng. Cả hai đều là
@@ -101,7 +131,7 @@ hai.
 | Xác suất fair (SVI) | `plugins/predict-club/domain/payoutPreview.ts` |
 | Xác suất hợp đồng ngụ ý | `plugins/predict-club/infrastructure/deepbookPredictPricingService.ts` (`quoteBinaryStrike`) |
 | Lắp ráp edge + cache + giới hạn đồng thời | `plugins/predict-club/application/mispricing.ts` |
-| Hình dạng ô (`fairProbability`, `contractProbability`, `edge`, `reason`) | `plugins/predict-club/domain/volSurface.ts` (`MispriceCell`) |
+| Hình dạng ô (`fairProbability`, `contractProbability`, `contractProbabilityDown`, `overround`, `netEdge`, `edge`, `reason`) | `plugins/predict-club/domain/volSurface.ts` (`MispriceCell`) |
 | Trình bày (caret, edge điểm, ATM band) | `plugins/predict-club/presentation/studio/` (`VolHeatmap`, `EdgePanel`, `SmileSlice`) |
 
 Xem thêm `SURFACE-STUDIO-TRADE.vi.md` (edge đi vào trade ticket thế nào) và

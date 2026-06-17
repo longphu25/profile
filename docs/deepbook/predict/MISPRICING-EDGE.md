@@ -79,6 +79,37 @@ faint at a weak edge and chip-backed at a strong one, and nothing below a noise
 floor. The caret is the primary colorblind-safe signal; the number is the second
 encoding.
 
+## Overround and net-of-vig edge
+
+The raw edge above has a blind spot: the contract-implied probability already carries
+the house margin, so a small positive edge can be entirely that margin rather than
+real value. To see the margin you have to quote BOTH sides:
+
+```
+pUp   = contract-implied probability for UP   (one devInspect quote)
+pDown = contract-implied probability for DOWN (a second devInspect quote)
+overround = pUp + pDown - 1
+```
+
+A fair two-outcome market would price the two sides to sum to exactly 1. Anything
+above 1 is the overround, the vig, the house margin baked into both prices. On a real
+testnet quote this is positive: the contract sells both sides slightly rich so the
+book has an edge over the trader.
+
+The net-of-vig edge removes that margin before comparing to the model:
+
+```
+devigUp = pUp / (pUp + pDown)        renormalize so the two sides sum to 1
+netEdge = devigUp - fairProbability  mispricing that is NOT the house margin
+```
+
+`netEdge` is the part of the gap actually worth trading. The raw `edge` is the
+headline (and still drives the heatmap caret unchanged), but the Studio shows the
+overround and a `Net` column beside it so a trader can tell a real mispricing from
+the vig. Rule of thumb: an edge smaller than the overround is mostly the house
+margin, not value. Both `overround` and `netEdge` are null whenever either side is
+unquoted, so the signal degrades rather than fabricating a margin.
+
 ## What this is NOT (honesty boundary)
 
 - **Not a BTC direction call.** Neither number says BTC will rise. Both are
@@ -103,7 +134,7 @@ encoding.
 | Fair probability (SVI) | `plugins/predict-club/domain/payoutPreview.ts` |
 | Contract-implied probability | `plugins/predict-club/infrastructure/deepbookPredictPricingService.ts` (`quoteBinaryStrike`) |
 | Edge assembly + cache + concurrency | `plugins/predict-club/application/mispricing.ts` |
-| Cell shape (`fairProbability`, `contractProbability`, `edge`, `reason`) | `plugins/predict-club/domain/volSurface.ts` (`MispriceCell`) |
+| Cell shape (`fairProbability`, `contractProbability`, `contractProbabilityDown`, `overround`, `netEdge`, `edge`, `reason`) | `plugins/predict-club/domain/volSurface.ts` (`MispriceCell`) |
 | Presentation (caret, edge points, ATM band) | `plugins/predict-club/presentation/studio/` (`VolHeatmap`, `EdgePanel`, `SmileSlice`) |
 
 See also `SURFACE-STUDIO-TRADE.md` (how the edge feeds the trade ticket) and

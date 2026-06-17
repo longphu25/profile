@@ -563,7 +563,7 @@ Kiểm chứng: `bun run build`; `bun run test:unit` (case mới + cũ pass);
 
 Tham chiếu: `docs/deepbook/predict/MISPRICING-EDGE.md`.
 
-Trạng thái: planned.
+Trạng thái: done.
 
 ## Tệp đụng tới (dự kiến)
 
