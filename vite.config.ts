@@ -164,6 +164,7 @@ export default defineConfig({
           __dirname,
           'predict-club-lifecycle-prototype.html',
         ),
+        solana: resolve(__dirname, 'solana.html'),
         // Build plugins as separate entry points
         'plugins/hello-plugin': resolve(__dirname, 'plugins/hello-plugin/plugin.tsx'),
         'plugins/hello-world-sui': resolve(__dirname, 'plugins/hello-world-sui/plugin.tsx'),
@@ -232,6 +233,15 @@ export default defineConfig({
         'plugins/polymarket': resolve(__dirname, 'plugins/polymarket/plugin.tsx'),
         'plugins/btc-chart': resolve(__dirname, 'plugins/btc-chart/plugin.tsx'),
         'plugins/predict-club': resolve(__dirname, 'plugins/predict-club/plugin.tsx'),
+        'plugins/solana-wallet-profile': resolve(
+          __dirname,
+          'plugins/solana-wallet-profile/plugin.tsx',
+        ),
+        'plugins/solana-faucet': resolve(__dirname, 'plugins/solana-faucet/plugin.tsx'),
+        'plugins/solana-create-wallet': resolve(
+          __dirname,
+          'plugins/solana-create-wallet/plugin.tsx',
+        ),
       },
       external: ['gsap', 'motion'],
       checks: {

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:solana": "vite build --config vite.config.solana-standalone.ts",
     "lint": "eslint .",
     "format": "biome format --write .",
     "format:check": "biome format .",
@@ -39,6 +40,11 @@
     "@polymarket/clob-client": "^5.8.1",
     "@scallop-io/sui-scallop-sdk": "^3.0.2",
     "@scure/bip39": "^2.2.0",
+    "@solana/kit": "^6.10.0",
+    "@solana/wallet-adapter-base": "^0.9.27",
+    "@solana/wallet-adapter-react": "^0.15.39",
+    "@solana/wallet-adapter-react-ui": "^0.9.39",
+    "@solana/wallet-adapter-wallets": "^0.19.38",
     "@uidotdev/usehooks": "^2.4.1",
     "boneyard-js": "^1.8.1",
     "clsx": "^2.1.1",
@@ -88,6 +94,7 @@
     "tailwindcss": "^4.3.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.61.1",
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "vite-plugin-singlefile": "^2.3.3"
   }
 }

@@ -1,0 +1,32 @@
+@import 'tailwindcss';
+
+:root {
+  --sol-purple: #9945ff;
+  --sol-green: #14f195;
+  --sol-dark: #0a0a0a;
+  --sol-card: #111113;
+  --sol-card-border: #1e1e22;
+  --sol-text: #ededed;
+  --sol-text-muted: #888;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  background: var(--sol-dark);
+  color: var(--sol-text);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}

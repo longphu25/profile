@@ -356,6 +356,22 @@ const PLUGIN_GROUPS: PluginGroup[] = [
       },
     ],
   },
+  {
+    id: 'solana',
+    label: 'Solana',
+    icon: '☀',
+    plugins: [
+      {
+        id: 'solana-wallet-profile',
+        name: 'SolanaWalletProfile',
+        label: 'Wallet Profile',
+        desc: 'Connect Solana wallet, view SOL balance (devnet)',
+        src: pluginPath('solana-wallet-profile'),
+        wasmDesc: '@solana/web3.js + Phantom',
+        noShadow: true,
+      },
+    ],
+  },
 ]
 
 // Flat list for lookup
@@ -388,15 +404,12 @@ export function SuiWasmDashboard() {
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<string | null>(null)
-  const [wasmSupported, setWasmSupported] = useState<boolean | null>(null)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
   const [walletInfo, setWalletInfo] = useState<{ address: string; network: string } | null>(null)
   const initRef = useRef(false)
 
   // Check WebAssembly support
-  useEffect(() => {
-    setWasmSupported(typeof WebAssembly !== 'undefined')
-  }, [])
+  const [wasmSupported] = useState(() => typeof WebAssembly !== 'undefined')
 
   // Track wallet from shared data
   useEffect(() => {
