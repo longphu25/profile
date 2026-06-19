@@ -96,3 +96,29 @@ export interface MispriceCell {
   /** Defined reason when the contract quote could not be obtained (degraded, not faked). */
   reason?: string
 }
+
+/**
+ * The payout multiple for a binary contract: stake 1, win this many. A binary pays 1
+ * DUSDC per contract on a win, so the multiple is the inverse of the win probability
+ * the contract charges (`1 / contractProbability`). A 0.62 win-probability contract
+ * pays 1.6x. This is the real, vig-inclusive payout the trader receives, not a model
+ * fair value, so it is only meaningful for a strike that carries a real contract quote.
+ * Null when the probability is missing or outside (0, 1) (no honest multiple exists).
+ */
+export function payoutMultiple(contractProbability: number | null): number | null {
+  if (contractProbability == null) return null
+  if (!(contractProbability > 0 && contractProbability < 1)) return null
+  return 1 / contractProbability
+}
+
+/**
+ * Format a payout multiple for a heatmap cell: one decimal and an "x" (1.6 -> "1.6x").
+ * A deep out-of-the-money strike has a tiny probability and so a huge multiple that
+ * would overflow the cell, so anything at or above 9x collapses to "9x+" rather than
+ * printing a wide number. Null multiples render as a dash.
+ */
+export function formatMultiple(multiple: number | null): string {
+  if (multiple == null || !Number.isFinite(multiple)) return '-'
+  if (multiple >= 9) return '9x+'
+  return `${multiple.toFixed(1)}x`
+}

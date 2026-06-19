@@ -8,6 +8,7 @@ import {
   sampleVolSurface,
 } from '../../plugins/predict-club/application/sampleVolSurface'
 import type { SurfaceColumnInput } from '../../plugins/predict-club/domain/volSurface'
+import { formatMultiple, payoutMultiple } from '../../plugins/predict-club/domain/volSurface'
 
 const SVI_FROM_TESTNET: SVIParams = {
   a: 257_891,
@@ -140,5 +141,37 @@ describe('sampleVolSurface', () => {
     expect(grid.ivRange).not.toBeNull()
     expect(grid.ivRange?.min).toBeCloseTo(Math.min(...allIvs), 9)
     expect(grid.ivRange?.max).toBeCloseTo(Math.max(...allIvs), 9)
+  })
+})
+
+describe('payoutMultiple', () => {
+  test('inverts the contract win probability into a stake multiple', () => {
+    expect(payoutMultiple(0.5)).toBeCloseTo(2.0, 12)
+    expect(payoutMultiple(0.625)).toBeCloseTo(1.6, 12)
+  })
+
+  test('is null (no honest multiple) outside the open unit interval', () => {
+    expect(payoutMultiple(null)).toBeNull()
+    expect(payoutMultiple(0)).toBeNull()
+    expect(payoutMultiple(1)).toBeNull()
+    expect(payoutMultiple(-0.2)).toBeNull()
+    expect(payoutMultiple(1.4)).toBeNull()
+  })
+})
+
+describe('formatMultiple', () => {
+  test('renders one decimal with an x suffix', () => {
+    expect(formatMultiple(1.6)).toBe('1.6x')
+    expect(formatMultiple(2)).toBe('2.0x')
+  })
+
+  test('collapses a huge multiple to 9x+ so it does not overflow the cell', () => {
+    expect(formatMultiple(20)).toBe('9x+')
+    expect(formatMultiple(9)).toBe('9x+')
+  })
+
+  test('a null or non-finite multiple renders as a dash', () => {
+    expect(formatMultiple(null)).toBe('-')
+    expect(formatMultiple(Number.POSITIVE_INFINITY)).toBe('-')
   })
 })
