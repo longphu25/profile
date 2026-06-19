@@ -267,6 +267,15 @@ trade ticket on a heatmap cell) is reached from that analysis, never the reverse
   from free SVI math, the quoted edge and value side, IV-vs-realized) lives in a
   hover/focus tooltip that is aria-hidden, with the same facts folded into each
   cell's aria-label so a screen reader hears the depth without it being read twice.
+- **A quoted cell leads with the payout multiple, not the vol number.** IV is the
+  quant's language, not what a binary trader scans for: they want "stake 1, win how
+  much". So a cell in the selected column's ATM band, where a real contract quote
+  exists, shows the payout multiple (1 / contract win-probability, vig included) as
+  its headline with the IV demoted to a small subline; the background stays the IV
+  ramp so the surface still reads as a vol surface. The rest of the grid has no quote,
+  so it keeps IV as the headline rather than a multiple inferred from the model, which
+  would promise a fairer payout than the contract actually pays. The tooltip adds the
+  payout as a Payout row alongside the model probability and edge.
 - **Positions drawer: the chain is the source of truth, the contract decides claims.**
   After minting, the trader opens a right-side drawer listing their real binary
   positions read straight from their PredictManager on chain - not the localStorage

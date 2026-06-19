@@ -32,6 +32,24 @@ analysis, never the reverse. Three rules shape the implementation:
 3. **Never let a doomed strike reach the wallet.** A read-only pre-flight catches a
    strike the contract will not price *before* asking the user to sign.
 
+## Cell display: payout multiple as the headline
+
+A binary trader scans the grid for "stake 1, win how much", not for implied vol. So a
+cell in the selected column's ATM band, where a real contract quote exists, shows the
+payout multiple as its headline number: `payoutMultiple = 1 / contractProbability`
+(`domain/volSurface.ts`). A binary pays 1 DUSDC per contract on a win, so the inverse
+of the contract-implied win probability is the real, vig-inclusive multiple the trader
+receives (a 0.62-probability contract pays 1.6x). The IV drops to a small subline and
+the background stays the IV color ramp, so the surface still reads as a vol surface.
+
+Cells outside the quoted band have no contract quote, so they keep IV as the headline
+rather than a multiple inferred from the model: a model multiple would advertise a
+fairer payout than the contract actually pays (it excludes the house margin). The
+multiple is therefore only shown where a real quote backs it, never fabricated to fill
+the grid. `formatMultiple` caps a deep out-of-the-money multiple at "9x+" so it does
+not overflow the cell, and the tooltip adds a Payout row beside the model probability
+and the edge.
+
 ## Architecture
 
 The feature is split so the orchestration is pure and unit-testable, the UI is
