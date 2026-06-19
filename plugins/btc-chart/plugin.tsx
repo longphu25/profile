@@ -96,6 +96,7 @@ const SYMBOLS = [
     exchange: 'okx' as Exchange,
     okxInstId: 'OKB-USDT-SWAP',
   },
+  { symbol: 'REUSDT', base: 'RE', quote: 'USDT', exchange: 'binance' as Exchange },
 ] as const
 type SymbolId = (typeof SYMBOLS)[number]['symbol']
 
