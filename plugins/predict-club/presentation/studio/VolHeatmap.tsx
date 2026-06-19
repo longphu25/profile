@@ -2,6 +2,7 @@ import { type KeyboardEvent, useLayoutEffect, useRef, useState } from 'react'
 import type { ArbReport } from '../../application/arbFreeCheck'
 import { edgeSide, edgeTier } from '../../application/submitStudioTrade'
 import { computeFairValue } from '../../domain/payoutPreview'
+import { formatMultiple, payoutMultiple } from '../../domain/volSurface'
 import type {
   MispriceCell,
   RealizedVol,
@@ -134,6 +135,7 @@ function HeatmapBody({
   onSelect,
   onCellSelect,
   edgeByStrike,
+  contractProbByStrike,
   arbKeys,
   mintedKeys,
   realized,
@@ -143,6 +145,7 @@ function HeatmapBody({
   onSelect: (oracleId: string) => void
   onCellSelect?: (column: SurfaceColumn, cell: SurfaceCell, anchorRect: DOMRect) => void
   edgeByStrike: Map<number, number>
+  contractProbByStrike: Map<number, number>
   arbKeys: Set<string>
   mintedKeys?: Set<string>
   realized?: RealizedVol | null
@@ -237,6 +240,10 @@ function HeatmapBody({
     tipColumn && tipColumn.oracleId === selectedOracleId && tipStrike != null
       ? (edgeByStrike.get(tipStrike) ?? null)
       : null
+  const tipContractProb =
+    tipColumn && tipColumn.oracleId === selectedOracleId && tipStrike != null
+      ? (contractProbByStrike.get(tipStrike) ?? null)
+      : null
 
   return (
     <>
@@ -295,6 +302,7 @@ function HeatmapBody({
             ivRange={ivRange}
             selectedOracleId={selectedOracleId}
             edgeByStrike={edgeByStrike}
+            contractProbByStrike={contractProbByStrike}
             arbKeys={arbKeys}
             active={active}
             cellRefs={cellRefs}
@@ -313,6 +321,7 @@ function HeatmapBody({
           strike={tipStrike}
           iv={tipCell?.iv ?? null}
           edge={tipEdge}
+          contractProbability={tipContractProb}
           realized={realized ?? null}
         />
       )}
@@ -330,6 +339,7 @@ function CellTooltip({
   strike,
   iv,
   edge,
+  contractProbability,
   realized,
 }: {
   rect: DOMRect
@@ -337,6 +347,7 @@ function CellTooltip({
   strike: number
   iv: number | null
   edge: number | null
+  contractProbability: number | null
   realized: RealizedVol | null
 }) {
   const ref = useRef<HTMLDivElement | null>(null)
@@ -360,6 +371,7 @@ function CellTooltip({
   const moneyness = formatMoneyness(strike, column.forward)
   const modelUp = modelUpProbability(column, strike)
   const side = edgeSide(edge)
+  const multiple = payoutMultiple(contractProbability)
   const richCheap = iv != null ? ivVsRealized(iv, realized) : null
 
   return (
@@ -385,6 +397,7 @@ function CellTooltip({
           {moneyness != null && <Stat label="Moneyness" value={moneyness} />}
           <Stat label="IV" value={formatIv(iv)} />
           {modelUp != null && <Stat label="Model UP" value={fmtProb(modelUp)} />}
+          {multiple != null && <Stat label="Payout" value={formatMultiple(multiple)} accent />}
           {edge != null && side != null && (
             <Stat
               label="Edge"
@@ -428,6 +441,7 @@ function Row({
   ivRange,
   selectedOracleId,
   edgeByStrike,
+  contractProbByStrike,
   arbKeys,
   active,
   cellRefs,
@@ -443,6 +457,7 @@ function Row({
   ivRange: SurfaceGrid['ivRange']
   selectedOracleId: string | null
   edgeByStrike: Map<number, number>
+  contractProbByStrike: Map<number, number>
   arbKeys: Set<string>
   active: [number, number]
   cellRefs: React.RefObject<(HTMLDivElement | null)[][]>
@@ -533,6 +548,12 @@ function Row({
         const modelUp = modelUpProbability(column, strike)
         const moneynessLabel = moneyness != null ? `, ${moneyness} vs spot` : ''
         const modelLabel = modelUp != null ? `, model UP ${(modelUp * 100).toFixed(1)} percent` : ''
+        // Real payout multiple for a quoted cell (ATM band of the selected column): the
+        // contract-implied probability inverted. Only the quoted band has it, so the
+        // rest of the grid keeps IV as the headline rather than a fabricated number.
+        const contractProb = selectedCol ? (contractProbByStrike.get(strike) ?? null) : null
+        const multiple = payoutMultiple(contractProb)
+        const payoutLabel = multiple != null ? `, payout ${formatMultiple(multiple)}` : ''
         return (
           <div
             key={column.oracleId}
@@ -551,7 +572,7 @@ function Row({
               onCellHover(rowIndex, colIndex, e.currentTarget.getBoundingClientRect())
             }
             onBlur={() => onCellHover(rowIndex, colIndex, null)}
-            aria-label={`Strike ${strike}, ${formatExpiryHeader(column)}: implied vol ${formatIv(iv)}${moneynessLabel}${modelLabel}${edgeLabel}${arbLabel}${mintedLabel}`}
+            aria-label={`Strike ${strike}, ${formatExpiryHeader(column)}: implied vol ${formatIv(iv)}${payoutLabel}${moneynessLabel}${modelLabel}${edgeLabel}${arbLabel}${mintedLabel}`}
             className={`relative flex items-center justify-center font-data text-data-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-primary-fixed focus-visible:ring-inset ${
               arb
                 ? 'ring-2 ring-error ring-inset'
@@ -569,7 +590,14 @@ function Row({
               } as React.CSSProperties
             }
           >
-            {formatIv(iv)}
+            {multiple != null ? (
+              <span className="flex flex-col items-center leading-none">
+                <span className="font-semibold">{formatMultiple(multiple)}</span>
+                <span className="text-[9px] opacity-70">iv {formatIv(iv)}</span>
+              </span>
+            ) : (
+              formatIv(iv)
+            )}
             {arb && (
               <span
                 aria-hidden="true"
@@ -642,6 +670,13 @@ export function VolHeatmap({
   for (const cell of mispriceCells) {
     if (cell.edge != null) edgeByStrike.set(cell.strike, cell.edge)
   }
+  // Contract-implied win probability by strike for the selected column's ATM band, so a
+  // quoted cell can show the real payout multiple (1 / probability) as its headline.
+  const contractProbByStrike = new Map<number, number>()
+  for (const cell of mispriceCells) {
+    if (cell.contractProbability != null)
+      contractProbByStrike.set(cell.strike, cell.contractProbability)
+  }
   // Arb violations keyed by (oracleId|strike) so any column's flagged cell shows it.
   const arbKeys = new Set<string>()
   for (const v of arbReport.violations) {
@@ -685,6 +720,7 @@ export function VolHeatmap({
             onSelect={onSelect}
             onCellSelect={onCellSelect}
             edgeByStrike={edgeByStrike}
+            contractProbByStrike={contractProbByStrike}
             arbKeys={arbKeys}
             mintedKeys={mintedKeys}
             realized={realized ?? null}
