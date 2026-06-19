@@ -5,7 +5,7 @@
       "args": [
         "mcp"
       ],
-      "disabled": false
+      "disabled": true
     },
     "sui": {
       "url": "https://sui.mcp.kapa.ai",
