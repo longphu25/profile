@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Predict Club Round Lifecycle",
+    "subtitle": "From draft to settlement, with cancellation and member states",
+    "output": "docs/diagrams/predict-club-lifecycle.html",
+    "viewBox": [980, 700]
+  },
+  "lanes": [
+    { "id": "main", "label": "Round Phases" },
+    { "id": "events", "label": "Member Actions" },
+    { "id": "terminal", "label": "Terminal Outcomes" }
+  ],
+  "states": [
+    {
+      "id": "draft",
+      "type": "start",
+      "label": "Draft",
+      "lane": "main",
+      "col": 0,
+      "step": "01",
+      "sublabel": "leader creates"
+    },
+    {
+      "id": "open",
+      "type": "active",
+      "label": "Open",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "sublabel": "members pledge"
+    },
+    {
+      "id": "confirmed",
+      "type": "active",
+      "label": "Confirmed",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "sublabel": "leader locks"
+    },
+    {
+      "id": "executed",
+      "type": "active",
+      "label": "Executed",
+      "lane": "main",
+      "col": 3,
+      "step": "04",
+      "sublabel": "trades signed"
+    },
+    {
+      "id": "settled",
+      "type": "waiting",
+      "label": "Settled",
+      "lane": "main",
+      "col": 4,
+      "step": "05",
+      "sublabel": "oracle resolves"
+    },
+    {
+      "id": "pledge",
+      "type": "active",
+      "label": "Pledge DUSDC",
+      "lane": "events",
+      "col": 0,
+      "sublabel": "member intent"
+    },
+    {
+      "id": "sign",
+      "type": "decision",
+      "label": "Self-Sign",
+      "lane": "events",
+      "col": 1,
+      "sublabel": "wallet tx"
+    },
+    {
+      "id": "claim",
+      "type": "active",
+      "label": "Claim Payout",
+      "lane": "events",
+      "col": 2,
+      "sublabel": "redeem position"
+    },
+    {
+      "id": "claimed",
+      "type": "success",
+      "label": "Claimed",
+      "lane": "terminal",
+      "col": 2,
+      "sublabel": "payouts redeemed"
+    },
+    {
+      "id": "cancelled",
+      "type": "failure",
+      "label": "Cancelled",
+      "lane": "terminal",
+      "col": 0,
+      "sublabel": "aborted"
+    }
+  ],
+  "transitions": [
+    { "from": "draft", "to": "open", "variant": "emphasis" },
+    { "from": "open", "to": "confirmed", "variant": "emphasis" },
+    { "from": "confirmed", "to": "executed", "variant": "emphasis" },
+    { "from": "executed", "to": "settled", "variant": "emphasis" },
+    {
+      "from": "open",
+      "to": "pledge",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "drop"
+    },
+    {
+      "from": "confirmed",
+      "to": "sign",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "drop"
+    },
+    {
+      "from": "settled",
+      "to": "claim",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "drop"
+    },
+    {
+      "from": "claim",
+      "to": "claimed",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "drop"
+    },
+    {
+      "from": "open",
+      "to": "cancelled",
+      "label": "cancel",
+      "variant": "security",
+      "fromSide": "left",
+      "toSide": "top",
+      "route": "left-channel",
+      "labelAt": [140, 420]
+    },
+    {
+      "from": "confirmed",
+      "to": "cancelled",
+      "label": "policy fail",
+      "variant": "security",
+      "fromSide": "left",
+      "toSide": "right",
+      "route": "left-channel",
+      "labelAt": [310, 460]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Round States",
+      "items": [
+        "draft -> open -> confirmed -> executed -> settled -> claimed",
+        "Cancellation possible from open or confirmed",
+        "Oracle settlement is the only path to claiming"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Member Flow",
+      "items": [
+        "Pledge DUSDC intent during open phase",
+        "Self-sign trade after leader confirms",
+        "Claim payout after oracle settles"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Safety Rules",
+      "items": [
+        "User-signed only (no custodial keys)",
+        "Stale oracle blocks execution",
+        "devInspect preflight before signing"
+      ]
+    }
+  ]
+}

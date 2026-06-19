@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Predict Surface Studio Workflow",
+    "subtitle": "Vol surface analysis to trade execution",
+    "output": "docs/diagrams/predict-surface-studio.html"
+  },
+  "lanes": [
+    { "id": "data", "label": "Data Layer" },
+    { "id": "analysis", "label": "Surface Analysis" },
+    { "id": "decision", "label": "Decision Support" },
+    { "id": "action", "label": "Trade Execution" }
+  ],
+  "nodes": [
+    {
+      "id": "oracles",
+      "lane": "data",
+      "col": 0,
+      "type": "cloud",
+      "label": "Oracles",
+      "sublabel": "SVI + forward price"
+    },
+    {
+      "id": "binance",
+      "lane": "data",
+      "col": 2,
+      "type": "external",
+      "label": "Binance Ref",
+      "sublabel": "1m BTC closes"
+    },
+    {
+      "id": "rpc",
+      "lane": "data",
+      "col": 4,
+      "type": "cloud",
+      "label": "Sui RPC",
+      "sublabel": "devInspect quotes"
+    },
+    {
+      "id": "sample",
+      "lane": "analysis",
+      "col": 0,
+      "type": "backend",
+      "label": "Sample Surface",
+      "sublabel": "strike x expiry",
+      "tag": "pure SVI"
+    },
+    {
+      "id": "heatmap",
+      "lane": "analysis",
+      "col": 2,
+      "type": "frontend",
+      "label": "Vol Heatmap",
+      "sublabel": "IV matrix"
+    },
+    {
+      "id": "smile",
+      "lane": "analysis",
+      "col": 4,
+      "type": "frontend",
+      "label": "Smile Slice",
+      "sublabel": "per-expiry curve"
+    },
+    {
+      "id": "realized",
+      "lane": "decision",
+      "col": 0,
+      "type": "backend",
+      "label": "Realized Vol",
+      "sublabel": "IV vs historical"
+    },
+    {
+      "id": "misprice",
+      "lane": "decision",
+      "col": 2,
+      "type": "security",
+      "label": "Mispricing",
+      "sublabel": "contract vs fair",
+      "tag": "primary edge"
+    },
+    {
+      "id": "arbfree",
+      "lane": "decision",
+      "col": 4,
+      "type": "backend",
+      "label": "Arb-Free",
+      "sublabel": "surface health"
+    },
+    {
+      "id": "ticket",
+      "lane": "action",
+      "col": 2,
+      "type": "frontend",
+      "label": "Trade Ticket",
+      "sublabel": "strike + side + size"
+    },
+    {
+      "id": "preflight",
+      "lane": "action",
+      "col": 4,
+      "type": "security",
+      "label": "Preflight",
+      "sublabel": "devInspect gate",
+      "tag": "zero gas"
+    },
+    {
+      "id": "mint",
+      "lane": "action",
+      "col": 5,
+      "type": "messagebus",
+      "label": "Mint Position",
+      "sublabel": "sign + submit"
+    }
+  ],
+  "edges": [
+    {
+      "from": "oracles",
+      "to": "sample",
+      "label": "SVI fan-out",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "drop",
+      "labelSegment": 1
+    },
+    {
+      "from": "binance",
+      "to": "realized",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "drop"
+    },
+    { "from": "sample", "to": "heatmap", "variant": "emphasis" },
+    { "from": "heatmap", "to": "smile", "variant": "default" },
+    {
+      "from": "heatmap",
+      "to": "misprice",
+      "label": "ATM band",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "drop",
+      "labelSegment": 1
+    },
+    {
+      "from": "rpc",
+      "to": "misprice",
+      "label": "quote",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "drop",
+      "labelSegment": 0,
+      "labelDy": 18
+    },
+    {
+      "from": "sample",
+      "to": "arbfree",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "drop"
+    },
+    {
+      "from": "misprice",
+      "to": "ticket",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "drop"
+    },
+    { "from": "ticket", "to": "preflight", "variant": "security" },
+    { "from": "preflight", "to": "mint", "variant": "emphasis" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Data Sources",
+      "items": [
+        "SVI params per oracle (free, no RPC cost)",
+        "Binance 1m closes for realized vol",
+        "devInspect quotes only for ATM band"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Edge Numbers",
+      "items": [
+        "Mispricing = contract prob - fair value",
+        "IV vs realized vol spread",
+        "Arb-free: butterfly + calendar checks"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Safety",
+      "items": [
+        "Preflight blocks doomed strikes",
+        "Degrade, never fabricate data",
+        "Color + number (never color alone)"
+      ]
+    }
+  ]
+}
