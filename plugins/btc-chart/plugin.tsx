@@ -1758,26 +1758,65 @@ function BtcChartView() {
                 <span className="btc-chart__osc-caret">{oscOpen ? '▾' : '▸'}</span>
                 Oscillators
                 <span className="btc-chart__osc-hint">
-                  RSI {sidebar.rsiNow != null ? sidebar.rsiNow.toFixed(1) : '—'}
-                  {' · '}ADX {sidebar.adxNow != null ? sidebar.adxNow.toFixed(1) : '—'}
-                  {' · '}StochK {sidebar.stochKNow != null ? sidebar.stochKNow.toFixed(1) : '—'}
+                  RSI {sidebar.rsiNow != null ? sidebar.rsiNow.toFixed(1) : '—'}{' '}
+                  <b
+                    className={
+                      sidebar.rsiNow != null && sidebar.rsiNow > 70
+                        ? 'osc-ob'
+                        : sidebar.rsiNow != null && sidebar.rsiNow < 30
+                          ? 'osc-os'
+                          : ''
+                    }
+                  >
+                    {sidebar.rsiNow != null && sidebar.rsiNow > 70
+                      ? 'Quá mua'
+                      : sidebar.rsiNow != null && sidebar.rsiNow < 30
+                        ? 'Quá bán'
+                        : 'Trung tính'}
+                  </b>
+                  {' · '}ADX {sidebar.adxNow != null ? sidebar.adxNow.toFixed(1) : '—'}{' '}
+                  <b className={sidebar.adxNow != null && sidebar.adxNow >= 25 ? 'osc-strong' : ''}>
+                    {sidebar.adxNow != null && sidebar.adxNow >= 25 ? 'Xu hướng mạnh' : 'Sideway'}
+                  </b>
+                  {' · '}StochK {sidebar.stochKNow != null ? sidebar.stochKNow.toFixed(1) : '—'}{' '}
+                  <b
+                    className={
+                      sidebar.stochKNow != null && sidebar.stochKNow > 80
+                        ? 'osc-ob'
+                        : sidebar.stochKNow != null && sidebar.stochKNow < 20
+                          ? 'osc-os'
+                          : ''
+                    }
+                  >
+                    {sidebar.stochKNow != null && sidebar.stochKNow > 80
+                      ? 'Quá mua'
+                      : sidebar.stochKNow != null && sidebar.stochKNow < 20
+                        ? 'Quá bán'
+                        : 'Trung tính'}
+                  </b>
                   {' · '}OBV{' '}
-                  {sidebar.obvNow != null ? (sidebar.obvNow / 1e6).toFixed(1) + 'M' : '—'}
+                  {sidebar.obvNow != null ? (sidebar.obvNow / 1e6).toFixed(1) + 'M' : '—'}{' '}
+                  <b
+                    className={
+                      sidebar.obvNow != null && sidebar.obvNow > 0
+                        ? 'osc-strong'
+                        : sidebar.obvNow != null && sidebar.obvNow < 0
+                          ? 'osc-ob'
+                          : ''
+                    }
+                  >
+                    {sidebar.obvNow != null && sidebar.obvNow > 0
+                      ? 'Tích lũy'
+                      : sidebar.obvNow != null && sidebar.obvNow < 0
+                        ? 'Phân phối'
+                        : '—'}
+                  </b>
                 </span>
-                <span className="btc-chart__osc-desc">
-                  {sidebar.rsiNow != null && sidebar.rsiNow > 70
-                    ? 'Quá mua'
-                    : sidebar.rsiNow != null && sidebar.rsiNow < 30
-                      ? 'Quá bán'
-                      : 'Trung tính'}
-                  {' · '}
-                  {sidebar.adxNow != null && sidebar.adxNow >= 25 ? 'Xu hướng mạnh' : 'Sideway'}
-                  {' · '}
-                  {sidebar.stochKNow != null && sidebar.stochKNow > 80
-                    ? 'Quá mua'
-                    : sidebar.stochKNow != null && sidebar.stochKNow < 20
-                      ? 'Quá bán'
-                      : 'Trung tính'}
+                <span
+                  className="btc-chart__osc-info"
+                  title="RSI: >70 Quá mua, <30 Quá bán&#10;ADX: ≥25 Xu hướng mạnh, <25 Sideway&#10;StochK: >80 Quá mua, <20 Quá bán&#10;OBV: >0 Tích lũy (mua vào), <0 Phân phối (bán ra)"
+                >
+                  ⓘ
                 </span>
               </button>
               {oscOpen && (
