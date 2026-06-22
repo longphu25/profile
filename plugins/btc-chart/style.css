@@ -382,6 +382,37 @@
   height: auto;
 }
 
+/* Volume spike threshold slider */
+.btc-chart__spike-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.btc-chart__spike-slider {
+  flex: 1;
+  accent-color: #ffd166;
+  cursor: pointer;
+}
+.btc-chart__spike-slider:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btc-chart__spike-val {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffd166;
+  min-width: 34px;
+  text-align: right;
+}
+.btc-chart__spike-hint {
+  margin-top: 5px;
+  font-size: 10px;
+  color: var(--muted-2);
+  line-height: 1.4;
+}
+
 /* Volume profile overlay — kept narrow + offset from price ladder */
 /* Volume profile overlay — kept narrow + offset from price ladder */
 .btc-chart__vp-canvas {

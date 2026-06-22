@@ -1143,6 +1143,10 @@ function BtcChartView() {
   const wsRef = useRef<WebSocket | null>(null)
   const candlesRef = useRef<Candle[]>([])
   const hiLoLinesRef = useRef<{ high: any; low: any } | null>(null)
+  // Volume-spike alert: only fire on a newly closed candle (not on UI
+  // re-renders), and mirror the sound-enabled flag for use inside renderData.
+  const lastCandleTimeRef = useRef<number>(0)
+  const soundEnabledRef = useRef<boolean>(cfgInit.sound.enabled)
   // Advanced oscillator pane (ADX / StochRSI / OBV) — created on demand.
   const oscElRef = useRef<HTMLDivElement>(null)
   const oscRefs = useRef<{
@@ -1191,6 +1195,9 @@ function BtcChartView() {
   const [oscOpen, setOscOpen] = useState<boolean>(cfgInit.oscOpen)
   const [oscView, setOscView] = useState<OscView>(cfgInit.oscView)
   const [oscHeight, setOscHeight] = useState<number>(cfgInit.oscHeight)
+  const [spikeMult, setSpikeMult] = useState<number>(cfgInit.spikeMult)
+  const spikeMultRef = useRef<number>(cfgInit.spikeMult)
+  spikeMultRef.current = spikeMult
   const oscViewRef = useRef<OscView>(cfgInit.oscView)
   oscViewRef.current = oscView
   const oscOpenRef = useRef<boolean>(cfgInit.oscOpen)
@@ -1342,6 +1349,9 @@ function BtcChartView() {
     soundRef.current.setVolume(sound.volume)
   }, [sound.volume])
   useEffect(() => {
+    soundEnabledRef.current = sound.enabled
+  }, [sound.enabled])
+  useEffect(() => {
     sidebarRef.current = sidebar
   }, [sidebar])
 
@@ -1361,9 +1371,10 @@ function BtcChartView() {
         oscOpen,
         oscView,
         oscHeight,
+        spikeMult,
       })
     },
-    [interval, symbol, vis, alerts, sound, notifAllowed, oscOpen, oscView, oscHeight],
+    [interval, symbol, vis, alerts, sound, notifAllowed, oscOpen, oscView, oscHeight, spikeMult],
   )
   useEffect(() => {
     persist(undefined)
@@ -1380,6 +1391,10 @@ function BtcChartView() {
   const renderData = useCallback((data: Candle[]) => {
     const refs = chartRefs.current
     if (!data.length || !refs) return
+
+    // Initial render (after a fetch/symbol switch) should not fire alerts for
+    // pre-existing candles; it only seeds the dedup state.
+    const isInitial = fitNextRef.current
 
     const v = visRef.current
     const nwe = calcMHBand(data)
@@ -1483,10 +1498,10 @@ function BtcChartView() {
     refs.vwapUpS.setData(v.vwap ? toLine(vwapR.upper) : [])
     refs.vwapLoS.setData(v.vwap ? toLine(vwapR.lower) : [])
 
-    // Volume bars, with large-volume spikes highlighted (vol > SPIKE_MULT x
+    // Volume bars, with large-volume spikes highlighted (vol > spikeMult x
     // its 20-bar average). Spikes are colored bright amber so unusual
     // activity stands out on any timeframe (e.g. an H4 volume burst).
-    const SPIKE_MULT = 2.5
+    const SPIKE_MULT = spikeMultRef.current
     const volArrAll = data.map((c) => c.volume)
     const volSmaAll = smaNum(volArrAll, 20)
     refs.volSeries.setData(
@@ -1525,15 +1540,20 @@ function BtcChartView() {
     }
 
     // Mark the latest candle if it is a volume spike, so it is visible even
-    // without reading the volume bars.
+    // without reading the volume bars, and raise an alert (sound + browser
+    // notification + toast) once, only when a fresh candle closes as a spike.
     const lastIdx = data.length - 1
-    if (
+    const lastTime = data[lastIdx].time
+    const isNewCandle = !isInitial && lastTime > lastCandleTimeRef.current
+    // On initial load reset the marker; on live updates track the max seen.
+    lastCandleTimeRef.current = isInitial ? lastTime : Math.max(lastCandleTimeRef.current, lastTime)
+    const lastSpike =
       v.volSpike &&
       volSmaAll[lastIdx] != null &&
       data[lastIdx].volume > (volSmaAll[lastIdx] as number) * SPIKE_MULT
-    ) {
+    if (lastSpike) {
       markers.push({
-        time: data[lastIdx].time,
+        time: lastTime,
         position: 'aboveBar',
         color: '#ffd166',
         shape: 'circle',
@@ -1541,6 +1561,14 @@ function BtcChartView() {
       })
       markers.sort((a, b) => a.time - b.time)
       refs.candleSeries.setMarkers(markers)
+
+      if (!isInitial && isNewCandle) {
+        const ratio = (data[lastIdx].volume / (volSmaAll[lastIdx] as number)).toFixed(1)
+        const msg = `Volume spike ${ratio}x trung bình 20 nến`
+        if (soundEnabledRef.current) soundRef.current.play()
+        pushNotification('BTC Chart — Volume Spike', msg)
+        setFiredToast(msg)
+      }
     }
 
     if (fitNextRef.current) {
@@ -2921,8 +2949,9 @@ function BtcChartView() {
       oscOpen,
       oscView,
       oscHeight,
+      spikeMult,
     })
-  }, [interval, symbol, vis, alerts, sound, notifAllowed, oscOpen, oscView, oscHeight])
+  }, [interval, symbol, vis, alerts, sound, notifAllowed, oscOpen, oscView, oscHeight, spikeMult])
 
   const importNow = useCallback(
     async (file: File) => {
@@ -2937,6 +2966,8 @@ function BtcChartView() {
         setOscOpen(cfg.oscOpen)
         setOscView(cfg.oscView)
         setOscHeight(cfg.oscHeight)
+        setSpikeMult(cfg.spikeMult)
+        spikeMultRef.current = cfg.spikeMult
         if (cfg.interval !== interval) setInterval_(cfg.interval as Interval)
         // restore zoom if present
         if (cfg.zoom && chartRefs.current?.mainChart) {
@@ -3627,6 +3658,43 @@ function BtcChartView() {
               <span className={`btc-chart__row-val ${sidebar.sigDiv.cls}`}>
                 {sidebar.sigDiv.text}
               </span>
+            </div>
+          </div>
+
+          {/* Volume spike threshold */}
+          <div className="btc-chart__panel">
+            <div className="btc-chart__panel-header">
+              <div className="btc-chart__panel-title">Volume spike</div>
+              <button
+                type="button"
+                className={`btc-chart__ind-btn${vis.volSpike ? ' is-on' : ''}`}
+                onClick={() => toggle('volSpike')}
+              >
+                {vis.volSpike ? 'On' : 'Off'}
+              </button>
+            </div>
+            <div className="btc-chart__spike-row">
+              <input
+                type="range"
+                className="btc-chart__spike-slider"
+                min={2}
+                max={3}
+                step={0.1}
+                value={spikeMult}
+                disabled={!vis.volSpike}
+                onChange={(e) => {
+                  const val = Math.round(parseFloat(e.target.value) * 10) / 10
+                  setSpikeMult(val)
+                  spikeMultRef.current = val
+                  if (candlesRef.current.length)
+                    queueMicrotask(() => renderData(candlesRef.current))
+                }}
+                aria-label="Volume spike threshold"
+              />
+              <span className="btc-chart__spike-val">{spikeMult.toFixed(1)}×</span>
+            </div>
+            <div className="btc-chart__spike-hint">
+              Đánh dấu + cảnh báo khi volume {'>'} {spikeMult.toFixed(1)}× trung bình 20 nến
             </div>
           </div>
 
