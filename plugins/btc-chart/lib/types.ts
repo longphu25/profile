@@ -53,6 +53,17 @@ export interface ChartRefs {
   cleanup: () => void
 }
 
+export interface TradeSetup {
+  dir: 'long' | 'short' | null
+  entry: number
+  sl: number
+  tp1: number
+  tp2: number
+  rr: number
+  confidence: number
+  reasons: string[]
+}
+
 export interface SidebarState {
   nweUpper: string
   nweMid: string
@@ -80,6 +91,7 @@ export interface SidebarState {
   obvNow: number | null
   nweUp: number | null
   nweLo: number | null
+  tradeSetup: TradeSetup
 }
 
 export interface StatsState {
@@ -144,6 +156,7 @@ export const INITIAL_SIDEBAR: SidebarState = {
   obvNow: null,
   nweUp: null,
   nweLo: null,
+  tradeSetup: { dir: null, entry: 0, sl: 0, tp1: 0, tp2: 0, rr: 0, confidence: 0, reasons: [] },
 }
 
 declare global {

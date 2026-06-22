@@ -1253,3 +1253,16 @@
 .btc-chart__pos-rows {
   padding: 4px 8px;
 }
+
+/* Trade Setup panel */
+.btc-chart__setup-tbl { width: 100%; font-size: 11px; border-collapse: collapse; }
+.btc-chart__setup-tbl td { padding: 2px 4px; }
+.btc-chart__setup-tbl .lbl { color: #6f8a83; width: 70px; }
+.btc-chart__setup-tbl .dn-row td { color: #ff7a85; }
+.btc-chart__setup-tbl .up-row td { color: #34d8a4; }
+.btc-chart__setup-reasons { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.btc-chart__setup-tag {
+  font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  background: rgba(159,185,177,0.12); color: #9fb9b1;
+}
+.btc-chart__pos-suggest { border-top: 1px dashed rgba(159,185,177,0.2); margin-top: 4px; padding-top: 3px; }

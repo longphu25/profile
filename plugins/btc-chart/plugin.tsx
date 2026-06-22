@@ -50,6 +50,7 @@ import {
   VolumeSpikePanel,
   ChartHeader,
   IndicatorToolbar,
+  TradeSetupPanel,
 } from './components'
 import { usePositions, useTicker, useFunding, useFearGreed, useKlines } from './hooks'
 import {
@@ -82,6 +83,8 @@ import {
   mlSignal,
   drawSMCOverlay,
   drawBoxFlipOverlay,
+  calcTradeSetup,
+  suggestSlTp,
   INITIAL_SIDEBAR,
   statsFromTicker,
   DEFAULT_STATS,
@@ -94,6 +97,7 @@ import {
   type StatsState,
   type FundingState,
   type FngState,
+  type TradeSetup,
 } from './lib'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -238,6 +242,21 @@ function BtcChartView() {
     addPosition,
     removePosition,
   } = usePositions(chartRefs)
+
+  // Compute suggested SL/TP for each open position (ATR + NWE bands).
+  const posSuggestions = useMemo(() => {
+    const candles = candlesRef.current
+    if (!candles.length || !positions.length) return {}
+    const i = candles.length - 1
+    const nweData = calcMHBand(candles)
+    const result: Record<string, { sl: number; tp1: number; tp2: number }> = {}
+    for (const p of positions) {
+      result[p.id] = suggestSlTp(p, candles, nweData)
+    }
+    return result
+    // Re-compute when positions change or sidebar updates (new candle tick).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positions, sidebar.rsiNow])
 
   // Keep refs in sync with state for use inside imperative callbacks.
   useEffect(() => {
@@ -691,6 +710,7 @@ function BtcChartView() {
       obvNow: obv[i] ?? null,
       nweUp: nwe.upper[i] ?? null,
       nweLo: nwe.lower[i] ?? null,
+      tradeSetup: calcTradeSetup(data, nwe, rsi, adxR, ml),
     }))
   }, [])
 
@@ -1848,6 +1868,7 @@ function BtcChartView() {
         {/* Sidebar */}
         <div className="btc-chart__sidebar">
           <SignalPanel ml={sidebar.ml} />
+          <TradeSetupPanel setup={sidebar.tradeSetup} />
           <PositionsPanel
             positions={positions}
             showForm={showPosForm}
@@ -1857,6 +1878,7 @@ function BtcChartView() {
             onAdd={addPosition}
             onRemove={removePosition}
             markPrice={lastPriceRef.current}
+            suggestions={posSuggestions}
           />
           <FundingPanel funding={funding} />
           <StatsPanel stats={stats} />

@@ -2,6 +2,12 @@
 
 import { type Position, type PosForm, calcLiquidation, calcPnl, fmtP } from '../lib'
 
+export interface PosSuggestion {
+  sl: number
+  tp1: number
+  tp2: number
+}
+
 export interface PositionsPanelProps {
   positions: Position[]
   showForm: boolean
@@ -12,6 +18,8 @@ export interface PositionsPanelProps {
   onRemove: (id: string) => void
   /** Latest mark price used for PnL; falls back to each entry price. */
   markPrice: number | null
+  /** ATR+NWE-based SL/TP suggestions per position id. */
+  suggestions?: Record<string, PosSuggestion>
 }
 
 export function PositionsPanel({
@@ -23,6 +31,7 @@ export function PositionsPanel({
   onAdd,
   onRemove,
   markPrice,
+  suggestions,
 }: PositionsPanelProps) {
   return (
     <div className="btc-chart__panel">
@@ -138,6 +147,25 @@ export function PositionsPanel({
                   {pct.toFixed(2)}%)
                 </span>
               </div>
+              {suggestions?.[p.id] && (
+                <div className="btc-chart__pos-suggest">
+                  <span className="btc-chart__row-label" style={{ fontSize: 9, opacity: 0.7 }}>
+                    Gợi ý (ATR+NWE)
+                  </span>
+                  <div className="btc-chart__row">
+                    <span className="btc-chart__row-label">SL</span>
+                    <span className="btc-chart__row-val dn">{fmtP(suggestions[p.id].sl)}</span>
+                  </div>
+                  <div className="btc-chart__row">
+                    <span className="btc-chart__row-label">TP1</span>
+                    <span className="btc-chart__row-val up">{fmtP(suggestions[p.id].tp1)}</span>
+                  </div>
+                  <div className="btc-chart__row">
+                    <span className="btc-chart__row-label">TP2</span>
+                    <span className="btc-chart__row-val up">{fmtP(suggestions[p.id].tp2)}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )
