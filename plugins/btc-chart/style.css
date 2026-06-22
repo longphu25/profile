@@ -296,6 +296,82 @@
   border-top: 1px solid var(--border);
 }
 
+/* Advanced oscillator pane — collapsible (ADX / StochRSI / OBV) */
+.btc-chart__osc-wrap {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  flex: 0 0 auto;
+  min-height: 0;
+}
+.btc-chart__osc-wrap.is-open {
+  flex: 1.8 1 0;
+}
+.btc-chart__osc-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  background: var(--surface-2);
+  flex: 0 0 auto;
+}
+.btc-chart__osc-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.btc-chart__osc-caret {
+  color: var(--mint);
+  font-size: 10px;
+}
+.btc-chart__osc-hint {
+  color: var(--muted-2);
+  font-weight: 400;
+  font-size: 10px;
+}
+.btc-chart__osc-tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.btc-chart__osc-tab {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--muted-2);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+}
+.btc-chart__osc-tab:hover {
+  color: var(--text);
+}
+.btc-chart__osc-tab.is-on {
+  color: var(--bg);
+  background: var(--mint);
+  border-color: var(--mint);
+}
+.btc-chart__osc {
+  width: 100%;
+  flex: 1 1 0;
+  min-height: 0;
+  height: 0;
+}
+.btc-chart__osc-wrap.is-open .btc-chart__osc {
+  height: auto;
+}
+
 /* Volume profile overlay — kept narrow + offset from price ladder */
 /* Volume profile overlay — kept narrow + offset from price ladder */
 .btc-chart__vp-canvas {

@@ -15,6 +15,7 @@ import {
   importConfigFromFile,
   type ChartConfig,
   type VisFlags,
+  type OscView,
 } from './storage'
 import {
   AlertSound,
@@ -311,6 +312,217 @@ function calcMACD(
   return { macd, signal: sl, hist }
 }
 
+/** SMA over an array that may contain nulls; resets the window on gaps. */
+function smaNullable(arr: (number | null)[], period: number): (number | null)[] {
+  const out = new Array<number | null>(arr.length).fill(null)
+  const buf: number[] = []
+  for (let i = 0; i < arr.length; i++) {
+    const v = arr[i]
+    if (v == null) {
+      buf.length = 0
+      continue
+    }
+    buf.push(v)
+    if (buf.length > period) buf.shift()
+    if (buf.length === period) out[i] = buf.reduce((a, b) => a + b, 0) / period
+  }
+  return out
+}
+
+/**
+ * ADX / DMI (Wilder). Measures trend *strength* (ADX) and direction
+ * (+DI vs -DI). ADX > 25 = trending, < 20 = ranging/sideways.
+ */
+function calcADX(
+  data: Candle[],
+  period = 14,
+): { adx: (number | null)[]; plusDI: (number | null)[]; minusDI: (number | null)[] } {
+  const n = data.length
+  const adx = new Array<number | null>(n).fill(null)
+  const plusDI = new Array<number | null>(n).fill(null)
+  const minusDI = new Array<number | null>(n).fill(null)
+  if (n < period * 2) return { adx, plusDI, minusDI }
+
+  const tr = new Array<number>(n).fill(0)
+  const plusDM = new Array<number>(n).fill(0)
+  const minusDM = new Array<number>(n).fill(0)
+  for (let i = 1; i < n; i++) {
+    const up = data[i].high - data[i - 1].high
+    const down = data[i - 1].low - data[i].low
+    plusDM[i] = up > down && up > 0 ? up : 0
+    minusDM[i] = down > up && down > 0 ? down : 0
+    const h = data[i].high,
+      l = data[i].low,
+      pc = data[i - 1].close
+    tr[i] = Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc))
+  }
+  // Wilder smoothing of TR / +DM / -DM
+  let trS = 0,
+    pS = 0,
+    mS = 0
+  for (let i = 1; i <= period; i++) {
+    trS += tr[i]
+    pS += plusDM[i]
+    mS += minusDM[i]
+  }
+  const dx: number[] = []
+  for (let i = period; i < n; i++) {
+    if (i > period) {
+      trS = trS - trS / period + tr[i]
+      pS = pS - pS / period + plusDM[i]
+      mS = mS - mS / period + minusDM[i]
+    }
+    const pdi = trS ? (100 * pS) / trS : 0
+    const mdi = trS ? (100 * mS) / trS : 0
+    plusDI[i] = pdi
+    minusDI[i] = mdi
+    const sum = pdi + mdi
+    dx.push(sum ? (100 * Math.abs(pdi - mdi)) / sum : 0)
+  }
+  // ADX = Wilder smoothing of DX
+  if (dx.length >= period) {
+    let adxVal = dx.slice(0, period).reduce((a, b) => a + b, 0) / period
+    adx[period * 2 - 1] = adxVal
+    for (let j = period; j < dx.length; j++) {
+      adxVal = (adxVal * (period - 1) + dx[j]) / period
+      adx[period + j] = adxVal
+    }
+  }
+  return { adx, plusDI, minusDI }
+}
+
+/**
+ * Stochastic RSI — applies the stochastic oscillator to RSI values, giving
+ * a faster, more sensitive momentum read than RSI alone. Returns %K and %D
+ * lines on a 0..100 scale.
+ */
+function calcStochRSI(
+  data: Candle[],
+  rsiPeriod = 14,
+  stochPeriod = 14,
+  kSmooth = 3,
+  dSmooth = 3,
+): { k: (number | null)[]; d: (number | null)[] } {
+  const n = data.length
+  const rsi = calcRSI(data, rsiPeriod)
+  const rawK = new Array<number | null>(n).fill(null)
+  for (let i = 0; i < n; i++) {
+    if (rsi[i] == null || i < stochPeriod - 1) continue
+    let lo = Infinity,
+      hi = -Infinity,
+      ok = true
+    for (let j = i - stochPeriod + 1; j <= i; j++) {
+      const r = rsi[j]
+      if (r == null) {
+        ok = false
+        break
+      }
+      if (r < lo) lo = r
+      if (r > hi) hi = r
+    }
+    if (!ok) continue
+    rawK[i] = hi > lo ? (((rsi[i] as number) - lo) / (hi - lo)) * 100 : 0
+  }
+  const k = smaNullable(rawK, kSmooth)
+  const d = smaNullable(k, dSmooth)
+  return { k, d }
+}
+
+/** On-Balance Volume — cumulative volume flow that confirms price moves. */
+function calcOBV(data: Candle[]): number[] {
+  const out = new Array<number>(data.length).fill(0)
+  for (let i = 1; i < data.length; i++) {
+    const prev = out[i - 1]
+    if (data[i].close > data[i - 1].close) out[i] = prev + data[i].volume
+    else if (data[i].close < data[i - 1].close) out[i] = prev - data[i].volume
+    else out[i] = prev
+  }
+  return out
+}
+
+/**
+ * Anchored VWAP (from first candle of the dataset) with ±mult·stddev bands.
+ * VWAP is the institutional reference price; bands flag stretched conditions.
+ */
+function calcVWAP(
+  data: Candle[],
+  mult = 2,
+): { vwap: (number | null)[]; upper: (number | null)[]; lower: (number | null)[] } {
+  const n = data.length
+  const vwap = new Array<number | null>(n).fill(null)
+  const upper = new Array<number | null>(n).fill(null)
+  const lower = new Array<number | null>(n).fill(null)
+  let cumPV = 0,
+    cumV = 0,
+    cumPV2 = 0
+  for (let i = 0; i < n; i++) {
+    const tp = (data[i].high + data[i].low + data[i].close) / 3
+    const vol = data[i].volume || 0
+    cumPV += tp * vol
+    cumV += vol
+    cumPV2 += tp * tp * vol
+    if (cumV > 0) {
+      const mean = cumPV / cumV
+      vwap[i] = mean
+      const variance = Math.max(0, cumPV2 / cumV - mean * mean)
+      const sd = Math.sqrt(variance)
+      upper[i] = mean + mult * sd
+      lower[i] = mean - mult * sd
+    }
+  }
+  return { vwap, upper, lower }
+}
+
+interface Divergence {
+  time: number
+  type: 'bull' | 'bear'
+  price: number
+}
+
+/**
+ * RSI divergence detection. Compares consecutive price pivots against RSI
+ * pivots: a higher price high with a lower RSI high is bearish divergence;
+ * a lower price low with a higher RSI low is bullish divergence.
+ */
+function detectRSIDivergence(
+  data: Candle[],
+  rsi: (number | null)[],
+  lookback = 5,
+  maxBars = 80,
+): Divergence[] {
+  const out: Divergence[] = []
+  const n = data.length
+  const start = Math.max(lookback, n - maxBars)
+  const pivHigh: number[] = []
+  const pivLow: number[] = []
+  for (let i = lookback; i < n - lookback; i++) {
+    let isH = true,
+      isL = true
+    for (let j = i - lookback; j <= i + lookback; j++) {
+      if (j === i) continue
+      if (data[j].high >= data[i].high) isH = false
+      if (data[j].low <= data[i].low) isL = false
+    }
+    if (isH) pivHigh.push(i)
+    if (isL) pivLow.push(i)
+  }
+  for (let p = 1; p < pivHigh.length; p++) {
+    const a = pivHigh[p - 1],
+      b = pivHigh[p]
+    if (b < start || rsi[a] == null || rsi[b] == null) continue
+    if (data[b].high > data[a].high && (rsi[b] as number) < (rsi[a] as number))
+      out.push({ time: data[b].time, type: 'bear', price: data[b].high })
+  }
+  for (let p = 1; p < pivLow.length; p++) {
+    const a = pivLow[p - 1],
+      b = pivLow[p]
+    if (b < start || rsi[a] == null || rsi[b] == null) continue
+    if (data[b].low < data[a].low && (rsi[b] as number) > (rsi[a] as number))
+      out.push({ time: data[b].time, type: 'bull', price: data[b].low })
+  }
+  return out
+}
+
 function buildOrderFlow(
   data: Candle[],
   nwe: NWE,
@@ -363,6 +575,13 @@ function mlSignal(
   sma200: (number | null)[],
   rsi: (number | null)[],
   macd: { hist: number[] },
+  extra?: {
+    adx: { adx: (number | null)[]; plusDI: (number | null)[]; minusDI: (number | null)[] }
+    stoch: { k: (number | null)[]; d: (number | null)[] }
+    obv: number[]
+    vwap: (number | null)[]
+    divs: Divergence[]
+  },
 ): MLResult {
   const i = data.length - 1
   const c = data[i]
@@ -404,6 +623,35 @@ function mlSignal(
   if (vsma[i] != null)
     f['VolSpike'] = c.volume > (vsma[i] as number) * 1.3 ? (c.close > c.open ? 0.6 : -0.6) : 0
 
+  if (extra) {
+    // ADX/DMI: only contributes when a real trend exists (ADX > 20). Strength
+    // scales the directional read so ranging markets don't generate fake bias.
+    const adxV = extra.adx.adx[i],
+      pdi = extra.adx.plusDI[i],
+      mdi = extra.adx.minusDI[i]
+    if (adxV != null && pdi != null && mdi != null) {
+      const strength = Math.max(0, Math.min(1, (adxV - 20) / 20))
+      f['ADX'] = (pdi > mdi ? 1 : -1) * strength * 2
+    }
+    // Stochastic RSI: oversold/overbought timing.
+    const sk = extra.stoch.k[i]
+    if (sk != null) f['StochRSI'] = sk < 20 ? 1 : sk > 80 ? -1 : ((50 - sk) / 50) * -0.6
+    // OBV slope over last 10 bars confirms or contradicts price.
+    if (i >= 10) {
+      const slope = extra.obv[i] - extra.obv[i - 10]
+      f['OBV'] = slope > 0 ? 0.8 : slope < 0 ? -0.8 : 0
+    }
+    // VWAP: above = bullish control, below = bearish.
+    const vw = extra.vwap[i]
+    if (vw != null) f['VWAP'] = c.close > vw ? 0.8 : -0.8
+    // Recent RSI divergence (within last 6 bars) is a strong reversal cue.
+    const recent = extra.divs.filter((d) => d.time >= data[Math.max(0, i - 6)].time)
+    if (recent.length) {
+      const last = recent[recent.length - 1]
+      f['Divergence'] = last.type === 'bull' ? 2 : -2
+    }
+  }
+
   const W: Record<string, number> = {
     NWE_pos: 1.5,
     'Price>NWE_mid': 2,
@@ -415,6 +663,11 @@ function mlSignal(
     MACD_acc: 1,
     Mom5: 1,
     VolSpike: 0.8,
+    ADX: 2,
+    StochRSI: 1.2,
+    OBV: 1,
+    VWAP: 1.2,
+    Divergence: 2.2,
   }
   let ws = 0,
     wt = 0
@@ -462,6 +715,9 @@ interface ChartRefs {
   rsiOB: any
   rsiOS: any
   volSeries: any
+  vwapS: any
+  vwapUpS: any
+  vwapLoS: any
   cleanup: () => void
 }
 
@@ -475,6 +731,11 @@ interface SidebarState {
   sigMa: { text: string; cls: string }
   sigMacd: { text: string; cls: string }
   sigTrend: { text: string; cls: string }
+  sigAdx: { text: string; cls: string }
+  sigStoch: { text: string; cls: string }
+  sigObv: { text: string; cls: string }
+  sigVwap: { text: string; cls: string }
+  sigDiv: { text: string; cls: string }
   ml: MLResult
   ofLog: OrderFlowSignal[]
   vp: { poc: string; vah: string; val: string; pos: string }
@@ -496,6 +757,11 @@ const INITIAL_SIDEBAR: SidebarState = {
   sigMa: { text: '—', cls: '' },
   sigMacd: { text: '—', cls: '' },
   sigTrend: { text: '—', cls: '' },
+  sigAdx: { text: '—', cls: '' },
+  sigStoch: { text: '—', cls: '' },
+  sigObv: { text: '—', cls: '' },
+  sigVwap: { text: '—', cls: '' },
+  sigDiv: { text: '—', cls: '' },
   ml: { score: 0.5, label: '—', color: '#9fb9b1', features: {} },
   ofLog: [],
   vp: { poc: '—', vah: '—', val: '—', pos: '—' },
@@ -884,6 +1150,21 @@ function BtcChartView() {
   const wsRef = useRef<WebSocket | null>(null)
   const candlesRef = useRef<Candle[]>([])
   const hiLoLinesRef = useRef<{ high: any; low: any } | null>(null)
+  // Advanced oscillator pane (ADX / StochRSI / OBV) — created on demand.
+  const oscElRef = useRef<HTMLDivElement>(null)
+  const oscRefs = useRef<{
+    chart: any
+    adxS: any
+    plusDIS: any
+    minusDIS: any
+    adxRef: any
+    stochKS: any
+    stochDS: any
+    stochOB: any
+    stochOS: any
+    obvS: any
+    cleanup: () => void
+  } | null>(null)
 
   // Boot configuration (vis flags + interval + alerts + sound + zoom).
   const cfgInit = useMemo<ChartConfig>(() => loadConfig(), [])
@@ -911,6 +1192,10 @@ function BtcChartView() {
   symbolInfoRef.current = symbolInfo
   const [vis, setVis] = useState<VisFlags>(visRef.current)
   const [vpOpts, setVpOpts] = useState(vpOptsRef.current)
+  const [oscOpen, setOscOpen] = useState<boolean>(cfgInit.oscOpen)
+  const [oscView, setOscView] = useState<OscView>(cfgInit.oscView)
+  const oscViewRef = useRef<OscView>(cfgInit.oscView)
+  oscViewRef.current = oscView
   const [alerts, setAlerts] = useState<AlertRule[]>(alertsRef.current)
   const [sound, setSound] = useState(cfgInit.sound)
   const [notifAllowed, setNotifAllowed] = useState(cfgInit.notifications)
@@ -1074,9 +1359,11 @@ function BtcChartView() {
         sound,
         notifications: notifAllowed,
         minimal: false,
+        oscOpen,
+        oscView,
       })
     },
-    [interval, symbol, vis, alerts, sound, notifAllowed],
+    [interval, symbol, vis, alerts, sound, notifAllowed, oscOpen, oscView],
   )
   useEffect(() => {
     persist(undefined)
@@ -1100,6 +1387,11 @@ function BtcChartView() {
     const sma200 = calcSMA(data, 200)
     const rsi = calcRSI(data, 14)
     const macd = calcMACD(data)
+    const adxR = calcADX(data, 14)
+    const stoch = calcStochRSI(data)
+    const obv = calcOBV(data)
+    const vwapR = calcVWAP(data)
+    const divs = detectRSIDivergence(data, rsi)
     const of_ = buildOrderFlow(data, nwe)
     const boxFlip = buildBoxFlipSignals(data, {
       minBoxBars: 10,
@@ -1107,7 +1399,13 @@ function BtcChartView() {
       breakoutConfirm: 'close',
       bufferPct: 0.0007,
     })
-    const ml = mlSignal(data, nwe, sma50, sma200, rsi, macd)
+    const ml = mlSignal(data, nwe, sma50, sma200, rsi, macd, {
+      adx: adxR,
+      stoch,
+      obv,
+      vwap: vwapR.vwap,
+      divs,
+    })
 
     const toLine = (arr: (number | null)[]) =>
       data
@@ -1126,17 +1424,32 @@ function BtcChartView() {
     // Order flow markers are drawn on our own overlay canvas in the
     // top/bottom gutter bands instead of the built-in setMarkers (which
     // hugs wicks and quickly becomes unreadable).
-    refs.candleSeries.setMarkers(
-      v.boxFlip
-        ? boxFlip.signals.map((sig) => ({
-            time: sig.time,
-            position: sig.dir === 'B' ? 'belowBar' : 'aboveBar',
-            color: sig.dir === 'B' ? '#22c55e' : '#f97316',
-            shape: sig.dir === 'B' ? 'arrowUp' : 'arrowDown',
-            text: sig.dir,
-          }))
-        : [],
-    )
+    const markers: any[] = []
+    if (v.boxFlip) {
+      for (const sig of boxFlip.signals) {
+        markers.push({
+          time: sig.time,
+          position: sig.dir === 'B' ? 'belowBar' : 'aboveBar',
+          color: sig.dir === 'B' ? '#22c55e' : '#f97316',
+          shape: sig.dir === 'B' ? 'arrowUp' : 'arrowDown',
+          text: sig.dir,
+        })
+      }
+    }
+    if (v.rsiDiv) {
+      for (const d of divs) {
+        markers.push({
+          time: d.time,
+          position: d.type === 'bull' ? 'belowBar' : 'aboveBar',
+          color: d.type === 'bull' ? '#6fbcf0' : '#c792ea',
+          shape: d.type === 'bull' ? 'arrowUp' : 'arrowDown',
+          text: d.type === 'bull' ? 'Div+' : 'Div-',
+        })
+      }
+    }
+    // lightweight-charts requires markers sorted ascending by time.
+    markers.sort((a, b) => a.time - b.time)
+    refs.candleSeries.setMarkers(markers)
     boxFlipRef.current = boxFlip
     if (boxCanvasRef.current && mainElRef.current && refs.candleSeries) {
       drawBoxFlipOverlay(
@@ -1166,6 +1479,9 @@ function BtcChartView() {
     refs.nweLowS.setData(v.nwe ? toLine(nwe.lower) : [])
     refs.ma50S.setData(v.ma50 ? toLine(sma50) : [])
     refs.ma200S.setData(v.ma200 ? toLine(sma200) : [])
+    refs.vwapS.setData(v.vwap ? toLine(vwapR.vwap) : [])
+    refs.vwapUpS.setData(v.vwap ? toLine(vwapR.upper) : [])
+    refs.vwapLoS.setData(v.vwap ? toLine(vwapR.lower) : [])
 
     const rsiData = data
       .map((c, i) => (rsi[i] != null ? { time: c.time, value: rsi[i] as number } : null))
@@ -1183,6 +1499,24 @@ function BtcChartView() {
           }))
         : [],
     )
+
+    // ── Advanced oscillator pane (only the selected view holds data) ──
+    const osc = oscRefs.current
+    if (osc) {
+      const view = oscViewRef.current
+      const empty: { time: number; value: number }[] = []
+      osc.adxS.setData(view === 'adx' ? toLine(adxR.adx) : empty)
+      osc.plusDIS.setData(view === 'adx' ? toLine(adxR.plusDI) : empty)
+      osc.minusDIS.setData(view === 'adx' ? toLine(adxR.minusDI) : empty)
+      osc.adxRef.setData(view === 'adx' ? data.map((c) => ({ time: c.time, value: 25 })) : empty)
+      osc.stochKS.setData(view === 'stoch' ? toLine(stoch.k) : empty)
+      osc.stochDS.setData(view === 'stoch' ? toLine(stoch.d) : empty)
+      osc.stochOB.setData(view === 'stoch' ? data.map((c) => ({ time: c.time, value: 80 })) : empty)
+      osc.stochOS.setData(view === 'stoch' ? data.map((c) => ({ time: c.time, value: 20 })) : empty)
+      osc.obvS.setData(
+        view === 'obv' ? data.map((c, i) => ({ time: c.time, value: obv[i] })) : empty,
+      )
+    }
 
     if (fitNextRef.current) {
       refs.mainChart.timeScale().fitContent()
@@ -1244,6 +1578,9 @@ function BtcChartView() {
           : null,
         rsi[i] != null
           ? `<span style="color:${CHART.neu}">RSI ${(rsi[i] as number).toFixed(1)}</span>`
+          : null,
+        v.vwap && vwapR.vwap[i] != null
+          ? `<span style="color:#c792ea">VWAP ${fmtP(vwapR.vwap[i] as number)}</span>`
           : null,
       ]
         .filter(Boolean)
@@ -1308,6 +1645,59 @@ function BtcChartView() {
       else if (sell) sigNwe = { text: '▼ Sell Rebound', cls: 'dn' }
     }
 
+    // ADX / DMI trend strength + direction
+    const adxV = adxR.adx[i],
+      pdi = adxR.plusDI[i],
+      mdi = adxR.minusDI[i]
+    let sigAdx = { text: '—', cls: '' }
+    if (adxV != null && pdi != null && mdi != null) {
+      const strong = adxV >= 25
+      const dir = pdi > mdi ? 'up' : 'dn'
+      const regime = adxV < 20 ? 'Sideway' : strong ? 'Strong' : 'Weak'
+      sigAdx = {
+        text: `${adxV.toFixed(0)} · ${regime} ${pdi > mdi ? '▲+DI' : '▼-DI'}`,
+        cls: adxV < 20 ? '' : dir,
+      }
+    }
+
+    // Stochastic RSI %K
+    const sk = stoch.k[i]
+    const sigStoch =
+      sk != null
+        ? {
+            text: `${sk.toFixed(0)}${sk < 20 ? ' (OS)' : sk > 80 ? ' (OB)' : ''}`,
+            cls: sk < 20 ? 'up' : sk > 80 ? 'dn' : '',
+          }
+        : { text: '—', cls: '' }
+
+    // OBV slope (last 10 bars)
+    let sigObv = { text: '—', cls: '' }
+    if (i >= 10) {
+      const slope = obv[i] - obv[i - 10]
+      sigObv = {
+        text: slope > 0 ? '▲ Accumulation' : slope < 0 ? '▼ Distribution' : 'Flat',
+        cls: slope > 0 ? 'up' : slope < 0 ? 'dn' : '',
+      }
+    }
+
+    // VWAP position
+    const vwapNow = vwapR.vwap[i]
+    const sigVwap =
+      vwapNow != null
+        ? c.close > vwapNow
+          ? { text: '▲ Above VWAP', cls: 'up' }
+          : { text: '▼ Below VWAP', cls: 'dn' }
+        : { text: '—', cls: '' }
+
+    // Latest RSI divergence within recent bars
+    const recentDiv = divs.filter((d) => d.time >= data[Math.max(0, i - 6)].time)
+    const lastDiv = recentDiv[recentDiv.length - 1]
+    const sigDiv = lastDiv
+      ? lastDiv.type === 'bull'
+        ? { text: '▲ Bullish Div', cls: 'up' }
+        : { text: '▼ Bearish Div', cls: 'dn' }
+      : { text: '—', cls: '' }
+
     setSidebar((s) => ({
       ...s,
       nweUpper: nwe.upper[i] != null ? fmtP(nwe.upper[i] as number) : '—',
@@ -1319,6 +1709,11 @@ function BtcChartView() {
       sigMacd,
       sigTrend,
       sigNwe,
+      sigAdx,
+      sigStoch,
+      sigObv,
+      sigVwap,
+      sigDiv,
       ml,
       ofLog: of_.log,
       boxFlip: {
@@ -1450,6 +1845,32 @@ function BtcChartView() {
       lastValueVisible: false,
       crosshairMarkerVisible: false,
       title: 'MA200',
+    })
+
+    // VWAP (anchored) + std-dev bands
+    const vwapS = mainChart.addLineSeries({
+      color: '#c792ea',
+      lineWidth: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+      title: 'VWAP',
+    })
+    const vwapUpS = mainChart.addLineSeries({
+      color: 'rgba(199,146,234,0.4)',
+      lineWidth: 1,
+      lineStyle: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    })
+    const vwapLoS = mainChart.addLineSeries({
+      color: 'rgba(199,146,234,0.4)',
+      lineWidth: 1,
+      lineStyle: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
     })
 
     const rsiSeries = rsiChart.addLineSeries({
@@ -1653,6 +2074,9 @@ function BtcChartView() {
       rsiOB,
       rsiOS,
       volSeries,
+      vwapS,
+      vwapUpS,
+      vwapLoS,
       cleanup: () => {
         ro.disconnect()
         try {
@@ -1679,6 +2103,115 @@ function BtcChartView() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ── Advanced oscillator pane (ADX / StochRSI / OBV) ────────────────
+  // Created only while open to keep the base chart light. Time scale is
+  // kept in sync with the main chart in both directions.
+  useEffect(() => {
+    if (!oscOpen) return
+    const LWC = window.LightweightCharts
+    const mainChart = chartRefs.current?.mainChart
+    if (!LWC || !oscElRef.current || !mainChart) return
+
+    const el = oscElRef.current
+    const chart = LWC.createChart(el, {
+      layout: {
+        background: { type: 'solid', color: CHART.bg },
+        textColor: CHART.axis,
+        fontSize: 10,
+      },
+      grid: {
+        vertLines: { color: CHART.grid },
+        horzLines: { color: CHART.grid },
+      },
+      crosshair: { mode: LWC.CrosshairMode.Normal },
+      rightPriceScale: { borderColor: CHART.border, scaleMargins: { top: 0.12, bottom: 0.08 } },
+      timeScale: { borderColor: CHART.border, timeVisible: true, secondsVisible: false },
+      width: el.clientWidth || 600,
+      height: el.clientHeight || 150,
+    })
+
+    const lineOpts = (color: string, width = 1.5, dashed = false) => ({
+      color,
+      lineWidth: width,
+      lineStyle: dashed ? 2 : 0,
+      priceLineVisible: false,
+      lastValueVisible: true,
+      crosshairMarkerVisible: false,
+    })
+
+    const adxRef = chart.addLineSeries(lineOpts('rgba(255,255,255,0.18)', 1, true))
+    const adxS = chart.addLineSeries({ ...lineOpts('#ffc46b', 2), title: 'ADX' })
+    const plusDIS = chart.addLineSeries({ ...lineOpts('#34d8a4', 1.5), title: '+DI' })
+    const minusDIS = chart.addLineSeries({ ...lineOpts('#ff7a85', 1.5), title: '-DI' })
+    const stochOB = chart.addLineSeries(lineOpts('rgba(255,122,133,0.3)', 1, true))
+    const stochOS = chart.addLineSeries(lineOpts('rgba(52,216,164,0.3)', 1, true))
+    const stochKS = chart.addLineSeries({ ...lineOpts('#6fbcf0', 2), title: '%K' })
+    const stochDS = chart.addLineSeries({ ...lineOpts('#ffc46b', 1.5), title: '%D' })
+    const obvS = chart.addLineSeries({ ...lineOpts('#80ffd5', 2), title: 'OBV' })
+
+    const syncFrom = mainChart.timeScale().subscribeVisibleLogicalRangeChange((r: any) => {
+      if (r) chart.timeScale().setVisibleLogicalRange(r)
+    })
+    chart.timeScale().subscribeVisibleLogicalRangeChange((r: any) => {
+      if (r) mainChart.timeScale().setVisibleLogicalRange(r)
+    })
+    // Match current main-chart view immediately.
+    const cur = mainChart.timeScale().getVisibleLogicalRange()
+    if (cur) chart.timeScale().setVisibleLogicalRange(cur)
+
+    const ro = new ResizeObserver(() => {
+      if (el.clientHeight > 0)
+        chart.applyOptions({ width: el.clientWidth, height: el.clientHeight })
+    })
+    ro.observe(el)
+
+    oscRefs.current = {
+      chart,
+      adxS,
+      plusDIS,
+      minusDIS,
+      adxRef,
+      stochKS,
+      stochDS,
+      stochOB,
+      stochOS,
+      obvS,
+      cleanup: () => {
+        ro.disconnect()
+        try {
+          mainChart.timeScale().unsubscribeVisibleLogicalRangeChange(syncFrom)
+        } catch {
+          /* noop */
+        }
+        try {
+          chart.remove()
+        } catch {
+          /* noop */
+        }
+      },
+    }
+
+    requestAnimationFrame(() => {
+      if (el.clientHeight > 0)
+        chart.applyOptions({ width: el.clientWidth, height: el.clientHeight })
+      if (candlesRef.current.length) renderData(candlesRef.current)
+    })
+
+    return () => {
+      oscRefs.current?.cleanup()
+      oscRefs.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oscOpen])
+
+  // Re-render oscillator series when switching which one is shown.
+  useEffect(() => {
+    if (oscOpen && oscRefs.current && candlesRef.current.length) {
+      queueMicrotask(() => renderData(candlesRef.current))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oscView])
 
   // ── Fetch klines + open WS for the selected interval ───────────────
   useEffect(() => {
@@ -2381,8 +2914,10 @@ function BtcChartView() {
       sound,
       notifications: notifAllowed,
       minimal: false,
+      oscOpen,
+      oscView,
     })
-  }, [interval, symbol, vis, alerts, sound, notifAllowed])
+  }, [interval, symbol, vis, alerts, sound, notifAllowed, oscOpen, oscView])
 
   const importNow = useCallback(
     async (file: File) => {
@@ -2394,6 +2929,8 @@ function BtcChartView() {
         alertsRef.current = cfg.alerts
         setSound(cfg.sound)
         setNotifAllowed(cfg.notifications)
+        setOscOpen(cfg.oscOpen)
+        setOscView(cfg.oscView)
         if (cfg.interval !== interval) setInterval_(cfg.interval as Interval)
         // restore zoom if present
         if (cfg.zoom && chartRefs.current?.mainChart) {
@@ -2422,6 +2959,8 @@ function BtcChartView() {
     { key: 'smc', label: 'SMC' },
     { key: 'boxFlip', label: 'Box Flip' },
     { key: 'of', label: 'Order Flow' },
+    { key: 'vwap', label: 'VWAP' },
+    { key: 'rsiDiv', label: 'RSI Div' },
     { key: 'vp', label: 'Vol Profile', sep: true },
     { key: 'rsi', label: 'RSI' },
     { key: 'vol', label: 'Volume' },
@@ -2663,6 +3202,42 @@ function BtcChartView() {
           <div className="btc-chart__rsi" ref={rsiElRef} />
           <div className="btc-chart__vol" ref={volElRef} />
           <canvas className="btc-chart__vp-canvas" ref={vpCanvasRef} />
+          {/* Advanced oscillator pane — hidden by default, toggled open */}
+          <div className={`btc-chart__osc-wrap${oscOpen ? ' is-open' : ''}`}>
+            <div className="btc-chart__osc-bar">
+              <button
+                type="button"
+                className="btc-chart__osc-toggle"
+                onClick={() => setOscOpen((o) => !o)}
+                aria-expanded={oscOpen}
+              >
+                <span className="btc-chart__osc-caret">{oscOpen ? '▾' : '▸'}</span>
+                Oscillators
+                <span className="btc-chart__osc-hint">ADX · StochRSI · OBV</span>
+              </button>
+              {oscOpen && (
+                <div className="btc-chart__osc-tabs">
+                  {(
+                    [
+                      { id: 'adx', label: 'ADX / DMI' },
+                      { id: 'stoch', label: 'Stoch RSI' },
+                      { id: 'obv', label: 'OBV' },
+                    ] as { id: OscView; label: string }[]
+                  ).map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      className={`btc-chart__osc-tab${oscView === t.id ? ' is-on' : ''}`}
+                      onClick={() => setOscView(t.id)}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="btc-chart__osc" ref={oscElRef} />
+          </div>
         </div>
 
         {/* Sidebar */}
@@ -3006,6 +3581,36 @@ function BtcChartView() {
                 {sidebar.sigTrend.text}
               </span>
             </div>
+            <div className="btc-chart__row">
+              <span className="btc-chart__row-label">ADX / DMI</span>
+              <span className={`btc-chart__row-val ${sidebar.sigAdx.cls}`}>
+                {sidebar.sigAdx.text}
+              </span>
+            </div>
+            <div className="btc-chart__row">
+              <span className="btc-chart__row-label">Stoch RSI</span>
+              <span className={`btc-chart__row-val ${sidebar.sigStoch.cls}`}>
+                {sidebar.sigStoch.text}
+              </span>
+            </div>
+            <div className="btc-chart__row">
+              <span className="btc-chart__row-label">OBV</span>
+              <span className={`btc-chart__row-val ${sidebar.sigObv.cls}`}>
+                {sidebar.sigObv.text}
+              </span>
+            </div>
+            <div className="btc-chart__row">
+              <span className="btc-chart__row-label">VWAP</span>
+              <span className={`btc-chart__row-val ${sidebar.sigVwap.cls}`}>
+                {sidebar.sigVwap.text}
+              </span>
+            </div>
+            <div className="btc-chart__row">
+              <span className="btc-chart__row-label">RSI Divergence</span>
+              <span className={`btc-chart__row-val ${sidebar.sigDiv.cls}`}>
+                {sidebar.sigDiv.text}
+              </span>
+            </div>
           </div>
 
           {/* Features */}
@@ -3103,6 +3708,11 @@ const FEATURE_LABEL: Record<string, string> = {
   MACD_acc: 'MACD Acc',
   Mom5: 'Mom5',
   VolSpike: 'VolSpike',
+  ADX: 'ADX/DMI',
+  StochRSI: 'StochRSI',
+  OBV: 'OBV',
+  VWAP: 'VWAP',
+  Divergence: 'RSI Div',
 }
 
 // ── Plugin export ──────────────────────────────────────────────────────────
