@@ -6,6 +6,7 @@
 
 import type { Plugin, HostAPI } from '../../src/plugins/types'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './style.css'
 import {
   loadConfig,
@@ -50,7 +51,7 @@ import {
   ChartHeader,
   IndicatorToolbar,
 } from './components'
-import { usePositions } from './hooks'
+import { usePositions, useTicker, useFunding, useFearGreed } from './hooks'
 import {
   CHART,
   LIMIT,
@@ -82,10 +83,17 @@ import {
   drawSMCOverlay,
   drawBoxFlipOverlay,
   INITIAL_SIDEBAR,
+  statsFromTicker,
+  DEFAULT_STATS,
+  DEFAULT_FUNDING,
+  DEFAULT_FNG,
   type Candle,
   type NWE,
   type ChartRefs,
   type SidebarState,
+  type StatsState,
+  type FundingState,
+  type FngState,
 } from './lib'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -179,15 +187,35 @@ function BtcChartView() {
   const [lastUpdate, setLastUpdate] = useState('—')
   const [price, setPrice] = useState({ cur: '—', chg: '+0.00%', up: true })
   const [ohlcv, setOhlcv] = useState({ o: '—', h: '—', l: '—', c: '—', v: '—' })
-  const [stats, setStats] = useState({ high: '—', low: '—', vol: '—', chg: '—', up: true })
-  const [funding, setFunding] = useState({
-    val: '—',
-    sub: 'Balanced',
-    cls: '',
-    breakdown: [] as { name: string; rate: number }[],
-  })
-  const [fng, setFng] = useState({ val: '—', label: 'Loading…', color: '#9fb9b1', pct: 50 })
   const [sidebar, setSidebar] = useState<SidebarState>(INITIAL_SIDEBAR)
+
+  // ── Polled market data via React Query (ticker 5s, funding 30s, F&G 60s) ──
+  const tickerQuery = useTicker(symbol, symbolInfo)
+  const fundingQuery = useFunding(symbol, symbolInfo)
+  const fngQuery = useFearGreed()
+  const stats: StatsState = tickerQuery.data ? statsFromTicker(tickerQuery.data) : DEFAULT_STATS
+  const funding: FundingState = fundingQuery.data ?? DEFAULT_FUNDING
+  const fng: FngState = fngQuery.data ?? DEFAULT_FNG
+
+  // The ticker poll also seeds price/OHLCV, which the WebSocket then updates
+  // live between polls.
+  useEffect(() => {
+    const t = tickerQuery.data
+    if (!t) return
+    setPrice({
+      cur: fmtP(t.price),
+      chg: (t.chg >= 0 ? '+' : '') + t.chg.toFixed(2) + '%',
+      up: t.up,
+    })
+    setOhlcv((o) => ({
+      ...o,
+      o: fmtP(t.low),
+      h: fmtP(t.high),
+      l: fmtP(t.low),
+      c: fmtP(t.price),
+      v: fmtV(t.vol),
+    }))
+  }, [tickerQuery.data])
 
   // Manual positions: list state, add/remove form, and chart price-line overlay.
   const {
@@ -1515,193 +1543,6 @@ function BtcChartView() {
     }
   }, [interval, symbol, renderData])
 
-  // ── Background polls: ticker / funding / fng ───────────────────────
-  useEffect(() => {
-    let stopped = false
-
-    const fetchTicker = async () => {
-      try {
-        let p: number, ch: number, high: number, low: number, vol: number, quoteVol: number
-        const info = symbolInfoRef.current
-        if (info.exchange === 'mexc') {
-          const msym = 'mexcSymbol' in info ? info.mexcSymbol : symbol
-          const json = await (await fetch(`/api/mexc/api/v1/contract/ticker?symbol=${msym}`)).json()
-          const t = json.data
-          if (!t || stopped) return
-          p = +t.lastPrice
-          high = +t.high24Price
-          low = +t.lower24Price
-          vol = +t.volume24
-          quoteVol = +t.amount24
-          ch = +t.riseFallRate * 100
-        } else if (info.exchange === 'okx') {
-          const instId = 'okxInstId' in info ? info.okxInstId : symbol
-          const json = await (await fetch(`/api/okx/api/v5/market/ticker?instId=${instId}`)).json()
-          const t = json.data?.[0]
-          if (!t || stopped) return
-          p = +t.last
-          high = +t.high24h
-          low = +t.low24h
-          vol = +t.vol24h
-          quoteVol = +t.volCcy24h
-          const open24 = +t.open24h
-          ch = open24 ? ((p - open24) / open24) * 100 : 0
-        } else {
-          // Try Binance futures first (most accurate price), fall back to Bybit or Binance spot
-          const binFut = await fetch(
-            `https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=${symbol}`,
-          )
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null)
-          if (binFut && !stopped && binFut.lastPrice) {
-            p = +binFut.lastPrice
-            ch = +binFut.priceChangePercent
-            high = +binFut.highPrice
-            low = +binFut.lowPrice
-            vol = +binFut.volume
-            quoteVol = +binFut.quoteVolume
-          } else if (info.exchange === 'bybit') {
-            const cat = 'bybitCategory' in info ? info.bybitCategory : 'linear'
-            const json = await (
-              await fetch(
-                `https://api.bybit.com/v5/market/tickers?category=${cat}&symbol=${symbol}`,
-              )
-            ).json()
-            const t = json.result?.list?.[0]
-            if (!t || stopped) return
-            p = +t.lastPrice
-            high = +t.highPrice24h
-            low = +t.lowPrice24h
-            vol = +t.volume24h
-            quoteVol = +t.turnover24h
-            const prev = +t.prevPrice24h
-            ch = prev ? ((p - prev) / prev) * 100 : 0
-          } else {
-            const t = await (
-              await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`)
-            ).json()
-            if (stopped) return
-            p = +t.lastPrice
-            ch = +t.priceChangePercent
-            high = +t.highPrice
-            low = +t.lowPrice
-            vol = +t.volume
-            quoteVol = +t.quoteVolume
-          }
-        }
-        setPrice({ cur: fmtP(p), chg: (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%', up: ch >= 0 })
-        setOhlcv((o) => ({
-          ...o,
-          o: fmtP(low),
-          h: fmtP(high),
-          l: fmtP(low),
-          c: fmtP(p),
-          v: fmtV(vol),
-        }))
-        setStats({
-          high: fmtP(high),
-          low: fmtP(low),
-          vol: fmtV(quoteVol),
-          chg: (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%',
-          up: ch >= 0,
-        })
-      } catch {
-        /* noop */
-      }
-    }
-    const fetchFunding = async () => {
-      const sym = symbol
-      const info = symbolInfoRef.current
-      const results: { name: string; rate: number }[] = []
-      // MEXC futures (when mexcSymbol defined — user trades on MEXC)
-      if ('mexcSymbol' in info) {
-        try {
-          const msym = info.mexcSymbol
-          const d = await (await fetch(`/api/mexc/api/v1/contract/ticker?symbol=${msym}`)).json()
-          if (d.data?.fundingRate) results.push({ name: 'MEXC', rate: +d.data.fundingRate * 100 })
-        } catch {
-          /* noop */
-        }
-      }
-      // Binance USDM futures
-      try {
-        const d = await (
-          await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${sym}`)
-        ).json()
-        if (d.lastFundingRate) results.push({ name: 'Binance', rate: +d.lastFundingRate * 100 })
-      } catch {
-        /* noop */
-      }
-      // OKX swap
-      try {
-        const d = await (
-          await fetch(
-            `https://www.okx.com/api/v5/public/funding-rate?instId=${sym.replace('USDT', '')}-USDT-SWAP`,
-          )
-        ).json()
-        if (d.data?.[0]?.fundingRate)
-          results.push({ name: 'OKX', rate: +d.data[0].fundingRate * 100 })
-      } catch {
-        /* noop */
-      }
-      // Bybit linear
-      try {
-        const cat = 'bybitCategory' in info ? info.bybitCategory : 'linear'
-        const d = await (
-          await fetch(
-            `https://api.bybit.com/v5/market/funding/history?category=${cat}&symbol=${sym}&limit=1`,
-          )
-        ).json()
-        if (d.result?.list?.[0]?.fundingRate)
-          results.push({ name: 'Bybit', rate: +d.result.list[0].fundingRate * 100 })
-      } catch {
-        /* noop */
-      }
-      if (stopped || results.length === 0) return
-      const avg = results.reduce((s, r) => s + r.rate, 0) / results.length
-      setFunding({
-        val: (avg >= 0 ? '+' : '') + avg.toFixed(4) + '%',
-        sub: avg > 0.1 ? 'Long heavy' : avg < 0 ? 'Short heavy' : 'Balanced',
-        cls: avg > 0.05 ? 'dn' : avg < 0 ? 'up' : '',
-        breakdown: results,
-      })
-    }
-    const fetchFng = async () => {
-      try {
-        const d = await (await fetch('https://api.alternative.me/fng/?limit=1')).json()
-        if (stopped) return
-        const v = +d.data[0].value,
-          cls = d.data[0].value_classification
-        const col =
-          v < 25
-            ? CHART.dn
-            : v < 45
-              ? '#ffaf6b'
-              : v < 55
-                ? CHART.hi
-                : v < 75
-                  ? CHART.up
-                  : CHART.ma50
-        setFng({ val: String(v), label: cls, color: col, pct: v })
-      } catch {
-        /* noop */
-      }
-    }
-
-    fetchTicker()
-    fetchFunding()
-    fetchFng()
-    const id1 = window.setInterval(fetchTicker, 5000)
-    const id2 = window.setInterval(fetchFunding, 30000)
-    const id3 = window.setInterval(fetchFng, 60000)
-    return () => {
-      stopped = true
-      clearInterval(id1)
-      clearInterval(id2)
-      clearInterval(id3)
-    }
-  }, [symbol])
-
   // ── Toggles ─────────────────────────────────────────────────────────
   const toggle = useCallback(
     (key: keyof VisFlags) => {
@@ -2089,13 +1930,33 @@ function BtcChartView() {
 
 // ── Plugin export ──────────────────────────────────────────────────────────
 
+// Plugin-owned query client: the plugin is loaded as a separate chunk, so it
+// provides its own React Query context rather than relying on the host.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5_000,
+    },
+  },
+})
+
+function BtcChartRoot() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BtcChartView />
+    </QueryClientProvider>
+  )
+}
+
 const BtcChartPlugin: Plugin = {
   name: 'BtcChart',
   version: '1.0.0',
   styleUrls: ['/plugins/btc-chart/style.css'],
 
   init(host: HostAPI) {
-    host.registerComponent('BtcChart', BtcChartView)
+    host.registerComponent('BtcChart', BtcChartRoot)
     host.log('BtcChart plugin initialized')
   },
 
