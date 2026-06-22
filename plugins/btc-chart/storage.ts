@@ -48,6 +48,8 @@ export interface ChartConfig {
   oscView: OscView
   /** Height (px) of the oscillator pane when open. */
   oscHeight: number
+  /** Volume-spike threshold as a multiple of the 20-bar average (2.0–3.0). */
+  spikeMult: number
 }
 
 export const DEFAULT_CONFIG: ChartConfig = {
@@ -76,6 +78,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
   oscOpen: true,
   oscView: 'rsi',
   oscHeight: 170,
+  spikeMult: 2.5,
 }
 
 /** Read full config from localStorage, with safe fallback. */
