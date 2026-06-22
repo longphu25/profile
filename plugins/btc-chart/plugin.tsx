@@ -1764,6 +1764,21 @@ function BtcChartView() {
                   {' · '}OBV{' '}
                   {sidebar.obvNow != null ? (sidebar.obvNow / 1e6).toFixed(1) + 'M' : '—'}
                 </span>
+                <span className="btc-chart__osc-desc">
+                  {sidebar.rsiNow != null && sidebar.rsiNow > 70
+                    ? 'Quá mua'
+                    : sidebar.rsiNow != null && sidebar.rsiNow < 30
+                      ? 'Quá bán'
+                      : 'Trung tính'}
+                  {' · '}
+                  {sidebar.adxNow != null && sidebar.adxNow >= 25 ? 'Xu hướng mạnh' : 'Sideway'}
+                  {' · '}
+                  {sidebar.stochKNow != null && sidebar.stochKNow > 80
+                    ? 'Quá mua'
+                    : sidebar.stochKNow != null && sidebar.stochKNow < 20
+                      ? 'Quá bán'
+                      : 'Trung tính'}
+                </span>
               </button>
               {oscOpen && (
                 <div className="btc-chart__osc-tabs">
