@@ -2449,7 +2449,7 @@ function BtcChartView() {
         </select>
         <form
           className="btc-chart__custom-sym"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault()
             const input = (e.target as HTMLFormElement).elements.namedItem(
               'coin',
@@ -2459,6 +2459,25 @@ function BtcChartView() {
             const sym = raw.endsWith('USDT') ? raw : raw + 'USDT'
             const base = sym.replace(/USDT$/, '')
             if (!allSymbols.find((s) => s.symbol === sym)) {
+              try {
+                const [spot, fut] = await Promise.all([
+                  fetch(
+                    `https://api.binance.com/api/v3/klines?symbol=${sym}&interval=1h&limit=1`,
+                  ).then((r) => r.ok),
+                  fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${sym}&interval=1h&limit=1`)
+                    .then((r) => r.ok)
+                    .catch(() => false),
+                ])
+                if (!spot && !fut) {
+                  setFiredToast(`${base} không có trên Binance`)
+                  input.value = ''
+                  return
+                }
+              } catch {
+                setFiredToast(`Không thể kiểm tra ${base} trên Binance`)
+                input.value = ''
+                return
+              }
               const entry: SymbolEntry = { symbol: sym, base, quote: 'USDT', exchange: 'binance' }
               const next = [...customSymbols, entry]
               setCustomSymbols(next)
