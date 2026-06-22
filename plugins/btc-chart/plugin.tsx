@@ -883,6 +883,7 @@ function BtcChartView() {
   const chartRefs = useRef<ChartRefs | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const candlesRef = useRef<Candle[]>([])
+  const hiLoLinesRef = useRef<{ high: any; low: any } | null>(null)
 
   // Boot configuration (vis flags + interval + alerts + sound + zoom).
   const cfgInit = useMemo<ChartConfig>(() => loadConfig(), [])
@@ -1525,6 +1526,44 @@ function BtcChartView() {
           boxFlipRef.current,
           visRef.current.boxFlip,
         )
+      }
+      // Update visible high/low price lines
+      const cands = candlesRef.current
+      if (cands.length) {
+        const from = Math.max(0, Math.floor(r.from))
+        const to = Math.min(cands.length - 1, Math.ceil(r.to))
+        let hi = -Infinity,
+          lo = Infinity
+        for (let i = from; i <= to; i++) {
+          if (cands[i].high > hi) hi = cands[i].high
+          if (cands[i].low < lo) lo = cands[i].low
+        }
+        if (hiLoLinesRef.current) {
+          try {
+            candleSeries.removePriceLine(hiLoLinesRef.current.high)
+            candleSeries.removePriceLine(hiLoLinesRef.current.low)
+          } catch {
+            /* noop */
+          }
+        }
+        hiLoLinesRef.current = {
+          high: candleSeries.createPriceLine({
+            price: hi,
+            color: 'rgba(52,216,164,0.6)',
+            lineWidth: 1,
+            lineStyle: 2,
+            axisLabelVisible: true,
+            title: `H ${fmtP(hi)}`,
+          }),
+          low: candleSeries.createPriceLine({
+            price: lo,
+            color: 'rgba(255,122,133,0.6)',
+            lineWidth: 1,
+            lineStyle: 2,
+            axisLabelVisible: true,
+            title: `L ${fmtP(lo)}`,
+          }),
+        }
       }
     })
 
