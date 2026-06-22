@@ -704,7 +704,6 @@ function mlSignal(
 interface ChartRefs {
   mainChart: any
   rsiChart: any
-  volChart: any
   candleSeries: any
   nweMidS: any
   nweUpS: any
@@ -1137,7 +1136,6 @@ function BtcChartView() {
   const rootRef = useRef<HTMLDivElement>(null)
   const mainElRef = useRef<HTMLDivElement>(null)
   const rsiElRef = useRef<HTMLDivElement>(null)
-  const volElRef = useRef<HTMLDivElement>(null)
   const vpCanvasRef = useRef<HTMLCanvasElement>(null)
   const ofCanvasRef = useRef<HTMLCanvasElement>(null)
   const smcCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -1733,13 +1731,7 @@ function BtcChartView() {
       setLoadingText('Lỗi: lightweight-charts chưa được tải.')
       return
     }
-    if (
-      !mainElRef.current ||
-      !rsiElRef.current ||
-      !volElRef.current ||
-      !mainElRef.current.parentElement
-    )
-      return
+    if (!mainElRef.current || !rsiElRef.current || !mainElRef.current.parentElement) return
 
     const col = mainElRef.current.parentElement
 
@@ -1748,7 +1740,6 @@ function BtcChartView() {
     // straight from clientHeight (or a safe fallback if layout is not ready).
     const initMain = mainElRef.current.clientHeight || 360
     const initRsi = rsiElRef.current.clientHeight || 80
-    const initVol = volElRef.current.clientHeight || 80
 
     const base = {
       layout: {
@@ -1782,16 +1773,12 @@ function BtcChartView() {
       height: initMain,
       timeScale: { ...base.timeScale, visible: false },
     })
+    // RSI is now the bottom pane, so it carries the visible time axis.
     const rsiChart = LWC.createChart(rsiElRef.current, {
       ...base,
       width: rsiElRef.current.clientWidth,
       height: initRsi,
-      timeScale: { ...base.timeScale, visible: false },
-    })
-    const volChart = LWC.createChart(volElRef.current, {
-      ...base,
-      width: volElRef.current.clientWidth,
-      height: initVol,
+      timeScale: { ...base.timeScale, visible: true },
     })
 
     const candleSeries = mainChart.addCandlestickSeries({
@@ -1896,18 +1883,26 @@ function BtcChartView() {
       crosshairMarkerVisible: false,
     })
 
-    const volSeries = volChart.addHistogramSeries({
+    // Volume is overlaid on the bottom of the main price pane (own scale).
+    const volSeries = mainChart.addHistogramSeries({
       priceFormat: { type: 'volume' },
-      scaleMargins: { top: 0.1, bottom: 0 },
+      priceScaleId: 'vol',
+    })
+    mainChart.priceScale('vol').applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    })
+    // Reserve the bottom 20% of the price scale for volume so candles and
+    // volume bars don't overlap.
+    mainChart.priceScale('right').applyOptions({
+      scaleMargins: { top: 0.05, bottom: 0.2 },
     })
 
     const sync = (src: any, ...tgts: any[]) =>
       src.timeScale().subscribeVisibleLogicalRangeChange((r: any) => {
         if (r) tgts.forEach((t) => t.timeScale().setVisibleLogicalRange(r))
       })
-    sync(mainChart, rsiChart, volChart)
-    sync(rsiChart, mainChart, volChart)
-    sync(volChart, mainChart, rsiChart)
+    sync(mainChart, rsiChart)
+    sync(rsiChart, mainChart)
 
     // Persist zoom whenever the user pans/zooms the main chart.
     // Also redraw the order-flow overlay so pills follow the candles.
@@ -1991,7 +1986,6 @@ function BtcChartView() {
     mainChart.subscribeCrosshairMove((param: any) => {
       if (!param?.time) return
       rsiChart.setCrosshairPosition(0, param.time, rsiSeries)
-      volChart.setCrosshairPosition(0, param.time, volSeries)
       const d = param.seriesData?.get(candleSeries)
       if (d) {
         setOhlcv({
@@ -2005,17 +1999,15 @@ function BtcChartView() {
     })
 
     // Observe each pane element so chart libs see real measured heights,
-    // and CSS flex (7 / 1.5 / 1.5) keeps them in correct ratios.
+    // and CSS flex keeps them in correct ratios.
     const syncSize = () => {
-      if (!mainElRef.current || !rsiElRef.current || !volElRef.current) return
+      if (!mainElRef.current || !rsiElRef.current) return
       const mw = mainElRef.current.clientWidth
       const mh2 = mainElRef.current.clientHeight
       const rh2 = rsiElRef.current.clientHeight
-      const vh2 = volElRef.current.clientHeight
-      if (mh2 <= 0 || rh2 <= 0 || vh2 <= 0) return
+      if (mh2 <= 0 || rh2 <= 0) return
       mainChart.applyOptions({ width: mw, height: mh2 })
       rsiChart.applyOptions({ width: rsiElRef.current.clientWidth, height: rh2 })
-      volChart.applyOptions({ width: volElRef.current.clientWidth, height: vh2 })
       if (candlesRef.current.length && vpCanvasRef.current) {
         const info = drawVP(
           vpCanvasRef.current,
@@ -2056,14 +2048,12 @@ function BtcChartView() {
     ro.observe(col)
     ro.observe(mainElRef.current)
     ro.observe(rsiElRef.current)
-    ro.observe(volElRef.current)
     // First sync after layout settles
     requestAnimationFrame(syncSize)
 
     chartRefs.current = {
       mainChart,
       rsiChart,
-      volChart,
       candleSeries,
       nweMidS,
       nweUpS,
@@ -2086,11 +2076,6 @@ function BtcChartView() {
         }
         try {
           rsiChart.remove()
-        } catch {
-          /* noop */
-        }
-        try {
-          volChart.remove()
         } catch {
           /* noop */
         }
@@ -2888,14 +2873,11 @@ function BtcChartView() {
   // ── Snapshot ────────────────────────────────────────────────────────
   const snapshot = useCallback(() => {
     const refs = chartRefs.current
-    if (!refs || !mainElRef.current || !rsiElRef.current || !volElRef.current) return
+    if (!refs || !mainElRef.current || !rsiElRef.current) return
     downloadChartSnapshot({
       main: { chart: refs.mainChart, height: mainElRef.current.clientHeight },
       rsi: visRef.current.rsi
         ? { chart: refs.rsiChart, height: rsiElRef.current.clientHeight }
-        : null,
-      vol: visRef.current.vol
-        ? { chart: refs.volChart, height: volElRef.current.clientHeight }
         : null,
       vpOverlay: visRef.current.vp ? vpCanvasRef.current : null,
       ofOverlay: visRef.current.of ? ofCanvasRef.current : null,
@@ -3200,7 +3182,6 @@ function BtcChartView() {
           <canvas className="btc-chart__box-canvas" ref={boxCanvasRef} />
           <div className="btc-chart__main" ref={mainElRef} />
           <div className="btc-chart__rsi" ref={rsiElRef} />
-          <div className="btc-chart__vol" ref={volElRef} />
           <canvas className="btc-chart__vp-canvas" ref={vpCanvasRef} />
           {/* Advanced oscillator pane — hidden by default, toggled open */}
           <div className={`btc-chart__osc-wrap${oscOpen ? ' is-open' : ''}`}>

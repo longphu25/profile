@@ -284,13 +284,7 @@
   position: relative;
 }
 .btc-chart__rsi {
-  flex: 1.5 1 0;
-  width: 100%;
-  min-height: 0;
-  border-top: 1px solid var(--border);
-}
-.btc-chart__vol {
-  flex: 1.5 1 0;
+  flex: 2 1 0;
   width: 100%;
   min-height: 0;
   border-top: 1px solid var(--border);
