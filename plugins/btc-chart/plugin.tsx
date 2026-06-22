@@ -414,10 +414,17 @@ function BtcChartView() {
             const avg = volSmaAll[idx]
             const isSpike =
               visFlags.volSpike && avg != null && c.volume > (avg as number) * SPIKE_MULT
+            const isBuy = c.close >= c.open
             return {
               time: c.time,
               value: c.volume,
-              color: isSpike ? '#ffd166' : c.close >= c.open ? CHART.upSoft : CHART.dnSoft,
+              color: isSpike
+                ? isBuy
+                  ? '#34ffc8'
+                  : '#ff5c6a'
+                : isBuy
+                  ? CHART.upSoft
+                  : CHART.dnSoft,
             }
           })
         : [],
