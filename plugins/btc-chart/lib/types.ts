@@ -79,6 +79,28 @@ export interface SidebarState {
   nweLo: number | null
 }
 
+export interface StatsState {
+  high: string
+  low: string
+  vol: string
+  chg: string
+  up: boolean
+}
+
+export interface FundingState {
+  val: string
+  sub: string
+  cls: string
+  breakdown: { name: string; rate: number }[]
+}
+
+export interface FngState {
+  val: string
+  label: string
+  color: string
+  pct: number
+}
+
 export const INITIAL_SIDEBAR: SidebarState = {
   nweUpper: '—',
   nweMid: '—',

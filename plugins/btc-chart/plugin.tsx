@@ -33,7 +33,21 @@ import { drawOrderFlow, type OFOverlaySignal } from './order-flow-overlay'
 import { computeSMC, initSmcWasm, type SMCResult } from './smc-wasm'
 import { buildBoxFlipSignals, type BoxFlipResult } from './box-flip'
 import { downloadChartSnapshot } from './snapshot'
-import { AlertsPanel, PositionsPanel } from './components'
+import {
+  AlertsPanel,
+  PositionsPanel,
+  SignalPanel,
+  FeatureWeightsPanel,
+  FundingPanel,
+  StatsPanel,
+  FearGreedPanel,
+  OrderFlowPanel,
+  BoxFlipPanel,
+  MHBandPanel,
+  VolumeProfilePanel,
+  TechnicalsPanel,
+  VolumeSpikePanel,
+} from './components'
 import { usePositions } from './hooks'
 import {
   CHART,
@@ -64,7 +78,6 @@ import {
   buildOrderFlow,
   smaNum,
   mlSignal,
-  FEATURE_LABEL,
   drawSMCOverlay,
   drawBoxFlipOverlay,
   INITIAL_SIDEBAR,
@@ -2141,34 +2154,7 @@ function BtcChartView() {
 
         {/* Sidebar */}
         <div className="btc-chart__sidebar">
-          {/* ML signal — single block, colored by stance */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Signal</div>
-            <div
-              className={`btc-chart__ml ${
-                sidebar.ml.score > 0.55 ? 'is-buy' : sidebar.ml.score < 0.45 ? 'is-sell' : ''
-              }`}
-            >
-              <div className="btc-chart__ml-head">
-                <span className="btc-chart__ml-label" style={{ color: sidebar.ml.color }}>
-                  {sidebar.ml.label}
-                </span>
-                <span className="btc-chart__ml-pct">{Math.round(sidebar.ml.score * 100)}%</span>
-              </div>
-              <div className="btc-chart__ml-bar-wrap">
-                <div
-                  className="btc-chart__ml-bar"
-                  style={{
-                    width: Math.round(sidebar.ml.score * 100) + '%',
-                    background: sidebar.ml.color,
-                  }}
-                />
-              </div>
-              <div className="btc-chart__ml-foot">Confidence · MH Band + MA + RSI + MACD</div>
-            </div>
-          </div>
-
-          {/* Positions */}
+          <SignalPanel ml={sidebar.ml} />
           <PositionsPanel
             positions={positions}
             showForm={showPosForm}
@@ -2179,143 +2165,11 @@ function BtcChartView() {
             onRemove={removePosition}
             markPrice={lastPriceRef.current}
           />
-
-          {/* Funding */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Funding rate (avg)</div>
-            <div className={`btc-chart__fund-val ${funding.cls}`}>{funding.val}</div>
-            <div className={`btc-chart__fund-sentiment ${funding.cls}`}>{funding.sub}</div>
-            {funding.breakdown.length > 0 && (
-              <div className="btc-chart__fund-breakdown">
-                {funding.breakdown.map((b) => (
-                  <div key={b.name} className="btc-chart__fund-row">
-                    <span>{b.name}</span>
-                    <span className={b.rate < 0 ? 'up' : b.rate > 0.05 ? 'dn' : ''}>
-                      {(b.rate >= 0 ? '+' : '') + b.rate.toFixed(4) + '%'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="btc-chart__fund-rules">
-              <div>
-                <span>&gt; 0.10%</span>
-                <span className="dn">Long heavy (bearish signal)</span>
-              </div>
-              <div>
-                <span>0 – 0.05%</span>
-                <span>Balanced</span>
-              </div>
-              <div>
-                <span>&lt; 0%</span>
-                <span className="up">Short heavy (bullish signal)</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">24h stats</div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">High</span>
-              <span className="btc-chart__row-val">{stats.high}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Low</span>
-              <span className="btc-chart__row-val">{stats.low}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Volume</span>
-              <span className="btc-chart__row-val">{stats.vol}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Change</span>
-              <span className={`btc-chart__row-val ${stats.up ? 'up' : 'dn'}`}>{stats.chg}</span>
-            </div>
-          </div>
-
-          {/* Order Flow */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Midnight Hunter signals</div>
-            {sidebar.ofLog.length === 0 ? (
-              <span className="btc-chart__of-empty">Chưa có tín hiệu rebound</span>
-            ) : (
-              sidebar.ofLog.map((s, idx) => (
-                <div key={idx} className="btc-chart__of-item">
-                  <span className={`btc-chart__of-tag ${s.type === 'buy' ? 'is-buy' : 'is-sell'}`}>
-                    {s.type === 'buy' ? 'BUY' : 'SELL'}
-                  </span>
-                  <span className="btc-chart__of-text">
-                    ${s.price} · ×{s.ratio}
-                  </span>
-                  <span className="btc-chart__of-time">{s.time}</span>
-                </div>
-              ))
-            )}
-            <div className="btc-chart__of-note">
-              <div>
-                <b className="dn">SELL ▼</b> — nến trước chọc lên trên dải trên (Upper Band) rồi nến
-                hiện tại đảo chiều giảm.
-              </div>
-              <div>
-                <b className="up">BUY ▲</b> — nến trước chọc xuống dưới dải dưới (Lower Band) rồi
-                nến hiện tại đảo chiều tăng.
-              </div>
-              <div className="btc-chart__of-note-sub">
-                ×N = bội số volume so với SMA20 (tham khảo, không phải điều kiện tín hiệu).
-              </div>
-            </div>
-          </div>
-
-          {/* Box Flip */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Box breakout flip</div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Signals</span>
-              <span className="btc-chart__row-val">{sidebar.boxFlip.count}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Last flip</span>
-              <span
-                className={`btc-chart__row-val ${
-                  sidebar.boxFlip.last === 'B' ? 'up' : sidebar.boxFlip.last === 'S' ? 'dn' : ''
-                }`}
-              >
-                {sidebar.boxFlip.last ?? '—'}
-              </span>
-            </div>
-            <div className="btc-chart__of-note">
-              <div>
-                <b className="up">B</b> / <b className="dn">S</b> only prints when box breakout
-                direction flips.
-              </div>
-            </div>
-          </div>
-
-          {/* MH Band */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Midnight Hunter Band</div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Upper</span>
-              <span className="btc-chart__row-val dn">{sidebar.nweUpper}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Mid</span>
-              <span className="btc-chart__row-val neu">{sidebar.nweMid}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Lower</span>
-              <span className="btc-chart__row-val up">{sidebar.nweLower}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Zone</span>
-              <span className={`btc-chart__row-val ${sidebar.nweZone.cls}`}>
-                {sidebar.nweZone.text}
-              </span>
-            </div>
-          </div>
-
-          {/* Alerts */}
+          <FundingPanel funding={funding} />
+          <StatsPanel stats={stats} />
+          <OrderFlowPanel ofLog={sidebar.ofLog} />
+          <BoxFlipPanel boxFlip={sidebar.boxFlip} />
+          <MHBandPanel sidebar={sidebar} />
           <AlertsPanel
             alerts={alerts}
             onAdd={addAlert}
@@ -2325,169 +2179,20 @@ function BtcChartView() {
             currentPrice={candlesRef.current[candlesRef.current.length - 1]?.close ?? null}
             currentRsi={sidebar.rsiNow}
           />
-
-          {/* TA Signals */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Technicals</div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">MH Signal</span>
-              <span className={`btc-chart__row-val ${sidebar.sigNwe.cls}`}>
-                {sidebar.sigNwe.text}
-              </span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">RSI · 14</span>
-              <span className={`btc-chart__row-val ${sidebar.sigRsi.cls}`}>
-                {sidebar.sigRsi.text}
-              </span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">MA 50 / 200</span>
-              <span className={`btc-chart__row-val ${sidebar.sigMa.cls}`}>
-                {sidebar.sigMa.text}
-              </span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">MACD</span>
-              <span className={`btc-chart__row-val ${sidebar.sigMacd.cls}`}>
-                {sidebar.sigMacd.text}
-              </span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Trend</span>
-              <span className={`btc-chart__row-val ${sidebar.sigTrend.cls}`}>
-                {sidebar.sigTrend.text}
-              </span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">ADX / DMI</span>
-              <span className={`btc-chart__row-val ${sidebar.sigAdx.cls}`}>
-                {sidebar.sigAdx.text}
-              </span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">Stoch RSI</span>
-              <span className={`btc-chart__row-val ${sidebar.sigStoch.cls}`}>
-                {sidebar.sigStoch.text}
-              </span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">OBV</span>
-              <span className={`btc-chart__row-val ${sidebar.sigObv.cls}`}>
-                {sidebar.sigObv.text}
-              </span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">VWAP</span>
-              <span className={`btc-chart__row-val ${sidebar.sigVwap.cls}`}>
-                {sidebar.sigVwap.text}
-              </span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">RSI Divergence</span>
-              <span className={`btc-chart__row-val ${sidebar.sigDiv.cls}`}>
-                {sidebar.sigDiv.text}
-              </span>
-            </div>
-          </div>
-
-          {/* Volume spike threshold */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-header">
-              <div className="btc-chart__panel-title">Volume spike</div>
-              <button
-                type="button"
-                className={`btc-chart__ind-btn${vis.volSpike ? ' is-on' : ''}`}
-                onClick={() => toggle('volSpike')}
-              >
-                {vis.volSpike ? 'On' : 'Off'}
-              </button>
-            </div>
-            <div className="btc-chart__spike-row">
-              <input
-                type="range"
-                className="btc-chart__spike-slider"
-                min={2}
-                max={3}
-                step={0.1}
-                value={spikeMult}
-                disabled={!vis.volSpike}
-                onChange={(e) => {
-                  const val = Math.round(parseFloat(e.target.value) * 10) / 10
-                  setSpikeMult(val)
-                  spikeMultRef.current = val
-                  if (candlesRef.current.length)
-                    queueMicrotask(() => renderData(candlesRef.current))
-                }}
-                aria-label="Volume spike threshold"
-              />
-              <span className="btc-chart__spike-val">{spikeMult.toFixed(1)}×</span>
-            </div>
-            <div className="btc-chart__spike-hint">
-              Đánh dấu + cảnh báo khi volume {'>'} {spikeMult.toFixed(1)}× trung bình 20 nến
-            </div>
-          </div>
-
-          {/* Features */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Feature weights</div>
-            <div className="btc-chart__features">
-              {Object.entries(sidebar.ml.features).map(([k, v]) => (
-                <div key={k} className="btc-chart__feat">
-                  <div className="btc-chart__feat-name">{FEATURE_LABEL[k] ?? k}</div>
-                  <div className={`btc-chart__feat-val ${v >= 0 ? 'up' : 'dn'}`}>
-                    {v >= 0 ? '+' : ''}
-                    {v.toFixed(2)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Volume Profile */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Volume profile</div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">POC</span>
-              <span className="btc-chart__row-val" style={{ color: 'var(--hi)' }}>
-                {sidebar.vp.poc}
-              </span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">VAH · 70%</span>
-              <span className="btc-chart__row-val dn">{sidebar.vp.vah}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">VAL · 70%</span>
-              <span className="btc-chart__row-val up">{sidebar.vp.val}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">vs POC</span>
-              <span className="btc-chart__row-val">{sidebar.vp.pos}</span>
-            </div>
-            <div className="btc-chart__row">
-              <span className="btc-chart__row-label">HVN nodes</span>
-              <span className="btc-chart__row-val" style={{ color: 'var(--hi)' }}>
-                {sidebar.vpHvn}
-              </span>
-            </div>
-          </div>
-
-          {/* Fear & Greed */}
-          <div className="btc-chart__panel">
-            <div className="btc-chart__panel-title">Fear &amp; Greed</div>
-            <div className="btc-chart__fng">
-              <div className="btc-chart__fng-val" style={{ color: fng.color }}>
-                {fng.val}
-              </div>
-              <div className="btc-chart__fng-label" style={{ color: fng.color }}>
-                {fng.label}
-              </div>
-              <div className="btc-chart__fng-bar">
-                <div className="btc-chart__fng-ptr" style={{ left: fng.pct + '%' }} />
-              </div>
-            </div>
-          </div>
+          <TechnicalsPanel sidebar={sidebar} />
+          <VolumeSpikePanel
+            enabled={vis.volSpike}
+            onToggle={() => toggle('volSpike')}
+            spikeMult={spikeMult}
+            onChange={(val) => {
+              setSpikeMult(val)
+              spikeMultRef.current = val
+              if (candlesRef.current.length) queueMicrotask(() => renderData(candlesRef.current))
+            }}
+          />
+          <FeatureWeightsPanel ml={sidebar.ml} />
+          <VolumeProfilePanel vp={sidebar.vp} vpHvn={sidebar.vpHvn} />
+          <FearGreedPanel fng={fng} />
         </div>
       </div>
       {/* Status */}
