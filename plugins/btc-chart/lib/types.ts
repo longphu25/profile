@@ -1,0 +1,111 @@
+// BTC Chart — domain types shared across lib, hooks, and components.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+export interface Candle {
+  time: number
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+/** Nadaraya-Watson / Midnight Hunter envelope: mid line + upper/lower bands. */
+export interface NWE {
+  mid: (number | null)[]
+  upper: (number | null)[]
+  lower: (number | null)[]
+}
+
+export interface OrderFlowSignal {
+  type: 'buy' | 'sell'
+  price: string
+  ratio: string
+  time: string
+}
+
+export interface MLResult {
+  score: number
+  label: string
+  color: string
+  features: Record<string, number>
+}
+
+export interface Divergence {
+  time: number
+  type: 'bull' | 'bear'
+  price: number
+}
+
+/** Live handles to the lightweight-charts chart + series instances. */
+export interface ChartRefs {
+  mainChart: any
+  candleSeries: any
+  nweMidS: any
+  nweUpS: any
+  nweLowS: any
+  ma50S: any
+  ma200S: any
+  volSeries: any
+  vwapS: any
+  vwapUpS: any
+  vwapLoS: any
+  cleanup: () => void
+}
+
+export interface SidebarState {
+  nweUpper: string
+  nweMid: string
+  nweLower: string
+  nweZone: { text: string; cls: string }
+  sigNwe: { text: string; cls: string }
+  sigRsi: { text: string; cls: string }
+  sigMa: { text: string; cls: string }
+  sigMacd: { text: string; cls: string }
+  sigTrend: { text: string; cls: string }
+  sigAdx: { text: string; cls: string }
+  sigStoch: { text: string; cls: string }
+  sigObv: { text: string; cls: string }
+  sigVwap: { text: string; cls: string }
+  sigDiv: { text: string; cls: string }
+  ml: MLResult
+  ofLog: OrderFlowSignal[]
+  vp: { poc: string; vah: string; val: string; pos: string }
+  vpHvn: number
+  boxFlip: { count: number; last: 'B' | 'S' | null }
+  /** Latest indicator snapshot for alert evaluation. */
+  rsiNow: number | null
+  nweUp: number | null
+  nweLo: number | null
+}
+
+export const INITIAL_SIDEBAR: SidebarState = {
+  nweUpper: '—',
+  nweMid: '—',
+  nweLower: '—',
+  nweZone: { text: '—', cls: '' },
+  sigNwe: { text: '—', cls: '' },
+  sigRsi: { text: '—', cls: '' },
+  sigMa: { text: '—', cls: '' },
+  sigMacd: { text: '—', cls: '' },
+  sigTrend: { text: '—', cls: '' },
+  sigAdx: { text: '—', cls: '' },
+  sigStoch: { text: '—', cls: '' },
+  sigObv: { text: '—', cls: '' },
+  sigVwap: { text: '—', cls: '' },
+  sigDiv: { text: '—', cls: '' },
+  ml: { score: 0.5, label: '—', color: '#9fb9b1', features: {} },
+  ofLog: [],
+  vp: { poc: '—', vah: '—', val: '—', pos: '—' },
+  vpHvn: 0,
+  boxFlip: { count: 0, last: null },
+  rsiNow: null,
+  nweUp: null,
+  nweLo: null,
+}
+
+declare global {
+  interface Window {
+    LightweightCharts?: any
+  }
+}
