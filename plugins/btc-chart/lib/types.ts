@@ -75,6 +75,9 @@ export interface SidebarState {
   boxFlip: { count: number; last: 'B' | 'S' | null }
   /** Latest indicator snapshot for alert evaluation. */
   rsiNow: number | null
+  adxNow: number | null
+  stochKNow: number | null
+  obvNow: number | null
   nweUp: number | null
   nweLo: number | null
 }
@@ -136,6 +139,9 @@ export const INITIAL_SIDEBAR: SidebarState = {
   vpHvn: 0,
   boxFlip: { count: 0, last: null },
   rsiNow: null,
+  adxNow: null,
+  stochKNow: null,
+  obvNow: null,
   nweUp: null,
   nweLo: null,
 }

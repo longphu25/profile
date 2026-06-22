@@ -686,6 +686,9 @@ function BtcChartView() {
         last: boxFlip.signals[boxFlip.signals.length - 1]?.dir ?? null,
       },
       rsiNow: rsi[i] ?? null,
+      adxNow: adxR.adx[i] ?? null,
+      stochKNow: stoch.k[i] ?? null,
+      obvNow: obv[i] ?? null,
       nweUp: nwe.upper[i] ?? null,
       nweLo: nwe.lower[i] ?? null,
     }))
@@ -1754,7 +1757,13 @@ function BtcChartView() {
               >
                 <span className="btc-chart__osc-caret">{oscOpen ? '▾' : '▸'}</span>
                 Oscillators
-                <span className="btc-chart__osc-hint">RSI · ADX · StochRSI · OBV</span>
+                <span className="btc-chart__osc-hint">
+                  RSI {sidebar.rsiNow != null ? sidebar.rsiNow.toFixed(1) : '—'}
+                  {' · '}ADX {sidebar.adxNow != null ? sidebar.adxNow.toFixed(1) : '—'}
+                  {' · '}StochK {sidebar.stochKNow != null ? sidebar.stochKNow.toFixed(1) : '—'}
+                  {' · '}OBV{' '}
+                  {sidebar.obvNow != null ? (sidebar.obvNow / 1e6).toFixed(1) + 'M' : '—'}
+                </span>
               </button>
               {oscOpen && (
                 <div className="btc-chart__osc-tabs">
