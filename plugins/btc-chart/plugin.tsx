@@ -99,6 +99,10 @@ import {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 function BtcChartView() {
+  // Boot configuration (vis flags + interval + alerts + sound + zoom).
+  // Must be declared first — many refs below read initial values from it.
+  const cfgInit = useMemo<ChartConfig>(() => loadConfig(), [])
+
   const rootRef = useRef<HTMLDivElement>(null)
   const mainElRef = useRef<HTMLDivElement>(null)
   const vpCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -135,9 +139,6 @@ function BtcChartView() {
     obvS: any
     cleanup: () => void
   } | null>(null)
-
-  // Boot configuration (vis flags + interval + alerts + sound + zoom).
-  const cfgInit = useMemo<ChartConfig>(() => loadConfig(), [])
 
   const visRef = useRef<VisFlags>({ ...cfgInit.vis })
   const vpOptsRef = useRef({ heatmap: true, hvnRatio: 0.8 })
@@ -299,7 +300,7 @@ function BtcChartView() {
     // pre-existing candles; it only seeds the dedup state.
     const isInitial = fitNextRef.current
 
-    const v = visRef.current
+    const visFlags = visRef.current
     const nwe = calcMHBand(data)
     const sma50 = calcSMA(data, 50)
     const sma200 = calcSMA(data, 200)
@@ -343,7 +344,7 @@ function BtcChartView() {
     // top/bottom gutter bands instead of the built-in setMarkers (which
     // hugs wicks and quickly becomes unreadable).
     const markers: any[] = []
-    if (v.boxFlip) {
+    if (visFlags.boxFlip) {
       for (const sig of boxFlip.signals) {
         markers.push({
           time: sig.time,
@@ -354,7 +355,7 @@ function BtcChartView() {
         })
       }
     }
-    if (v.rsiDiv) {
+    if (visFlags.rsiDiv) {
       for (const d of divs) {
         markers.push({
           time: d.time,
@@ -377,7 +378,7 @@ function BtcChartView() {
         refs.candleSeries,
         data,
         boxFlip,
-        v.boxFlip,
+        visFlags.boxFlip,
       )
     }
     ofOverlayRef.current = of_.overlay
@@ -387,19 +388,19 @@ function BtcChartView() {
         mainElRef.current,
         refs.mainChart,
         refs.candleSeries,
-        v.of ? of_.overlay : [],
+        visFlags.of ? of_.overlay : [],
         true,
       )
     }
 
-    refs.nweMidS.setData(v.nwe ? toLine(nwe.mid) : [])
-    refs.nweUpS.setData(v.nwe ? toLine(nwe.upper) : [])
-    refs.nweLowS.setData(v.nwe ? toLine(nwe.lower) : [])
-    refs.ma50S.setData(v.ma50 ? toLine(sma50) : [])
-    refs.ma200S.setData(v.ma200 ? toLine(sma200) : [])
-    refs.vwapS.setData(v.vwap ? toLine(vwapR.vwap) : [])
-    refs.vwapUpS.setData(v.vwap ? toLine(vwapR.upper) : [])
-    refs.vwapLoS.setData(v.vwap ? toLine(vwapR.lower) : [])
+    refs.nweMidS.setData(visFlags.nwe ? toLine(nwe.mid) : [])
+    refs.nweUpS.setData(visFlags.nwe ? toLine(nwe.upper) : [])
+    refs.nweLowS.setData(visFlags.nwe ? toLine(nwe.lower) : [])
+    refs.ma50S.setData(visFlags.ma50 ? toLine(sma50) : [])
+    refs.ma200S.setData(visFlags.ma200 ? toLine(sma200) : [])
+    refs.vwapS.setData(visFlags.vwap ? toLine(vwapR.vwap) : [])
+    refs.vwapUpS.setData(visFlags.vwap ? toLine(vwapR.upper) : [])
+    refs.vwapLoS.setData(visFlags.vwap ? toLine(vwapR.lower) : [])
 
     // Volume bars, with large-volume spikes highlighted (vol > spikeMult x
     // its 20-bar average). Spikes are colored bright amber so unusual
@@ -408,10 +409,11 @@ function BtcChartView() {
     const volArrAll = data.map((c) => c.volume)
     const volSmaAll = smaNum(volArrAll, 20)
     refs.volSeries.setData(
-      v.vol
+      visFlags.vol
         ? data.map((c, idx) => {
             const avg = volSmaAll[idx]
-            const isSpike = v.volSpike && avg != null && c.volume > (avg as number) * SPIKE_MULT
+            const isSpike =
+              visFlags.volSpike && avg != null && c.volume > (avg as number) * SPIKE_MULT
             return {
               time: c.time,
               value: c.volume,
@@ -451,7 +453,7 @@ function BtcChartView() {
     // On initial load reset the marker; on live updates track the max seen.
     lastCandleTimeRef.current = isInitial ? lastTime : Math.max(lastCandleTimeRef.current, lastTime)
     const lastSpike =
-      v.volSpike &&
+      visFlags.volSpike &&
       volSmaAll[lastIdx] != null &&
       data[lastIdx].volume > (volSmaAll[lastIdx] as number) * SPIKE_MULT
     if (lastSpike) {
@@ -480,7 +482,7 @@ function BtcChartView() {
     }
 
     if (vpCanvasRef.current && mainElRef.current) {
-      const info = drawVP(vpCanvasRef.current, mainElRef.current, data.slice(-LIMIT), v.vp, {
+      const info = drawVP(vpCanvasRef.current, mainElRef.current, data.slice(-LIMIT), visFlags.vp, {
         ...vpOptsRef.current,
         width: 220,
       })
@@ -492,7 +494,7 @@ function BtcChartView() {
     }
 
     // ── SMC overlay ──
-    const smcResult = v.smc
+    const smcResult = visFlags.smc
       ? computeSMC(data, {
           structure: true,
           orderBlocks: true,
@@ -509,7 +511,7 @@ function BtcChartView() {
         refs.mainChart,
         refs.candleSeries,
         smcResult,
-        v.smc,
+        visFlags.smc,
       )
     }
 
@@ -535,7 +537,7 @@ function BtcChartView() {
         rsi[i] != null
           ? `<span style="color:${CHART.neu}">RSI ${(rsi[i] as number).toFixed(1)}</span>`
           : null,
-        v.vwap && vwapR.vwap[i] != null
+        visFlags.vwap && vwapR.vwap[i] != null
           ? `<span style="color:#c792ea">VWAP ${fmtP(vwapR.vwap[i] as number)}</span>`
           : null,
       ]
@@ -1456,8 +1458,8 @@ function BtcChartView() {
   // ── Toggles ─────────────────────────────────────────────────────────
   const toggle = useCallback(
     (key: keyof VisFlags) => {
-      setVis((v) => {
-        const next = { ...v, [key]: !v[key] }
+      setVis((prev) => {
+        const next = { ...prev, [key]: !prev[key] }
         visRef.current = next
         if (candlesRef.current.length) {
           // Defer to next tick so visRef is read inside renderData
