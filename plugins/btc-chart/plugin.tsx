@@ -47,12 +47,13 @@ import {
   VolumeProfilePanel,
   TechnicalsPanel,
   VolumeSpikePanel,
+  ChartHeader,
+  IndicatorToolbar,
 } from './components'
 import { usePositions } from './hooks'
 import {
   CHART,
   LIMIT,
-  INTERVALS,
   type Interval,
   SYMBOLS,
   loadCustomSymbols,
@@ -1853,19 +1854,58 @@ function BtcChartView() {
     return () => clearTimeout(t)
   }, [firedToast])
 
-  const indButtons: { key: keyof VisFlags; label: string; sep?: boolean }[] = [
-    { key: 'nwe', label: 'MH Band' },
-    { key: 'ma50', label: 'MA50' },
-    { key: 'ma200', label: 'MA200' },
-    { key: 'smc', label: 'SMC' },
-    { key: 'boxFlip', label: 'Box Flip' },
-    { key: 'of', label: 'Order Flow' },
-    { key: 'vwap', label: 'VWAP' },
-    { key: 'rsiDiv', label: 'RSI Div' },
-    { key: 'vp', label: 'Vol Profile', sep: true },
-    { key: 'vol', label: 'Volume' },
-    { key: 'volSpike', label: 'Vol Spike' },
-  ]
+  // ── Header handlers ─────────────────────────────────────────────────
+  const persistConfigField = (patch: Record<string, unknown>) => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('btc-chart:config:v1') || '{}')
+      localStorage.setItem('btc-chart:config:v1', JSON.stringify({ ...saved, ...patch }))
+    } catch {
+      /* noop */
+    }
+  }
+
+  const selectSymbol = (next: SymbolId) => {
+    setSymbol(next)
+    persistConfigField({ symbol: next })
+  }
+
+  const selectInterval = (iv: Interval) => {
+    setInterval_(iv)
+    persistConfigField({ interval: iv })
+  }
+
+  // Validate an entered coin against Binance (spot or futures) before adding.
+  const addCustomSymbol = async (raw: string) => {
+    const cleaned = raw.trim().toUpperCase()
+    if (!cleaned) return
+    const sym = cleaned.endsWith('USDT') ? cleaned : cleaned + 'USDT'
+    const base = sym.replace(/USDT$/, '')
+    if (!allSymbols.find((s) => s.symbol === sym)) {
+      try {
+        const [spot, fut] = await Promise.all([
+          fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=1h&limit=1`).then(
+            (r) => r.ok,
+          ),
+          fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${sym}&interval=1h&limit=1`)
+            .then((r) => r.ok)
+            .catch(() => false),
+        ])
+        if (!spot && !fut) {
+          setFiredToast(`${base} không có trên Binance`)
+          return
+        }
+      } catch {
+        setFiredToast(`Không thể kiểm tra ${base} trên Binance`)
+        return
+      }
+      const entry: SymbolEntry = { symbol: sym, base, quote: 'USDT', exchange: 'binance' }
+      const next = [...customSymbols, entry]
+      setCustomSymbols(next)
+      saveCustomSymbols(next)
+    }
+    setSymbol(sym)
+    persistConfigField({ symbol: sym })
+  }
 
   return (
     <div className={`btc-chart${loading ? '' : ' is-ready'}`} ref={rootRef}>
@@ -1897,201 +1937,31 @@ function BtcChartView() {
         </div>
       )}
       {/* Header */}
-      <div className="btc-chart__header">
-        <span className="btc-chart__pair">
-          {symbolInfo.base}
-          <small>/ {symbolInfo.quote}</small>
-        </span>
-        <select
-          className="btc-chart__symbol-select"
-          value={symbol}
-          onChange={(e) => {
-            const next = e.target.value as SymbolId
-            setSymbol(next)
-            try {
-              const saved = JSON.parse(localStorage.getItem('btc-chart:config:v1') || '{}')
-              localStorage.setItem(
-                'btc-chart:config:v1',
-                JSON.stringify({ ...saved, symbol: next }),
-              )
-            } catch {
-              /* noop */
-            }
-          }}
-          aria-label="Select trading pair"
-        >
-          {allSymbols.map((s) => (
-            <option key={s.symbol} value={s.symbol}>
-              {s.base}/{s.quote}
-            </option>
-          ))}
-        </select>
-        <form
-          className="btc-chart__custom-sym"
-          onSubmit={async (e) => {
-            e.preventDefault()
-            const input = (e.target as HTMLFormElement).elements.namedItem(
-              'coin',
-            ) as HTMLInputElement
-            const raw = input.value.trim().toUpperCase()
-            if (!raw) return
-            const sym = raw.endsWith('USDT') ? raw : raw + 'USDT'
-            const base = sym.replace(/USDT$/, '')
-            if (!allSymbols.find((s) => s.symbol === sym)) {
-              try {
-                const [spot, fut] = await Promise.all([
-                  fetch(
-                    `https://api.binance.com/api/v3/klines?symbol=${sym}&interval=1h&limit=1`,
-                  ).then((r) => r.ok),
-                  fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${sym}&interval=1h&limit=1`)
-                    .then((r) => r.ok)
-                    .catch(() => false),
-                ])
-                if (!spot && !fut) {
-                  setFiredToast(`${base} không có trên Binance`)
-                  input.value = ''
-                  return
-                }
-              } catch {
-                setFiredToast(`Không thể kiểm tra ${base} trên Binance`)
-                input.value = ''
-                return
-              }
-              const entry: SymbolEntry = { symbol: sym, base, quote: 'USDT', exchange: 'binance' }
-              const next = [...customSymbols, entry]
-              setCustomSymbols(next)
-              saveCustomSymbols(next)
-            }
-            setSymbol(sym)
-            try {
-              const saved = JSON.parse(localStorage.getItem('btc-chart:config:v1') || '{}')
-              localStorage.setItem('btc-chart:config:v1', JSON.stringify({ ...saved, symbol: sym }))
-            } catch {
-              /* noop */
-            }
-            input.value = ''
-          }}
-        >
-          <input
-            name="coin"
-            className="btc-chart__custom-input"
-            placeholder="+ coin"
-            aria-label="Add custom coin"
-          />
-        </form>
-        <div className="btc-chart__intervals">
-          {INTERVALS.map((iv) => (
-            <button
-              key={iv}
-              type="button"
-              className={`btc-chart__iv-btn${interval === iv ? ' is-active' : ''}`}
-              onClick={() => {
-                setInterval_(iv)
-                try {
-                  const saved = JSON.parse(localStorage.getItem('btc-chart:config:v1') || '{}')
-                  localStorage.setItem(
-                    'btc-chart:config:v1',
-                    JSON.stringify({ ...saved, interval: iv }),
-                  )
-                } catch {
-                  /* noop */
-                }
-              }}
-            >
-              {iv.toUpperCase()}
-            </button>
-          ))}
-        </div>
-        <div className="btc-chart__price">
-          <span className={`btc-chart__price-cur ${price.up ? 'up' : 'dn'}`}>{price.cur}</span>
-          <span className={`btc-chart__price-chg ${price.up ? 'up' : 'dn'}`}>{price.chg}</span>
-        </div>
-        <div className="btc-chart__ohlcv">
-          <span>
-            O <span>{ohlcv.o}</span>
-          </span>
-          <span>
-            H <span>{ohlcv.h}</span>
-          </span>
-          <span>
-            L <span>{ohlcv.l}</span>
-          </span>
-          <span>
-            C <span>{ohlcv.c}</span>
-          </span>
-          <span>
-            V <span>{ohlcv.v}</span>
-          </span>
-        </div>
-        <div className="btc-chart__live">
-          <span className="btc-chart__live-dot" />
-          Live
-        </div>
-      </div>
+      <ChartHeader
+        symbolInfo={symbolInfo}
+        symbol={symbol}
+        symbols={allSymbols}
+        interval={interval}
+        price={price}
+        ohlcv={ohlcv}
+        onSelectSymbol={selectSymbol}
+        onSelectInterval={selectInterval}
+        onAddCustomSymbol={addCustomSymbol}
+      />
       {/* Toolbar */}
-      <div className="btc-chart__toolbar">
-        <span className="btc-chart__tb-label">Indicators</span>
-        {indButtons.map((b, idx) => (
-          <span key={b.key} style={{ display: 'inline-flex', alignItems: 'center' }}>
-            {b.sep && idx > 0 && <span className="btc-chart__sep">·</span>}
-            <button
-              type="button"
-              className={`btc-chart__ind-btn${vis[b.key] ? ' is-on' : ''}`}
-              onClick={() => toggle(b.key)}
-            >
-              {b.label}
-            </button>
-          </span>
-        ))}
-
-        <span className="btc-chart__sep">·</span>
-        <button
-          type="button"
-          className={`btc-chart__ind-btn${vpOpts.heatmap ? ' is-on' : ''}`}
-          onClick={toggleHeatmap}
-          title="Toggle heatmap behind volume profile"
-        >
-          Heatmap
-        </button>
-
-        <div className="btc-chart__tb-spacer" />
-
-        <button
-          type="button"
-          className={`btc-chart__ind-btn${sound.enabled ? ' is-on' : ''}`}
-          onClick={toggleSound}
-          title="Sound on alert"
-          aria-label="Toggle alert sound"
-        >
-          {sound.enabled ? 'Sound on' : 'Sound off'}
-        </button>
-        <button
-          type="button"
-          className={`btc-chart__ind-btn${notifAllowed ? ' is-on' : ''}`}
-          onClick={requestNotif}
-          title="Browser notifications"
-        >
-          {notifAllowed ? 'Notif on' : 'Notif…'}
-        </button>
-        <button type="button" className="btc-chart__ind-btn" onClick={snapshot}>
-          PNG
-        </button>
-        <button type="button" className="btc-chart__ind-btn" onClick={exportNow}>
-          Export
-        </button>
-        <label className="btc-chart__ind-btn btc-chart__file" title="Import config JSON">
-          Import
-          <input
-            type="file"
-            accept="application/json,.json"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) importNow(f)
-              e.target.value = ''
-            }}
-          />
-        </label>
-      </div>
+      <IndicatorToolbar
+        vis={vis}
+        onToggle={toggle}
+        heatmap={vpOpts.heatmap}
+        onToggleHeatmap={toggleHeatmap}
+        soundEnabled={sound.enabled}
+        onToggleSound={toggleSound}
+        notifAllowed={notifAllowed}
+        onRequestNotif={requestNotif}
+        onSnapshot={snapshot}
+        onExport={exportNow}
+        onImport={importNow}
+      />
       {/* Body */}
       <div className="btc-chart__body">
         <div className="btc-chart__col">

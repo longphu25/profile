@@ -101,6 +101,20 @@ export interface FngState {
   pct: number
 }
 
+export interface PriceState {
+  cur: string
+  chg: string
+  up: boolean
+}
+
+export interface OhlcvState {
+  o: string
+  h: string
+  l: string
+  c: string
+  v: string
+}
+
 export const INITIAL_SIDEBAR: SidebarState = {
   nweUpper: '—',
   nweMid: '—',
