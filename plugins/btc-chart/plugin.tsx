@@ -97,8 +97,30 @@ const SYMBOLS = [
     okxInstId: 'OKB-USDT-SWAP',
   },
   { symbol: 'REUSDT', base: 'RE', quote: 'USDT', exchange: 'binance' as Exchange },
+  { symbol: 'BICOUSDT', base: 'BICO', quote: 'USDT', exchange: 'binance' as Exchange },
 ] as const
-type SymbolId = (typeof SYMBOLS)[number]['symbol']
+type SymbolId = string
+
+interface SymbolEntry {
+  symbol: string
+  base: string
+  quote: string
+  exchange: Exchange
+  mexcSymbol?: string
+  okxInstId?: string
+  bybitCategory?: string
+}
+
+function loadCustomSymbols(): SymbolEntry[] {
+  try {
+    return JSON.parse(localStorage.getItem('btc-chart:custom-symbols') || '[]')
+  } catch {
+    return []
+  }
+}
+function saveCustomSymbols(list: SymbolEntry[]) {
+  localStorage.setItem('btc-chart:custom-symbols', JSON.stringify(list))
+}
 
 // Bybit interval mapping from Binance format
 const BYBIT_INTERVAL: Record<string, string> = {
@@ -151,7 +173,11 @@ const CHART = {
 // ── Formatters ─────────────────────────────────────────────────────────────
 
 const fmtP = (n: number): string =>
-  n >= 10000 ? n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : n.toFixed(2)
+  n >= 10000
+    ? n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    : n < 1
+      ? n.toFixed(5)
+      : n.toFixed(2)
 const fmtV = (n: number): string =>
   n >= 1e9
     ? (n / 1e9).toFixed(2) + 'B'
@@ -613,7 +639,11 @@ function AlertsPanel({
 }
 
 function formatPriceShort(n: number) {
-  return n >= 10000 ? n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : n.toFixed(2)
+  return n >= 10000
+    ? n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    : n < 1
+      ? n.toFixed(5)
+      : n.toFixed(2)
 }
 
 function drawSMCOverlay(
@@ -867,7 +897,14 @@ function BtcChartView() {
 
   const [interval, setInterval_] = useState<Interval>(cfgInit.interval as Interval)
   const [symbol, setSymbol] = useState<SymbolId>((cfgInit.symbol as SymbolId) || 'BTCUSDT')
-  const symbolInfo = SYMBOLS.find((s) => s.symbol === symbol)!
+  const [customSymbols, setCustomSymbols] = useState<SymbolEntry[]>(loadCustomSymbols)
+  const allSymbols: SymbolEntry[] = [...SYMBOLS, ...customSymbols]
+  const symbolInfo: SymbolEntry = allSymbols.find((s) => s.symbol === symbol) || {
+    symbol,
+    base: symbol.replace(/USDT$/, ''),
+    quote: 'USDT',
+    exchange: 'binance' as Exchange,
+  }
   // Also keep a ref so effects always see the latest value without stale closures
   const symbolInfoRef = useRef(symbolInfo)
   symbolInfoRef.current = symbolInfo
@@ -1624,7 +1661,7 @@ function BtcChartView() {
       }
     }
 
-    const connectWs = () => {
+    const connectWs = (spotMode = false) => {
       let ws: WebSocket
       const info = symbolInfoRef.current
       if (info.exchange === 'mexc') {
@@ -1782,7 +1819,28 @@ function BtcChartView() {
           if (k[8] === '1') renderData(arr)
         }
       } else {
-        ws = new WebSocket(`wss://fstream.binance.com/ws/${symbol.toLowerCase()}@kline_${interval}`)
+        const wsUrl = spotMode
+          ? `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${interval}`
+          : `wss://fstream.binance.com/ws/${symbol.toLowerCase()}@kline_${interval}`
+        ws = new WebSocket(wsUrl)
+        ws.onerror = () => {
+          // If futures WS fails, retry with spot
+          if (!spotMode && !cancelled) {
+            wsRef.current = null
+            const spotWs = new WebSocket(
+              `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${interval}`,
+            )
+            spotWs.onopen = ws.onopen
+            spotWs.onmessage = ws.onmessage
+            spotWs.onerror = () => setWsStatus({ text: 'Error', tone: 'err' })
+            spotWs.onclose = () => {
+              if (!cancelled) setWsStatus({ text: 'Closed', tone: 'muted' })
+            }
+            wsRef.current = spotWs
+            return
+          }
+          setWsStatus({ text: 'Error', tone: 'err' })
+        }
         ws.onopen = () => {
           if (cancelled) return
           setWsStatus({ text: 'Live', tone: 'live' })
@@ -1841,7 +1899,7 @@ function BtcChartView() {
           if (k.x) renderData(arr)
         }
       }
-      ws.onerror = () => setWsStatus({ text: 'Error', tone: 'err' })
+      if (!ws.onerror) ws.onerror = () => setWsStatus({ text: 'Error', tone: 'err' })
       ws.onclose = () => {
         if (!cancelled) setWsStatus({ text: 'Closed', tone: 'muted' })
       }
@@ -1851,6 +1909,7 @@ function BtcChartView() {
     ;(async () => {
       try {
         let cands: Candle[]
+        let usedSpot = false
         const info = symbolInfoRef.current
         if (info.exchange === 'mexc') {
           const msym = 'mexcSymbol' in info ? info.mexcSymbol : symbol
@@ -1913,13 +1972,30 @@ function BtcChartView() {
             volume: +d[5],
           }))
         } else {
-          const r = await fetch(
-            `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
-          )
-          if (!r.ok) throw new Error('HTTP ' + r.status)
-          const raw = (await r.json()) as any[][]
+          // Custom/unknown symbols: use spot directly (CORS-safe).
+          // Known futures symbols: try futures first.
+          const isKnownFutures = (SYMBOLS as readonly any[]).some((s: any) => s.symbol === symbol)
+          let raw: any[][] | null = null
+          if (isKnownFutures) {
+            try {
+              const r = await fetch(
+                `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
+              )
+              if (r.ok) raw = await r.json()
+            } catch {
+              /* futures unavailable or CORS blocked */
+            }
+          }
+          if (!raw) {
+            const r = await fetch(
+              `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
+            )
+            if (!r.ok) throw new Error('HTTP ' + r.status)
+            raw = await r.json()
+            usedSpot = true
+          }
           if (cancelled) return
-          cands = raw.map((d) => ({
+          cands = raw!.map((d) => ({
             time: Math.floor(d[0] / 1000),
             open: +d[1],
             high: +d[2],
@@ -1930,12 +2006,25 @@ function BtcChartView() {
         }
         if (cancelled) return
         candlesRef.current = cands
+        // Adjust price precision based on price level
+        if (chartRefs.current?.candleSeries && cands.length) {
+          const lastClose = cands[cands.length - 1].close
+          const precision = lastClose < 0.01 ? 6 : lastClose < 1 ? 5 : lastClose < 100 ? 4 : 2
+          const minMove = Math.pow(10, -precision)
+          const pf = { type: 'price', precision, minMove }
+          chartRefs.current.candleSeries.applyOptions({ priceFormat: pf })
+          chartRefs.current.nweMidS.applyOptions({ priceFormat: pf })
+          chartRefs.current.nweUpS.applyOptions({ priceFormat: pf })
+          chartRefs.current.nweLowS.applyOptions({ priceFormat: pf })
+          chartRefs.current.ma50S.applyOptions({ priceFormat: pf })
+          chartRefs.current.ma200S.applyOptions({ priceFormat: pf })
+        }
         renderData(cands)
         const savedZoom = loadConfig().zoom
         if (savedZoom && chartRefs.current?.mainChart) {
           chartRefs.current.mainChart.timeScale().setVisibleLogicalRange(savedZoom)
         }
-        connectWs()
+        connectWs(usedSpot)
       } catch (e) {
         if (cancelled) return
         console.error(e)
@@ -2340,7 +2429,6 @@ function BtcChartView() {
           onChange={(e) => {
             const next = e.target.value as SymbolId
             setSymbol(next)
-            // Write immediately so a quick refresh doesn't lose the selection
             try {
               const saved = JSON.parse(localStorage.getItem('btc-chart:config:v1') || '{}')
               localStorage.setItem(
@@ -2353,12 +2441,46 @@ function BtcChartView() {
           }}
           aria-label="Select trading pair"
         >
-          {SYMBOLS.map((s) => (
+          {allSymbols.map((s) => (
             <option key={s.symbol} value={s.symbol}>
               {s.base}/{s.quote}
             </option>
           ))}
         </select>
+        <form
+          className="btc-chart__custom-sym"
+          onSubmit={(e) => {
+            e.preventDefault()
+            const input = (e.target as HTMLFormElement).elements.namedItem(
+              'coin',
+            ) as HTMLInputElement
+            const raw = input.value.trim().toUpperCase()
+            if (!raw) return
+            const sym = raw.endsWith('USDT') ? raw : raw + 'USDT'
+            const base = sym.replace(/USDT$/, '')
+            if (!allSymbols.find((s) => s.symbol === sym)) {
+              const entry: SymbolEntry = { symbol: sym, base, quote: 'USDT', exchange: 'binance' }
+              const next = [...customSymbols, entry]
+              setCustomSymbols(next)
+              saveCustomSymbols(next)
+            }
+            setSymbol(sym)
+            try {
+              const saved = JSON.parse(localStorage.getItem('btc-chart:config:v1') || '{}')
+              localStorage.setItem('btc-chart:config:v1', JSON.stringify({ ...saved, symbol: sym }))
+            } catch {
+              /* noop */
+            }
+            input.value = ''
+          }}
+        >
+          <input
+            name="coin"
+            className="btc-chart__custom-input"
+            placeholder="+ coin"
+            aria-label="Add custom coin"
+          />
+        </form>
         <div className="btc-chart__intervals">
           {INTERVALS.map((iv) => (
             <button
