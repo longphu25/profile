@@ -278,28 +278,44 @@
   background: var(--bg);
 }
 .btc-chart__main {
-  flex: 7 1 0;
+  flex: 1 1 0;
   width: 100%;
   min-height: 0;
   position: relative;
 }
-.btc-chart__rsi {
-  flex: 2 1 0;
-  width: 100%;
-  min-height: 0;
-  border-top: 1px solid var(--border);
-}
 
-/* Advanced oscillator pane — collapsible (ADX / StochRSI / OBV) */
+/* Oscillator pane — RSI / ADX / StochRSI / OBV, collapsible + resizable */
 .btc-chart__osc-wrap {
   display: flex;
   flex-direction: column;
   border-top: 1px solid var(--border);
   flex: 0 0 auto;
   min-height: 0;
+  position: relative;
 }
-.btc-chart__osc-wrap.is-open {
-  flex: 1.8 1 0;
+.btc-chart__osc-resize {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 7px;
+  cursor: ns-resize;
+  z-index: 6;
+}
+.btc-chart__osc-resize::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.2s;
+}
+.btc-chart__osc-resize:hover::after {
+  background: var(--mint);
 }
 .btc-chart__osc-bar {
   display: flex;
