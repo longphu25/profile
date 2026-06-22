@@ -14,6 +14,8 @@ export interface VisFlags {
   vol: boolean
   smc: boolean
   boxFlip: boolean
+  vwap: boolean
+  rsiDiv: boolean
 }
 
 export interface ZoomState {
@@ -27,6 +29,8 @@ export interface SoundConfig {
   volume: number // 0..1
 }
 
+export type OscView = 'adx' | 'stoch' | 'obv'
+
 export interface ChartConfig {
   version: 1
   interval: string
@@ -37,6 +41,10 @@ export interface ChartConfig {
   sound: SoundConfig
   notifications: boolean
   minimal: boolean
+  /** Advanced oscillator pane open/closed state. */
+  oscOpen: boolean
+  /** Which oscillator is shown in the advanced pane. */
+  oscView: OscView
 }
 
 export const DEFAULT_CONFIG: ChartConfig = {
@@ -53,12 +61,16 @@ export const DEFAULT_CONFIG: ChartConfig = {
     vol: true,
     smc: false,
     boxFlip: false,
+    vwap: false,
+    rsiDiv: false,
   },
   zoom: null,
   alerts: [],
   sound: { enabled: true, volume: 0.4 },
   notifications: false,
   minimal: false,
+  oscOpen: false,
+  oscView: 'adx',
 }
 
 /** Read full config from localStorage, with safe fallback. */
