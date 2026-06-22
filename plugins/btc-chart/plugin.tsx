@@ -51,7 +51,7 @@ import {
   ChartHeader,
   IndicatorToolbar,
 } from './components'
-import { usePositions, useTicker, useFunding, useFearGreed } from './hooks'
+import { usePositions, useTicker, useFunding, useFearGreed, useKlines } from './hooks'
 import {
   CHART,
   LIMIT,
@@ -193,6 +193,8 @@ function BtcChartView() {
   const tickerQuery = useTicker(symbol, symbolInfo)
   const fundingQuery = useFunding(symbol, symbolInfo)
   const fngQuery = useFearGreed()
+  // Historical candles (one-shot per symbol/interval); WS handles live ticks.
+  const klinesQuery = useKlines(symbol, interval, symbolInfo)
   const stats: StatsState = tickerQuery.data ? statsFromTicker(tickerQuery.data) : DEFAULT_STATS
   const funding: FundingState = fundingQuery.data ?? DEFAULT_FUNDING
   const fng: FngState = fngQuery.data ?? DEFAULT_FNG
@@ -216,6 +218,14 @@ function BtcChartView() {
       v: fmtV(t.vol),
     }))
   }, [tickerQuery.data])
+
+  // Spinner + status while the historical candles are loading.
+  useEffect(() => {
+    if (klinesQuery.isFetching) {
+      setLoading(true)
+      setLoadingText(`Tải dữ liệu ${symbolInfo.base}/${symbolInfo.quote} ${interval}…`)
+    }
+  }, [klinesQuery.isFetching, symbolInfo.base, symbolInfo.quote, interval])
 
   // Manual positions: list state, add/remove form, and chart price-line overlay.
   const {
@@ -1118,14 +1128,16 @@ function BtcChartView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [oscView])
 
-  // ── Fetch klines + open WS for the selected interval ───────────────
+  // ── Wire klines + WebSocket once the query resolves ────────────────
+  // Historical candles come from React Query (useKlines); the live socket
+  // stays imperative. Re-runs when fresh data/error arrives or symbol/interval
+  // changes, reconnecting the socket accordingly.
   useEffect(() => {
+    const data = klinesQuery.data
+    const err = klinesQuery.error
+    if (!data && !err) return
+
     let cancelled = false
-    setLoading(true)
-    setLoadingText(
-      `Tải dữ liệu ${symbolInfoRef.current.base}/${symbolInfoRef.current.quote} ${interval}…`,
-    )
-    fitNextRef.current = true
 
     const closeWs = () => {
       if (wsRef.current) {
@@ -1383,165 +1395,63 @@ function BtcChartView() {
       wsRef.current = ws
     }
 
-    ;(async () => {
-      try {
-        let cands: Candle[]
-        let usedSpot = false
-        const info = symbolInfoRef.current
-        if (info.exchange === 'mexc') {
-          const msym = 'mexcSymbol' in info ? info.mexcSymbol : symbol
-          const r = await fetch(
-            `/api/mexc/api/v1/contract/kline/${msym}?interval=${MEXC_INTERVAL[interval]}&limit=${LIMIT}`,
-          )
-          if (!r.ok) throw new Error('HTTP ' + r.status)
-          const json = (await r.json()) as {
-            data: {
-              time: number[]
-              open: string[]
-              high: string[]
-              low: string[]
-              close: string[]
-              vol: string[]
-            }
-          }
-          if (cancelled) return
-          const d = json.data
-          cands = d.time
-            .map((t, i) => ({
-              time: t,
-              open: +d.open[i],
-              high: +d.high[i],
-              low: +d.low[i],
-              close: +d.close[i],
-              volume: +d.vol[i],
-            }))
-            .sort((a, b) => a.time - b.time)
-        } else if (info.exchange === 'bybit') {
-          const cat = 'bybitCategory' in info ? info.bybitCategory : 'linear'
-          const r = await fetch(
-            `https://api.bybit.com/v5/market/kline?category=${cat}&symbol=${symbol}&interval=${BYBIT_INTERVAL[interval]}&limit=${LIMIT}`,
-          )
-          if (!r.ok) throw new Error('HTTP ' + r.status)
-          const json = (await r.json()) as { result: { list: string[][] } }
-          if (cancelled) return
-          cands = json.result.list.reverse().map((d) => ({
-            time: Math.floor(Number(d[0]) / 1000),
-            open: +d[1],
-            high: +d[2],
-            low: +d[3],
-            close: +d[4],
-            volume: +d[5],
-          }))
-        } else if (info.exchange === 'okx') {
-          const instId = 'okxInstId' in info ? info.okxInstId : symbol
-          const r = await fetch(
-            `/api/okx/api/v5/market/candles?instId=${instId}&bar=${OKX_INTERVAL[interval]}&limit=${LIMIT}`,
-          )
-          if (!r.ok) throw new Error('HTTP ' + r.status)
-          const json = (await r.json()) as { data: string[][] }
-          if (cancelled) return
-          cands = json.data.reverse().map((d) => ({
-            time: Math.floor(Number(d[0]) / 1000),
-            open: +d[1],
-            high: +d[2],
-            low: +d[3],
-            close: +d[4],
-            volume: +d[5],
-          }))
-        } else {
-          // Custom/unknown symbols: use spot directly (CORS-safe).
-          // Known futures symbols: try futures first.
-          const isKnownFutures = (SYMBOLS as readonly any[]).some((s: any) => s.symbol === symbol)
-          let raw: any[][] | null = null
-          if (isKnownFutures) {
-            try {
-              const r = await fetch(
-                `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
-              )
-              if (r.ok) raw = await r.json()
-            } catch {
-              /* futures unavailable or CORS blocked */
-            }
-          }
-          if (!raw) {
-            const r = await fetch(
-              `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
-            )
-            if (!r.ok) throw new Error('HTTP ' + r.status)
-            raw = await r.json()
-            usedSpot = true
-          }
-          if (cancelled) return
-          cands = raw!.map((d) => ({
-            time: Math.floor(d[0] / 1000),
-            open: +d[1],
-            high: +d[2],
-            low: +d[3],
-            close: +d[4],
-            volume: +d[5],
-          }))
-        }
-        if (cancelled) return
-        candlesRef.current = cands
-        // Adjust price precision based on price level
-        if (chartRefs.current?.candleSeries && cands.length) {
-          const lastClose = cands[cands.length - 1].close
-          const precision = lastClose < 0.01 ? 6 : lastClose < 1 ? 5 : lastClose < 100 ? 4 : 2
-          const minMove = Math.pow(10, -precision)
-          const pf = { type: 'price', precision, minMove }
-          chartRefs.current.candleSeries.applyOptions({ priceFormat: pf })
-          chartRefs.current.nweMidS.applyOptions({ priceFormat: pf })
-          chartRefs.current.nweUpS.applyOptions({ priceFormat: pf })
-          chartRefs.current.nweLowS.applyOptions({ priceFormat: pf })
-          chartRefs.current.ma50S.applyOptions({ priceFormat: pf })
-          chartRefs.current.ma200S.applyOptions({ priceFormat: pf })
-        }
-        renderData(cands)
-        const savedZoom = loadConfig().zoom
-        if (savedZoom && chartRefs.current?.mainChart) {
-          chartRefs.current.mainChart.timeScale().setVisibleLogicalRange(savedZoom)
-        }
-        connectWs(usedSpot)
-      } catch (e) {
-        if (cancelled) return
-        console.error(e)
-        setWsStatus({
-          text: e instanceof Error ? e.message : 'fetch error',
-          tone: 'err',
-        })
-        // Mock fallback
-        const step =
-          { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400 }[interval] ||
-          3600
-        const t0 = Math.floor(Date.now() / 1000) - LIMIT * step
-        let p = 65000
-        const cands: Candle[] = []
-        for (let i = 0; i <= LIMIT; i++) {
-          const ch = (Math.random() - 0.48) * 900
-          const o = p
-          p = Math.max(55000, Math.min(75000, p + ch))
-          const c = p
-          cands.push({
-            time: t0 + i * step,
-            open: o,
-            high: Math.max(o, c) + Math.random() * 400,
-            low: Math.min(o, c) - Math.random() * 400,
-            close: c,
-            volume: 200 + Math.random() * 1800,
-          })
-        }
-        candlesRef.current = cands
-        renderData(cands)
-        setWsStatus({ text: 'Demo data (offline)', tone: 'err' })
+    if (data) {
+      candlesRef.current = data.candles
+      // Adjust price precision based on price level
+      if (chartRefs.current?.candleSeries && data.candles.length) {
+        const lastClose = data.candles[data.candles.length - 1].close
+        const precision = lastClose < 0.01 ? 6 : lastClose < 1 ? 5 : lastClose < 100 ? 4 : 2
+        const minMove = Math.pow(10, -precision)
+        const pf = { type: 'price', precision, minMove }
+        chartRefs.current.candleSeries.applyOptions({ priceFormat: pf })
+        chartRefs.current.nweMidS.applyOptions({ priceFormat: pf })
+        chartRefs.current.nweUpS.applyOptions({ priceFormat: pf })
+        chartRefs.current.nweLowS.applyOptions({ priceFormat: pf })
+        chartRefs.current.ma50S.applyOptions({ priceFormat: pf })
+        chartRefs.current.ma200S.applyOptions({ priceFormat: pf })
       }
-      if (!cancelled) setLoading(false)
-    })()
+      fitNextRef.current = true
+      renderData(data.candles)
+      const savedZoom = loadConfig().zoom
+      if (savedZoom && chartRefs.current?.mainChart) {
+        chartRefs.current.mainChart.timeScale().setVisibleLogicalRange(savedZoom)
+      }
+      connectWs(data.usedSpot)
+      setLoading(false)
+    } else if (err) {
+      console.error(err)
+      // Mock fallback (offline / blocked) — render demo data, no socket.
+      const step =
+        { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400 }[interval] || 3600
+      const t0 = Math.floor(Date.now() / 1000) - LIMIT * step
+      let p = 65000
+      const cands: Candle[] = []
+      for (let i = 0; i <= LIMIT; i++) {
+        const ch = (Math.random() - 0.48) * 900
+        const o = p
+        p = Math.max(55000, Math.min(75000, p + ch))
+        const c = p
+        cands.push({
+          time: t0 + i * step,
+          open: o,
+          high: Math.max(o, c) + Math.random() * 400,
+          low: Math.min(o, c) - Math.random() * 400,
+          close: c,
+          volume: 200 + Math.random() * 1800,
+        })
+      }
+      candlesRef.current = cands
+      fitNextRef.current = true
+      renderData(cands)
+      setWsStatus({ text: 'Demo data (offline)', tone: 'err' })
+      setLoading(false)
+    }
 
     return () => {
       cancelled = true
       closeWs()
     }
-  }, [interval, symbol, renderData])
+  }, [klinesQuery.data, klinesQuery.error, interval, symbol, renderData])
 
   // ── Toggles ─────────────────────────────────────────────────────────
   const toggle = useCallback(

@@ -3,7 +3,14 @@
 // endpoints live here (ticker 5s, funding 30s, Fear & Greed 60s).
 
 import { useQuery } from '@tanstack/react-query'
-import { type SymbolEntry, fetchTicker, fetchFunding, fetchFearGreed } from '../lib'
+import {
+  type Interval,
+  type SymbolEntry,
+  fetchTicker,
+  fetchFunding,
+  fetchFearGreed,
+  fetchKlines,
+} from '../lib'
 
 export function useTicker(symbol: string, info: SymbolEntry) {
   return useQuery({
@@ -29,5 +36,18 @@ export function useFearGreed() {
     queryFn: fetchFearGreed,
     refetchInterval: 60_000,
     staleTime: 60_000,
+  })
+}
+
+/**
+ * Initial historical candles. One-shot per symbol/interval (no polling) —
+ * live updates arrive over the WebSocket, kept imperative for performance.
+ */
+export function useKlines(symbol: string, interval: Interval, info: SymbolEntry) {
+  return useQuery({
+    queryKey: ['btc-chart', 'klines', info.exchange, symbol, interval],
+    queryFn: () => fetchKlines(symbol, interval, info),
+    staleTime: 15_000,
+    retry: 0,
   })
 }

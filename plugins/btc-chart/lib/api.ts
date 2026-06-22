@@ -2,9 +2,10 @@
 // Pure async functions intended as React Query queryFns. They throw on
 // failure so the query layer can retry and keep the last good value.
 
-import { CHART } from './constants'
+import { LIMIT, CHART, type Interval } from './constants'
 import { fmtP, fmtV } from './format'
-import type { FngState, FundingState, StatsState, SymbolEntry } from './types'
+import { BYBIT_INTERVAL, MEXC_INTERVAL, OKX_INTERVAL, SYMBOLS } from './symbols'
+import type { Candle, FngState, FundingState, StatsState, SymbolEntry } from './types'
 
 export interface TickerData {
   price: number
@@ -182,4 +183,115 @@ export async function fetchFearGreed(): Promise<FngState> {
   const color =
     v < 25 ? CHART.dn : v < 45 ? '#ffaf6b' : v < 55 ? CHART.hi : v < 75 ? CHART.up : CHART.ma50
   return { val: String(v), label: row.value_classification, color, pct: v }
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+export interface KlineResult {
+  candles: Candle[]
+  /** True when a Binance symbol fell back to the spot endpoint. */
+  usedSpot: boolean
+}
+
+/** Fetch historical candles, normalized across Binance/Bybit/MEXC/OKX. */
+export async function fetchKlines(
+  symbol: string,
+  interval: Interval,
+  info: SymbolEntry,
+): Promise<KlineResult> {
+  if (info.exchange === 'mexc') {
+    const msym = info.mexcSymbol ?? symbol
+    const r = await fetch(
+      `/api/mexc/api/v1/contract/kline/${msym}?interval=${MEXC_INTERVAL[interval]}&limit=${LIMIT}`,
+    )
+    if (!r.ok) throw new Error('HTTP ' + r.status)
+    const json = (await r.json()) as {
+      data: {
+        time: number[]
+        open: string[]
+        high: string[]
+        low: string[]
+        close: string[]
+        vol: string[]
+      }
+    }
+    const d = json.data
+    const candles = d.time
+      .map((t, i) => ({
+        time: t,
+        open: +d.open[i],
+        high: +d.high[i],
+        low: +d.low[i],
+        close: +d.close[i],
+        volume: +d.vol[i],
+      }))
+      .sort((a, b) => a.time - b.time)
+    return { candles, usedSpot: false }
+  }
+  if (info.exchange === 'bybit') {
+    const cat = info.bybitCategory ?? 'linear'
+    const r = await fetch(
+      `https://api.bybit.com/v5/market/kline?category=${cat}&symbol=${symbol}&interval=${BYBIT_INTERVAL[interval]}&limit=${LIMIT}`,
+    )
+    if (!r.ok) throw new Error('HTTP ' + r.status)
+    const json = (await r.json()) as { result: { list: string[][] } }
+    const candles = json.result.list.reverse().map((d) => ({
+      time: Math.floor(Number(d[0]) / 1000),
+      open: +d[1],
+      high: +d[2],
+      low: +d[3],
+      close: +d[4],
+      volume: +d[5],
+    }))
+    return { candles, usedSpot: false }
+  }
+  if (info.exchange === 'okx') {
+    const instId = info.okxInstId ?? symbol
+    const r = await fetch(
+      `/api/okx/api/v5/market/candles?instId=${instId}&bar=${OKX_INTERVAL[interval]}&limit=${LIMIT}`,
+    )
+    if (!r.ok) throw new Error('HTTP ' + r.status)
+    const json = (await r.json()) as { data: string[][] }
+    const candles = json.data.reverse().map((d) => ({
+      time: Math.floor(Number(d[0]) / 1000),
+      open: +d[1],
+      high: +d[2],
+      low: +d[3],
+      close: +d[4],
+      volume: +d[5],
+    }))
+    return { candles, usedSpot: false }
+  }
+  // Binance: known futures symbols try the futures endpoint first; custom or
+  // unknown symbols use spot directly (CORS-safe).
+  const isKnownFutures = (SYMBOLS as readonly any[]).some((s: any) => s.symbol === symbol)
+  let raw: any[][] | null = null
+  let usedSpot = false
+  if (isKnownFutures) {
+    try {
+      const r = await fetch(
+        `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
+      )
+      if (r.ok) raw = await r.json()
+    } catch {
+      /* futures unavailable or CORS blocked */
+    }
+  }
+  if (!raw) {
+    const r = await fetch(
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${LIMIT}`,
+    )
+    if (!r.ok) throw new Error('HTTP ' + r.status)
+    raw = await r.json()
+    usedSpot = true
+  }
+  const candles = raw.map((d) => ({
+    time: Math.floor(d[0] / 1000),
+    open: +d[1],
+    high: +d[2],
+    low: +d[3],
+    close: +d[4],
+    volume: +d[5],
+  }))
+  return { candles, usedSpot }
 }
