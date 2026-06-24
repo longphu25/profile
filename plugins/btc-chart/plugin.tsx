@@ -109,13 +109,11 @@ import {
   type LienResult,
   type SignalConfig,
   type Candle,
-  type NWE,
   type ChartRefs,
   type SidebarState,
   type StatsState,
   type FundingState,
   type FngState,
-  type TradeSetup,
 } from './lib'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -146,6 +144,7 @@ function BtcChartView() {
     lower1: any
     sma: any
   } | null>(null)
+  const markersRef = useRef<any>(null)
   // Volume-spike alert: only fire on a newly closed candle (not on UI
   // re-renders), and mirror the sound-enabled flag for use inside renderData.
   const lastCandleTimeRef = useRef<number>(0)
@@ -313,7 +312,6 @@ function BtcChartView() {
   const posSuggestions = useMemo(() => {
     const candles = candlesRef.current
     if (!candles.length || !positions.length) return {}
-    const i = candles.length - 1
     const nweData = calcMHBand(candles)
     const result: Record<string, { sl: number; tp1: number; tp2: number }> = {}
     for (const p of positions) {
@@ -497,7 +495,14 @@ function BtcChartView() {
     }
     // lightweight-charts requires markers sorted ascending by time.
     markers.sort((a, b) => a.time - b.time)
-    refs.candleSeries.setMarkers(markers)
+    if (markersRef.current) {
+      markersRef.current.setMarkers(markers)
+    } else {
+      const LWC = window.LightweightCharts
+      if (LWC?.createSeriesMarkers) {
+        markersRef.current = LWC.createSeriesMarkers(refs.candleSeries, markers)
+      }
+    }
     boxFlipRef.current = boxFlip
     if (boxCanvasRef.current && mainElRef.current && refs.candleSeries) {
       drawBoxFlipOverlay(
@@ -639,7 +644,7 @@ function BtcChartView() {
         text: 'VOL',
       })
       markers.sort((a, b) => a.time - b.time)
-      refs.candleSeries.setMarkers(markers)
+      if (markersRef.current) markersRef.current.setMarkers(markers)
 
       if (!isInitial && isNewCandle) {
         const ratio = (data[lastIdx].volume / (volSmaAll[lastIdx] as number)).toFixed(1)
@@ -919,7 +924,7 @@ function BtcChartView() {
       timeScale: { ...base.timeScale, visible: !oscOpenRef.current },
     })
 
-    const candleSeries = mainChart.addCandlestickSeries({
+    const candleSeries = mainChart.addSeries(LWC.CandlestickSeries, {
       upColor: CHART.up,
       downColor: CHART.dn,
       borderUpColor: CHART.up,
@@ -928,7 +933,7 @@ function BtcChartView() {
       wickDownColor: CHART.dn,
     })
 
-    const nweUpS = mainChart.addLineSeries({
+    const nweUpS = mainChart.addSeries(LWC.LineSeries, {
       color: 'rgba(255,122,133,0.6)',
       lineWidth: 1,
       lineStyle: 0,
@@ -937,7 +942,7 @@ function BtcChartView() {
       crosshairMarkerVisible: false,
       title: 'MH+',
     })
-    const nweMidS = mainChart.addLineSeries({
+    const nweMidS = mainChart.addSeries(LWC.LineSeries, {
       color: 'rgba(111,188,240,0.7)',
       lineWidth: 1,
       lineStyle: 2,
@@ -946,7 +951,7 @@ function BtcChartView() {
       crosshairMarkerVisible: false,
       title: 'MH',
     })
-    const nweLowS = mainChart.addLineSeries({
+    const nweLowS = mainChart.addSeries(LWC.LineSeries, {
       color: 'rgba(52,216,164,0.6)',
       lineWidth: 1,
       lineStyle: 0,
@@ -955,7 +960,7 @@ function BtcChartView() {
       crosshairMarkerVisible: false,
       title: 'MH-',
     })
-    const ma50S = mainChart.addLineSeries({
+    const ma50S = mainChart.addSeries(LWC.LineSeries, {
       color: CHART.ma50,
       lineWidth: 1.5,
       priceLineVisible: false,
@@ -963,7 +968,7 @@ function BtcChartView() {
       crosshairMarkerVisible: false,
       title: 'MA50',
     })
-    const ma200S = mainChart.addLineSeries({
+    const ma200S = mainChart.addSeries(LWC.LineSeries, {
       color: CHART.hi,
       lineWidth: 1,
       priceLineVisible: false,
@@ -973,7 +978,7 @@ function BtcChartView() {
     })
 
     // VWAP (anchored) + std-dev bands
-    const vwapS = mainChart.addLineSeries({
+    const vwapS = mainChart.addSeries(LWC.LineSeries, {
       color: '#c792ea',
       lineWidth: 2,
       priceLineVisible: false,
@@ -981,7 +986,7 @@ function BtcChartView() {
       crosshairMarkerVisible: false,
       title: 'VWAP',
     })
-    const vwapUpS = mainChart.addLineSeries({
+    const vwapUpS = mainChart.addSeries(LWC.LineSeries, {
       color: 'rgba(199,146,234,0.4)',
       lineWidth: 1,
       lineStyle: 2,
@@ -989,7 +994,7 @@ function BtcChartView() {
       lastValueVisible: false,
       crosshairMarkerVisible: false,
     })
-    const vwapLoS = mainChart.addLineSeries({
+    const vwapLoS = mainChart.addSeries(LWC.LineSeries, {
       color: 'rgba(199,146,234,0.4)',
       lineWidth: 1,
       lineStyle: 2,
@@ -999,7 +1004,7 @@ function BtcChartView() {
     })
 
     // Double Bollinger Bands (Kathy Lien)
-    const dbbSma = mainChart.addLineSeries({
+    const dbbSma = mainChart.addSeries(LWC.LineSeries, {
       color: 'rgba(199,146,234,0.5)',
       lineWidth: 1,
       lineStyle: 2,
@@ -1007,7 +1012,7 @@ function BtcChartView() {
       lastValueVisible: false,
       crosshairMarkerVisible: false,
     })
-    const dbbUpper2 = mainChart.addLineSeries({
+    const dbbUpper2 = mainChart.addSeries(LWC.LineSeries, {
       color: 'rgba(255,122,133,0.35)',
       lineWidth: 1,
       lineStyle: 0,
@@ -1015,7 +1020,7 @@ function BtcChartView() {
       lastValueVisible: false,
       crosshairMarkerVisible: false,
     })
-    const dbbLower2 = mainChart.addLineSeries({
+    const dbbLower2 = mainChart.addSeries(LWC.LineSeries, {
       color: 'rgba(52,216,164,0.35)',
       lineWidth: 1,
       lineStyle: 0,
@@ -1023,7 +1028,7 @@ function BtcChartView() {
       lastValueVisible: false,
       crosshairMarkerVisible: false,
     })
-    const dbbUpper1 = mainChart.addLineSeries({
+    const dbbUpper1 = mainChart.addSeries(LWC.LineSeries, {
       color: 'rgba(255,122,133,0.2)',
       lineWidth: 1,
       lineStyle: 2,
@@ -1031,7 +1036,7 @@ function BtcChartView() {
       lastValueVisible: false,
       crosshairMarkerVisible: false,
     })
-    const dbbLower1 = mainChart.addLineSeries({
+    const dbbLower1 = mainChart.addSeries(LWC.LineSeries, {
       color: 'rgba(52,216,164,0.2)',
       lineWidth: 1,
       lineStyle: 2,
@@ -1048,7 +1053,7 @@ function BtcChartView() {
     }
 
     // Volume is overlaid on the bottom of the main price pane (own scale).
-    const volSeries = mainChart.addHistogramSeries({
+    const volSeries = mainChart.addSeries(LWC.HistogramSeries, {
       priceFormat: { type: 'volume' },
       priceScaleId: 'vol',
     })
@@ -1275,18 +1280,18 @@ function BtcChartView() {
       crosshairMarkerVisible: false,
     })
 
-    const adxRef = chart.addLineSeries(lineOpts('rgba(255,255,255,0.18)', 1, true))
-    const adxS = chart.addLineSeries({ ...lineOpts('#ffc46b', 2), title: 'ADX' })
-    const plusDIS = chart.addLineSeries({ ...lineOpts('#34d8a4', 1.5), title: '+DI' })
-    const minusDIS = chart.addLineSeries({ ...lineOpts('#ff7a85', 1.5), title: '-DI' })
-    const stochOB = chart.addLineSeries(lineOpts('rgba(255,122,133,0.3)', 1, true))
-    const stochOS = chart.addLineSeries(lineOpts('rgba(52,216,164,0.3)', 1, true))
-    const stochKS = chart.addLineSeries({ ...lineOpts('#6fbcf0', 2), title: '%K' })
-    const stochDS = chart.addLineSeries({ ...lineOpts('#ffc46b', 1.5), title: '%D' })
-    const obvS = chart.addLineSeries({ ...lineOpts('#80ffd5', 2), title: 'OBV' })
-    const rsiOB = chart.addLineSeries(lineOpts('rgba(255,122,133,0.3)', 1, true))
-    const rsiOS = chart.addLineSeries(lineOpts('rgba(52,216,164,0.3)', 1, true))
-    const rsiS = chart.addLineSeries({ ...lineOpts(CHART.neu, 2), title: 'RSI' })
+    const adxRef = chart.addSeries(LWC.LineSeries, lineOpts('rgba(255,255,255,0.18)', 1, true))
+    const adxS = chart.addSeries(LWC.LineSeries, { ...lineOpts('#ffc46b', 2), title: 'ADX' })
+    const plusDIS = chart.addSeries(LWC.LineSeries, { ...lineOpts('#34d8a4', 1.5), title: '+DI' })
+    const minusDIS = chart.addSeries(LWC.LineSeries, { ...lineOpts('#ff7a85', 1.5), title: '-DI' })
+    const stochOB = chart.addSeries(LWC.LineSeries, lineOpts('rgba(255,122,133,0.3)', 1, true))
+    const stochOS = chart.addSeries(LWC.LineSeries, lineOpts('rgba(52,216,164,0.3)', 1, true))
+    const stochKS = chart.addSeries(LWC.LineSeries, { ...lineOpts('#6fbcf0', 2), title: '%K' })
+    const stochDS = chart.addSeries(LWC.LineSeries, { ...lineOpts('#ffc46b', 1.5), title: '%D' })
+    const obvS = chart.addSeries(LWC.LineSeries, { ...lineOpts('#80ffd5', 2), title: 'OBV' })
+    const rsiOB = chart.addSeries(LWC.LineSeries, lineOpts('rgba(255,122,133,0.3)', 1, true))
+    const rsiOS = chart.addSeries(LWC.LineSeries, lineOpts('rgba(52,216,164,0.3)', 1, true))
+    const rsiS = chart.addSeries(LWC.LineSeries, { ...lineOpts(CHART.neu, 2), title: 'RSI' })
 
     // Main pane gives up its time axis to the oscillator pane while open.
     mainChart.applyOptions({ timeScale: { visible: false } })

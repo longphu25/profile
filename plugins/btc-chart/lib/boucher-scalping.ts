@@ -137,7 +137,7 @@ function detectBoxes(data: Candle[], boxSize: number): ScalpBox[] {
 }
 
 /** Detect three-bar reversal patterns at box edges. */
-function detectThreeBar(data: Candle[], boxSize: number): ThreeBarSignal[] {
+function detectThreeBar(data: Candle[], _boxSize: number): ThreeBarSignal[] {
   const signals: ThreeBarSignal[] = []
   if (data.length < 4) return signals
 
@@ -145,7 +145,7 @@ function detectThreeBar(data: Candle[], boxSize: number): ThreeBarSignal[] {
   const start = Math.max(3, data.length - 60)
   for (let i = start; i < data.length; i++) {
     const bar1 = data[i - 2]
-    const bar2 = data[i - 1]
+    const _bar2 = data[i - 1]
     const bar3 = data[i]
 
     // LONG: bar1 bearish, bar2 neutral/small, bar3 bullish overtaking bar1's high (apex)

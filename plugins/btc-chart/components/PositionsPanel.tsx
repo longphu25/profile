@@ -1,5 +1,6 @@
-// BTC Chart — Positions panel: add-form + per-position PnL / liquidation rows.
+// BTC Chart — Positions panel: add-form with capital/leverage, PnL display.
 
+import { useState, useEffect } from 'react'
 import { type Position, type PosForm, calcLiquidation, calcPnl, fmtP } from '../lib'
 
 export interface PosSuggestion {
@@ -16,9 +17,7 @@ export interface PositionsPanelProps {
   setForm: React.Dispatch<React.SetStateAction<PosForm>>
   onAdd: () => void
   onRemove: (id: string) => void
-  /** Latest mark price used for PnL; falls back to each entry price. */
   markPrice: number | null
-  /** ATR+NWE-based SL/TP suggestions per position id. */
   suggestions?: Record<string, PosSuggestion>
 }
 
@@ -33,6 +32,24 @@ export function PositionsPanel({
   markPrice,
   suggestions,
 }: PositionsPanelProps) {
+  const [capital, setCapital] = useState(10)
+  const [leverage, setLeverage] = useState(10)
+
+  // Auto-calculate size and margin when capital/leverage/entry changes
+  useEffect(() => {
+    const entry = parseFloat(form.entry)
+    if (!entry || entry <= 0) return
+    const notional = capital * leverage
+    const qty = notional / entry
+    // Margin = notional / leverage = capital (initial margin required)
+    const margin = notional / leverage
+    setForm((f) => ({
+      ...f,
+      size: qty.toFixed(6),
+      margin: margin.toFixed(4),
+    }))
+  }, [capital, leverage, form.entry, setForm])
+
   return (
     <div className="btc-chart__panel">
       <div className="btc-chart__panel-header">
@@ -61,6 +78,33 @@ export function PositionsPanel({
               <option value="cross">Cross</option>
             </select>
           </div>
+          {/* Capital + Leverage */}
+          <div className="btc-chart__pos-row">
+            <div className="btc-chart__pos-field">
+              <label className="btc-chart__pos-lbl">Vốn ($)</label>
+              <input
+                className="btc-chart__pos-input"
+                type="number"
+                min={1}
+                value={capital}
+                onChange={(e) => setCapital(Math.max(1, +e.target.value || 1))}
+              />
+            </div>
+            <div className="btc-chart__pos-field">
+              <label className="btc-chart__pos-lbl">Leverage</label>
+              <div className="btc-chart__pos-lev-row">
+                <span className="btc-chart__pos-lev-x">x</span>
+                <input
+                  className="btc-chart__pos-input"
+                  type="number"
+                  min={1}
+                  max={125}
+                  value={leverage}
+                  onChange={(e) => setLeverage(Math.max(1, Math.min(125, +e.target.value || 1)))}
+                />
+              </div>
+            </div>
+          </div>
           <input
             className="btc-chart__pos-input"
             type="number"
@@ -68,20 +112,14 @@ export function PositionsPanel({
             value={form.entry}
             onChange={(e) => setForm((f) => ({ ...f, entry: e.target.value }))}
           />
-          <input
-            className="btc-chart__pos-input"
-            type="number"
-            placeholder="Số lượng (Size)"
-            value={form.size}
-            onChange={(e) => setForm((f) => ({ ...f, size: e.target.value }))}
-          />
-          <input
-            className="btc-chart__pos-input"
-            type="number"
-            placeholder="Ký quỹ USDT (Margin)"
-            value={form.margin}
-            onChange={(e) => setForm((f) => ({ ...f, margin: e.target.value }))}
-          />
+          {/* Auto-calculated: Size and Margin (read-only display) */}
+          {form.entry && parseFloat(form.entry) > 0 && (
+            <div className="btc-chart__pos-calc">
+              <span>Size: ${(capital * leverage).toFixed(2)}</span>
+              <span>Qty: {form.size}</span>
+              <span>Margin: ${form.margin}</span>
+            </div>
+          )}
           <input
             className="btc-chart__pos-input"
             type="number"
@@ -118,12 +156,16 @@ export function PositionsPanel({
                 <span className="btc-chart__row-val">{fmtP(p.entryPrice)}</span>
               </div>
               <div className="btc-chart__row">
+                <span className="btc-chart__row-label">Mark</span>
+                <span className="btc-chart__row-val">{fmtP(mark)}</span>
+              </div>
+              <div className="btc-chart__row">
                 <span className="btc-chart__row-label">Size</span>
-                <span className="btc-chart__row-val">{p.size}</span>
+                <span className="btc-chart__row-val">{p.size.toFixed(6)}</span>
               </div>
               <div className="btc-chart__row">
                 <span className="btc-chart__row-label">Margin</span>
-                <span className="btc-chart__row-val">{fmtP(p.margin)} USDT</span>
+                <span className="btc-chart__row-val">${p.margin.toFixed(2)}</span>
               </div>
               {p.stopLoss && (
                 <div className="btc-chart__row">
@@ -143,7 +185,7 @@ export function PositionsPanel({
                 <span className="btc-chart__row-label">PnL</span>
                 <span className={`btc-chart__row-val ${pnl >= 0 ? 'up' : 'dn'}`}>
                   {pnl >= 0 ? '+' : ''}
-                  {pnl.toFixed(2)} USDT ({pct >= 0 ? '+' : ''}
+                  {pnl.toFixed(2)} $ ({pct >= 0 ? '+' : ''}
                   {pct.toFixed(2)}%)
                 </span>
               </div>

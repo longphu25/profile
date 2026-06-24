@@ -5,7 +5,8 @@
 import { LIMIT, CHART, type Interval } from './constants'
 import { fmtP, fmtV } from './format'
 import { BYBIT_INTERVAL, MEXC_INTERVAL, OKX_INTERVAL, SYMBOLS } from './symbols'
-import type { Candle, FngState, FundingState, StatsState, SymbolEntry } from './types'
+import type { Candle, FngState, FundingState, StatsState } from './types'
+import type { SymbolEntry } from './symbols'
 
 export interface TickerData {
   price: number
@@ -285,7 +286,7 @@ export async function fetchKlines(
     raw = await r.json()
     usedSpot = true
   }
-  const candles = raw.map((d) => ({
+  const candles = raw!.map((d) => ({
     time: Math.floor(d[0] / 1000),
     open: +d[1],
     high: +d[2],

@@ -1596,3 +1596,14 @@
   opacity: 0.5;
 }
 .btc-chart__panel.is-disabled .btc-chart__collapse-summary { display: none; }
+
+/* ── Position Form Enhancements ── */
+.btc-chart__pos-field { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.btc-chart__pos-lbl { font-size: 9px; color: var(--muted); font-family: var(--font-mono); }
+.btc-chart__pos-lev-row { display: flex; align-items: center; gap: 2px; }
+.btc-chart__pos-lev-x { font-size: 11px; font-family: var(--font-mono); font-weight: 700; color: var(--mint); }
+.btc-chart__pos-calc {
+  display: flex; gap: 8px; font-size: 9px; font-family: var(--font-mono);
+  color: var(--muted); padding: 4px 6px; background: var(--surface-3);
+  border-radius: 4px;
+}
