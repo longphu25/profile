@@ -1,6 +1,6 @@
 // Site Builder — Drag & drop page builder using installed plugins
 import { useState, useCallback } from 'react'
-import type { DragEndEvent } from '@dnd-kit/abstract'
+import type { DragEndEvent } from '@dnd-kit/react'
 import { DragDropProvider } from '@dnd-kit/react'
 import { useSortable } from '@dnd-kit/react/sortable'
 import { GripVertical, Trash2, Settings, Eye, Download, ChevronLeft, Sun, Moon } from 'lucide-react'

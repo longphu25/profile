@@ -3,6 +3,7 @@ import {
   ColorType,
   CrosshairMode,
   createChart,
+  AreaSeries,
   type IChartApi,
   type ISeriesApi,
   type MouseEventParams,
@@ -127,7 +128,7 @@ export function PredictPositionChart({
         secondsVisible: false,
       },
     })
-    const series = chart.addAreaSeries({
+    const series = chart.addSeries(AreaSeries, {
       topColor: 'rgba(128, 255, 213, 0.22)',
       bottomColor: 'rgba(128, 255, 213, 0.02)',
       lineColor: '#80ffd5',

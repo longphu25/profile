@@ -1,6 +1,8 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
 import {
   createChart,
+  LineSeries,
+  HistogramSeries,
   type IChartApi,
   type ISeriesApi,
   type DeepPartial,
@@ -131,7 +133,7 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
     chartRef.current = chart
 
     // Spot line
-    const spotSeries = chart.addLineSeries({
+    const spotSeries = chart.addSeries(LineSeries, {
       color: '#00e0b3',
       lineWidth: 2,
       priceScaleId: 'right',
@@ -147,7 +149,7 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
     spotSeriesRef.current = spotSeries
 
     // Forward line
-    const fwdSeries = chart.addLineSeries({
+    const fwdSeries = chart.addSeries(LineSeries, {
       color: '#b7c8e1',
       lineWidth: 1,
       lineStyle: 2, // dashed
@@ -162,7 +164,7 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
     fwdSeriesRef.current = fwdSeries
 
     // Basis histogram overlay
-    const basisSeries = chart.addHistogramSeries({
+    const basisSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: 'price', precision: 0, minMove: 1 },
       priceScaleId: 'basis',
       lastValueVisible: false,
@@ -175,7 +177,7 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
 
     // Binance reference line (hidden until toggled on). Amber dashed, distinct
     // from oracle Spot/Forward so it reads as an external reference only.
-    const binanceSeries = chart.addLineSeries({
+    const binanceSeries = chart.addSeries(LineSeries, {
       color: '#e2c635',
       lineWidth: 1,
       lineStyle: 1, // dotted
