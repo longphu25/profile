@@ -1,12 +1,21 @@
 // BTC Chart — automatic Entry / SL / TP calculation from indicator confluence.
 
 import type { Candle, NWE, MLResult, TradeSetup } from './types'
+import type { BoucherResult } from './boucher-scalping'
+import type { LienResult } from './lien-reversal'
 
 export type { TradeSetup }
 
+/** Extra signals from Boucher + Lien for enhanced confluence. */
+export interface TradeSetupExtra {
+  boucher?: BoucherResult
+  lien?: LienResult
+}
+
 /**
  * Compute a suggested trade setup based on confluence of:
- * ML signal, RSI, NWE zone, ADX trend strength.
+ * ML signal, RSI, NWE zone, ADX trend strength,
+ * Boucher M1 scalping signals, and Kathy Lien reversal signals.
  *
  * Returns null direction when no clear setup exists.
  */
@@ -16,6 +25,7 @@ export function calcTradeSetup(
   rsi: (number | null)[],
   adx: { adx: (number | null)[] },
   ml: MLResult,
+  extra?: TradeSetupExtra,
 ): TradeSetup {
   const i = data.length - 1
   const c = data[i]
@@ -25,7 +35,6 @@ export function calcTradeSetup(
   const adxV = adx.adx[i]
   const nweUp = nwe.upper[i]
   const nweLo = nwe.lower[i]
-  const nweMid = nwe.mid[i]
 
   // Count bullish / bearish confluence signals
   let bull = 0
@@ -64,6 +73,76 @@ export function calcTradeSetup(
     reasons.push(`ADX ${adxV.toFixed(0)} (trending)`)
   }
 
+  // ── Boucher M1 Scalping signals ──
+  if (extra?.boucher) {
+    const b = extra.boucher
+    const lastEntry = b.entries[b.entries.length - 1]
+    // Recent entry signal (within last 3 bars)
+    if (lastEntry && lastEntry.time >= data[Math.max(0, i - 3)].time) {
+      if (lastEntry.dir === 'long') {
+        bull++
+        reasons.push('Boucher Buy')
+      } else {
+        bear++
+        reasons.push('Boucher Sell')
+      }
+    }
+    // Three-bar reversal (within last 3 bars)
+    const last3b = b.threeBar[b.threeBar.length - 1]
+    if (last3b && last3b.time >= data[Math.max(0, i - 3)].time) {
+      if (last3b.dir === 'long') {
+        bull++
+        reasons.push('3-Bar Reversal+')
+      } else {
+        bear++
+        reasons.push('3-Bar Reversal-')
+      }
+    }
+    // Speed: fast box = momentum continuation
+    if (b.speed === 'fast' && lastEntry) {
+      if (lastEntry.dir === 'long') bull++
+      else bear++
+      reasons.push('Box Speed Fast')
+    }
+  }
+
+  // ── Kathy Lien Reversal signals ──
+  if (extra?.lien) {
+    const l = extra.lien
+    // Recent reversal signal (within last 5 bars)
+    if (l.latestSignal) {
+      if (l.latestSignal.type === 'bullish') {
+        bull++
+        reasons.push('Lien Bullish Rev')
+      } else {
+        bear++
+        reasons.push('Lien Bearish Rev')
+      }
+      // High confidence reversal adds extra weight
+      if (l.latestSignal.confidence >= 70) {
+        if (l.latestSignal.type === 'bullish') bull++
+        else bear++
+        reasons.push('Lien High Conf')
+      }
+    }
+    // Squeeze breakout
+    if (l.squeeze.breakout === 'up') {
+      bull++
+      reasons.push('Squeeze Breakout+')
+    } else if (l.squeeze.breakout === 'down') {
+      bear++
+      reasons.push('Squeeze Breakout-')
+    }
+    // Momentum exhaustion at band edge = reversal signal
+    if (l.exhaustion && l.bandTouch === 'upper') {
+      bear++
+      reasons.push('Exhaustion at Top')
+    } else if (l.exhaustion && l.bandTouch === 'lower') {
+      bull++
+      reasons.push('Exhaustion at Bottom')
+    }
+  }
+
   // Swing high/low for SL (last 20 bars)
   const lookback = data.slice(Math.max(0, i - 20), i + 1)
   const swingLow = Math.min(...lookback.map((d) => d.low))
@@ -74,15 +153,16 @@ export function calcTradeSetup(
   if (bull >= 2 && bull > bear) dir = 'long'
   else if (bear >= 2 && bear > bull) dir = 'short'
 
-  const confidence = Math.min(100, Math.max(bull, bear) * 25)
+  const confidence = Math.min(100, Math.max(bull, bear) * 20 + Math.abs(bull - bear) * 10)
 
   if (dir === 'long') {
     const entry = price
-    const sl = Math.min(swingLow, nweLo ?? swingLow) * 0.998 // buffer 0.2%
+    const sl = Math.min(swingLow, nweLo ?? swingLow) * 0.998
     const risk = entry - sl
     const tp1 = entry + risk * 2
     const tp2 = nweUp != null ? Math.max(nweUp, entry + risk * 3) : entry + risk * 3
-    return { dir, entry, sl, tp1, tp2, rr: 2, confidence, reasons }
+    const rr = risk > 0 ? (tp1 - entry) / risk : 2
+    return { dir, entry, sl, tp1, tp2, rr, confidence, reasons }
   }
   if (dir === 'short') {
     const entry = price
@@ -90,7 +170,8 @@ export function calcTradeSetup(
     const risk = sl - entry
     const tp1 = entry - risk * 2
     const tp2 = nweLo != null ? Math.min(nweLo, entry - risk * 3) : entry - risk * 3
-    return { dir, entry, sl, tp1, tp2, rr: 2, confidence, reasons }
+    const rr = risk > 0 ? (entry - tp1) / risk : 2
+    return { dir, entry, sl, tp1, tp2, rr, confidence, reasons }
   }
 
   // No setup
@@ -130,16 +211,19 @@ export function suggestSlTp(
   const atr = atrSum / period
 
   if (pos.side === 'long') {
-    const sl = Math.max(pos.entryPrice - atr * 1.5, nweLo ?? pos.entryPrice - atr * 1.5)
+    const atrSl = pos.entryPrice - atr * 1.5
+    // SL must be below entry: pick the higher of ATR-SL and NWE lower, but cap at entry
+    const sl = nweLo != null && nweLo < pos.entryPrice ? Math.max(atrSl, nweLo) : atrSl
     const risk = pos.entryPrice - sl
     const tp1 = pos.entryPrice + risk * 2
-    const tp2 = nweUp ?? pos.entryPrice + risk * 3
+    const tp2 = nweUp != null && nweUp > pos.entryPrice ? nweUp : pos.entryPrice + risk * 3
     return { sl, tp1, tp2 }
   }
-  // short
-  const sl = Math.min(pos.entryPrice + atr * 1.5, nweUp ?? pos.entryPrice + atr * 1.5)
+  // short: SL must be above entry
+  const atrSl = pos.entryPrice + atr * 1.5
+  const sl = nweUp != null && nweUp > pos.entryPrice ? Math.min(atrSl, nweUp) : atrSl
   const risk = sl - pos.entryPrice
   const tp1 = pos.entryPrice - risk * 2
-  const tp2 = nweLo ?? pos.entryPrice - risk * 3
+  const tp2 = nweLo != null && nweLo < pos.entryPrice ? nweLo : pos.entryPrice - risk * 3
   return { sl, tp1, tp2 }
 }

@@ -12,14 +12,46 @@ export interface SymbolEntry {
   mexcSymbol?: string
   okxInstId?: string
   bybitCategory?: string
+  /** CoinGecko coin id for supply lookup (e.g. "bitcoin"). */
+  geckoId?: string
 }
 
 export const SYMBOLS = [
-  { symbol: 'BTCUSDT', base: 'BTC', quote: 'USDT', exchange: 'binance' as Exchange },
-  { symbol: 'ETHUSDT', base: 'ETH', quote: 'USDT', exchange: 'binance' as Exchange },
-  { symbol: 'SOLUSDT', base: 'SOL', quote: 'USDT', exchange: 'binance' as Exchange },
-  { symbol: 'SUIUSDT', base: 'SUI', quote: 'USDT', exchange: 'binance' as Exchange },
-  { symbol: 'HYPEUSDT', base: 'HYPE', quote: 'USDT', exchange: 'binance' as Exchange },
+  {
+    symbol: 'BTCUSDT',
+    base: 'BTC',
+    quote: 'USDT',
+    exchange: 'binance' as Exchange,
+    geckoId: 'bitcoin',
+  },
+  {
+    symbol: 'ETHUSDT',
+    base: 'ETH',
+    quote: 'USDT',
+    exchange: 'binance' as Exchange,
+    geckoId: 'ethereum',
+  },
+  {
+    symbol: 'SOLUSDT',
+    base: 'SOL',
+    quote: 'USDT',
+    exchange: 'binance' as Exchange,
+    geckoId: 'solana',
+  },
+  {
+    symbol: 'SUIUSDT',
+    base: 'SUI',
+    quote: 'USDT',
+    exchange: 'binance' as Exchange,
+    geckoId: 'sui',
+  },
+  {
+    symbol: 'HYPEUSDT',
+    base: 'HYPE',
+    quote: 'USDT',
+    exchange: 'binance' as Exchange,
+    geckoId: 'hyperliquid',
+  },
   { symbol: 'CHIPUSDT', base: 'CHIP', quote: 'USDT', exchange: 'binance' as Exchange },
   {
     symbol: 'LABUSDT',
@@ -37,6 +69,13 @@ export const SYMBOLS = [
   },
   { symbol: 'REUSDT', base: 'RE', quote: 'USDT', exchange: 'binance' as Exchange },
   { symbol: 'BICOUSDT', base: 'BICO', quote: 'USDT', exchange: 'binance' as Exchange },
+  {
+    symbol: 'RESOLVUSDT',
+    base: 'RESOLV',
+    quote: 'USDT',
+    exchange: 'binance' as Exchange,
+    geckoId: 'resolv',
+  },
 ] as const
 
 export function loadCustomSymbols(): SymbolEntry[] {

@@ -18,6 +18,7 @@ export function mlSignal(
     vwap: (number | null)[]
     divs: Divergence[]
   },
+  enabledFeatures?: Record<string, boolean>,
 ): MLResult {
   const i = data.length - 1
   const c = data[i]
@@ -108,6 +109,7 @@ export function mlSignal(
   let ws = 0,
     wt = 0
   for (const [k, v] of Object.entries(f)) {
+    if (enabledFeatures && enabledFeatures[k] === false) continue
     const w = W[k] || 1
     ws += v * w
     wt += w

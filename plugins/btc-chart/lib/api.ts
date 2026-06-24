@@ -295,3 +295,86 @@ export async function fetchKlines(
   }))
   return { candles, usedSpot }
 }
+
+// ── Open Interest (Binance + Bybit aggregated) ─────────────────────
+
+export interface OIData {
+  /** Total OI in USD across fetched exchanges. */
+  totalUsd: number
+  breakdown: { exchange: string; usd: number }[]
+}
+
+export async function fetchOpenInterest(symbol: string, price: number): Promise<OIData> {
+  const breakdown: { exchange: string; usd: number }[] = []
+
+  const requests = [
+    // Binance Futures
+    fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol}`)
+      .then(async (r) => {
+        if (!r.ok) return
+        const j = await r.json()
+        const qty = parseFloat(j.openInterest)
+        breakdown.push({ exchange: 'Binance', usd: qty * price })
+      })
+      .catch(() => {}),
+    // Bybit
+    fetch(
+      `https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${symbol}&intervalTime=5min&limit=1`,
+    )
+      .then(async (r) => {
+        if (!r.ok) return
+        const j = await r.json()
+        const item = j.result?.list?.[0]
+        if (item) {
+          const qty = parseFloat(item.openInterest)
+          breakdown.push({ exchange: 'Bybit', usd: qty * price })
+        }
+      })
+      .catch(() => {}),
+  ]
+
+  await Promise.allSettled(requests)
+  const totalUsd = breakdown.reduce((s, b) => s + b.usd, 0)
+  return { totalUsd, breakdown }
+}
+
+// ── Circulating Supply (CoinGecko, cached 24h in localStorage) ──────
+
+const SUPPLY_KEY = 'btc-chart:supply'
+const SUPPLY_TTL = 24 * 60 * 60 * 1000 // 24h
+
+interface SupplyCache {
+  [geckoId: string]: { supply: number; ts: number }
+}
+
+function loadSupplyCache(): SupplyCache {
+  try {
+    return JSON.parse(localStorage.getItem(SUPPLY_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+
+function saveSupplyCache(cache: SupplyCache) {
+  localStorage.setItem(SUPPLY_KEY, JSON.stringify(cache))
+}
+
+/**
+ * Get circulating supply for a coin. Cached in localStorage for 24h.
+ * `geckoId` is the CoinGecko coin id (e.g. "bitcoin", "ethereum").
+ */
+export async function fetchCirculatingSupply(geckoId: string): Promise<number> {
+  const cache = loadSupplyCache()
+  const entry = cache[geckoId]
+  if (entry && Date.now() - entry.ts < SUPPLY_TTL) return entry.supply
+
+  const r = await fetch(
+    `https://api.coingecko.com/api/v3/coins/${geckoId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`,
+  )
+  if (!r.ok) throw new Error('CoinGecko HTTP ' + r.status)
+  const j = await r.json()
+  const supply = j.market_data?.circulating_supply ?? 0
+  cache[geckoId] = { supply, ts: Date.now() }
+  saveSupplyCache(cache)
+  return supply
+}

@@ -51,8 +51,20 @@ import {
   ChartHeader,
   IndicatorToolbar,
   TradeSetupPanel,
+  OIPanel,
+  ScalpingPanel,
+  ReversalPanel,
+  SignalConfigPanel,
 } from './components'
-import { usePositions, useTicker, useFunding, useFearGreed, useKlines } from './hooks'
+import {
+  usePositions,
+  useTicker,
+  useFunding,
+  useFearGreed,
+  useKlines,
+  useOpenInterest,
+  useSupply,
+} from './hooks'
 import {
   CHART,
   LIMIT,
@@ -90,6 +102,12 @@ import {
   DEFAULT_STATS,
   DEFAULT_FUNDING,
   DEFAULT_FNG,
+  computeBoucherScalping,
+  computeLienReversal,
+  DEFAULT_SIGNAL_CONFIG,
+  type BoucherResult,
+  type LienResult,
+  type SignalConfig,
   type Candle,
   type NWE,
   type ChartRefs,
@@ -121,6 +139,13 @@ function BtcChartView() {
   const wsRef = useRef<WebSocket | null>(null)
   const candlesRef = useRef<Candle[]>([])
   const hiLoLinesRef = useRef<{ high: any; low: any } | null>(null)
+  const dbbSeriesRef = useRef<{
+    upper2: any
+    lower2: any
+    upper1: any
+    lower1: any
+    sma: any
+  } | null>(null)
   // Volume-spike alert: only fire on a newly closed candle (not on UI
   // re-renders), and mirror the sound-enabled flag for use inside renderData.
   const lastCandleTimeRef = useRef<number>(0)
@@ -155,7 +180,10 @@ function BtcChartView() {
   const [interval, setInterval_] = useState<Interval>(cfgInit.interval as Interval)
   const [symbol, setSymbol] = useState<SymbolId>((cfgInit.symbol as SymbolId) || 'BTCUSDT')
   const [customSymbols, setCustomSymbols] = useState<SymbolEntry[]>(loadCustomSymbols)
-  const allSymbols: SymbolEntry[] = [...SYMBOLS, ...customSymbols]
+  const allSymbols: SymbolEntry[] = [
+    ...SYMBOLS,
+    ...customSymbols.filter((c) => !SYMBOLS.some((s) => s.symbol === c.symbol)),
+  ]
   const symbolInfo: SymbolEntry = allSymbols.find((s) => s.symbol === symbol) || {
     symbol,
     base: symbol.replace(/USDT$/, ''),
@@ -193,6 +221,38 @@ function BtcChartView() {
   const [price, setPrice] = useState({ cur: '—', chg: '+0.00%', up: true })
   const [ohlcv, setOhlcv] = useState({ o: '—', h: '—', l: '—', c: '—', v: '—' })
   const [sidebar, setSidebar] = useState<SidebarState>(INITIAL_SIDEBAR)
+  const [boucherScalp, setBoucherScalp] = useState<BoucherResult>({
+    atr: 0,
+    boxSize: 0,
+    currentBox: null,
+    boxes: [],
+    ladder: [],
+    threeBar: [],
+    entries: [],
+    envelope: 0,
+    target: 0,
+    speed: 'normal',
+    stats: { signals: 0, wins: 0, rr: 0 },
+  })
+  const [lienReversal, setLienReversal] = useState<LienResult>({
+    dbb: null,
+    zone: 'neutral',
+    prevZone: 'neutral',
+    regime: 'range',
+    squeeze: { active: false, bars: 0, breakout: null },
+    reversals: [],
+    latestSignal: null,
+    exhaustion: false,
+    bandTouch: null,
+    adrSpent: 0,
+  })
+  const [signalConfig, setSignalConfig] = useState<SignalConfig>(
+    () => (loadConfig().signalConfig as SignalConfig) ?? { ...DEFAULT_SIGNAL_CONFIG },
+  )
+  const signalConfigRef = useRef<SignalConfig>(signalConfig)
+  signalConfigRef.current = signalConfig
+  const [boucherEnabled, setBoucherEnabled] = useState(true)
+  const [lienEnabled, setLienEnabled] = useState(true)
 
   // ── Polled market data via React Query (ticker 5s, funding 30s, F&G 60s) ──
   const tickerQuery = useTicker(symbol, symbolInfo)
@@ -203,6 +263,12 @@ function BtcChartView() {
   const stats: StatsState = tickerQuery.data ? statsFromTicker(tickerQuery.data) : DEFAULT_STATS
   const funding: FundingState = fundingQuery.data ?? DEFAULT_FUNDING
   const fng: FngState = fngQuery.data ?? DEFAULT_FNG
+
+  // OI + Market Cap
+  const currentPrice = tickerQuery.data?.price ?? 0
+  const oiQuery = useOpenInterest(symbol, currentPrice)
+  const supplyQuery = useSupply(symbolInfo.geckoId)
+  const mcap = supplyQuery.data != null ? supplyQuery.data * currentPrice : null
 
   // The ticker poll also seeds price/OHLCV, which the WebSocket then updates
   // live between polls.
@@ -295,9 +361,22 @@ function BtcChartView() {
         oscView,
         oscHeight,
         spikeMult,
+        signalConfig,
       })
     },
-    [interval, symbol, vis, alerts, sound, notifAllowed, oscOpen, oscView, oscHeight, spikeMult],
+    [
+      interval,
+      symbol,
+      vis,
+      alerts,
+      sound,
+      notifAllowed,
+      oscOpen,
+      oscView,
+      oscHeight,
+      spikeMult,
+      signalConfig,
+    ],
   )
   useEffect(() => {
     persist(undefined)
@@ -337,13 +416,22 @@ function BtcChartView() {
       breakoutConfirm: 'close',
       bufferPct: 0.0007,
     })
-    const ml = mlSignal(data, nwe, sma50, sma200, rsi, macd, {
-      adx: adxR,
-      stoch,
-      obv,
-      vwap: vwapR.vwap,
-      divs,
-    })
+    const ml = mlSignal(
+      data,
+      nwe,
+      sma50,
+      sma200,
+      rsi,
+      macd,
+      {
+        adx: adxR,
+        stoch,
+        obv,
+        vwap: vwapR.vwap,
+        divs,
+      },
+      signalConfigRef.current,
+    )
 
     const toLine = (arr: (number | null)[]) =>
       data
@@ -385,6 +473,28 @@ function BtcChartView() {
         })
       }
     }
+    // Boucher 3-bar reversal markers
+    const bScalp = computeBoucherScalping(data)
+    for (const sig of bScalp.threeBar) {
+      markers.push({
+        time: sig.time,
+        position: sig.dir === 'long' ? 'belowBar' : 'aboveBar',
+        color: sig.dir === 'long' ? '#80ffd5' : '#ffc46b',
+        shape: sig.dir === 'long' ? 'arrowUp' : 'arrowDown',
+        text: sig.dir === 'long' ? '3B+' : '3B-',
+      })
+    }
+    // Kathy Lien reversal markers
+    const lienR = computeLienReversal(data)
+    for (const rev of lienR.reversals) {
+      markers.push({
+        time: rev.time,
+        position: rev.type === 'bullish' ? 'belowBar' : 'aboveBar',
+        color: rev.type === 'bullish' ? '#6fbcf0' : '#c792ea',
+        shape: rev.type === 'bullish' ? 'arrowUp' : 'arrowDown',
+        text: rev.type === 'bullish' ? 'REV+' : 'REV-',
+      })
+    }
     // lightweight-charts requires markers sorted ascending by time.
     markers.sort((a, b) => a.time - b.time)
     refs.candleSeries.setMarkers(markers)
@@ -420,6 +530,44 @@ function BtcChartView() {
     refs.vwapS.setData(visFlags.vwap ? toLine(vwapR.vwap) : [])
     refs.vwapUpS.setData(visFlags.vwap ? toLine(vwapR.upper) : [])
     refs.vwapLoS.setData(visFlags.vwap ? toLine(vwapR.lower) : [])
+
+    // Double Bollinger Bands (Kathy Lien)
+    if (dbbSeriesRef.current) {
+      const dbbS = dbbSeriesRef.current
+      if (visFlags.dbb && data.length >= 20) {
+        const period = 20
+        const smaArr: { time: number; value: number }[] = []
+        const u2: typeof smaArr = [],
+          l2: typeof smaArr = [],
+          u1: typeof smaArr = [],
+          l1: typeof smaArr = []
+        for (let idx = period - 1; idx < data.length; idx++) {
+          let sum = 0
+          for (let j = idx - period + 1; j <= idx; j++) sum += data[j].close
+          const sm = sum / period
+          let vr = 0
+          for (let j = idx - period + 1; j <= idx; j++) vr += (data[j].close - sm) ** 2
+          const sd = Math.sqrt(vr / period)
+          const t = data[idx].time
+          smaArr.push({ time: t, value: sm })
+          u2.push({ time: t, value: sm + 2 * sd })
+          l2.push({ time: t, value: sm - 2 * sd })
+          u1.push({ time: t, value: sm + sd })
+          l1.push({ time: t, value: sm - sd })
+        }
+        dbbS.sma.setData(smaArr)
+        dbbS.upper2.setData(u2)
+        dbbS.lower2.setData(l2)
+        dbbS.upper1.setData(u1)
+        dbbS.lower1.setData(l1)
+      } else {
+        dbbS.sma.setData([])
+        dbbS.upper2.setData([])
+        dbbS.lower2.setData([])
+        dbbS.upper1.setData([])
+        dbbS.lower1.setData([])
+      }
+    }
 
     // Volume bars, with large-volume spikes highlighted (vol > spikeMult x
     // its 20-bar average). Spikes are colored bright amber so unusual
@@ -710,8 +858,14 @@ function BtcChartView() {
       obvNow: obv[i] ?? null,
       nweUp: nwe.upper[i] ?? null,
       nweLo: nwe.lower[i] ?? null,
-      tradeSetup: calcTradeSetup(data, nwe, rsi, adxR, ml),
+      tradeSetup: calcTradeSetup(data, nwe, rsi, adxR, ml, { boucher: bScalp, lien: lienR }),
     }))
+
+    // ── Boucher M1 Scalping ──
+    setBoucherScalp(bScalp)
+
+    // ── Kathy Lien Reversal ──
+    setLienReversal(lienR)
   }, [])
 
   // ── Setup charts (once) ───────────────────────────────────────────
@@ -843,6 +997,55 @@ function BtcChartView() {
       lastValueVisible: false,
       crosshairMarkerVisible: false,
     })
+
+    // Double Bollinger Bands (Kathy Lien)
+    const dbbSma = mainChart.addLineSeries({
+      color: 'rgba(199,146,234,0.5)',
+      lineWidth: 1,
+      lineStyle: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    })
+    const dbbUpper2 = mainChart.addLineSeries({
+      color: 'rgba(255,122,133,0.35)',
+      lineWidth: 1,
+      lineStyle: 0,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    })
+    const dbbLower2 = mainChart.addLineSeries({
+      color: 'rgba(52,216,164,0.35)',
+      lineWidth: 1,
+      lineStyle: 0,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    })
+    const dbbUpper1 = mainChart.addLineSeries({
+      color: 'rgba(255,122,133,0.2)',
+      lineWidth: 1,
+      lineStyle: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    })
+    const dbbLower1 = mainChart.addLineSeries({
+      color: 'rgba(52,216,164,0.2)',
+      lineWidth: 1,
+      lineStyle: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    })
+    dbbSeriesRef.current = {
+      upper2: dbbUpper2,
+      lower2: dbbLower2,
+      upper1: dbbUpper1,
+      lower1: dbbLower1,
+      sma: dbbSma,
+    }
 
     // Volume is overlaid on the bottom of the main price pane (own scale).
     const volSeries = mainChart.addHistogramSeries({
@@ -1511,6 +1714,15 @@ function BtcChartView() {
     })
   }, [renderData])
 
+  const updateSignalConfig = useCallback(
+    (cfg: SignalConfig) => {
+      setSignalConfig(cfg)
+      signalConfigRef.current = cfg
+      if (candlesRef.current.length) queueMicrotask(() => renderData(candlesRef.current))
+    },
+    [renderData],
+  )
+
   // ── Oscillator pane resize (drag the top edge) ──────────────────────
   const startOscResize = useCallback(
     (e: React.PointerEvent) => {
@@ -1869,6 +2081,18 @@ function BtcChartView() {
         <div className="btc-chart__sidebar">
           <SignalPanel ml={sidebar.ml} />
           <TradeSetupPanel setup={sidebar.tradeSetup} />
+          <SignalConfigPanel config={signalConfig} onChange={updateSignalConfig} />
+          <ScalpingPanel
+            scalp={boucherScalp}
+            interval={interval}
+            enabled={boucherEnabled}
+            onToggle={() => setBoucherEnabled((v) => !v)}
+          />
+          <ReversalPanel
+            lien={lienReversal}
+            enabled={lienEnabled}
+            onToggle={() => setLienEnabled((v) => !v)}
+          />
           <PositionsPanel
             positions={positions}
             showForm={showPosForm}
@@ -1881,6 +2105,11 @@ function BtcChartView() {
             suggestions={posSuggestions}
           />
           <FundingPanel funding={funding} />
+          <OIPanel
+            oi={oiQuery.data?.totalUsd ?? null}
+            mcap={mcap}
+            breakdown={oiQuery.data?.breakdown}
+          />
           <StatsPanel stats={stats} />
           <OrderFlowPanel ofLog={sidebar.ofLog} />
           <BoxFlipPanel boxFlip={sidebar.boxFlip} />

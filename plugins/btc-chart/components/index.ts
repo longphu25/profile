@@ -10,3 +10,7 @@ export { VolumeSpikePanel, type VolumeSpikePanelProps } from './VolumeSpikePanel
 export { ChartHeader, type ChartHeaderProps } from './ChartHeader'
 export { IndicatorToolbar, type IndicatorToolbarProps } from './IndicatorToolbar'
 export { TradeSetupPanel } from './TradeSetupPanel'
+export { ScalpingPanel } from './ScalpingPanel'
+export { ReversalPanel } from './ReversalPanel'
+export { SignalConfigPanel } from './SignalConfigPanel'
+export { OIPanel } from './OIPanel'

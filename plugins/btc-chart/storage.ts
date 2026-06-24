@@ -17,6 +17,7 @@ export interface VisFlags {
   vwap: boolean
   rsiDiv: boolean
   volSpike: boolean
+  dbb: boolean
 }
 
 export interface ZoomState {
@@ -50,6 +51,8 @@ export interface ChartConfig {
   oscHeight: number
   /** Volume-spike threshold as a multiple of the 20-bar average (2.0–3.0). */
   spikeMult: number
+  /** Signal config: which features are enabled for ML signal + trade setup. */
+  signalConfig?: Record<string, boolean>
 }
 
 export const DEFAULT_CONFIG: ChartConfig = {
@@ -69,6 +72,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
     vwap: false,
     rsiDiv: false,
     volSpike: true,
+    dbb: true,
   },
   zoom: null,
   alerts: [],
