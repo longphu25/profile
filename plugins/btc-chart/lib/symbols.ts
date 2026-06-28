@@ -76,6 +76,13 @@ export const SYMBOLS = [
     exchange: 'binance' as Exchange,
     geckoId: 'resolv',
   },
+  {
+    symbol: 'ACTUSDT',
+    base: 'ACT',
+    quote: 'USDT',
+    exchange: 'binance' as Exchange,
+    geckoId: 'act-i-the-ai-prophecy',
+  },
 ] as const
 
 export function loadCustomSymbols(): SymbolEntry[] {
