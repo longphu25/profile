@@ -2191,6 +2191,12 @@ function BtcChartView() {
           {/* Always visible */}
           <SignalPanel ml={sidebar.ml} />
           <TradeSetupPanel setup={sidebar.tradeSetup} />
+          <FundingNwePanel
+            funding={funding}
+            nwe={luxNweResult}
+            candles={candlesRef.current}
+            symbol={symbol}
+          />
           <FundingPanel funding={funding} />
           <ScalpingPanel
             scalp={boucherScalp}
@@ -2314,14 +2320,6 @@ function BtcChartView() {
           </SidebarAccordion>
           <SidebarAccordion title="Fear & Greed">
             <FearGreedPanel fng={fng} />
-          </SidebarAccordion>
-          <SidebarAccordion title="Funding + NWE Signal">
-            <FundingNwePanel
-              funding={funding}
-              nwe={luxNweResult}
-              candles={candlesRef.current}
-              symbol={symbol}
-            />
           </SidebarAccordion>
         </div>
       </div>
