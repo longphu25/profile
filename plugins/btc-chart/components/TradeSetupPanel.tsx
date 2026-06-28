@@ -107,6 +107,13 @@ export function TradeSetupPanel({ setup }: Props) {
       {/* Calculated position details */}
       <div className="btc-chart__setup-calc">
         <div className="btc-chart__setup-calc-row">
+          <span className="lbl">Vol</span>
+          <span className={setup.volRatio >= 1.5 ? 'up' : setup.volRatio < 0.5 ? 'dn' : ''}>
+            {setup.volRatio.toFixed(1)}x avg
+            {setup.volRatio >= 1.5 ? ' (confirmed)' : setup.volRatio < 0.5 ? ' (weak)' : ''}
+          </span>
+        </div>
+        <div className="btc-chart__setup-calc-row">
           <span className="lbl">Size</span>
           <span>${positionSize.toFixed(2)}</span>
         </div>

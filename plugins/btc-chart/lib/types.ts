@@ -62,6 +62,8 @@ export interface TradeSetup {
   rr: number
   confidence: number
   reasons: string[]
+  /** Volume ratio vs 20-bar average (e.g. 2.1 = 2.1x avg) */
+  volRatio: number
 }
 
 export interface SidebarState {
@@ -156,7 +158,17 @@ export const INITIAL_SIDEBAR: SidebarState = {
   obvNow: null,
   nweUp: null,
   nweLo: null,
-  tradeSetup: { dir: null, entry: 0, sl: 0, tp1: 0, tp2: 0, rr: 0, confidence: 0, reasons: [] },
+  tradeSetup: {
+    dir: null,
+    entry: 0,
+    sl: 0,
+    tp1: 0,
+    tp2: 0,
+    rr: 0,
+    confidence: 0,
+    reasons: [],
+    volRatio: 0,
+  },
 }
 
 declare global {

@@ -25,7 +25,11 @@ export interface UsePositions {
  * Owns the manual-positions list, its add/remove form state, and the chart
  * entry/stop-loss price-line overlay that stays in sync with the positions.
  */
-export function usePositions(chartRefs: React.MutableRefObject<ChartRefs | null>): UsePositions {
+export function usePositions(
+  chartRefs: React.MutableRefObject<ChartRefs | null>,
+  chartReady?: boolean,
+  markPrice?: number | null,
+): UsePositions {
   const [positions, setPositions] = useState<Position[]>(loadPositions)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<PosForm>(EMPTY_POS_FORM)
@@ -37,9 +41,11 @@ export function usePositions(chartRefs: React.MutableRefObject<ChartRefs | null>
 
   const addPosition = () => {
     const entry = parseFloat(form.entry)
-    const size = parseFloat(form.size)
     const margin = parseFloat(form.margin)
-    if (!entry || !size || !margin) return
+    const leverage = parseFloat(form.leverage) || 10
+    if (!entry || !margin) return
+    const notional = margin * leverage
+    const size = notional / entry
     const p: Position = {
       id: Date.now().toString(),
       side: form.side as 'long' | 'short',
@@ -47,6 +53,7 @@ export function usePositions(chartRefs: React.MutableRefObject<ChartRefs | null>
       entryPrice: entry,
       size,
       margin,
+      leverage,
       stopLoss: form.sl ? parseFloat(form.sl) : null,
     }
     save([...positions, p])
@@ -56,7 +63,7 @@ export function usePositions(chartRefs: React.MutableRefObject<ChartRefs | null>
 
   const removePosition = (id: string) => save(positions.filter((x) => x.id !== id))
 
-  // Draw entry + SL price lines on the chart whenever positions change.
+  // Draw entry + PnL price line on the chart whenever positions change.
   const posLinesRef = useRef<{ id: string; lines: any[] }[]>([])
   useEffect(() => {
     const series = chartRefs.current?.candleSeries
@@ -73,6 +80,10 @@ export function usePositions(chartRefs: React.MutableRefObject<ChartRefs | null>
     posLinesRef.current = []
     for (const p of positions) {
       const lines: any[] = []
+      const mark = markPrice ?? p.entryPrice
+      const diff = p.side === 'long' ? mark - p.entryPrice : p.entryPrice - mark
+      const pnl = diff * p.size
+      const pnlStr = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}$`
       lines.push(
         series.createPriceLine({
           price: p.entryPrice,
@@ -80,7 +91,7 @@ export function usePositions(chartRefs: React.MutableRefObject<ChartRefs | null>
           lineWidth: 2,
           lineStyle: 0,
           axisLabelVisible: true,
-          title: `${p.side.toUpperCase()} ${p.type} ${p.size}`,
+          title: `${p.side.toUpperCase()} ${pnlStr}`,
         }),
       )
       if (p.stopLoss) {
@@ -97,7 +108,7 @@ export function usePositions(chartRefs: React.MutableRefObject<ChartRefs | null>
       }
       posLinesRef.current.push({ id: p.id, lines })
     }
-  }, [positions, chartRefs])
+  }, [positions, chartRefs, chartReady, markPrice])
 
   return { positions, showForm, setShowForm, form, setForm, addPosition, removePosition }
 }

@@ -148,6 +148,13 @@ export function calcTradeSetup(
   const swingLow = Math.min(...lookback.map((d) => d.low))
   const swingHigh = Math.max(...lookback.map((d) => d.high))
 
+  // Volume confirmation: current bar vs 20-bar average
+  let volSum = 0
+  const volPeriod = Math.min(20, i)
+  for (let j = i - volPeriod; j < i; j++) volSum += data[j].volume
+  const volAvg = volPeriod > 0 ? volSum / volPeriod : 1
+  const volRatio = volAvg > 0 ? c.volume / volAvg : 1
+
   // Determine direction: need at least 2 confluence signals
   let dir: 'long' | 'short' | null = null
   if (bull >= 2 && bull > bear) dir = 'long'
@@ -162,7 +169,7 @@ export function calcTradeSetup(
     const tp1 = entry + risk * 2
     const tp2 = nweUp != null ? Math.max(nweUp, entry + risk * 3) : entry + risk * 3
     const rr = risk > 0 ? (tp1 - entry) / risk : 2
-    return { dir, entry, sl, tp1, tp2, rr, confidence, reasons }
+    return { dir, entry, sl, tp1, tp2, rr, confidence, reasons, volRatio }
   }
   if (dir === 'short') {
     const entry = price
@@ -171,7 +178,7 @@ export function calcTradeSetup(
     const tp1 = entry - risk * 2
     const tp2 = nweLo != null ? Math.min(nweLo, entry - risk * 3) : entry - risk * 3
     const rr = risk > 0 ? (entry - tp1) / risk : 2
-    return { dir, entry, sl, tp1, tp2, rr, confidence, reasons }
+    return { dir, entry, sl, tp1, tp2, rr, confidence, reasons, volRatio }
   }
 
   // No setup
@@ -184,6 +191,7 @@ export function calcTradeSetup(
     rr: 0,
     confidence: 0,
     reasons: ['No confluence'],
+    volRatio,
   }
 }
 

@@ -3,6 +3,7 @@
 // Bollinger squeeze, momentum exhaustion, and trend-vs-range classification.
 
 import type { Candle } from './types'
+import { hasBullishHaramiCross } from './candlestick-patterns'
 
 /** Double Bollinger Band values at a single bar. */
 export interface DBBValues {
@@ -251,6 +252,11 @@ export function computeLienReversal(data: Candle[]): LienResult {
       if (data[i].close > data[i].open && data[i].close > data[i - 1].close) {
         reasons.push('Bullish candle')
         conf += 15
+      }
+      // Bullish Harami Cross confirmation
+      if (hasBullishHaramiCross(data, i)) {
+        reasons.push('Harami Cross')
+        conf += 20
       }
       // Squeeze release up
       if (squeeze.breakout === 'up') {

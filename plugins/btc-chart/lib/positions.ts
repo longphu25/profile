@@ -6,7 +6,8 @@ export interface Position {
   type: 'isolated' | 'cross'
   entryPrice: number
   size: number // contracts / qty
-  margin: number // USDT
+  margin: number // USDT (initial margin = capital)
+  leverage: number
   stopLoss: number | null
 }
 
@@ -16,6 +17,7 @@ export interface PosForm {
   entry: string
   size: string
   margin: string
+  leverage: string
   sl: string
 }
 
@@ -25,6 +27,7 @@ export const EMPTY_POS_FORM: PosForm = {
   entry: '',
   size: '',
   margin: '',
+  leverage: '10',
   sl: '',
 }
 
@@ -46,11 +49,11 @@ export function persistPositions(ps: Position[]): void {
   }
 }
 
-/** Unrealized PnL (USDT) and percentage for a position at the given mark price. */
+/** Unrealized PnL (USDT) and percentage (vs margin) for a position at the given mark price. */
 export function calcPnl(p: Position, mark: number): { pnl: number; pct: number } {
   const diff = p.side === 'long' ? mark - p.entryPrice : p.entryPrice - mark
-  const pnl = (diff / p.entryPrice) * p.size * p.entryPrice
-  const pct = (diff / p.entryPrice) * 100
+  const pnl = diff * p.size
+  const pct = p.margin > 0 ? (pnl / p.margin) * 100 : 0
   return { pnl, pct }
 }
 

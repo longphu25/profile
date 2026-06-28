@@ -18,6 +18,8 @@ export interface VisFlags {
   rsiDiv: boolean
   volSpike: boolean
   dbb: boolean
+  scalping: boolean
+  reversal: boolean
 }
 
 export interface ZoomState {
@@ -60,26 +62,28 @@ export const DEFAULT_CONFIG: ChartConfig = {
   interval: '1h',
   symbol: 'BTCUSDT',
   vis: {
-    nwe: true,
-    ma50: true,
-    ma200: true,
-    of: true,
-    vp: true,
-    rsi: true,
-    vol: true,
+    nwe: false,
+    ma50: false,
+    ma200: false,
+    of: false,
+    vp: false,
+    rsi: false,
+    vol: false,
     smc: false,
     boxFlip: false,
     vwap: false,
     rsiDiv: false,
-    volSpike: true,
-    dbb: true,
+    volSpike: false,
+    dbb: false,
+    scalping: false,
+    reversal: false,
   },
   zoom: null,
   alerts: [],
   sound: { enabled: true, volume: 0.4 },
   notifications: false,
   minimal: false,
-  oscOpen: true,
+  oscOpen: false,
   oscView: 'rsi',
   oscHeight: 170,
   spikeMult: 2.5,

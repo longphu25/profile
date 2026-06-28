@@ -1563,6 +1563,23 @@
 }
 
 /* ── Collapsible Panel Pattern ── */
+.btc-chart__accordion {
+  padding: 0;
+}
+.btc-chart__accordion-hdr {
+  display: flex; align-items: center; gap: 5px; width: 100%;
+  background: none; border: none; color: var(--text); cursor: pointer;
+  font-size: 11px; font-weight: 600; padding: 8px 10px;
+  font-family: inherit; text-align: left;
+}
+.btc-chart__accordion-hdr:hover { color: var(--mint); }
+.btc-chart__accordion-body {
+  padding: 0 10px 10px;
+}
+.btc-chart__accordion .btc-chart__panel {
+  padding: 0; border: none; margin: 0; background: none;
+}
+
 .btc-chart__collapse-hdr {
   display: flex; align-items: center; gap: 6px;
 }

@@ -55,6 +55,7 @@ import {
   ScalpingPanel,
   ReversalPanel,
   SignalConfigPanel,
+  SidebarAccordion,
 } from './components'
 import {
   usePositions,
@@ -104,6 +105,7 @@ import {
   DEFAULT_FNG,
   computeBoucherScalping,
   computeLienReversal,
+  detectCandlePatterns,
   DEFAULT_SIGNAL_CONFIG,
   type BoucherResult,
   type LienResult,
@@ -218,6 +220,7 @@ function BtcChartView() {
   })
   const [lastUpdate, setLastUpdate] = useState('—')
   const [price, setPrice] = useState({ cur: '—', chg: '+0.00%', up: true })
+  const [markPrice, setMarkPrice] = useState<number | null>(null)
   const [ohlcv, setOhlcv] = useState({ o: '—', h: '—', l: '—', c: '—', v: '—' })
   const [sidebar, setSidebar] = useState<SidebarState>(INITIAL_SIDEBAR)
   const [boucherScalp, setBoucherScalp] = useState<BoucherResult>({
@@ -279,6 +282,7 @@ function BtcChartView() {
       chg: (t.chg >= 0 ? '+' : '') + t.chg.toFixed(2) + '%',
       up: t.up,
     })
+    setMarkPrice(t.price)
     setOhlcv((o) => ({
       ...o,
       o: fmtP(t.low),
@@ -306,7 +310,7 @@ function BtcChartView() {
     setForm: setPosForm,
     addPosition,
     removePosition,
-  } = usePositions(chartRefs)
+  } = usePositions(chartRefs, !loading, markPrice)
 
   // Compute suggested SL/TP for each open position (ATR + NWE bands).
   const posSuggestions = useMemo(() => {
@@ -473,25 +477,39 @@ function BtcChartView() {
     }
     // Boucher 3-bar reversal markers
     const bScalp = computeBoucherScalping(data)
-    for (const sig of bScalp.threeBar) {
-      markers.push({
-        time: sig.time,
-        position: sig.dir === 'long' ? 'belowBar' : 'aboveBar',
-        color: sig.dir === 'long' ? '#80ffd5' : '#ffc46b',
-        shape: sig.dir === 'long' ? 'arrowUp' : 'arrowDown',
-        text: sig.dir === 'long' ? '3B+' : '3B-',
-      })
+    if (visFlags.scalping) {
+      for (const sig of bScalp.threeBar) {
+        markers.push({
+          time: sig.time,
+          position: sig.dir === 'long' ? 'belowBar' : 'aboveBar',
+          color: sig.dir === 'long' ? '#80ffd5' : '#ffc46b',
+          shape: sig.dir === 'long' ? 'arrowUp' : 'arrowDown',
+          text: sig.dir === 'long' ? '3B+' : '3B-',
+        })
+      }
     }
     // Kathy Lien reversal markers
     const lienR = computeLienReversal(data)
-    for (const rev of lienR.reversals) {
-      markers.push({
-        time: rev.time,
-        position: rev.type === 'bullish' ? 'belowBar' : 'aboveBar',
-        color: rev.type === 'bullish' ? '#6fbcf0' : '#c792ea',
-        shape: rev.type === 'bullish' ? 'arrowUp' : 'arrowDown',
-        text: rev.type === 'bullish' ? 'REV+' : 'REV-',
-      })
+    if (visFlags.reversal) {
+      for (const rev of lienR.reversals) {
+        markers.push({
+          time: rev.time,
+          position: rev.type === 'bullish' ? 'belowBar' : 'aboveBar',
+          color: rev.type === 'bullish' ? '#6fbcf0' : '#c792ea',
+          shape: rev.type === 'bullish' ? 'arrowUp' : 'arrowDown',
+          text: rev.type === 'bullish' ? 'REV+' : 'REV-',
+        })
+      }
+      // Candlestick pattern markers (Harami Cross, etc.)
+      for (const pat of detectCandlePatterns(data)) {
+        markers.push({
+          time: pat.time,
+          position: pat.type === 'bullish' ? 'belowBar' : 'aboveBar',
+          color: pat.type === 'bullish' ? '#34d399' : '#fb7185',
+          shape: pat.type === 'bullish' ? 'circle' : 'circle',
+          text: pat.name,
+        })
+      }
     }
     // lightweight-charts requires markers sorted ascending by time.
     markers.sort((a, b) => a.time - b.time)
@@ -1441,6 +1459,7 @@ function BtcChartView() {
             color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
           })
           setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
+          setMarkPrice(candle.close)
           setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
           setLastUpdate(tsNow())
           if (k.end) renderData(arr)
@@ -1492,6 +1511,7 @@ function BtcChartView() {
             color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
           })
           setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
+          setMarkPrice(candle.close)
           setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
           setLastUpdate(tsNow())
           if (k.confirm) renderData(arr)
@@ -1543,6 +1563,7 @@ function BtcChartView() {
             color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
           })
           setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
+          setMarkPrice(candle.close)
           setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
           setLastUpdate(tsNow())
           if (k[8] === '1') renderData(arr)
@@ -1606,6 +1627,7 @@ function BtcChartView() {
             color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
           })
           setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
+          setMarkPrice(candle.close)
           setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
           setLastUpdate(tsNow())
           // ── Alerts ─────────────────────────────────────────────────
@@ -2084,9 +2106,10 @@ function BtcChartView() {
 
         {/* Sidebar */}
         <div className="btc-chart__sidebar">
+          {/* Always visible */}
           <SignalPanel ml={sidebar.ml} />
           <TradeSetupPanel setup={sidebar.tradeSetup} />
-          <SignalConfigPanel config={signalConfig} onChange={updateSignalConfig} />
+          <FundingPanel funding={funding} />
           <ScalpingPanel
             scalp={boucherScalp}
             interval={interval}
@@ -2098,50 +2121,103 @@ function BtcChartView() {
             enabled={lienEnabled}
             onToggle={() => setLienEnabled((v) => !v)}
           />
-          <PositionsPanel
-            positions={positions}
-            showForm={showPosForm}
-            setShowForm={setShowPosForm}
-            form={posForm}
-            setForm={setPosForm}
-            onAdd={addPosition}
-            onRemove={removePosition}
-            markPrice={lastPriceRef.current}
-            suggestions={posSuggestions}
-          />
-          <FundingPanel funding={funding} />
-          <OIPanel
-            oi={oiQuery.data?.totalUsd ?? null}
-            mcap={mcap}
-            breakdown={oiQuery.data?.breakdown}
-          />
-          <StatsPanel stats={stats} />
-          <OrderFlowPanel ofLog={sidebar.ofLog} />
-          <BoxFlipPanel boxFlip={sidebar.boxFlip} />
-          <MHBandPanel sidebar={sidebar} />
-          <AlertsPanel
-            alerts={alerts}
-            onAdd={addAlert}
-            onRemove={removeAlert}
-            onToggle={toggleAlert}
-            onReset={resetAlert}
-            currentPrice={candlesRef.current[candlesRef.current.length - 1]?.close ?? null}
-            currentRsi={sidebar.rsiNow}
-          />
-          <TechnicalsPanel sidebar={sidebar} />
-          <VolumeSpikePanel
-            enabled={vis.volSpike}
-            onToggle={() => toggle('volSpike')}
-            spikeMult={spikeMult}
-            onChange={(val) => {
-              setSpikeMult(val)
-              spikeMultRef.current = val
-              if (candlesRef.current.length) queueMicrotask(() => renderData(candlesRef.current))
+
+          {/* Accordion panels (collapsed by default, activate indicator on open) */}
+          <SidebarAccordion title="Signal Config" onToggle={() => {}}>
+            <SignalConfigPanel config={signalConfig} onChange={updateSignalConfig} />
+          </SidebarAccordion>
+          <SidebarAccordion title="Positions">
+            <PositionsPanel
+              positions={positions}
+              showForm={showPosForm}
+              setShowForm={setShowPosForm}
+              form={posForm}
+              setForm={setPosForm}
+              onAdd={addPosition}
+              onRemove={removePosition}
+              markPrice={markPrice}
+              suggestions={posSuggestions}
+            />
+          </SidebarAccordion>
+          <SidebarAccordion title="Open Interest">
+            <OIPanel
+              oi={oiQuery.data?.totalUsd ?? null}
+              mcap={mcap}
+              breakdown={oiQuery.data?.breakdown}
+            />
+          </SidebarAccordion>
+          <SidebarAccordion title="24h Stats">
+            <StatsPanel stats={stats} />
+          </SidebarAccordion>
+          <SidebarAccordion
+            title="Order Flow"
+            onToggle={(open) => {
+              if (open && !vis.of) toggle('of')
             }}
-          />
-          <FeatureWeightsPanel ml={sidebar.ml} />
-          <VolumeProfilePanel vp={sidebar.vp} vpHvn={sidebar.vpHvn} />
-          <FearGreedPanel fng={fng} />
+          >
+            <OrderFlowPanel ofLog={sidebar.ofLog} />
+          </SidebarAccordion>
+          <SidebarAccordion
+            title="Box Flip"
+            onToggle={(open) => {
+              if (open && !vis.boxFlip) toggle('boxFlip')
+            }}
+          >
+            <BoxFlipPanel boxFlip={sidebar.boxFlip} />
+          </SidebarAccordion>
+          <SidebarAccordion
+            title="MH Band"
+            onToggle={(open) => {
+              if (open && !vis.nwe) toggle('nwe')
+            }}
+          >
+            <MHBandPanel sidebar={sidebar} />
+          </SidebarAccordion>
+          <SidebarAccordion title="Alerts">
+            <AlertsPanel
+              alerts={alerts}
+              onAdd={addAlert}
+              onRemove={removeAlert}
+              onToggle={toggleAlert}
+              onReset={resetAlert}
+              currentPrice={candlesRef.current[candlesRef.current.length - 1]?.close ?? null}
+              currentRsi={sidebar.rsiNow}
+            />
+          </SidebarAccordion>
+          <SidebarAccordion title="Technicals">
+            <TechnicalsPanel sidebar={sidebar} />
+          </SidebarAccordion>
+          <SidebarAccordion
+            title="Volume Spike"
+            onToggle={(open) => {
+              if (open && !vis.volSpike) toggle('volSpike')
+            }}
+          >
+            <VolumeSpikePanel
+              enabled={vis.volSpike}
+              onToggle={() => toggle('volSpike')}
+              spikeMult={spikeMult}
+              onChange={(val) => {
+                setSpikeMult(val)
+                spikeMultRef.current = val
+                if (candlesRef.current.length) queueMicrotask(() => renderData(candlesRef.current))
+              }}
+            />
+          </SidebarAccordion>
+          <SidebarAccordion title="Feature Weights">
+            <FeatureWeightsPanel ml={sidebar.ml} />
+          </SidebarAccordion>
+          <SidebarAccordion
+            title="Volume Profile"
+            onToggle={(open) => {
+              if (open && !vis.vp) toggle('vp')
+            }}
+          >
+            <VolumeProfilePanel vp={sidebar.vp} vpHvn={sidebar.vpHvn} />
+          </SidebarAccordion>
+          <SidebarAccordion title="Fear & Greed">
+            <FearGreedPanel fng={fng} />
+          </SidebarAccordion>
         </div>
       </div>
       {/* Status */}
