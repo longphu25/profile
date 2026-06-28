@@ -39,7 +39,6 @@ import {
   PositionsPanel,
   SignalPanel,
   FeatureWeightsPanel,
-  FundingPanel,
   StatsPanel,
   FearGreedPanel,
   OrderFlowPanel,
@@ -926,7 +925,11 @@ function BtcChartView() {
       obvNow: obv[i] ?? null,
       nweUp: nwe.upper[i] ?? null,
       nweLo: nwe.lower[i] ?? null,
-      tradeSetup: calcTradeSetup(data, nwe, rsi, adxR, ml, { boucher: bScalp, lien: lienR }),
+      tradeSetup: calcTradeSetup(data, nwe, rsi, adxR, ml, {
+        boucher: bScalp,
+        lien: lienR,
+        luxNwe,
+      }),
     }))
 
     // ── Boucher M1 Scalping ──
@@ -2197,7 +2200,6 @@ function BtcChartView() {
             candles={candlesRef.current}
             symbol={symbol}
           />
-          <FundingPanel funding={funding} />
           <ScalpingPanel
             scalp={boucherScalp}
             interval={interval}
