@@ -35,13 +35,20 @@ export function TradeSetupPanel({ setup }: Props) {
 
   // Categorize reasons
   const mlReasons = setup.reasons.filter(
-    (r) => r.startsWith('ML') || r.startsWith('RSI') || r.startsWith('ADX') || r.includes('NWE'),
+    (r) =>
+      (r.startsWith('ML') || r.startsWith('RSI') || r.startsWith('ADX') || r.includes('NWE')) &&
+      !r.startsWith('NWE Cross') &&
+      !r.startsWith('Price at Lux') &&
+      !r.includes('Lux NWE mid'),
   )
   const boucherReasons = setup.reasons.filter(
     (r) => r.startsWith('Boucher') || r.startsWith('3-Bar') || r.startsWith('Box'),
   )
   const lienReasons = setup.reasons.filter(
     (r) => r.startsWith('Lien') || r.startsWith('Squeeze') || r.startsWith('Exhaustion'),
+  )
+  const nweReasons = setup.reasons.filter(
+    (r) => r.startsWith('NWE Cross') || r.startsWith('Price at Lux') || r.includes('Lux NWE mid'),
   )
 
   return (
@@ -166,6 +173,16 @@ export function TradeSetupPanel({ setup }: Props) {
             <span className="btc-chart__setup-src-label">Lien</span>
             {lienReasons.map((r) => (
               <span key={r} className="btc-chart__setup-tag btc-chart__setup-tag--lien">
+                {r}
+              </span>
+            ))}
+          </div>
+        )}
+        {nweReasons.length > 0 && (
+          <div className="btc-chart__setup-src">
+            <span className="btc-chart__setup-src-label">Lux NWE</span>
+            {nweReasons.map((r) => (
+              <span key={r} className="btc-chart__setup-tag btc-chart__setup-tag--nwe">
                 {r}
               </span>
             ))}
