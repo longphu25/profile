@@ -3,13 +3,15 @@
 import type { Candle, NWE, MLResult, TradeSetup } from './types'
 import type { BoucherResult } from './boucher-scalping'
 import type { LienResult } from './lien-reversal'
+import type { NadarayaWatsonResult } from './nadaraya-watson'
 
 export type { TradeSetup }
 
-/** Extra signals from Boucher + Lien for enhanced confluence. */
+/** Extra signals from Boucher + Lien + Lux NWE for enhanced confluence. */
 export interface TradeSetupExtra {
   boucher?: BoucherResult
   lien?: LienResult
+  luxNwe?: NadarayaWatsonResult
 }
 
 /**
@@ -143,6 +145,42 @@ export function calcTradeSetup(
     }
   }
 
+  // ── Lux NWE (Nadaraya-Watson Envelope) signals ──
+  if (extra?.luxNwe) {
+    const lnwe = extra.luxNwe
+    // Recent crossover signal (within last 3 bars)
+    const recentSigs = lnwe.signals.filter((s) => s.index >= Math.max(0, i - 3) && s.index <= i)
+    const lastSig = recentSigs[recentSigs.length - 1]
+    if (lastSig) {
+      if (lastSig.type === 'buy') {
+        bull++
+        reasons.push('NWE Cross Buy')
+      } else {
+        bear++
+        reasons.push('NWE Cross Sell')
+      }
+    }
+    // Band position: price near Lux NWE bands confirms reversal zone
+    const luxUp = lnwe.upper[i]
+    const luxLo = lnwe.lower[i]
+    const luxMid = lnwe.mid[i]
+    if (luxLo != null && price <= luxLo * 1.003) {
+      bull++
+      reasons.push('Price at Lux NWE lower')
+    } else if (luxUp != null && price >= luxUp * 0.997) {
+      bear++
+      reasons.push('Price at Lux NWE upper')
+    }
+    // Trend bias: price relative to Lux NWE mid
+    if (luxMid != null) {
+      if (price > luxMid * 1.002) {
+        reasons.push('Above Lux NWE mid (bullish bias)')
+      } else if (price < luxMid * 0.998) {
+        reasons.push('Below Lux NWE mid (bearish bias)')
+      }
+    }
+  }
+
   // Swing high/low for SL (last 20 bars)
   const lookback = data.slice(Math.max(0, i - 20), i + 1)
   const swingLow = Math.min(...lookback.map((d) => d.low))
@@ -164,19 +202,25 @@ export function calcTradeSetup(
 
   if (dir === 'long') {
     const entry = price
-    const sl = Math.min(swingLow, nweLo ?? swingLow) * 0.998
+    const luxLo = extra?.luxNwe?.lower[i]
+    const luxUp = extra?.luxNwe?.upper[i]
+    const sl = Math.min(swingLow, nweLo ?? swingLow, luxLo ?? swingLow) * 0.998
     const risk = entry - sl
+    const bestUp = luxUp != null && nweUp != null ? Math.max(luxUp, nweUp) : (luxUp ?? nweUp)
     const tp1 = entry + risk * 2
-    const tp2 = nweUp != null ? Math.max(nweUp, entry + risk * 3) : entry + risk * 3
+    const tp2 = bestUp != null ? Math.max(bestUp, entry + risk * 3) : entry + risk * 3
     const rr = risk > 0 ? (tp1 - entry) / risk : 2
     return { dir, entry, sl, tp1, tp2, rr, confidence, reasons, volRatio }
   }
   if (dir === 'short') {
     const entry = price
-    const sl = Math.max(swingHigh, nweUp ?? swingHigh) * 1.002
+    const luxUp = extra?.luxNwe?.upper[i]
+    const luxLo = extra?.luxNwe?.lower[i]
+    const sl = Math.max(swingHigh, nweUp ?? swingHigh, luxUp ?? swingHigh) * 1.002
     const risk = sl - entry
+    const bestLo = luxLo != null && nweLo != null ? Math.min(luxLo, nweLo) : (luxLo ?? nweLo)
     const tp1 = entry - risk * 2
-    const tp2 = nweLo != null ? Math.min(nweLo, entry - risk * 3) : entry - risk * 3
+    const tp2 = bestLo != null ? Math.min(bestLo, entry - risk * 3) : entry - risk * 3
     const rr = risk > 0 ? (entry - tp1) / risk : 2
     return { dir, entry, sl, tp1, tp2, rr, confidence, reasons, volRatio }
   }
