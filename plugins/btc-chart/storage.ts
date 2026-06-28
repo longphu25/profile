@@ -20,6 +20,7 @@ export interface VisFlags {
   dbb: boolean
   scalping: boolean
   reversal: boolean
+  whale: boolean
 }
 
 export interface ZoomState {
@@ -77,6 +78,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
     dbb: false,
     scalping: false,
     reversal: false,
+    whale: false,
   },
   zoom: null,
   alerts: [],

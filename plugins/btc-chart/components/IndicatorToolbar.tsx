@@ -14,6 +14,7 @@ const IND_BUTTONS: { key: keyof VisFlags; label: string; sep?: boolean }[] = [
   { key: 'rsiDiv', label: 'RSI Div' },
   { key: 'scalping', label: 'Scalping' },
   { key: 'reversal', label: 'Reversal' },
+  { key: 'whale', label: 'Whale', sep: true },
   { key: 'vp', label: 'Vol Profile', sep: true },
   { key: 'vol', label: 'Volume' },
   { key: 'volSpike', label: 'Vol Spike' },

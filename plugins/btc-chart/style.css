@@ -1624,3 +1624,106 @@
   color: var(--muted); padding: 4px 6px; background: var(--surface-3);
   border-radius: 4px;
 }
+
+/* ── Whale Tracker Panel ── */
+.btc-whale-panel {
+  display: flex; flex-direction: column; gap: 8px;
+  font-size: 10px; font-family: var(--font-mono);
+}
+.btc-whale-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 4px; border-bottom: 1px solid var(--border);
+}
+.btc-whale-title {
+  font-size: 11px; font-weight: 600; color: var(--text);
+}
+.btc-whale-clear {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  font-size: 12px; padding: 2px 6px; border-radius: 3px;
+}
+.btc-whale-clear:hover {
+  color: var(--dn); background: rgba(255, 122, 133, 0.1);
+}
+.btc-whale-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+}
+.btc-whale-stat {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 6px; background: var(--surface-3); border-radius: 4px;
+}
+.btc-whale-stat-label {
+  font-size: 9px; color: var(--muted); text-transform: uppercase;
+}
+.btc-whale-stat-value {
+  font-size: 12px; font-weight: 600;
+}
+.btc-whale-flow {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px; background: var(--surface-3); border-radius: 4px;
+}
+.btc-whale-flow-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 10px; color: var(--text-2);
+}
+.btc-whale-flow-bars {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.btc-whale-flow-bar {
+  display: flex; align-items: center; gap: 6px;
+}
+.btc-whale-flow-bar-label {
+  font-size: 9px; color: var(--muted); width: 24px;
+}
+.btc-whale-flow-bar-fill {
+  height: 8px; border-radius: 2px; transition: width 0.3s ease;
+  min-width: 2px;
+}
+.btc-whale-flow-detail {
+  display: flex; justify-content: space-between;
+  font-size: 9px; color: var(--muted);
+}
+.btc-whale-alerts {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.btc-whale-alerts-header {
+  font-size: 10px; color: var(--text-2); font-weight: 600;
+  padding-bottom: 4px; border-bottom: 1px solid var(--border);
+}
+.btc-whale-empty {
+  font-size: 10px; color: var(--muted); text-align: center;
+  padding: 12px; font-style: italic;
+}
+.btc-whale-alerts-list {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 300px; overflow-y: auto;
+}
+.btc-whale-alert {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 4px;
+  border-left: 3px solid transparent;
+}
+.btc-whale-alert-buy {
+  background: rgba(52, 216, 164, 0.08);
+  border-left-color: var(--up);
+}
+.btc-whale-alert-sell {
+  background: rgba(255, 122, 133, 0.08);
+  border-left-color: var(--dn);
+}
+.btc-whale-alert-side {
+  font-size: 10px; font-weight: 700; min-width: 70px;
+}
+.btc-whale-alert-buy .btc-whale-alert-side { color: var(--up); }
+.btc-whale-alert-sell .btc-whale-alert-side { color: var(--dn); }
+.btc-whale-alert-details {
+  flex: 1; display: flex; flex-direction: column; gap: 1px;
+}
+.btc-whale-alert-value {
+  font-size: 11px; font-weight: 600; color: var(--text);
+}
+.btc-whale-alert-info {
+  font-size: 9px; color: var(--muted);
+}
+.btc-whale-alert-time {
+  font-size: 9px; color: var(--muted);
+}

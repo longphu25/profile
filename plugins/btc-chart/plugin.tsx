@@ -56,6 +56,7 @@ import {
   ReversalPanel,
   SignalConfigPanel,
   SidebarAccordion,
+  WhalePanel,
 } from './components'
 import {
   usePositions,
@@ -65,6 +66,7 @@ import {
   useKlines,
   useOpenInterest,
   useSupply,
+  useWhaleTracker,
 } from './hooks'
 import {
   CHART,
@@ -274,6 +276,14 @@ function BtcChartView() {
   const oiQuery = useOpenInterest(symbol, currentPrice)
   const supplyQuery = useSupply(symbolInfo.geckoId)
   const mcap = supplyQuery.data != null ? supplyQuery.data * currentPrice : null
+
+  // Whale tracker: detect large trades and exchange flow
+  const whaleTracker = useWhaleTracker(symbol, {
+    enabled: vis.whale,
+    whaleThreshold: 100000, // $100k+ trades
+    flowWindowMs: 3600000, // 1h window
+    maxAlerts: 100,
+  })
 
   // The ticker poll also seeds price/OHLCV, which the WebSocket then updates
   // live between polls.
@@ -2154,6 +2164,21 @@ function BtcChartView() {
               oi={oiQuery.data?.totalUsd ?? null}
               mcap={mcap}
               breakdown={oiQuery.data?.breakdown}
+            />
+          </SidebarAccordion>
+          <SidebarAccordion
+            title="Whale Tracker"
+            onToggle={(open) => {
+              if (open && !vis.whale) toggle('whale')
+            }}
+          >
+            <WhalePanel
+              whaleAlerts={whaleTracker.whaleAlerts}
+              exchangeFlow={whaleTracker.exchangeFlow}
+              whaleStats={whaleTracker.whaleStats}
+              recentBuyVolume={whaleTracker.recentBuyVolume}
+              recentSellVolume={whaleTracker.recentSellVolume}
+              onClear={whaleTracker.clearAlerts}
             />
           </SidebarAccordion>
           <SidebarAccordion title="24h Stats">
