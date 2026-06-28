@@ -57,6 +57,7 @@ import {
   SignalConfigPanel,
   SidebarAccordion,
   WhalePanel,
+  FundingNwePanel,
 } from './components'
 import {
   usePositions,
@@ -261,6 +262,12 @@ function BtcChartView() {
   signalConfigRef.current = signalConfig
   const [boucherEnabled, setBoucherEnabled] = useState(true)
   const [lienEnabled, setLienEnabled] = useState(true)
+  const [luxNweResult, setLuxNweResult] = useState<{
+    mid: (number | null)[]
+    upper: (number | null)[]
+    lower: (number | null)[]
+    signals: Array<{ index: number; type: 'buy' | 'sell'; price: number }>
+  }>({ mid: [], upper: [], lower: [], signals: [] })
 
   // ── Polled market data via React Query (ticker 5s, funding 30s, F&G 60s) ──
   const tickerQuery = useTicker(symbol, symbolInfo)
@@ -569,6 +576,9 @@ function BtcChartView() {
     refs.luxNweMidS.setData(visFlags.luxNwe ? toLine(luxNwe.mid) : [])
     refs.luxNweUpS.setData(visFlags.luxNwe ? toLine(luxNwe.upper) : [])
     refs.luxNweLoS.setData(visFlags.luxNwe ? toLine(luxNwe.lower) : [])
+
+    // Update NWE result for FundingNwePanel
+    setLuxNweResult(luxNwe)
 
     refs.ma50S.setData(visFlags.ma50 ? toLine(sma50) : [])
     refs.ma200S.setData(visFlags.ma200 ? toLine(sma200) : [])
@@ -2291,6 +2301,14 @@ function BtcChartView() {
           </SidebarAccordion>
           <SidebarAccordion title="Fear & Greed">
             <FearGreedPanel fng={fng} />
+          </SidebarAccordion>
+          <SidebarAccordion title="Funding + NWE Signal">
+            <FundingNwePanel
+              funding={funding}
+              nwe={luxNweResult}
+              candles={candlesRef.current}
+              symbol={symbol}
+            />
           </SidebarAccordion>
         </div>
       </div>

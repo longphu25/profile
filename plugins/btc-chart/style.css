@@ -1727,3 +1727,101 @@
 .btc-whale-alert-time {
   font-size: 9px; color: var(--muted);
 }
+
+/* Funding + NWE Signal Panel */
+.btc-funding-nwe-panel {
+  display: flex; flex-direction: column; gap: 10px;
+  font-size: 10px; font-family: var(--font-mono);
+}
+.btc-funding-nwe-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.btc-funding-nwe-symbol {
+  font-size: 12px; font-weight: 700; color: var(--text);
+}
+.btc-funding-nwe-direction {
+  font-size: 14px; font-weight: 800; padding: 4px 12px;
+  border: 2px solid; border-radius: 6px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.btc-funding-nwe-section {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 8px; background: var(--surface-3); border-radius: 4px;
+}
+.btc-funding-nwe-row {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.btc-funding-nwe-label {
+  font-size: 9px; color: var(--muted); text-transform: uppercase;
+}
+.btc-funding-nwe-value {
+  font-size: 11px; font-weight: 600;
+}
+.btc-funding-nwe-value.pos { color: var(--up); }
+.btc-funding-nwe-value.neg { color: var(--dn); }
+.btc-funding-nwe-value.neu { color: var(--muted); }
+.btc-funding-nwe-direction-text {
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+}
+.btc-funding-nwe-risk {
+  font-size: 11px; font-weight: 600;
+}
+.btc-funding-nwe-reasons {
+  padding: 8px; background: var(--surface-3); border-radius: 4px;
+}
+.btc-funding-nwe-reasons-title {
+  font-size: 10px; font-weight: 600; color: var(--text-2);
+  margin-bottom: 6px;
+}
+.btc-funding-nwe-reasons-list {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.btc-funding-nwe-reasons-list li {
+  font-size: 9px; color: var(--text); line-height: 1.4;
+  padding-left: 12px; position: relative;
+}
+.btc-funding-nwe-reasons-list li::before {
+  content: '•'; position: absolute; left: 0; color: var(--muted);
+}
+.btc-funding-nwe-no-signal {
+  font-size: 9px; color: var(--muted); font-style: italic;
+  text-align: center; padding: 8px;
+}
+.btc-funding-nwe-breakdown {
+  padding: 8px; background: var(--surface-3); border-radius: 4px;
+}
+.btc-funding-nwe-breakdown-title {
+  font-size: 10px; font-weight: 600; color: var(--text-2);
+  margin-bottom: 6px;
+}
+.btc-funding-nwe-breakdown-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 3px 0; font-size: 9px;
+}
+.btc-funding-nwe-breakdown-row span:first-child {
+  color: var(--muted);
+}
+.btc-funding-nwe-breakdown-row span:last-child {
+  font-weight: 600;
+}
+.btc-funding-nwe-breakdown-row span.up { color: var(--up); }
+.btc-funding-nwe-breakdown-row span.dn { color: var(--dn); }
+.btc-funding-nwe-rules {
+  padding: 8px; background: var(--surface-3); border-radius: 4px;
+  border-left: 3px solid var(--accent);
+}
+.btc-funding-nwe-rules-title {
+  font-size: 10px; font-weight: 600; color: var(--text-2);
+  margin-bottom: 6px;
+}
+.btc-funding-nwe-rule {
+  font-size: 9px; color: var(--text); line-height: 1.5;
+  padding-left: 12px; position: relative;
+}
+.btc-funding-nwe-rule::before {
+  content: '▸'; position: absolute; left: 0; color: var(--accent);
+}
+.btc-funding-nwe-rule span.up { color: var(--up); font-weight: 600; }
+.btc-funding-nwe-rule span.dn { color: var(--dn); font-weight: 600; }
