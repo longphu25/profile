@@ -439,6 +439,9 @@ function BtcChartView() {
       breakoutConfirm: 'close',
       bufferPct: 0.0007,
     })
+    // LuxAlgo Nadaraya-Watson Envelope
+    const luxNweCfg = cfgInit.luxNwe ?? { bandwidth: 8, multiplier: 3, repaint: true }
+    const luxNwe = calcNadarayaWatson(data, luxNweCfg)
     const ml = mlSignal(
       data,
       nwe,
@@ -532,6 +535,18 @@ function BtcChartView() {
         })
       }
     }
+    // LuxAlgo NWE crossover markers
+    if (visFlags.luxNwe) {
+      for (const sig of luxNwe.signals) {
+        markers.push({
+          time: data[sig.index].time,
+          position: sig.type === 'buy' ? 'belowBar' : 'aboveBar',
+          color: sig.type === 'buy' ? '#26A69A' : '#EF5350',
+          shape: sig.type === 'buy' ? 'arrowUp' : 'arrowDown',
+          text: sig.type === 'buy' ? '▲' : '▼',
+        })
+      }
+    }
     // lightweight-charts requires markers sorted ascending by time.
     markers.sort((a, b) => a.time - b.time)
     if (markersRef.current) {
@@ -571,8 +586,6 @@ function BtcChartView() {
     refs.nweLowS.setData(visFlags.nwe ? toLine(nwe.lower) : [])
 
     // LuxAlgo Nadaraya-Watson Envelope
-    const luxNweCfg = cfgInit.luxNwe ?? { bandwidth: 8, multiplier: 3, repaint: true }
-    const luxNwe = calcNadarayaWatson(data, luxNweCfg)
     refs.luxNweMidS.setData(visFlags.luxNwe ? toLine(luxNwe.mid) : [])
     refs.luxNweUpS.setData(visFlags.luxNwe ? toLine(luxNwe.upper) : [])
     refs.luxNweLoS.setData(visFlags.luxNwe ? toLine(luxNwe.lower) : [])
@@ -1011,7 +1024,7 @@ function BtcChartView() {
       title: 'MH-',
     })
     const luxNweMidS = mainChart.addSeries(LWC.LineSeries, {
-      color: 'rgba(156,39,176,0.8)',
+      color: '#FFD54F',
       lineWidth: 2,
       lineStyle: 0,
       priceLineVisible: false,
@@ -1020,7 +1033,7 @@ function BtcChartView() {
       title: 'LuxNWE',
     })
     const luxNweUpS = mainChart.addSeries(LWC.LineSeries, {
-      color: 'rgba(156,39,176,0.4)',
+      color: '#26A69A',
       lineWidth: 1,
       lineStyle: 2,
       priceLineVisible: false,
@@ -1029,7 +1042,7 @@ function BtcChartView() {
       title: 'LuxUp',
     })
     const luxNweLoS = mainChart.addSeries(LWC.LineSeries, {
-      color: 'rgba(156,39,176,0.4)',
+      color: '#EF5350',
       lineWidth: 1,
       lineStyle: 2,
       priceLineVisible: false,

@@ -3,6 +3,7 @@
 import type { VisFlags } from '../storage'
 
 const IND_BUTTONS: { key: keyof VisFlags; label: string; sep?: boolean }[] = [
+  { key: 'luxNwe', label: 'Lux NWE' },
   { key: 'nwe', label: 'MH Band' },
   { key: 'ma50', label: 'MA50' },
   { key: 'ma200', label: 'MA200' },
@@ -15,7 +16,6 @@ const IND_BUTTONS: { key: keyof VisFlags; label: string; sep?: boolean }[] = [
   { key: 'scalping', label: 'Scalping' },
   { key: 'reversal', label: 'Reversal' },
   { key: 'whale', label: 'Whale', sep: true },
-  { key: 'luxNwe', label: 'Lux NWE' },
   { key: 'vp', label: 'Vol Profile', sep: true },
   { key: 'vol', label: 'Volume' },
   { key: 'volSpike', label: 'Vol Spike' },
