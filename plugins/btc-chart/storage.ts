@@ -21,6 +21,13 @@ export interface VisFlags {
   scalping: boolean
   reversal: boolean
   whale: boolean
+  luxNwe: boolean
+}
+
+export interface NadarayaConfig {
+  bandwidth: number
+  multiplier: number
+  repaint: boolean
 }
 
 export interface ZoomState {
@@ -56,6 +63,8 @@ export interface ChartConfig {
   spikeMult: number
   /** Signal config: which features are enabled for ML signal + trade setup. */
   signalConfig?: Record<string, boolean>
+  /** LuxAlgo Nadaraya-Watson Envelope configuration. */
+  luxNwe?: NadarayaConfig
 }
 
 export const DEFAULT_CONFIG: ChartConfig = {
@@ -79,6 +88,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
     scalping: false,
     reversal: false,
     whale: false,
+    luxNwe: false,
   },
   zoom: null,
   alerts: [],
@@ -89,6 +99,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
   oscView: 'rsi',
   oscHeight: 170,
   spikeMult: 2.5,
+  luxNwe: { bandwidth: 8, multiplier: 3, repaint: true },
 }
 
 /** Read full config from localStorage, with safe fallback. */

@@ -44,6 +44,9 @@ export interface ChartRefs {
   nweMidS: any
   nweUpS: any
   nweLowS: any
+  luxNweMidS: any
+  luxNweUpS: any
+  luxNweLoS: any
   ma50S: any
   ma200S: any
   volSeries: any

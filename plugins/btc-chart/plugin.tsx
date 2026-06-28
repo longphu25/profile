@@ -118,6 +118,7 @@ import {
   type StatsState,
   type FundingState,
   type FngState,
+  calcNadarayaWatson,
 } from './lib'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -561,6 +562,14 @@ function BtcChartView() {
     refs.nweMidS.setData(visFlags.nwe ? toLine(nwe.mid) : [])
     refs.nweUpS.setData(visFlags.nwe ? toLine(nwe.upper) : [])
     refs.nweLowS.setData(visFlags.nwe ? toLine(nwe.lower) : [])
+
+    // LuxAlgo Nadaraya-Watson Envelope
+    const luxNweCfg = cfgInit.luxNwe ?? { bandwidth: 8, multiplier: 3, repaint: true }
+    const luxNwe = calcNadarayaWatson(data, luxNweCfg)
+    refs.luxNweMidS.setData(visFlags.luxNwe ? toLine(luxNwe.mid) : [])
+    refs.luxNweUpS.setData(visFlags.luxNwe ? toLine(luxNwe.upper) : [])
+    refs.luxNweLoS.setData(visFlags.luxNwe ? toLine(luxNwe.lower) : [])
+
     refs.ma50S.setData(visFlags.ma50 ? toLine(sma50) : [])
     refs.ma200S.setData(visFlags.ma200 ? toLine(sma200) : [])
     refs.vwapS.setData(visFlags.vwap ? toLine(vwapR.vwap) : [])
@@ -991,6 +1000,33 @@ function BtcChartView() {
       crosshairMarkerVisible: false,
       title: 'MH-',
     })
+    const luxNweMidS = mainChart.addSeries(LWC.LineSeries, {
+      color: 'rgba(156,39,176,0.8)',
+      lineWidth: 2,
+      lineStyle: 0,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+      title: 'LuxNWE',
+    })
+    const luxNweUpS = mainChart.addSeries(LWC.LineSeries, {
+      color: 'rgba(156,39,176,0.4)',
+      lineWidth: 1,
+      lineStyle: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+      title: 'LuxUp',
+    })
+    const luxNweLoS = mainChart.addSeries(LWC.LineSeries, {
+      color: 'rgba(156,39,176,0.4)',
+      lineWidth: 1,
+      lineStyle: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+      title: 'LuxLo',
+    })
     const ma50S = mainChart.addSeries(LWC.LineSeries, {
       color: CHART.ma50,
       lineWidth: 1.5,
@@ -1252,6 +1288,9 @@ function BtcChartView() {
       nweMidS,
       nweUpS,
       nweLowS,
+      luxNweMidS,
+      luxNweUpS,
+      luxNweLoS,
       ma50S,
       ma200S,
       volSeries,
