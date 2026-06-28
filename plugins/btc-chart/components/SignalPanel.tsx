@@ -21,7 +21,7 @@ export function SignalPanel({ ml }: { ml: MLResult }) {
             style={{ width: Math.round(ml.score * 100) + '%', background: ml.color }}
           />
         </div>
-        <div className="btc-chart__ml-foot">Confidence · MH Band + MA + RSI + MACD</div>
+        <div className="btc-chart__ml-foot">Confidence · Lux NWE + MA + RSI + MACD</div>
       </div>
     </div>
   )
