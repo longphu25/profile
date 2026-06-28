@@ -41,9 +41,9 @@ export function usePositions(
 
   const addPosition = () => {
     const entry = parseFloat(form.entry)
-    const margin = parseFloat(form.margin)
+    const margin = parseFloat(form.margin) || 10
     const leverage = parseFloat(form.leverage) || 10
-    if (!entry || !margin) return
+    if (!entry) return
     const notional = margin * leverage
     const size = notional / entry
     const p: Position = {

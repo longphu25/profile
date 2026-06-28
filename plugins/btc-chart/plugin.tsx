@@ -175,6 +175,9 @@ function BtcChartView() {
   const alertsRef = useRef<AlertRule[]>([...cfgInit.alerts])
   const soundRef = useRef<AlertSound>(new AlertSound())
   const lastPriceRef = useRef<number | null>(null)
+  // Throttle: skip UI updates if interval not elapsed
+  const lastPriceUpdateRef = useRef(0) // 1s throttle for price/PnL
+  const lastChartUpdateRef = useRef(0) // 5s throttle for full chart render
   // Latest computed indicator snapshot — read from inside the WS handler.
   const sidebarRef = useRef<SidebarState>(INITIAL_SIDEBAR)
 
@@ -1408,6 +1411,25 @@ function BtcChartView() {
       }
     }
 
+    /** Throttled price/PnL update (1s) */
+    const throttledPriceUpdate = (close: number) => {
+      const now = Date.now()
+      if (now - lastPriceUpdateRef.current < 1000) return
+      lastPriceUpdateRef.current = now
+      setPrice((p) => ({ ...p, cur: fmtP(close) }))
+      setMarkPrice(close)
+      setOhlcv((o) => ({ ...o, c: fmtP(close) }))
+      setLastUpdate(tsNow())
+    }
+
+    /** Throttled chart render (5s) */
+    const throttledRender = (data: Candle[]) => {
+      const now = Date.now()
+      if (now - lastChartUpdateRef.current < 5000) return
+      lastChartUpdateRef.current = now
+      renderData(data)
+    }
+
     const connectWs = (spotMode = false) => {
       let ws: WebSocket
       const info = symbolInfoRef.current
@@ -1458,11 +1480,8 @@ function BtcChartView() {
             value: candle.volume,
             color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
           })
-          setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
-          setMarkPrice(candle.close)
-          setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
-          setLastUpdate(tsNow())
-          if (k.end) renderData(arr)
+          throttledPriceUpdate(candle.close)
+          if (k.end) throttledRender(arr)
         }
       } else if (info.exchange === 'bybit') {
         const cat = 'bybitCategory' in info ? info.bybitCategory : 'linear'
@@ -1510,11 +1529,8 @@ function BtcChartView() {
             value: candle.volume,
             color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
           })
-          setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
-          setMarkPrice(candle.close)
-          setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
-          setLastUpdate(tsNow())
-          if (k.confirm) renderData(arr)
+          throttledPriceUpdate(candle.close)
+          if (k.confirm) throttledRender(arr)
         }
       } else if (info.exchange === 'okx') {
         const instId = 'okxInstId' in info ? info.okxInstId : symbol
@@ -1562,11 +1578,8 @@ function BtcChartView() {
             value: candle.volume,
             color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
           })
-          setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
-          setMarkPrice(candle.close)
-          setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
-          setLastUpdate(tsNow())
-          if (k[8] === '1') renderData(arr)
+          throttledPriceUpdate(candle.close)
+          if (k[8] === '1') throttledRender(arr)
         }
       } else {
         const wsUrl = spotMode
@@ -1626,10 +1639,7 @@ function BtcChartView() {
             value: candle.volume,
             color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
           })
-          setPrice((p) => ({ ...p, cur: fmtP(candle.close) }))
-          setMarkPrice(candle.close)
-          setOhlcv((o) => ({ ...o, c: fmtP(candle.close) }))
-          setLastUpdate(tsNow())
+          throttledPriceUpdate(candle.close)
           // ── Alerts ─────────────────────────────────────────────────
           const ctx = {
             price: candle.close,
@@ -1647,7 +1657,7 @@ function BtcChartView() {
             setFiredToast(fired.map((f) => describeRule(f.rule)).join(' · '))
             setAlerts([...alertsRef.current])
           }
-          if (k.x) renderData(arr)
+          if (k.x) throttledRender(arr)
         }
       }
       if (!ws.onerror) ws.onerror = () => setWsStatus({ text: 'Error', tone: 'err' })
