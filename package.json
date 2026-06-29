@@ -38,7 +38,7 @@
     "@mysten/walrus": "^1.2.0",
     "@mysten/zksend": "^1.2.0",
     "@polymarket/clob-client": "^5.8.1",
-    "@scallop-io/sui-scallop-sdk": "^3.0.2",
+    "@scallop-io/sui-scallop-sdk": "^4.1.2",
     "@scure/bip39": "^2.2.0",
     "@solana/kit": "^6.10.0",
     "@solana/wallet-adapter-base": "^0.9.27",
