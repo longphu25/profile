@@ -480,6 +480,22 @@
   pointer-events: none;
   z-index: 3;
 }
+/* ICT session shading — sits lowest so bands sit behind other overlays. */
+.btc-chart__ict-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+/* ICT Liquidity — range/EQ/BSL-SSL, above session bands, below SMC structures. */
+.btc-chart__liq-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 3;
+}
 
 /* Floating legend */
 .btc-chart__legend {
@@ -1481,6 +1497,264 @@
   color: var(--muted);
   margin-left: auto;
   font-weight: 400;
+}
+/* Collapsible header (shared shape for Trade Setup + ICT Sessions) */
+.btc-chart__setup-hdr,
+.btc-chart__sessions-hdr {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: var(--text-1, inherit);
+  font: inherit;
+  text-align: left;
+}
+.btc-chart__setup-hdr--static,
+.btc-chart__sessions-hdr--static {
+  cursor: default;
+}
+.btc-chart__setup-title,
+.btc-chart__sessions-title {
+  font-size: 12px;
+  font-weight: 700;
+}
+.btc-chart__setup-summary,
+.btc-chart__sessions-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+.btc-chart__setup-summary .up,
+.btc-chart__sessions-summary .up {
+  color: var(--up);
+  font-weight: 700;
+}
+.btc-chart__setup-summary .dn,
+.btc-chart__sessions-summary .dn {
+  color: var(--dn);
+  font-weight: 700;
+}
+.btc-chart__setup-summary .btc-chart__setup-conf {
+  margin-left: 0;
+}
+.btc-chart__setup-body {
+  margin-top: 8px;
+}
+/* Trade Setup header row + explain trigger */
+.btc-chart__setup-hdr-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btc-chart__setup-hdr-row .btc-chart__setup-hdr {
+  flex: 1;
+  min-width: 0;
+}
+.btc-chart__explain-btn {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-2);
+  color: var(--muted-2);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btc-chart__explain-btn:hover {
+  color: var(--text);
+  border-color: var(--up);
+}
+/* Explanation modal */
+.btc-chart__modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(3, 8, 8, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.btc-chart__modal {
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  width: min(680px, 100%);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+/* PLACEHOLDER_MODAL_CSS */
+.btc-chart__modal-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.btc-chart__modal-hdr h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+}
+.btc-chart__modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.btc-chart__modal-close:hover {
+  color: var(--text);
+}
+.btc-chart__modal-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+.btc-chart__explain-verdict {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.btc-chart__explain-verdict .up {
+  color: var(--up);
+}
+.btc-chart__explain-verdict .dn {
+  color: var(--dn);
+}
+.btc-chart__explain-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 8px 0;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.btc-chart__explain-levels .up {
+  color: var(--up);
+}
+.btc-chart__explain-levels .dn {
+  color: var(--dn);
+}
+.btc-chart__explain-group {
+  margin: 10px 0;
+}
+.btc-chart__explain-group-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.btc-chart__explain-group-title.up {
+  color: var(--up);
+}
+.btc-chart__explain-group-title.dn {
+  color: var(--dn);
+}
+.btc-chart__explain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.btc-chart__explain-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.btc-chart__explain-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-2);
+  font-weight: 700;
+}
+.btc-chart__explain-tag.up {
+  color: var(--up);
+}
+.btc-chart__explain-tag.dn {
+  color: var(--dn);
+}
+.btc-chart__explain-text {
+  color: var(--muted-2);
+  line-height: 1.4;
+}
+.btc-chart__explain-empty {
+  font-size: 11px;
+  margin: 0;
+}
+.btc-chart__explain-conf-note {
+  margin: 10px 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--bg-2);
+  color: var(--muted-2);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.btc-chart__explain-h4 {
+  margin: 14px 0 8px;
+  font-size: 12px;
+  color: var(--text);
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.btc-chart__explain-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.btc-chart__explain-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.btc-chart__explain-doc-name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+.btc-chart__explain-doc-desc {
+  color: var(--muted-2);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.btc-chart__sessions-body {
+  margin-top: 6px;
+}
+.btc-chart__sessions-chip {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(255, 196, 107, 0.18);
+  color: #ffc46b;
+  font-weight: 700;
+}
+.btc-chart__sessions-adr-mini {
+  color: var(--muted);
 }
 .btc-chart__setup-sizing {
   display: flex;
@@ -2546,4 +2820,74 @@
 .btc-fnwe-rule-text strong {
   color: var(--text-2);
   font-weight: 700;
+}
+
+/* ICT Sessions panel */
+.btc-chart__sessions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 11px;
+}
+.btc-chart__sessions-key {
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.btc-chart__sessions-val {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.btc-chart__sessions-val.up {
+  color: var(--up);
+}
+.btc-chart__sessions-val.dn {
+  color: var(--dn);
+}
+.btc-chart__sessions-val.muted {
+  color: var(--muted);
+  font-weight: 400;
+}
+.btc-chart__sessions-kz-on {
+  color: #ffc46b;
+}
+.btc-chart__sessions-asia {
+  margin: 4px 0;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: rgba(255, 196, 107, 0.05);
+}
+/* PLACEHOLDER_SESSIONS_CSS */
+.btc-chart__sessions-adr {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(190, 255, 234, 0.08);
+  overflow: hidden;
+  margin: 2px 0 6px;
+}
+.btc-chart__sessions-adr-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.btc-chart__sessions-judas {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.btc-chart__sessions-judas-tag {
+  margin-top: 3px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+.btc-chart__sessions-judas-tag.up {
+  color: var(--up);
+  background: rgba(52, 216, 164, 0.1);
+}
+.btc-chart__sessions-judas-tag.dn {
+  color: var(--dn);
+  background: rgba(255, 122, 133, 0.1);
 }
