@@ -9,4 +9,4 @@ rustup target add wasm32-unknown-unknown 2>/dev/null || true
 cargo test --release
 wasm-pack build --target web --release --out-dir ../pkg
 echo "✓ WASM built → plugins/btc-chart/pkg/"
-echo "  Size: $(du -h ../pkg/btc_chart_bg.wasm | cut -f1)"
+echo "  Size: $(du -h ../pkg/btc_chart_wasm_bg.wasm | cut -f1)"

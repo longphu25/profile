@@ -3,10 +3,13 @@
  *
  * Strategy: Try load WASM → if fail, use the pure JS computeSMC.
  * Same public API as smc.ts so callers swap import transparently.
+ * The same module also backs the Nadaraya-Watson envelope (compute_nwe).
  */
 
 import { computeSMC as computeSMCJs } from './smc'
 import type { SMCConfig, SMCResult } from './smc'
+import { calcNadarayaWatson as calcNweJs } from './lib/nadaraya-watson'
+import type { NadarayaWatsonConfig, NadarayaWatsonResult } from './lib/nadaraya-watson'
 
 interface Candle {
   time: number
@@ -19,6 +22,7 @@ interface Candle {
 
 interface WasmModule {
   compute_smc: (candles: Candle[], cfg: SMCConfig) => SMCResult
+  compute_nwe: (candles: Candle[], cfg: Partial<NadarayaWatsonConfig>) => NadarayaWatsonResult
 }
 
 let wasmModule: WasmModule | null = null
@@ -44,10 +48,10 @@ export async function initSmcWasm(): Promise<boolean> {
       ),
     })
     wasmModule = mod as unknown as WasmModule
-    console.log('[btc-chart] SMC WASM loaded — native compute')
+    console.log('[btc-chart] WASM loaded — native SMC + NWE compute')
     return true
   } catch (e) {
-    console.log('[btc-chart] SMC WASM unavailable — JS fallback', e)
+    console.log('[btc-chart] WASM unavailable — JS fallback', e)
     return false
   }
 }
@@ -71,6 +75,25 @@ export function computeSMC(candles: Candle[], cfg: SMCConfig): SMCResult {
     }
   }
   return computeSMCJs(candles, cfg)
+}
+
+/**
+ * Compute Nadaraya-Watson Envelope. Uses WASM if loaded, otherwise pure JS.
+ * Drop-in replacement for calcNadarayaWatson from lib/nadaraya-watson.ts —
+ * offloads the O(n²) repaint kernel off the JS main thread.
+ */
+export function computeNadarayaWatson(
+  candles: Candle[],
+  cfg: Partial<NadarayaWatsonConfig> = {},
+): NadarayaWatsonResult {
+  if (wasmModule) {
+    try {
+      return wasmModule.compute_nwe(candles, cfg)
+    } catch {
+      return calcNweJs(candles, cfg)
+    }
+  }
+  return calcNweJs(candles, cfg)
 }
 
 export type { SMCConfig, SMCResult }

@@ -63,6 +63,36 @@ pub struct SmcResult {
     pub fvgs: Vec<FvgBox>,
 }
 
+/// Nadaraya-Watson Envelope config. Mirrors NadarayaWatsonConfig in nadaraya-watson.ts.
+#[derive(Debug, Clone, Deserialize)]
+pub struct NweConfig {
+    pub bandwidth: f64,
+    pub multiplier: f64,
+    pub repaint: bool,
+    #[serde(rename = "maxBarsBack", default = "default_max_bars_back")]
+    pub max_bars_back: usize,
+}
+
+fn default_max_bars_back() -> usize {
+    500
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct NweSignal {
+    pub index: usize,
+    #[serde(rename = "type")]
+    pub sig_type: String,
+    pub price: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct NweResult {
+    pub mid: Vec<Option<f64>>,
+    pub upper: Vec<Option<f64>>,
+    pub lower: Vec<Option<f64>>,
+    pub signals: Vec<NweSignal>,
+}
+
 #[derive(Debug, Clone)]
 struct Pivot {
     price: f64,
@@ -122,6 +152,145 @@ pub fn compute_smc(candles_js: JsValue, cfg_js: JsValue) -> JsValue {
 fn empty_result() -> JsValue {
     let empty = SmcResult { structures: vec![], order_blocks: vec![], fvgs: vec![] };
     serde_wasm_bindgen::to_value(&empty).unwrap_or(JsValue::NULL)
+}
+
+/// Gaussian window: exp(-(x^2 / (h^2 * 2))). Mirrors gauss() in nadaraya-watson.ts.
+fn gauss(x: f64, h: f64) -> f64 {
+    (-(x.powi(2) / (h * h * 2.0))).exp()
+}
+
+/// WASM-exported entry: compute Nadaraya-Watson Envelope from candles + config.
+#[wasm_bindgen]
+pub fn compute_nwe(candles_js: JsValue, cfg_js: JsValue) -> JsValue {
+    let candles: Vec<Candle> = match serde_wasm_bindgen::from_value(candles_js) {
+        Ok(c) => c,
+        Err(_) => return empty_nwe_result(),
+    };
+    let cfg: NweConfig = match serde_wasm_bindgen::from_value(cfg_js) {
+        Ok(c) => c,
+        Err(_) => return empty_nwe_result(),
+    };
+
+    let result = compute_nwe_inner(&candles, &cfg);
+    serde_wasm_bindgen::to_value(&result).unwrap_or_else(|_| empty_nwe_result())
+}
+
+fn empty_nwe_result() -> JsValue {
+    let empty = NweResult { mid: vec![], upper: vec![], lower: vec![], signals: vec![] };
+    serde_wasm_bindgen::to_value(&empty).unwrap_or(JsValue::NULL)
+}
+
+/// Pure NWE computation — mirrors calcNadarayaWatson in nadaraya-watson.ts exactly.
+pub fn compute_nwe_inner(candles: &[Candle], cfg: &NweConfig) -> NweResult {
+    let n = candles.len();
+    let src: Vec<f64> = candles.iter().map(|c| c.close).collect();
+
+    let mut mid: Vec<Option<f64>> = vec![None; n];
+    let mut upper: Vec<Option<f64>> = vec![None; n];
+    let mut lower: Vec<Option<f64>> = vec![None; n];
+    let mut signals: Vec<NweSignal> = Vec::new();
+
+    if n == 0 {
+        return NweResult { mid, upper, lower, signals };
+    }
+
+    if cfg.repaint {
+        // Repainting mode: compute all points in window on the last bar.
+        let max_bars = cfg.max_bars_back.min(n);
+        let mut nwe: Vec<f64> = Vec::with_capacity(max_bars);
+
+        for i in 0..max_bars {
+            let mut sum = 0.0;
+            let mut sumw = 0.0;
+            for j in 0..max_bars {
+                let w = gauss(i as f64 - j as f64, cfg.bandwidth);
+                sum += src[n - max_bars + j] * w;
+                sumw += w;
+            }
+            nwe.push(sum / sumw);
+        }
+
+        // SAE (Smoothed Absolute Error)
+        let mut sae_sum = 0.0;
+        for i in 0..max_bars {
+            sae_sum += (src[n - max_bars + i] - nwe[i]).abs();
+        }
+        let sae = (sae_sum / max_bars as f64) * cfg.multiplier;
+
+        for i in 0..max_bars {
+            let idx = n - max_bars + i;
+            mid[idx] = Some(nwe[i]);
+            upper[idx] = Some(nwe[i] + sae);
+            lower[idx] = Some(nwe[i] - sae);
+
+            if i > 0 {
+                let prev_src = src[idx - 1];
+                let curr_src = src[idx];
+                let prev_upper = nwe[i - 1] + sae;
+                let curr_upper = nwe[i] + sae;
+                let prev_lower = nwe[i - 1] - sae;
+                let curr_lower = nwe[i] - sae;
+
+                if prev_src < prev_upper && curr_src > curr_upper {
+                    signals.push(NweSignal { index: idx, sig_type: "sell".to_string(), price: curr_src });
+                } else if prev_src > prev_lower && curr_src < curr_lower {
+                    signals.push(NweSignal { index: idx, sig_type: "buy".to_string(), price: curr_src });
+                }
+            }
+        }
+    } else {
+        // Non-repainting mode: compute endpoint only.
+        let mut coefs: Vec<f64> = Vec::with_capacity(cfg.max_bars_back);
+        let mut den = 0.0;
+        for i in 0..cfg.max_bars_back {
+            let w = gauss(i as f64, cfg.bandwidth);
+            coefs.push(w);
+            den += w;
+        }
+
+        let mut mae_values: Vec<f64> = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut out = 0.0;
+            let bars_to_use = cfg.max_bars_back.min(i + 1);
+            for j in 0..bars_to_use {
+                out += src[i - j] * coefs[j];
+            }
+            out /= den;
+            mid[i] = Some(out);
+            mae_values.push((src[i] - out).abs());
+        }
+
+        let mae_period = 499usize.min(n);
+        let mut mae_sum = 0.0;
+        for i in 0..mae_period {
+            mae_sum += mae_values[i];
+        }
+        let mae = (mae_sum / mae_period as f64) * cfg.multiplier;
+
+        for i in 0..n {
+            if let Some(m) = mid[i] {
+                upper[i] = Some(m + mae);
+                lower[i] = Some(m - mae);
+            }
+        }
+
+        if n >= 2 {
+            let prev_src = src[n - 2];
+            let curr_src = src[n - 1];
+            let prev_upper = upper[n - 2].unwrap();
+            let curr_upper = upper[n - 1].unwrap();
+            let prev_lower = lower[n - 2].unwrap();
+            let curr_lower = lower[n - 1].unwrap();
+
+            if prev_src < prev_upper && curr_src > curr_upper {
+                signals.push(NweSignal { index: n - 1, sig_type: "sell".to_string(), price: curr_src });
+            } else if prev_src > prev_lower && curr_src < curr_lower {
+                signals.push(NweSignal { index: n - 1, sig_type: "buy".to_string(), price: curr_src });
+            }
+        }
+    }
+
+    NweResult { mid, upper, lower, signals }
 }
 
 /// Pure computation — testable without WASM. Mirrors smc.ts exactly.
@@ -345,5 +514,42 @@ mod tests {
         let cfg = SmcConfig { structure: false, order_blocks: false, fvg: true, swing_len: 10, internal_len: 5 };
         let result = compute_smc_inner(&candles, &cfg);
         assert!(!result.fvgs.is_empty());
+    }
+
+    #[test]
+    fn test_nwe_repaint_shape() {
+        let candles = gen_candles(120);
+        let cfg = NweConfig { bandwidth: 8.0, multiplier: 3.0, repaint: true, max_bars_back: 500 };
+        let r = compute_nwe_inner(&candles, &cfg);
+        assert_eq!(r.mid.len(), 120);
+        assert_eq!(r.upper.len(), 120);
+        assert_eq!(r.lower.len(), 120);
+        // All bars in-window should be filled (window = min(500,120) = 120).
+        assert!(r.mid.iter().all(|v| v.is_some()));
+        // Bands straddle the mid line.
+        for i in 0..120 {
+            let m = r.mid[i].unwrap();
+            assert!(r.upper[i].unwrap() >= m);
+            assert!(r.lower[i].unwrap() <= m);
+        }
+    }
+
+    #[test]
+    fn test_nwe_non_repaint_shape() {
+        let candles = gen_candles(120);
+        let cfg = NweConfig { bandwidth: 8.0, multiplier: 3.0, repaint: false, max_bars_back: 500 };
+        let r = compute_nwe_inner(&candles, &cfg);
+        assert_eq!(r.mid.len(), 120);
+        assert!(r.mid.iter().all(|v| v.is_some()));
+        // Non-repaint only emits at most one signal (last bar).
+        assert!(r.signals.len() <= 1);
+    }
+
+    #[test]
+    fn test_nwe_empty() {
+        let cfg = NweConfig { bandwidth: 8.0, multiplier: 3.0, repaint: true, max_bars_back: 500 };
+        let r = compute_nwe_inner(&[], &cfg);
+        assert!(r.mid.is_empty());
+        assert!(r.signals.is_empty());
     }
 }
