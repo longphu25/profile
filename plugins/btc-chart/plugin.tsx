@@ -31,7 +31,7 @@ import {
 } from './alerts'
 import { drawVolumeProfile as drawVP } from './volume-profile'
 import { drawOrderFlow, type OFOverlaySignal } from './order-flow-overlay'
-import { computeSMC, initSmcWasm, type SMCResult } from './smc-wasm'
+import { computeSMC, initSmcWasm, computeNadarayaWatson, type SMCResult } from './smc-wasm'
 import { buildBoxFlipSignals, type BoxFlipResult } from './box-flip'
 import { downloadChartSnapshot } from './snapshot'
 import {
@@ -57,6 +57,8 @@ import {
   SidebarAccordion,
   WhalePanel,
   FundingNwePanel,
+  SessionsPanel,
+  LiquidityPanel,
 } from './components'
 import {
   usePositions,
@@ -98,6 +100,13 @@ import {
   mlSignal,
   drawSMCOverlay,
   drawBoxFlipOverlay,
+  drawICTOverlay,
+  computeICT,
+  type ICTResult,
+  drawLiquidityOverlay,
+  computeLiquidity,
+  HTF_MAP,
+  type LiquidityResult,
   calcTradeSetup,
   suggestSlTp,
   INITIAL_SIDEBAR,
@@ -118,7 +127,6 @@ import {
   type StatsState,
   type FundingState,
   type FngState,
-  calcNadarayaWatson,
 } from './lib'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -134,6 +142,24 @@ function BtcChartView() {
   const ofCanvasRef = useRef<HTMLCanvasElement>(null)
   const smcCanvasRef = useRef<HTMLCanvasElement>(null)
   const boxCanvasRef = useRef<HTMLCanvasElement>(null)
+  const ictCanvasRef = useRef<HTMLCanvasElement>(null)
+  const ictDataRef = useRef<ICTResult>({
+    sessions: [],
+    judas: [],
+    killzones: [],
+    activeSession: null,
+    adrPct: 0,
+  })
+  const liqCanvasRef = useRef<HTMLCanvasElement>(null)
+  const liqDataRef = useRef<LiquidityResult>({
+    range: null,
+    levels: [],
+    inverseFvgs: [],
+    sweeps: [],
+    nextTarget: null,
+  })
+  // Higher-timeframe candles for the liquidity trading range (Hack #1).
+  const htfRef = useRef<Candle[] | null>(null)
   const smcDataRef = useRef<SMCResult>({ structures: [], orderBlocks: [], fvgs: [] })
   const boxFlipRef = useRef<BoxFlipResult>({ boxes: [], signals: [] })
   const ofOverlayRef = useRef<OFOverlaySignal[]>([])
@@ -174,6 +200,9 @@ function BtcChartView() {
   } | null>(null)
 
   const visRef = useRef<VisFlags>({ ...cfgInit.vis })
+  // Interval mirror so renderData (deps []) can read the current timeframe —
+  // ICT session logic only runs on intraday frames.
+  const intervalRef = useRef<Interval>(cfgInit.interval as Interval)
   const vpOptsRef = useRef({ heatmap: true, hvnRatio: 0.8 })
   const alertsRef = useRef<AlertRule[]>([...cfgInit.alerts])
   const soundRef = useRef<AlertSound>(new AlertSound())
@@ -268,12 +297,31 @@ function BtcChartView() {
     signals: Array<{ index: number; type: 'buy' | 'sell'; price: number }>
   }>({ mid: [], upper: [], lower: [], signals: [] })
 
+  const [ictResult, setICTResult] = useState<ICTResult>({
+    sessions: [],
+    judas: [],
+    killzones: [],
+    activeSession: null,
+    adrPct: 0,
+  })
+  const [liquidityResult, setLiquidityResult] = useState<LiquidityResult>({
+    range: null,
+    levels: [],
+    inverseFvgs: [],
+    sweeps: [],
+    nextTarget: null,
+  })
+
   // ── Polled market data via React Query (ticker 5s, funding 30s, F&G 60s) ──
   const tickerQuery = useTicker(symbol, symbolInfo)
   const fundingQuery = useFunding(symbol, symbolInfo)
   const fngQuery = useFearGreed()
   // Historical candles (one-shot per symbol/interval); WS handles live ticks.
   const klinesQuery = useKlines(symbol, interval, symbolInfo)
+  // Higher-timeframe candles for the liquidity trading range (Hack #1). Keyed
+  // separately in React Query, so it caches independently of the main frame.
+  const htfInterval = HTF_MAP[interval as Interval]
+  const htfQuery = useKlines(symbol, htfInterval ?? (interval as Interval), symbolInfo)
   const stats: StatsState = tickerQuery.data ? statsFromTicker(tickerQuery.data) : DEFAULT_STATS
   const funding: FundingState = fundingQuery.data ?? DEFAULT_FUNDING
   const fng: FngState = fngQuery.data ?? DEFAULT_FNG
@@ -351,6 +399,12 @@ function BtcChartView() {
     visRef.current = vis
   }, [vis])
   useEffect(() => {
+    intervalRef.current = interval
+  }, [interval])
+  useEffect(() => {
+    htfRef.current = htfQuery.data?.candles ?? null
+  }, [htfQuery.data])
+  useEffect(() => {
     vpOptsRef.current = vpOpts
   }, [vpOpts])
   useEffect(() => {
@@ -411,6 +465,10 @@ function BtcChartView() {
   }, [])
 
   const fitNextRef = useRef(true)
+  // Tracks the interval/symbol the socket effect last ran for, so a timeframe
+  // switch can reset the view to the latest candle instead of reapplying the
+  // saved zoom range (which belongs to the previous dataset).
+  const lastViewKeyRef = useRef<string>('')
 
   const renderData = useCallback((data: Candle[]) => {
     const refs = chartRefs.current
@@ -438,9 +496,13 @@ function BtcChartView() {
       breakoutConfirm: 'close',
       bufferPct: 0.0007,
     })
-    // LuxAlgo Nadaraya-Watson Envelope
+    // LuxAlgo Nadaraya-Watson Envelope (WASM-backed, JS fallback)
     const luxNweCfg = cfgInit.luxNwe ?? { bandwidth: 8, multiplier: 3, repaint: true }
-    const luxNwe = calcNadarayaWatson(data, luxNweCfg)
+    const luxNwe = computeNadarayaWatson(data, luxNweCfg)
+    // ICT sessions + Judas swing (intraday only; empty on 4h/1d)
+    const ict = computeICT(data, intervalRef.current)
+    ictDataRef.current = ict
+    setICTResult(ict)
     const ml = mlSignal(
       data,
       nwe,
@@ -735,15 +797,17 @@ function BtcChartView() {
     }
 
     // ── SMC overlay ──
-    const smcResult = visFlags.smc
-      ? computeSMC(data, {
-          structure: true,
-          orderBlocks: true,
-          fvg: true,
-          swingLen: 10,
-          internalLen: 5,
-        })
-      : { structures: [], orderBlocks: [], fvgs: [] }
+    // Compute when SMC is shown OR liquidity is on (liquidity reuses FVGs/BOS).
+    const smcResult =
+      visFlags.smc || visFlags.liquidity
+        ? computeSMC(data, {
+            structure: true,
+            orderBlocks: true,
+            fvg: true,
+            swingLen: 10,
+            internalLen: 5,
+          })
+        : { structures: [], orderBlocks: [], fvgs: [] }
     smcDataRef.current = smcResult
     if (smcCanvasRef.current && mainElRef.current && refs.mainChart) {
       drawSMCOverlay(
@@ -753,6 +817,35 @@ function BtcChartView() {
         refs.candleSeries,
         smcResult,
         visFlags.smc,
+      )
+    }
+
+    // ── ICT sessions + Judas overlay ──
+    if (ictCanvasRef.current && mainElRef.current && refs.mainChart) {
+      drawICTOverlay(
+        ictCanvasRef.current,
+        mainElRef.current,
+        refs.mainChart,
+        refs.candleSeries,
+        ict,
+        data,
+        visFlags.ict,
+      )
+    }
+
+    // ── ICT Liquidity: trading range, external/internal, sweeps, draw ──
+    const liq = computeLiquidity(data, htfRef.current, smcResult, intervalRef.current)
+    liqDataRef.current = liq
+    setLiquidityResult(liq)
+    if (liqCanvasRef.current && mainElRef.current && refs.mainChart) {
+      drawLiquidityOverlay(
+        liqCanvasRef.current,
+        mainElRef.current,
+        refs.mainChart,
+        refs.candleSeries,
+        liq,
+        data,
+        visFlags.liquidity,
       )
     }
 
@@ -929,6 +1022,8 @@ function BtcChartView() {
         boucher: bScalp,
         lien: lienR,
         luxNwe,
+        ict,
+        liquidity: liq,
       }),
     }))
 
@@ -1187,6 +1282,28 @@ function BtcChartView() {
           visRef.current.smc,
         )
       }
+      if (ictCanvasRef.current && mainElRef.current) {
+        drawICTOverlay(
+          ictCanvasRef.current,
+          mainElRef.current,
+          mainChart,
+          candleSeries,
+          ictDataRef.current,
+          candlesRef.current,
+          visRef.current.ict,
+        )
+      }
+      if (liqCanvasRef.current && mainElRef.current) {
+        drawLiquidityOverlay(
+          liqCanvasRef.current,
+          mainElRef.current,
+          mainChart,
+          candleSeries,
+          liqDataRef.current,
+          candlesRef.current,
+          visRef.current.liquidity,
+        )
+      }
       if (boxCanvasRef.current && mainElRef.current) {
         drawBoxFlipOverlay(
           boxCanvasRef.current,
@@ -1299,6 +1416,38 @@ function BtcChartView() {
           candlesRef.current,
           boxFlipRef.current,
           visRef.current.boxFlip,
+        )
+      }
+      if (smcCanvasRef.current) {
+        drawSMCOverlay(
+          smcCanvasRef.current,
+          mainElRef.current,
+          mainChart,
+          candleSeries,
+          smcDataRef.current,
+          visRef.current.smc,
+        )
+      }
+      if (ictCanvasRef.current) {
+        drawICTOverlay(
+          ictCanvasRef.current,
+          mainElRef.current,
+          mainChart,
+          candleSeries,
+          ictDataRef.current,
+          candlesRef.current,
+          visRef.current.ict,
+        )
+      }
+      if (liqCanvasRef.current) {
+        drawLiquidityOverlay(
+          liqCanvasRef.current,
+          mainElRef.current,
+          mainChart,
+          candleSeries,
+          liqDataRef.current,
+          candlesRef.current,
+          visRef.current.liquidity,
         )
       }
     }
@@ -1476,13 +1625,29 @@ function BtcChartView() {
     let cancelled = false
 
     const closeWs = () => {
-      if (wsRef.current) {
+      const ws = wsRef.current
+      if (!ws) return
+      wsRef.current = null
+      // Detach handlers so late/queued events don't fire after teardown.
+      ws.onmessage = null
+      ws.onerror = null
+      ws.onclose = null
+      if (ws.readyState === WebSocket.CONNECTING) {
+        // Closing a socket mid-handshake logs a "closed before established"
+        // warning — defer the close until it opens instead.
+        ws.onopen = () => {
+          try {
+            ws.close()
+          } catch {
+            /* noop */
+          }
+        }
+      } else {
         try {
-          wsRef.current.close()
+          ws.close()
         } catch {
           /* noop */
         }
-        wsRef.current = null
       }
     }
 
@@ -1759,9 +1924,19 @@ function BtcChartView() {
       }
       fitNextRef.current = true
       renderData(data.candles)
-      const savedZoom = loadConfig().zoom
-      if (savedZoom && chartRefs.current?.mainChart) {
-        chartRefs.current.mainChart.timeScale().setVisibleLogicalRange(savedZoom)
+      // On a symbol/interval switch, snap to the latest candle instead of
+      // restoring the saved zoom (that range maps to the old dataset and
+      // would leave the chart parked away from the right edge).
+      const viewKey = `${symbol}:${interval}`
+      const isViewSwitch = lastViewKeyRef.current !== '' && lastViewKeyRef.current !== viewKey
+      lastViewKeyRef.current = viewKey
+      if (isViewSwitch) {
+        chartRefs.current?.mainChart.timeScale().scrollToRealTime()
+      } else {
+        const savedZoom = loadConfig().zoom
+        if (savedZoom && chartRefs.current?.mainChart) {
+          chartRefs.current.mainChart.timeScale().setVisibleLogicalRange(savedZoom)
+        }
       }
       connectWs(data.usedSpot)
       setLoading(false)
@@ -2074,6 +2249,8 @@ function BtcChartView() {
         <div className="btc-chart__col">
           <div className="btc-chart__legend" ref={legendRef} />
           <canvas className="btc-chart__of-canvas" ref={ofCanvasRef} />
+          <canvas className="btc-chart__ict-canvas" ref={ictCanvasRef} />
+          <canvas className="btc-chart__liq-canvas" ref={liqCanvasRef} />
           <canvas className="btc-chart__smc-canvas" ref={smcCanvasRef} />
           <canvas className="btc-chart__box-canvas" ref={boxCanvasRef} />
           <div className="btc-chart__main" ref={mainElRef} />
@@ -2194,6 +2371,8 @@ function BtcChartView() {
           {/* Always visible */}
           <SignalPanel ml={sidebar.ml} />
           <TradeSetupPanel setup={sidebar.tradeSetup} />
+          <SessionsPanel ict={ictResult} />
+          <LiquidityPanel liquidity={liquidityResult} />
           <FundingNwePanel
             funding={funding}
             nwe={luxNweResult}

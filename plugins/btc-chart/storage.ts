@@ -22,6 +22,8 @@ export interface VisFlags {
   reversal: boolean
   whale: boolean
   luxNwe: boolean
+  ict: boolean
+  liquidity: boolean
 }
 
 export interface NadarayaConfig {
@@ -89,6 +91,8 @@ export const DEFAULT_CONFIG: ChartConfig = {
     reversal: false,
     whale: false,
     luxNwe: false,
+    ict: true,
+    liquidity: true,
   },
   zoom: null,
   alerts: [],

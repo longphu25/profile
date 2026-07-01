@@ -4,14 +4,18 @@ import type { Candle, NWE, MLResult, TradeSetup } from './types'
 import type { BoucherResult } from './boucher-scalping'
 import type { LienResult } from './lien-reversal'
 import type { NadarayaWatsonResult } from './nadaraya-watson'
+import type { ICTResult } from './ict-sessions'
+import type { LiquidityResult } from './liquidity'
 
 export type { TradeSetup }
 
-/** Extra signals from Boucher + Lien + Lux NWE for enhanced confluence. */
+/** Extra signals from Boucher + Lien + Lux NWE + ICT + Liquidity for confluence. */
 export interface TradeSetupExtra {
   boucher?: BoucherResult
   lien?: LienResult
   luxNwe?: NadarayaWatsonResult
+  ict?: ICTResult
+  liquidity?: LiquidityResult
 }
 
 /**
@@ -178,6 +182,83 @@ export function calcTradeSetup(
       } else if (price < luxMid * 0.998) {
         reasons.push('Below Lux NWE mid (bearish bias)')
       }
+    }
+  }
+
+  // ── ICT Judas Swing + Killzone signals ──
+  if (extra?.ict) {
+    const ict = extra.ict
+    // Recent Judas swing (within last 3 bars) — a stop-hunt reversal.
+    const recentJudas = ict.judas.filter((s) => s.index >= Math.max(0, i - 3) && s.index <= i)
+    const lastJudas = recentJudas[recentJudas.length - 1]
+    if (lastJudas) {
+      if (lastJudas.type === 'bullish') {
+        bull++
+        reasons.push('Judas Swing Long (sweep Asia low)')
+        if (lastJudas.volConfirm) {
+          bull++
+          reasons.push('VOL confirms sweep')
+        }
+      } else {
+        bear++
+        reasons.push('Judas Swing Short (sweep Asia high)')
+        if (lastJudas.volConfirm) {
+          bear++
+          reasons.push('VOL confirms sweep')
+        }
+      }
+    }
+    // Trading inside an active killzone raises conviction (no direction change).
+    const activeKz = ict.killzones.find((k) => k.active)
+    if (activeKz) {
+      reasons.push(`In ${activeKz.name === 'london' ? 'London' : 'NY'} Killzone`)
+    }
+    // Overextended day: warn when >85% of ADR is spent (mean-reversion risk).
+    if (ict.adrPct > 85) {
+      reasons.push(`ADR ${ict.adrPct.toFixed(0)}% spent (extended)`)
+    }
+  }
+
+  // ── ICT Liquidity: external sweeps + premium/discount + draw target ──
+  if (extra?.liquidity) {
+    const liq = extra.liquidity
+    // A liquidity sweep of an external edge within the last ~3 bars is the
+    // strongest smart-money entry signal — strongest when inside a killzone.
+    const recentSweep = liq.sweeps.filter((s) => s.index >= Math.max(0, i - 3) && s.index <= i)
+    const lastSweep = recentSweep[recentSweep.length - 1]
+    if (lastSweep) {
+      if (lastSweep.type === 'bullish') {
+        bull++
+        reasons.push('Liquidity Sweep Long (external low)')
+        if (lastSweep.inKillzone) {
+          bull++
+          reasons.push('Sweep in London/NY Killzone')
+        }
+      } else {
+        bear++
+        reasons.push('Liquidity Sweep Short (external high)')
+        if (lastSweep.inKillzone) {
+          bear++
+          reasons.push('Sweep in London/NY Killzone')
+        }
+      }
+    }
+    // Premium/discount bias: buying discount, selling premium (ICT rule).
+    if (liq.range) {
+      const price = c.close
+      const hasBullFvg = liq.levels.some((l) => l.kind === 'fvg' && l.price > price)
+      const hasBearFvg = liq.levels.some((l) => l.kind === 'fvg' && l.price < price)
+      if (price < liq.range.equilibrium && hasBullFvg) {
+        bull++
+        reasons.push('Discount + bullish FVG target')
+      } else if (price > liq.range.equilibrium && hasBearFvg) {
+        bear++
+        reasons.push('Premium + bearish FVG target')
+      }
+    }
+    // Directional draw (context, no vote): where liquidity is being pulled.
+    if (liq.nextTarget) {
+      reasons.push(`Draw → ${liq.nextTarget.label}`)
     }
   }
 

@@ -125,46 +125,53 @@ export function statsFromTicker(t: TickerData): StatsState {
 /** Average funding rate across the venues that list the symbol. */
 export async function fetchFunding(symbol: string, info: SymbolEntry): Promise<FundingState> {
   const results: { name: string; rate: number }[] = []
+
+  const venues: Promise<void>[] = []
+
   if (info.mexcSymbol) {
-    try {
+    venues.push(
+      (async () => {
+        const d = await (
+          await fetch(`/api/mexc/api/v1/contract/ticker?symbol=${info.mexcSymbol}`)
+        ).json()
+        if (d.data?.fundingRate) results.push({ name: 'MEXC', rate: +d.data.fundingRate * 100 })
+      })(),
+    )
+  }
+  venues.push(
+    (async () => {
       const d = await (
-        await fetch(`/api/mexc/api/v1/contract/ticker?symbol=${info.mexcSymbol}`)
+        await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`)
       ).json()
-      if (d.data?.fundingRate) results.push({ name: 'MEXC', rate: +d.data.fundingRate * 100 })
-    } catch {
-      /* noop */
-    }
-  }
-  try {
-    const d = await (
-      await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`)
-    ).json()
-    if (d.lastFundingRate) results.push({ name: 'Binance', rate: +d.lastFundingRate * 100 })
-  } catch {
-    /* noop */
-  }
-  try {
-    const d = await (
-      await fetch(
-        `https://www.okx.com/api/v5/public/funding-rate?instId=${symbol.replace('USDT', '')}-USDT-SWAP`,
-      )
-    ).json()
-    if (d.data?.[0]?.fundingRate) results.push({ name: 'OKX', rate: +d.data[0].fundingRate * 100 })
-  } catch {
-    /* noop */
-  }
-  try {
-    const cat = info.bybitCategory ?? 'linear'
-    const d = await (
-      await fetch(
-        `https://api.bybit.com/v5/market/funding/history?category=${cat}&symbol=${symbol}&limit=1`,
-      )
-    ).json()
-    if (d.result?.list?.[0]?.fundingRate)
-      results.push({ name: 'Bybit', rate: +d.result.list[0].fundingRate * 100 })
-  } catch {
-    /* noop */
-  }
+      if (d.lastFundingRate) results.push({ name: 'Binance', rate: +d.lastFundingRate * 100 })
+    })(),
+  )
+  venues.push(
+    (async () => {
+      const d = await (
+        await fetch(
+          `https://www.okx.com/api/v5/public/funding-rate?instId=${symbol.replace('USDT', '')}-USDT-SWAP`,
+        )
+      ).json()
+      if (d.data?.[0]?.fundingRate)
+        results.push({ name: 'OKX', rate: +d.data[0].fundingRate * 100 })
+    })(),
+  )
+  venues.push(
+    (async () => {
+      const cat = info.bybitCategory ?? 'linear'
+      const d = await (
+        await fetch(
+          `https://api.bybit.com/v5/market/funding/history?category=${cat}&symbol=${symbol}&limit=1`,
+        )
+      ).json()
+      if (d.result?.list?.[0]?.fundingRate)
+        results.push({ name: 'Bybit', rate: +d.result.list[0].fundingRate * 100 })
+    })(),
+  )
+
+  await Promise.allSettled(venues)
+
   if (results.length === 0) throw new Error('no funding data')
   const avg = results.reduce((s, r) => s + r.rate, 0) / results.length
   return {

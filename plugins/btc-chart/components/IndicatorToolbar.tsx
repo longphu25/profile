@@ -9,6 +9,8 @@ const IND_BUTTONS: { key: keyof VisFlags; label: string; sep?: boolean }[] = [
   { key: 'ma200', label: 'MA200' },
   { key: 'dbb', label: 'DBB' },
   { key: 'smc', label: 'SMC' },
+  { key: 'ict', label: 'ICT Sessions' },
+  { key: 'liquidity', label: 'Liquidity' },
   { key: 'boxFlip', label: 'Box Flip' },
   { key: 'of', label: 'Order Flow' },
   { key: 'vwap', label: 'VWAP' },

@@ -5,6 +5,8 @@ import type { BoxFlipResult } from '../box-flip'
 import type { SMCResult } from '../smc-wasm'
 import { fmtP } from './format'
 import type { Candle } from './types'
+import type { ICTResult, SessionName } from './ict-sessions'
+import type { LiquidityResult } from './liquidity'
 
 export function drawSMCOverlay(
   canvas: HTMLCanvasElement,
@@ -220,6 +222,290 @@ export function drawBoxFlipOverlay(
       ctx.strokeRect(labelX, labelY, tw, 18)
       ctx.fillStyle = tagColor
       ctx.fillText(label, labelX + 5, labelY + 4)
+    }
+  }
+
+  ctx.setLineDash([])
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+}
+
+/** Per-session colors: box border/fill + label, tuned to sit quietly behind price. */
+const SESSION_STYLE: Record<
+  SessionName,
+  { border: string; fill: string; label: string; name: string }
+> = {
+  asia: {
+    border: 'rgba(89,132,224,0.55)',
+    fill: 'rgba(89,132,224,0.06)',
+    label: 'rgba(120,160,240,0.85)',
+    name: 'Asia',
+  },
+  london: {
+    border: 'rgba(232,158,74,0.6)',
+    fill: 'rgba(232,158,74,0.06)',
+    label: 'rgba(240,178,110,0.9)',
+    name: 'London',
+  },
+  ny: {
+    border: 'rgba(64,190,168,0.55)',
+    fill: 'rgba(64,190,168,0.06)',
+    label: 'rgba(110,210,190,0.85)',
+    name: 'New York',
+  },
+}
+
+/**
+ * ICT overlay: draws each session as a range-bounded box (top = session high,
+ * bottom = session low) spanning its time window, with a dotted midline and a
+ * compact Range/Avg/Name caption — the "Daily Range" decode. Contained within
+ * the price range so it stays readable instead of shading the whole chart.
+ * Also draws Judas swing markers.
+ */
+export function drawICTOverlay(
+  canvas: HTMLCanvasElement,
+  container: HTMLElement,
+  chart: any,
+  series: any,
+  ict: ICTResult,
+  data: Candle[],
+  show: boolean,
+) {
+  const dpr = window.devicePixelRatio || 1
+  const w = container.clientWidth
+  const h = container.clientHeight
+  canvas.width = w * dpr
+  canvas.height = h * dpr
+  canvas.style.width = w + 'px'
+  canvas.style.height = h + 'px'
+  const ctx = canvas.getContext('2d')!
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  if (!show || !data.length) return
+
+  ctx.scale(dpr, dpr)
+  const ts = chart.timeScale()
+  const toX = (time: number) => {
+    const coord = ts.timeToCoordinate(time)
+    return coord ?? -1
+  }
+  const toY = (price: number) => {
+    const coord = series.priceToCoordinate(price)
+    return coord ?? -1
+  }
+
+  // ── Session range boxes ──
+  for (const s of ict.sessions) {
+    let x1 = toX(s.startTime)
+    let x2 = toX(s.endTime)
+    // Skip fully off-screen bands; clamp partial ones to the viewport.
+    if (x1 < 0 && x2 < 0) continue
+    if (x1 < 0) x1 = 0
+    if (x2 < 0) x2 = w
+    const left = Math.min(x1, x2)
+    const right = Math.max(x1, x2)
+    if (right - left < 2) continue
+
+    const yHigh = toY(s.high)
+    const yLow = toY(s.low)
+    if (yHigh < 0 || yLow < 0) continue
+    const top = Math.min(yHigh, yLow)
+    const boxH = Math.max(2, Math.abs(yLow - yHigh))
+
+    const st = SESSION_STYLE[s.name]
+    // Fill + dashed border box.
+    ctx.fillStyle = st.fill
+    ctx.fillRect(left, top, right - left, boxH)
+    ctx.strokeStyle = st.border
+    ctx.lineWidth = 1
+    ctx.setLineDash([4, 3])
+    ctx.strokeRect(left, top, right - left, boxH)
+
+    // Dotted midline (session average).
+    const mid = (s.high + s.low) / 2
+    const yMid = toY(mid)
+    if (yMid >= 0) {
+      ctx.setLineDash([1, 3])
+      ctx.beginPath()
+      ctx.moveTo(left, yMid)
+      ctx.lineTo(right, yMid)
+      ctx.stroke()
+    }
+    ctx.setLineDash([])
+
+    // Compact caption below the box: Range / Avg / Name.
+    const range = s.high - s.low
+    ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace'
+    ctx.textBaseline = 'top'
+    const capX = left + 4
+    let capY = Math.min(h - 42, top + boxH + 5)
+    ctx.fillStyle = st.label
+    ctx.fillText(`Range: ${fmtP(range)}`, capX, capY)
+    capY += 12
+    ctx.fillText(`Avg: ${fmtP(mid)}`, capX, capY)
+    capY += 12
+    ctx.fillText(st.name, capX, capY)
+  }
+
+  ctx.textBaseline = 'alphabetic'
+
+  // ── Judas swing markers ──
+  for (const j of ict.judas) {
+    const c = data[j.index]
+    if (!c) continue
+    const x = toX(c.time)
+    const y = toY(j.type === 'bearish' ? c.high : c.low)
+    if (x < 0 || y < 0) continue
+    const color = j.type === 'bullish' ? '#34d8a4' : '#ff7a85'
+    ctx.fillStyle = color
+    ctx.strokeStyle = color
+    ctx.lineWidth = 1
+    // Small diamond at the sweep extreme.
+    const off = j.type === 'bearish' ? -8 : 8
+    ctx.beginPath()
+    ctx.moveTo(x, y + off - 4)
+    ctx.lineTo(x + 4, y + off)
+    ctx.lineTo(x, y + off + 4)
+    ctx.lineTo(x - 4, y + off)
+    ctx.closePath()
+    ctx.fill()
+    ctx.font = 'bold 9px monospace'
+    const tag = j.volConfirm ? 'JUDAS✦' : 'JUDAS'
+    const tw = ctx.measureText(tag).width
+    ctx.fillText(tag, x - tw / 2, y + off + (j.type === 'bearish' ? -8 : 16))
+  }
+
+  ctx.setLineDash([])
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+}
+
+// PLACEHOLDER_LIQUIDITY_OVERLAY
+/**
+ * ICT Liquidity overlay: the trading range + equilibrium (premium/discount),
+ * external buy/sell-side liquidity lines (BSL/SSL), sweep markers, and the
+ * current liquidity draw target. Kept intentionally sparse to avoid clutter.
+ */
+export function drawLiquidityOverlay(
+  canvas: HTMLCanvasElement,
+  container: HTMLElement,
+  chart: any,
+  series: any,
+  liq: LiquidityResult,
+  data: Candle[],
+  show: boolean,
+) {
+  const dpr = window.devicePixelRatio || 1
+  const w = container.clientWidth
+  const h = container.clientHeight
+  canvas.width = w * dpr
+  canvas.height = h * dpr
+  canvas.style.width = w + 'px'
+  canvas.style.height = h + 'px'
+  const ctx = canvas.getContext('2d')!
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  if (!show || !data.length || !liq.range) return
+
+  ctx.scale(dpr, dpr)
+  const ts = chart.timeScale()
+  const toY = (price: number) => {
+    const coord = series.priceToCoordinate(price)
+    return coord ?? -1
+  }
+  const toX = (time: number) => {
+    const coord = ts.timeToCoordinate(time)
+    return coord ?? -1
+  }
+
+  const { range } = liq
+  const yHigh = toY(range.high)
+  const yLow = toY(range.low)
+  const yEq = toY(range.equilibrium)
+
+  // ── Premium / discount shading (very faint) ──
+  if (yHigh >= 0 && yEq >= 0) {
+    ctx.fillStyle = 'rgba(255,122,133,0.04)' // premium = above EQ
+    ctx.fillRect(0, Math.min(yHigh, yEq), w, Math.abs(yEq - yHigh))
+  }
+  if (yLow >= 0 && yEq >= 0) {
+    ctx.fillStyle = 'rgba(52,216,164,0.04)' // discount = below EQ
+    ctx.fillRect(0, Math.min(yEq, yLow), w, Math.abs(yLow - yEq))
+  }
+
+  // ── Equilibrium line (dashed) ──
+  if (yEq >= 0) {
+    ctx.strokeStyle = 'rgba(190,255,234,0.4)'
+    ctx.lineWidth = 1
+    ctx.setLineDash([5, 4])
+    ctx.beginPath()
+    ctx.moveTo(0, yEq)
+    ctx.lineTo(w, yEq)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.font = '9px monospace'
+    ctx.fillStyle = 'rgba(190,255,234,0.6)'
+    ctx.fillText('EQ (50%)', 4, yEq - 3)
+  }
+
+  // ── External liquidity lines: BSL (range high) + SSL (range low) ──
+  const externalHigh = liq.levels.find((l) => l.side === 'external' && l.kind === 'swing-high')
+  const externalLow = liq.levels.find((l) => l.side === 'external' && l.kind === 'swing-low')
+  for (const [y, price, label, swept] of [
+    [yHigh, range.high, 'BSL', externalHigh?.swept ?? false],
+    [yLow, range.low, 'SSL', externalLow?.swept ?? false],
+  ] as const) {
+    if (y < 0) continue
+    ctx.strokeStyle = swept ? 'rgba(120,130,150,0.5)' : 'rgba(255,196,107,0.75)'
+    ctx.lineWidth = swept ? 1 : 1.5
+    ctx.setLineDash(swept ? [3, 3] : [])
+    ctx.beginPath()
+    ctx.moveTo(0, y)
+    ctx.lineTo(w, y)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.font = 'bold 9px monospace'
+    ctx.fillStyle = swept ? 'rgba(120,130,150,0.8)' : 'rgba(255,196,107,0.95)'
+    ctx.fillText(`${label}${swept ? ' (swept)' : ''} ${fmtP(price)}`, w - 130, y - 3)
+  }
+
+  // ── Sweep markers (arrow at the pierced extreme) ──
+  for (const s of liq.sweeps) {
+    const c = data[s.index]
+    if (!c) continue
+    const x = toX(c.time)
+    const y = toY(s.side === 'high' ? c.high : c.low)
+    if (x < 0 || y < 0) continue
+    const color = s.type === 'bullish' ? '#34d8a4' : '#ff7a85'
+    ctx.strokeStyle = color
+    ctx.fillStyle = color
+    ctx.lineWidth = 1.5
+    const dir = s.side === 'high' ? -1 : 1 // arrow points away from the wick
+    ctx.beginPath()
+    ctx.moveTo(x, y + dir * 2)
+    ctx.lineTo(x, y + dir * 12)
+    ctx.moveTo(x, y + dir * 2)
+    ctx.lineTo(x - 3, y + dir * 6)
+    ctx.moveTo(x, y + dir * 2)
+    ctx.lineTo(x + 3, y + dir * 6)
+    ctx.stroke()
+    ctx.font = 'bold 8px monospace'
+    const tag = s.inKillzone ? 'SWEEP✦' : 'SWEEP'
+    const tw = ctx.measureText(tag).width
+    ctx.fillText(tag, x - tw / 2, y + dir * 20)
+  }
+
+  // ── Next liquidity draw (dotted line toward the target) ──
+  if (liq.nextTarget) {
+    const y = toY(liq.nextTarget.price)
+    if (y >= 0) {
+      ctx.strokeStyle = 'rgba(111,188,240,0.7)'
+      ctx.lineWidth = 1
+      ctx.setLineDash([1, 3])
+      ctx.beginPath()
+      ctx.moveTo(0, y)
+      ctx.lineTo(w, y)
+      ctx.stroke()
+      ctx.setLineDash([])
+      ctx.font = '9px monospace'
+      ctx.fillStyle = 'rgba(111,188,240,0.9)'
+      ctx.fillText(`→ ${liq.nextTarget.label}`, 4, y - 3)
     }
   }
 
