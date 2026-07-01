@@ -39,6 +39,9 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Build
         run: bun run build
+        env:
+          VITE_TURSO_DB_URL: ${{ secrets.VITE_TURSO_DB_URL }}
+          VITE_TURSO_DB_TOKEN: ${{ secrets.VITE_TURSO_DB_TOKEN }}
       - name: Copy 404 fallback for SPA routing
         run: cp dist/index.html dist/404.html
       - name: Setup Pages
