@@ -7,11 +7,17 @@ Technical and user documentation for the BTC Chart Pro plugin.
 | File | Description |
 |------|-------------|
 | [TECHNICAL.md](./TECHNICAL.md) | Architecture, data flow, file structure, all indicators |
+| [wasm.md](./wasm.md) | WASM compute layer (SMC + NWE), timeframe-agnostic design, multi-TF |
 | [ml-signal.md](./ml-signal.md) | ML weighted-ensemble signal engine (15 features) |
 | [trade-setup.md](./trade-setup.md) | Confluence-based Trade Setup (Entry/SL/TP) |
 | [boucher-scalping.md](./boucher-scalping.md) | Jean-Francois Boucher M1 scalping system |
 | [lien-reversal.md](./lien-reversal.md) | Kathy Lien Double Bollinger Band reversal system |
+| [luxalgo-nwe.md](./luxalgo-nwe.md) | LuxAlgo Nadaraya-Watson envelope |
+| [nwe-strategies.md](./nwe-strategies.md) | NWE trading strategies |
 | [USER-GUIDE.md](./USER-GUIDE.md) | End-user guide (interface, features, mobile) |
+
+Also: ICT Sessions (`lib/ict-sessions.ts`) and ICT Liquidity Hacks
+(`lib/liquidity.ts`) — documented inline in `TECHNICAL.md`.
 
 ## Quick Reference
 
@@ -38,8 +44,16 @@ Boucher Box Speed ──────────────────┤
 Lien Reversal Signal ───────────────┤
 Lien High Confidence ───────────────┤
 Lien Squeeze Breakout ──────────────┤
-Lien Exhaustion ────────────────────┘
+Lien Exhaustion ────────────────────┤
+                                     │
+Lux NWE Cross / band ───────────────┤
+ICT Judas Swing (+ VOL) ────────────┤
+ICT Liquidity Sweep (+ killzone) ───┘
 ```
+
+The **"?"** button on the Trade Setup panel opens an explanation modal that
+translates every one of these reasons into plain language (bull / bear /
+context) and includes a glossary of all indicators. See `TECHNICAL.md`.
 
 ### Supported Exchanges
 
