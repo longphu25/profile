@@ -122,7 +122,14 @@
       "Bash(dig +short @8.8.8.8 crash.suize.io)",
       "Bash(dig +short @8.8.8.8 suize.io)",
       "Bash(nslookup crash.suize.io 8.8.8.8)",
-      "Bash(pkill -f \"bun.*preview\")"
+      "Bash(pkill -f \"bun.*preview\")",
+      "Bash(wc -l *.ts *.tsx *.css)",
+      "Bash(wc -l components/*.tsx components/*.ts)",
+      "Bash(command -v wasm-pack)",
+      "Bash(command -v cargo)",
+      "Bash(command -v rustc)",
+      "Bash(rustup target *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('hooks',{}\\),indent=2\\)\\)\")"
     ]
   }
 }
