@@ -75,6 +75,7 @@ import {
   LIMIT,
   type Interval,
   SYMBOLS,
+  loadSymbols,
   loadCustomSymbols,
   saveCustomSymbols,
   BYBIT_INTERVAL,
@@ -216,9 +217,10 @@ function BtcChartView() {
   const [interval, setInterval_] = useState<Interval>(cfgInit.interval as Interval)
   const [symbol, setSymbol] = useState<SymbolId>((cfgInit.symbol as SymbolId) || 'BTCUSDT')
   const [customSymbols, setCustomSymbols] = useState<SymbolEntry[]>(loadCustomSymbols)
+  const [remoteSymbols, setRemoteSymbols] = useState<readonly SymbolEntry[]>(SYMBOLS)
   const allSymbols: SymbolEntry[] = [
-    ...SYMBOLS,
-    ...customSymbols.filter((c) => !SYMBOLS.some((s) => s.symbol === c.symbol)),
+    ...remoteSymbols,
+    ...customSymbols.filter((c) => !remoteSymbols.some((s) => s.symbol === c.symbol)),
   ]
   const symbolInfo: SymbolEntry = allSymbols.find((s) => s.symbol === symbol) || {
     symbol,
@@ -339,6 +341,12 @@ function BtcChartView() {
     flowWindowMs: 3600000, // 1h window
     maxAlerts: 100,
   })
+
+  // Load coin list from Turso (remote DB). Falls back to hardcoded SYMBOLS
+  // if Turso env vars are not set or the request fails.
+  useEffect(() => {
+    loadSymbols().then((list) => setRemoteSymbols(list))
+  }, [])
 
   // The ticker poll also seeds price/OHLCV, which the WebSocket then updates
   // live between polls.

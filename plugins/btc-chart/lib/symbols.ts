@@ -1,5 +1,7 @@
 // BTC Chart — symbol catalog, custom-symbol persistence, exchange interval maps.
 
+import { fetchCoinsFromTurso } from './turso'
+
 export type Exchange = 'binance' | 'bybit' | 'mexc' | 'okx'
 
 export type SymbolId = string
@@ -90,6 +92,22 @@ export const SYMBOLS = [
     exchange: 'binance' as Exchange,
   },
 ] as const
+
+/**
+ * Load coin list: Turso (remote, toggleable) → fallback to hardcoded SYMBOLS.
+ * Custom symbols from localStorage are always appended.
+ */
+export async function loadSymbols(): Promise<SymbolEntry[]> {
+  try {
+    const remote = await fetchCoinsFromTurso()
+    if (remote && remote.length > 0) {
+      return [...remote, ...loadCustomSymbols()]
+    }
+  } catch (err) {
+    console.warn('[symbols] Turso fetch failed, using hardcoded list:', err)
+  }
+  return [...SYMBOLS, ...loadCustomSymbols()]
+}
 
 export function loadCustomSymbols(): SymbolEntry[] {
   try {
