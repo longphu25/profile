@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test'
-import type { ExchangeMarketAdapter } from '../../functions/shared/btc-chart/adapters/types'
-import { buildMarketSnapshot } from '../../functions/shared/btc-chart/lib/normalize'
-import { MarketSnapshotOrchestrator } from '../../functions/shared/btc-chart/lib/orchestrator'
-import type {
-  ExchangeVenueSnapshot,
-  SymbolRoutingContext,
-} from '../../functions/shared/btc-chart/lib/types'
+import {
+  buildMarketSnapshot,
+  MarketSnapshotOrchestrator,
+  type ExchangeMarketAdapter,
+  type ExchangeVenueSnapshot,
+  type SymbolRoutingContext,
+} from '@profile/market-core'
 
 function mockAdapter(
   venue: ExchangeVenueSnapshot['venue'],

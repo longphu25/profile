@@ -4,7 +4,8 @@
     "includes": [
       "src/**/*.{ts,tsx,js,jsx}",
       "plugins/**/*.{ts,tsx,js,jsx}",
-      "functions/**/*.{ts,tsx,js,jsx}",
+      "packages/**/*.{ts,tsx,js,jsx}",
+      "apps/**/*.{ts,tsx,js,jsx}",
       "tests/**/*.{ts,tsx,js,jsx}",
       "vite.config.ts",
       "commitlint.config.ts",

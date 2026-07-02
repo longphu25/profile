@@ -1,8 +1,12 @@
 {
   "name": "profile",
   "private": true,
-  "version": "0.101.0",
+  "version": "0.101.1",
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -22,9 +26,10 @@
     "codegraph:status": "codegraph status",
     "codegen": "sui-ts-codegen generate",
     "coins:turso": "bun scripts/turso-coins.mjs",
-    "functions:dev": "cd functions && bun run dev",
-    "functions:deploy": "cd functions && bun run deploy",
-    "functions:typecheck": "cd functions && bun run typecheck",
+    "convex:dev": "bun run --filter @profile/convex dev",
+    "convex:deploy": "bun run --filter @profile/convex deploy",
+    "convex:typecheck": "bun run --filter @profile/convex typecheck",
+    "market-core:typecheck": "bun run --filter @profile/market-core typecheck",
     "prepare": "husky",
     "doctor": "bunx react-doctor@latest"
   },
@@ -72,6 +77,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@profile/market-core": "workspace:*",
     "@babel/core": "^7.29.7",
     "@biomejs/biome": "^2.5.0",
     "@commitlint/cli": "^20.5.3",
