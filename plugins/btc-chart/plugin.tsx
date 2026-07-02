@@ -8,6 +8,7 @@ import type { Plugin, HostAPI } from '../../src/plugins/types'
 import { useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './style.css'
+import './stitch-theme.css'
 import {
   loadConfig,
   saveConfig,
@@ -2331,9 +2332,14 @@ function BtcChartView() {
   }
 
   return (
-    <div className={`btc-chart${loading ? '' : ' is-ready'}`} ref={rootRef}>
+    <div className={`btc-chart btc-chart--stitch${loading ? '' : ' is-ready'}`} ref={rootRef}>
       <div className={`btc-chart__loading${loading ? '' : ' is-done'}`} aria-hidden={!loading}>
-        <div className="btc-chart__spinner" />
+        <div className="btc-chart__load-skeleton" aria-hidden>
+          <div className="btc-chart__load-skeleton-bar btc-chart__load-skeleton-bar--wide" />
+          <div className="btc-chart__load-skeleton-bar" />
+          <div className="btc-chart__load-skeleton-bar btc-chart__load-skeleton-bar--short" />
+        </div>
+        <div className="btc-chart__spinner" aria-hidden />
         <span className="btc-chart__loading-text">{loadingText}</span>
       </div>
       {firedToast && (

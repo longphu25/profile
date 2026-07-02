@@ -83,12 +83,52 @@ body::after {
 .btc-page--error {
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 14px;
   color: var(--color-muted);
   font-family: var(--font-ui-mono);
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.btc-page--loading .btc-page__spinner {
+  display: none;
+}
+
+.btc-page__load-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(200px, 72vw);
+}
+
+.btc-page__load-bar {
+  height: 10px;
+  background: linear-gradient(
+    90deg,
+    var(--color-ink-2) 0%,
+    rgba(255, 255, 255, 0.06) 45%,
+    var(--color-ink-2) 90%
+  );
+  background-size: 220% 100%;
+  animation: btc-page-skeleton 1.8s ease-in-out infinite;
+}
+
+.btc-page__load-bar--wide {
+  height: 16px;
+}
+
+.btc-page__load-bar--short {
+  width: 58%;
+}
+
+@keyframes btc-page-skeleton {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
 }
 .btc-page--error {
   color: #f25757;

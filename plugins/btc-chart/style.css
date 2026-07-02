@@ -1,19 +1,9 @@
 /* =====================================================
-   BTC CHART — MERIDIAN TAPE
-   Design direction (frontend-design skill):
-     Editorial financial terminal + vintage ticker tape
-     Warm obsidian OLED, copper-gold meridian accent
-     Bricolage Grotesque display + IBM Plex Mono data
-     Grain atmosphere, staggered reveal, HUD brackets
-
-   Rules:
-   - No emojis as icons
-   - Tight 4/6/8/12px rhythm for density
-   - Tabular numbers, high contrast
-   - Subtle borders > heavy shadows
-   - Fast transitions (120-180ms)
-   - Gold accent for action/live states
-   - Pre-delivery: contrast, focus, hover, reduced-motion
+   BTC CHART — MERIDIAN COCKPIT (stitch-design-taste)
+   Density 8 · Variance 7 · Motion 6
+   Zinc neutrals, single gold accent, divider-first layout
+   Bricolage Grotesque + IBM Plex Mono · no neon glows
+   See stitch-theme.css for cockpit overrides (.btc-chart--stitch)
 ===================================================== */
 
 @import 'tailwindcss';

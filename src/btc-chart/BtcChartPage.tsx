@@ -51,7 +51,12 @@ export function BtcChartPage() {
           <span className="btc-page__brand-name">Meridian</span>
           <span className="btc-page__brand-sub">Chart Terminal</span>
         </div>
-        <div className="btc-page__spinner" />
+        <div className="btc-page__load-skeleton" aria-hidden>
+          <div className="btc-page__load-bar btc-page__load-bar--wide" />
+          <div className="btc-page__load-bar" />
+          <div className="btc-page__load-bar btc-page__load-bar--short" />
+        </div>
+        <div className="btc-page__spinner" aria-hidden />
         <span>Initializing chart engine…</span>
       </div>
     )

@@ -1,25 +1,47 @@
 import { resolve } from 'path'
-import { readdirSync, copyFileSync, mkdirSync, existsSync } from 'fs'
+import { readdirSync, copyFileSync, mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs'
 import { defineConfig, type Plugin as VitePlugin } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 
-/** Copy plugin CSS files into dist so Shadow DOM <link> tags work in production */
+function readPluginCss(pluginsDir: string, name: string): string | null {
+  const stylePath = resolve(pluginsDir, name, 'style.css')
+  if (!existsSync(stylePath)) return null
+  let css = readFileSync(stylePath, 'utf8')
+  const stitchPath = resolve(pluginsDir, name, 'stitch-theme.css')
+  if (existsSync(stitchPath)) {
+    css += `\n${readFileSync(stitchPath, 'utf8')}`
+  }
+  return css
+}
+
+/** Serve + copy plugin CSS (style.css + optional stitch-theme.css) for Shadow DOM */
 function copyPluginAssets(): VitePlugin {
+  const pluginsDir = resolve(__dirname, 'plugins')
+
   return {
     name: 'copy-plugin-assets',
-    apply: 'build',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const match = req.url?.split('?')[0].match(/^\/plugins\/([^/]+)\/style\.css$/)
+        if (!match) return next()
+        const css = readPluginCss(pluginsDir, match[1])
+        if (!css) return next()
+        res.setHeader('Content-Type', 'text/css; charset=utf-8')
+        res.end(css)
+      })
+    },
     closeBundle() {
-      const pluginsDir = resolve(__dirname, 'plugins')
       for (const name of readdirSync(pluginsDir)) {
-        const src = resolve(pluginsDir, name, 'style.css')
+        const css = readPluginCss(pluginsDir, name)
+        if (!css) continue
         try {
           const dest = resolve(__dirname, 'dist/plugins', name)
           mkdirSync(dest, { recursive: true })
-          copyFileSync(src, resolve(dest, 'style.css'))
+          writeFileSync(resolve(dest, 'style.css'), css)
         } catch {
-          // plugin has no style.css — skip
+          // skip
         }
         // Copy WASM pkg if exists
         const pkgDir = resolve(pluginsDir, name, 'pkg')

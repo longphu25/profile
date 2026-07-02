@@ -1,0 +1,501 @@
+/* =====================================================
+   STITCH DESIGN TASTE — Meridian BTC Chart cockpit
+   Density 8 · Variance 7 · Motion 6
+   Single accent (--mint) · Zinc neutrals · Divider-first
+   No neon glows · Mono numbers · transform/opacity motion only
+===================================================== */
+
+.btc-chart--stitch {
+  --stitch-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --stitch-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --surface: #131316;
+  --surface-2: #1a1a1f;
+  --surface-3: #222228;
+  --border: rgba(244, 240, 232, 0.08);
+  --border-strong: rgba(232, 184, 74, 0.22);
+}
+
+/* ── Header: asymmetric 3-zone grid ─────────────────────────────── */
+.btc-chart--stitch .btc-chart__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  min-height: 48px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.btc-chart--stitch .btc-chart__header-left,
+.btc-chart--stitch .btc-chart__header-price,
+.btc-chart--stitch .btc-chart__header-controls {
+  padding: 8px 12px;
+  gap: 10px;
+}
+
+.btc-chart--stitch .btc-chart__header-left {
+  border-right: 1px solid var(--border);
+}
+
+.btc-chart--stitch .btc-chart__header-price {
+  justify-content: flex-start;
+  flex: unset;
+  border-right: 1px solid var(--border);
+  border-left: none;
+}
+
+.btc-chart--stitch .btc-chart__header-controls {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-content: center;
+}
+
+.btc-chart--stitch .btc-chart__pair {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: -0.02em;
+}
+
+.btc-chart--stitch .btc-chart__price-cur {
+  font-size: clamp(1.1rem, 2.4vw, 1.35rem);
+  font-weight: 800;
+}
+
+.btc-chart--stitch .btc-chart__ohlcv {
+  border-left: none;
+  padding-left: 0;
+  font-size: 10px;
+}
+
+.btc-chart--stitch .btc-chart__ohlcv span span {
+  font-weight: 700;
+}
+
+.btc-chart--stitch .btc-chart__iv-btn.is-active,
+.btc-chart--stitch .btc-chart__tools-trigger.is-on {
+  box-shadow: none;
+  border-bottom: 2px solid var(--mint);
+  border-radius: 0;
+  background: rgba(232, 184, 74, 0.06);
+}
+
+.btc-chart--stitch .btc-chart__live-dot {
+  box-shadow: none;
+}
+
+.btc-chart--stitch .btc-chart__symbol-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238a8f98'/%3E%3C/svg%3E");
+}
+
+.btc-chart--stitch .btc-chart__tools-trigger,
+.btc-chart--stitch .btc-chart__iv-btn,
+.btc-chart--stitch .btc-chart__tools-close,
+.btc-chart--stitch .btc-chart__tools-action,
+.btc-chart--stitch .ind-panel-group__btn,
+.btc-chart--stitch .ind-panel-foot__btn,
+.btc-chart--stitch .sb-trade-ghost-btn,
+.btc-chart--stitch .btc-chart__osc-tab {
+  transition:
+    background 0.18s var(--stitch-spring),
+    color 0.18s var(--stitch-spring),
+    border-color 0.18s var(--stitch-spring),
+    transform 0.18s var(--stitch-spring);
+}
+
+.btc-chart--stitch .btc-chart__tools-trigger:active,
+.btc-chart--stitch .btc-chart__iv-btn:active,
+.btc-chart--stitch .btc-chart__tools-action:active,
+.btc-chart--stitch .ind-panel-foot__btn:active {
+  transform: translateY(1px);
+}
+
+/* ── Body + chart stage ─────────────────────────────────────────── */
+.btc-chart--stitch .btc-chart__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 276px;
+  background: var(--bg);
+}
+
+.btc-chart--stitch .btc-chart__col {
+  border-right: 1px solid var(--border);
+}
+
+.btc-chart--stitch .btc-chart__legend {
+  border-radius: 0;
+  border: 1px solid var(--border);
+  background: rgba(12, 12, 14, 0.88);
+  backdrop-filter: none;
+}
+
+.btc-chart--stitch .btc-chart__osc-bar {
+  border-top: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.btc-chart--stitch .btc-chart__osc-hint b,
+.btc-chart--stitch .btc-chart__osc-info,
+.btc-chart--stitch .btc-chart__osc-desc {
+  color: var(--muted);
+}
+
+.btc-chart--stitch .btc-chart__osc-hint b.osc-os,
+.btc-chart--stitch .btc-chart__osc-hint b.osc-strong {
+  color: var(--up);
+}
+
+.btc-chart--stitch .btc-chart__osc-hint b.osc-ob {
+  color: var(--dn);
+}
+
+.btc-chart--stitch .btc-chart__osc-tab.is-on {
+  color: var(--ink);
+  border-radius: 0;
+  border-bottom: 2px solid var(--mint);
+}
+
+/* ── Tools panel: flat divider drawer ───────────────────────────── */
+.btc-chart--stitch .btc-chart__tools-panel {
+  background: var(--surface);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: none;
+}
+
+.btc-chart--stitch .btc-chart__tools-head {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.btc-chart--stitch .btc-chart__tools-section {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.btc-chart--stitch .btc-chart__tools-section:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.btc-chart--stitch .btc-chart__tools-section--nwe {
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  padding: 12px 0 0;
+  background: transparent;
+}
+
+.btc-chart--stitch .ind-panel-group {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.btc-chart--stitch .ind-panel-chip {
+  border-radius: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.btc-chart--stitch .ind-panel-chip:hover:not(:disabled) {
+  transform: none;
+  background: var(--surface-3);
+}
+
+.btc-chart--stitch .ind-panel-chip.is-on {
+  box-shadow: none;
+  border-color: var(--border-strong);
+  border-left: 2px solid var(--mint);
+}
+
+.btc-chart--stitch .ind-panel-chip.is-on .ind-panel-chip__dot {
+  box-shadow: none;
+}
+
+.btc-chart--stitch .btc-chart__tools-grid {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.btc-chart--stitch .btc-chart__tools-action {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+  justify-content: flex-start;
+  padding: 10px 12px;
+  min-height: 44px;
+}
+
+.btc-chart--stitch .btc-chart__tools-foot {
+  background: var(--surface);
+}
+
+/* ── Sidebar: cockpit rail ──────────────────────────────────────── */
+.btc-chart--stitch .btc-chart__sidebar {
+  width: 276px;
+  background: var(--surface);
+  border-left: 1px solid var(--border-strong);
+  padding: 8px 10px;
+  gap: 0;
+}
+
+.btc-chart--stitch .sb-rail + .sb-rail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-strong);
+}
+
+.btc-chart--stitch .sb-rail__stack {
+  gap: 0;
+}
+
+.btc-chart--stitch .sb-block {
+  border: none;
+  border-radius: 0;
+  border-top: 1px solid var(--border);
+  background: transparent;
+  --sb-accent: var(--mint);
+}
+
+.btc-chart--stitch .sb-rail__stack > .sb-block:first-child {
+  border-top: none;
+}
+
+.btc-chart--stitch .sb-block--signal,
+.btc-chart--stitch .sb-block--trade,
+.btc-chart--stitch .sb-block--trade.sb-block--long,
+.btc-chart--stitch .sb-block--trade.sb-block--short,
+.btc-chart--stitch .sb-block--context,
+.btc-chart--stitch .sb-block--market,
+.btc-chart--stitch .sb-block--strategy,
+.btc-chart--stitch .sb-block--data {
+  background: transparent;
+}
+
+.btc-chart--stitch .sb-block--trade.sb-block--long {
+  --sb-accent: var(--up);
+}
+
+.btc-chart--stitch .sb-block--trade.sb-block--short {
+  --sb-accent: var(--dn);
+}
+
+.btc-chart--stitch .sb-block::before {
+  width: 2px;
+  opacity: 0.85;
+}
+
+.btc-chart--stitch .sb-funding-hero,
+.btc-chart--stitch .sb-trade-split,
+.btc-chart--stitch .sb-hero {
+  background: transparent;
+}
+
+.btc-chart--stitch .sb-funding-hero__rate.up,
+.btc-chart--stitch .sb-funding-hero__rate.dn,
+.btc-chart--stitch .sb-trade-split__dir.up,
+.btc-chart--stitch .sb-trade-split__dir.dn {
+  text-shadow: none;
+}
+
+.btc-chart--stitch .btc-chart__sidebar .card,
+.btc-chart--stitch .btc-chart__panel {
+  border: none;
+  border-radius: 0;
+  border-top: 1px solid var(--border);
+  background: transparent;
+  box-shadow: none;
+  padding: 10px 0;
+}
+
+.btc-chart--stitch .btc-chart__panel::before,
+.btc-chart--stitch .btc-chart__panel::after {
+  display: none;
+}
+
+/* Accordion: divider rows */
+.btc-chart--stitch .btc-chart__accordion {
+  border: none;
+  border-radius: 0;
+  border-top: 1px solid var(--border);
+  background: transparent;
+  opacity: 1;
+}
+
+.btc-chart--stitch .btc-chart__accordion.is-open {
+  border-color: var(--border);
+}
+
+.btc-chart--stitch .btc-chart__accordion-hdr {
+  min-height: 44px;
+  padding: 10px 4px 10px 0;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}
+
+.btc-chart--stitch .btc-chart__accordion-body {
+  padding: 8px 0 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Status + toast ─────────────────────────────────────────────── */
+.btc-chart--stitch .btc-chart__status {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  padding: 6px 12px;
+  min-height: 28px;
+  background: var(--surface);
+  border-top: 1px solid var(--border-strong);
+  font-size: 10px;
+}
+
+.btc-chart--stitch .btc-chart__status-tag {
+  margin-left: 0;
+}
+
+.btc-chart--stitch .btc-chart__toast {
+  border-radius: 0;
+  border: 1px solid var(--border-strong);
+  border-left: 2px solid var(--mint);
+  box-shadow: none;
+  background: var(--surface-2);
+}
+
+/* ── Loading: skeleton (no spinner) ─────────────────────────────── */
+.btc-chart--stitch .btc-chart__load-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(220px, 70vw);
+}
+
+.btc-chart--stitch .btc-chart__load-skeleton-bar {
+  height: 10px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-3) 0%,
+    rgba(255, 255, 255, 0.07) 45%,
+    var(--surface-3) 90%
+  );
+  background-size: 220% 100%;
+  animation: stitch-skeleton 1.8s ease-in-out infinite;
+}
+
+.btc-chart--stitch .btc-chart__load-skeleton-bar--wide {
+  height: 18px;
+  width: 100%;
+}
+
+.btc-chart--stitch .btc-chart__load-skeleton-bar--short {
+  width: 62%;
+}
+
+.btc-chart--stitch .btc-chart__spinner {
+  display: none;
+}
+
+@keyframes stitch-skeleton {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+/* ── Reveal: spring stagger ───────────────────────────────────────── */
+.btc-chart--stitch.is-ready .btc-chart__header {
+  animation: stitch-reveal 0.5s var(--stitch-spring) both;
+}
+
+.btc-chart--stitch.is-ready .btc-chart__body {
+  animation: stitch-reveal 0.55s var(--stitch-spring) 0.06s both;
+}
+
+.btc-chart--stitch.is-ready .btc-chart__status {
+  animation: stitch-reveal 0.45s var(--stitch-spring) 0.12s both;
+}
+
+@keyframes stitch-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Responsive: single column collapse ─────────────────────────── */
+@media (max-width: 1180px) {
+  .btc-chart--stitch .btc-chart__body {
+    grid-template-columns: minmax(0, 1fr) 240px;
+  }
+
+  .btc-chart--stitch .btc-chart__sidebar {
+    width: 240px;
+  }
+
+  .btc-chart--stitch .btc-chart__header {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .btc-chart--stitch .btc-chart__header-controls {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border);
+    border-right: none;
+    justify-content: space-between;
+  }
+
+  .btc-chart--stitch .btc-chart__header-price {
+    border-right: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .btc-chart--stitch .btc-chart__body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .btc-chart--stitch .btc-chart__sidebar {
+    width: 100%;
+    max-height: 42dvh;
+    border-left: none;
+    border-top: 1px solid var(--border-strong);
+  }
+
+  .btc-chart--stitch .btc-chart__header {
+    grid-template-columns: 1fr;
+  }
+
+  .btc-chart--stitch .btc-chart__header-left,
+  .btc-chart--stitch .btc-chart__header-price {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .btc-chart--stitch .btc-chart__ohlcv {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btc-chart--stitch .btc-chart__load-skeleton-bar,
+  .btc-chart--stitch .btc-chart__live-dot,
+  .btc-chart--stitch .sb-trade-split__meter-fill,
+  .btc-chart--stitch .sb-trade-split__price,
+  .btc-chart--stitch .sb-trade-map__pin.is-active {
+    animation: none;
+  }
+
+  .btc-chart--stitch.is-ready .btc-chart__header,
+  .btc-chart--stitch.is-ready .btc-chart__body,
+  .btc-chart--stitch.is-ready .btc-chart__status {
+    animation: none;
+  }
+}
