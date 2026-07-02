@@ -44,8 +44,15 @@ export function BtcChartPage() {
   if (!Component) {
     return (
       <div className="btc-page btc-page--loading">
+        <div className="btc-page__brand">
+          <div className="btc-page__brand-mark" aria-hidden>
+            M
+          </div>
+          <span className="btc-page__brand-name">Meridian</span>
+          <span className="btc-page__brand-sub">Chart Terminal</span>
+        </div>
         <div className="btc-page__spinner" />
-        <span>Loading BTC Chart…</span>
+        <span>Initializing chart engine…</span>
       </div>
     )
   }

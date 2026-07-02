@@ -254,11 +254,27 @@ const SESSION_STYLE: Record<
   },
 }
 
+interface LabelRect {
+  l: number
+  t: number
+  r: number
+  b: number
+}
+
+function labelOverlaps(a: LabelRect, b: LabelRect, pad = 3): boolean {
+  return a.l < b.r + pad && a.r > b.l - pad && a.t < b.b + pad && a.b > b.t - pad
+}
+
+const ICT_LABEL_MIN_W = 52
+const ICT_LABEL_MIN_H = 16
+const ICT_LABEL_MAX = 14
+const ICT_LABEL_LINE = 13
+
 /**
  * ICT overlay: draws each session as a range-bounded box (top = session high,
  * bottom = session low) spanning its time window, with a dotted midline and a
- * compact Range/Avg/Name caption — the "Daily Range" decode. Contained within
- * the price range so it stays readable instead of shading the whole chart.
+ * compact single-line caption inside the box when there is room. Labels use
+ * collision avoidance so captions do not stack on top of each other.
  * Also draws Judas swing markers.
  */
 export function drawICTOverlay(
@@ -292,11 +308,21 @@ export function drawICTOverlay(
     return coord ?? -1
   }
 
-  // ── Session range boxes ──
+  type SessionDraw = {
+    s: (typeof ict.sessions)[number]
+    left: number
+    right: number
+    top: number
+    boxH: number
+    mid: number
+    area: number
+  }
+
+  const sessionDraws: SessionDraw[] = []
+
   for (const s of ict.sessions) {
     let x1 = toX(s.startTime)
     let x2 = toX(s.endTime)
-    // Skip fully off-screen bands; clamp partial ones to the viewport.
     if (x1 < 0 && x2 < 0) continue
     if (x1 < 0) x1 = 0
     if (x2 < 0) x2 = w
@@ -309,40 +335,79 @@ export function drawICTOverlay(
     if (yHigh < 0 || yLow < 0) continue
     const top = Math.min(yHigh, yLow)
     const boxH = Math.max(2, Math.abs(yLow - yHigh))
+    const mid = (s.high + s.low) / 2
 
-    const st = SESSION_STYLE[s.name]
-    // Fill + dashed border box.
+    sessionDraws.push({ s, left, right, top, boxH, mid, area: (right - left) * boxH })
+  }
+
+  // Draw boxes first (all visible sessions).
+  for (const d of sessionDraws) {
+    const st = SESSION_STYLE[d.s.name]
+    const boxW = d.right - d.left
+
     ctx.fillStyle = st.fill
-    ctx.fillRect(left, top, right - left, boxH)
+    ctx.fillRect(d.left, d.top, boxW, d.boxH)
     ctx.strokeStyle = st.border
     ctx.lineWidth = 1
     ctx.setLineDash([4, 3])
-    ctx.strokeRect(left, top, right - left, boxH)
+    ctx.strokeRect(d.left, d.top, boxW, d.boxH)
 
-    // Dotted midline (session average).
-    const mid = (s.high + s.low) / 2
-    const yMid = toY(mid)
+    const yMid = toY(d.mid)
     if (yMid >= 0) {
       ctx.setLineDash([1, 3])
       ctx.beginPath()
-      ctx.moveTo(left, yMid)
-      ctx.lineTo(right, yMid)
+      ctx.moveTo(d.left, yMid)
+      ctx.lineTo(d.right, yMid)
       ctx.stroke()
     }
     ctx.setLineDash([])
+  }
 
-    // Compact caption below the box: Range / Avg / Name.
-    const range = s.high - s.low
-    ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace'
-    ctx.textBaseline = 'top'
-    const capX = left + 4
-    let capY = Math.min(h - 42, top + boxH + 5)
+  // Labels: widest sessions first, collision-aware, capped count.
+  const labelRects: LabelRect[] = []
+  const labelCandidates = [...sessionDraws]
+    .filter((d) => d.right - d.left >= ICT_LABEL_MIN_W && d.boxH >= ICT_LABEL_MIN_H)
+    .sort((a, b) => b.area - a.area)
+    .slice(0, ICT_LABEL_MAX * 2)
+
+  ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, monospace'
+  ctx.textBaseline = 'top'
+
+  let labelsDrawn = 0
+  for (const d of labelCandidates) {
+    if (labelsDrawn >= ICT_LABEL_MAX) break
+
+    const st = SESSION_STYLE[d.s.name]
+    const range = d.s.high - d.s.low
+    const text = `${st.name} · ${fmtP(range)}`
+    const tw = ctx.measureText(text).width + 8
+    const boxW = d.right - d.left
+
+    if (tw > boxW - 6) continue
+
+    let lx = d.left + 4
+    let ly = d.top + 4
+
+    const fitsInBox = (): boolean => {
+      if (ly + ICT_LABEL_LINE > d.top + d.boxH - 2) return false
+      const rect: LabelRect = { l: lx, t: ly, r: lx + tw, b: ly + ICT_LABEL_LINE }
+      if (rect.r > d.right - 2) return false
+      return !labelRects.some((r) => labelOverlaps(rect, r))
+    }
+
+    while (!fitsInBox()) {
+      ly += ICT_LABEL_LINE + 2
+      if (ly > d.top + d.boxH - ICT_LABEL_LINE) break
+    }
+    if (!fitsInBox()) continue
+
+    const rect: LabelRect = { l: lx, t: ly, r: lx + tw, b: ly + ICT_LABEL_LINE }
+    ctx.fillStyle = 'rgba(8,10,13,0.78)'
+    ctx.fillRect(rect.l, rect.t, tw, ICT_LABEL_LINE)
     ctx.fillStyle = st.label
-    ctx.fillText(`Range: ${fmtP(range)}`, capX, capY)
-    capY += 12
-    ctx.fillText(`Avg: ${fmtP(mid)}`, capX, capY)
-    capY += 12
-    ctx.fillText(st.name, capX, capY)
+    ctx.fillText(text, lx + 4, ly + 1)
+    labelRects.push(rect)
+    labelsDrawn++
   }
 
   ctx.textBaseline = 'alphabetic'
@@ -447,6 +512,7 @@ export function drawLiquidityOverlay(
   // ── External liquidity lines: BSL (range high) + SSL (range low) ──
   const externalHigh = liq.levels.find((l) => l.side === 'external' && l.kind === 'swing-high')
   const externalLow = liq.levels.find((l) => l.side === 'external' && l.kind === 'swing-low')
+  const liqLabels: LabelRect[] = []
   for (const [y, price, label, swept] of [
     [yHigh, range.high, 'BSL', externalHigh?.swept ?? false],
     [yLow, range.low, 'SSL', externalLow?.swept ?? false],
@@ -462,7 +528,16 @@ export function drawLiquidityOverlay(
     ctx.setLineDash([])
     ctx.font = 'bold 9px monospace'
     ctx.fillStyle = swept ? 'rgba(120,130,150,0.8)' : 'rgba(255,196,107,0.95)'
-    ctx.fillText(`${label}${swept ? ' (swept)' : ''} ${fmtP(price)}`, w - 130, y - 3)
+    const text = `${label}${swept ? ' (swept)' : ''} ${fmtP(price)}`
+    const tw = ctx.measureText(text).width
+    let lx = w - tw - 8
+    let ly = y - 11
+    const rect = (): LabelRect => ({ l: lx, t: ly, r: lx + tw, b: ly + 11 })
+    while (liqLabels.some((r) => labelOverlaps(rect(), r)) && ly > 12) {
+      ly -= 12
+    }
+    ctx.fillText(text, lx, ly)
+    liqLabels.push(rect())
   }
 
   // ── Sweep markers (arrow at the pierced extreme) ──

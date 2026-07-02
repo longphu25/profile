@@ -40,6 +40,11 @@ function copyPluginAssets(): VitePlugin {
 // https://vite.dev/config/
 export default defineConfig({
   base: '/',
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+    },
+  },
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] }),

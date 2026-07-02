@@ -10,6 +10,8 @@ export interface VisFlags {
   ma200: boolean
   of: boolean
   vp: boolean
+  /** Volume intensity strip beside the profile (requires Vol Profile). */
+  heatmap: boolean
   rsi: boolean
   vol: boolean
   smc: boolean
@@ -30,6 +32,8 @@ export interface NadarayaConfig {
   bandwidth: number
   multiplier: number
   repaint: boolean
+  /** Computation window size (last N bars). Lower = faster, slightly less historical context. Default 250. */
+  maxBarsBack?: number
 }
 
 export interface ZoomState {
@@ -79,6 +83,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
     ma200: false,
     of: false,
     vp: false,
+    heatmap: true,
     rsi: false,
     vol: false,
     smc: false,
@@ -103,7 +108,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
   oscView: 'rsi',
   oscHeight: 170,
   spikeMult: 2.5,
-  luxNwe: { bandwidth: 8, multiplier: 3, repaint: true },
+  luxNwe: { bandwidth: 8, multiplier: 3, repaint: false, maxBarsBack: 250 },
 }
 
 /** Read full config from localStorage, with safe fallback. */
@@ -129,6 +134,7 @@ export function mergeConfig(p: Partial<ChartConfig>): ChartConfig {
     sound: { ...DEFAULT_CONFIG.sound, ...(p.sound ?? {}) },
     alerts: Array.isArray(p.alerts) ? p.alerts : [],
     zoom: p.zoom ?? null,
+    luxNwe: p.luxNwe ? { ...DEFAULT_CONFIG.luxNwe!, ...p.luxNwe } : DEFAULT_CONFIG.luxNwe,
   }
 }
 

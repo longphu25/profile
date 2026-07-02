@@ -1,5 +1,8 @@
 // BTC Chart — Volume-spike threshold control (toggle + 2x–3x slider).
 
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+
 export interface VolumeSpikePanelProps {
   enabled: boolean
   onToggle: () => void
@@ -14,21 +17,22 @@ export function VolumeSpikePanel({
   onChange,
 }: VolumeSpikePanelProps) {
   return (
-    <div className="btc-chart__panel">
-      <div className="btc-chart__panel-header">
-        <div className="btc-chart__panel-title">Volume spike</div>
-        <button
-          type="button"
-          className={`btc-chart__ind-btn${enabled ? ' is-on' : ''}`}
+    <Card className="p-3">
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-sm font-medium">Volume spike</div>
+        <Button
+          variant={enabled ? 'default' : 'outline'}
+          size="sm"
+          className="h-6 px-2 text-[10px]"
           onClick={onToggle}
         >
           {enabled ? 'On' : 'Off'}
-        </button>
+        </Button>
       </div>
-      <div className="btc-chart__spike-row">
+      <div className="flex items-center gap-2 mt-1">
         <input
           type="range"
-          className="btc-chart__spike-slider"
+          className="flex-1 accent-[var(--mint)]"
           min={2}
           max={3}
           step={0.1}
@@ -37,11 +41,13 @@ export function VolumeSpikePanel({
           onChange={(e) => onChange(Math.round(parseFloat(e.target.value) * 10) / 10)}
           aria-label="Volume spike threshold"
         />
-        <span className="btc-chart__spike-val">{spikeMult.toFixed(1)}×</span>
+        <span className="font-mono text-xs w-8 tabular-nums text-right">
+          {spikeMult.toFixed(1)}×
+        </span>
       </div>
-      <div className="btc-chart__spike-hint">
-        Đánh dấu + cảnh báo khi volume {'>'} {spikeMult.toFixed(1)}× trung bình 20 nến
+      <div className="mt-1 text-[10px] text-[var(--muted)]">
+        Mark + alert when volume &gt; {spikeMult.toFixed(1)}× avg (20 bars)
       </div>
-    </div>
+    </Card>
   )
 }

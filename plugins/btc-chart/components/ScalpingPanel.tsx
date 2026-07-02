@@ -1,7 +1,17 @@
-// BTC Chart — Boucher M1 Scalping Panel (collapsible sidebar widget)
+// BTC Chart — Boucher M1 Scalping Panel.
 
 import { useState } from 'react'
 import { fmtP, type BoucherResult } from '../lib'
+import {
+  SideBlock,
+  SideHead,
+  SideBody,
+  StatGrid,
+  StatCell,
+  SideBadge,
+  SideNote,
+  SideEmpty,
+} from './sidebar'
 
 interface Props {
   scalp: BoucherResult
@@ -16,133 +26,97 @@ export function ScalpingPanel({ scalp, interval, enabled, onToggle }: Props) {
   const hasData = scalp.atr > 0 && scalp.boxSize > 0
 
   return (
-    <div className={`btc-chart__panel btc-chart__scalp-panel${!enabled ? ' is-disabled' : ''}`}>
-      {/* Compact header (always visible) */}
-      <div className="btc-chart__collapse-hdr">
-        <button
-          type="button"
-          className="btc-chart__collapse-btn"
-          onClick={() => setOpen((o) => !o)}
-        >
-          <span className="btc-chart__collapse-caret">{open ? '▾' : '▸'}</span>
-          <span>Scalping M1</span>
-          <span className="muted">(Boucher)</span>
-        </button>
-        {/* Summary when collapsed */}
-        {!open && hasData && enabled && (
-          <span className="btc-chart__collapse-summary">
-            <span className={scalp.speed === 'fast' ? 'up' : scalp.speed === 'slow' ? 'dn' : ''}>
-              {scalp.speed === 'fast' ? 'FAST' : scalp.speed === 'slow' ? 'SLOW' : 'OK'}
-            </span>
-            {lastEntry && (
-              <span className={lastEntry.dir === 'long' ? 'up' : 'dn'}>
-                {lastEntry.dir === 'long' ? '▲' : '▼'}
-              </span>
-            )}
-            <span className="muted">WR:{Math.round(scalp.stats.rr * 100)}%</span>
-          </span>
-        )}
-        <button
-          type="button"
-          className={`btc-chart__collapse-toggle${enabled ? ' is-on' : ''}`}
-          onClick={onToggle}
-          title={enabled ? 'Tat Boucher' : 'Bat Boucher'}
-        >
-          {enabled ? 'ON' : 'OFF'}
-        </button>
-      </div>
+    <SideBlock variant="strategy" className={!enabled ? 'is-disabled' : ''}>
+      <SideHead
+        title="Scalping M1"
+        subtitle="Boucher method"
+        collapsible
+        open={open}
+        onToggle={() => setOpen((o) => !o)}
+        badges={
+          !open && hasData && enabled ? (
+            <>
+              <SideBadge
+                tone={scalp.speed === 'fast' ? 'up' : scalp.speed === 'slow' ? 'dn' : 'muted'}
+              >
+                {scalp.speed === 'fast' ? 'FAST' : scalp.speed === 'slow' ? 'SLOW' : 'OK'}
+              </SideBadge>
+              {lastEntry && (
+                <SideBadge tone={lastEntry.dir === 'long' ? 'up' : 'dn'}>
+                  {lastEntry.dir === 'long' ? 'BUY' : 'SELL'}
+                </SideBadge>
+              )}
+            </>
+          ) : undefined
+        }
+        summary={
+          !open && hasData && enabled ? `WR ${Math.round(scalp.stats.rr * 100)}%` : undefined
+        }
+        actions={
+          <button
+            type="button"
+            className={`btc-chart__collapse-toggle${enabled ? ' is-on' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggle()
+            }}
+          >
+            {enabled ? 'ON' : 'OFF'}
+          </button>
+        }
+      />
 
-      {/* Expanded detail */}
       {open && enabled && hasData && (
-        <div className="btc-chart__collapse-body">
-          {interval !== '1m' && <div className="btc-chart__scalp-warn">Nen dung M1</div>}
-          <div className="btc-chart__scalp-grid">
-            <div className="btc-chart__scalp-metric">
-              <span className="lbl">Box</span>
-              <span>{fmtP(scalp.boxSize)}</span>
-            </div>
-            <div className="btc-chart__scalp-metric">
-              <span className="lbl">ATR</span>
-              <span>{fmtP(scalp.atr)}</span>
-            </div>
-            <div className="btc-chart__scalp-metric">
-              <span className="lbl">Envelope</span>
-              <span className="dn">{fmtP(scalp.envelope)}</span>
-            </div>
-            <div className="btc-chart__scalp-metric">
-              <span className="lbl">Target</span>
-              <span className="up">{fmtP(scalp.target)}</span>
-            </div>
-          </div>
+        <SideBody>
+          {interval !== '1m' && (
+            <SideNote>
+              <span className="dn">Khuyến nghị dùng khung 1m</span>
+            </SideNote>
+          )}
 
-          <div className="btc-chart__scalp-speed">
-            <span className="lbl">Speed</span>
-            <span className={scalp.speed === 'fast' ? 'up' : scalp.speed === 'slow' ? 'dn' : ''}>
-              {scalp.speed === 'fast'
-                ? 'FAST (momentum)'
-                : scalp.speed === 'slow'
-                  ? 'SLOW (mean-rev)'
-                  : 'Normal'}
-            </span>
-          </div>
+          <StatGrid cols={2}>
+            <StatCell label="Box" value={fmtP(scalp.boxSize)} />
+            <StatCell label="ATR" value={fmtP(scalp.atr)} />
+            <StatCell label="Envelope" value={fmtP(scalp.envelope)} tone="dn" />
+            <StatCell label="Target" value={fmtP(scalp.target)} tone="up" />
+          </StatGrid>
+
+          <StatGrid cols={3}>
+            <StatCell
+              label="Speed"
+              value={scalp.speed === 'fast' ? 'Fast' : scalp.speed === 'slow' ? 'Slow' : 'Normal'}
+              tone={scalp.speed === 'fast' ? 'up' : scalp.speed === 'slow' ? 'dn' : ''}
+            />
+            <StatCell label="3-Bar" value={String(scalp.threeBar.length)} />
+            <StatCell
+              label="Win rate"
+              value={`${Math.round(scalp.stats.rr * 100)}%`}
+              tone={scalp.stats.rr >= 0.6 ? 'up' : scalp.stats.rr < 0.4 ? 'dn' : ''}
+            />
+          </StatGrid>
 
           {scalp.currentBox && (
-            <div className="btc-chart__scalp-box">
-              <span className="lbl">Box</span>
-              <span>
-                {fmtP(scalp.currentBox.low)} - {fmtP(scalp.currentBox.high)}
-              </span>
-              <span className="muted"> ({scalp.currentBox.bars} bars)</span>
-            </div>
+            <SideNote>
+              Active box {fmtP(scalp.currentBox.low)} – {fmtP(scalp.currentBox.high)} (
+              {scalp.currentBox.bars} bars)
+            </SideNote>
           )}
 
           {lastEntry && (
             <div
-              className={`btc-chart__scalp-entry ${lastEntry.dir === 'long' ? 'is-long' : 'is-short'}`}
+              className={`sb-calc-box ${lastEntry.dir === 'long' ? 'sb-block--long' : 'sb-block--short'}`}
             >
-              <div className="btc-chart__scalp-entry-head">
-                <span className={lastEntry.dir === 'long' ? 'up' : 'dn'}>
-                  {lastEntry.dir === 'long' ? '▲ BUY' : '▼ SELL'}
-                </span>
-                {lastEntry.confirmed && <span className="btc-chart__scalp-confirmed">3-Bar</span>}
-              </div>
-              <div className="btc-chart__scalp-entry-detail">
-                <span>@ {fmtP(lastEntry.price)}</span>
-                <span className="muted">Level {fmtP(lastEntry.level)}</span>
-              </div>
+              <SideBadge tone={lastEntry.dir === 'long' ? 'up' : 'dn'}>
+                {lastEntry.dir === 'long' ? 'BUY ▲' : 'SELL ▼'}
+              </SideBadge>
+              <span className="sb-row__value"> @ {fmtP(lastEntry.price)}</span>
+              {lastEntry.confirmed && <SideBadge tone="mint">3-Bar</SideBadge>}
             </div>
           )}
-
-          <div className="btc-chart__scalp-stats">
-            <span>3-Bar: {scalp.threeBar.length}</span>
-            <span>Entries: {scalp.stats.signals}</span>
-            <span className={scalp.stats.rr >= 0.6 ? 'up' : scalp.stats.rr < 0.4 ? 'dn' : ''}>
-              WR: {Math.round(scalp.stats.rr * 100)}%
-            </span>
-          </div>
-
-          {scalp.ladder.length > 0 && (
-            <div className="btc-chart__scalp-ladder">
-              <span className="lbl">Ladder</span>
-              {scalp.ladder.slice(0, 6).map((l) => (
-                <div key={l.price} className="btc-chart__scalp-lvl">
-                  <span className={l.role === 'resistance' ? 'dn' : 'up'}>
-                    {l.role === 'resistance' ? 'R' : 'S'}
-                  </span>
-                  <span>{fmtP(l.price)}</span>
-                  <span className="muted">({l.touches})</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        </SideBody>
       )}
 
-      {open && !hasData && enabled && (
-        <div className="btc-chart__collapse-body">
-          <p className="muted">Chua du du lieu</p>
-        </div>
-      )}
-    </div>
+      {open && !hasData && enabled && <SideEmpty>Chưa đủ dữ liệu</SideEmpty>}
+    </SideBlock>
   )
 }

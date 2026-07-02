@@ -1,21 +1,32 @@
-// BTC Chart — ICT Sessions panel: active session, Asian range, killzone
-// status, latest Judas swing, and ADR% spent. Collapsed by default; the header
-// shows a compact one-line summary, click to expand full detail.
+// BTC Chart — ICT Sessions panel: active session, Asian range, killzone, Judas.
 
 import { useState } from 'react'
+import React from 'react'
 import { fmtP, type ICTResult } from '../lib'
+import {
+  SideBlock,
+  SideHead,
+  SideBody,
+  SideRow,
+  StatGrid,
+  StatCell,
+  SideBadge,
+  SideMeter,
+  SideNote,
+  SideEmpty,
+} from './sidebar'
 
 interface Props {
   ict: ICTResult
 }
 
 const SESSION_LABEL: Record<string, string> = {
-  asia: 'Á (Asia)',
-  london: 'Âu (London)',
-  ny: 'Mỹ (New York)',
+  asia: 'Asia',
+  london: 'London',
+  ny: 'New York',
 }
 
-export function SessionsPanel({ ict }: Props) {
+export const SessionsPanel = React.memo(function SessionsPanel({ ict }: Props) {
   const [open, setOpen] = useState(false)
 
   const activeKz = ict.killzones.find((k) => k.active)
@@ -24,101 +35,86 @@ export function SessionsPanel({ ict }: Props) {
 
   if (!ict.sessions.length) {
     return (
-      <div className="btc-chart__panel btc-chart__sessions-panel">
-        <div className="btc-chart__sessions-hdr btc-chart__sessions-hdr--static">
-          <span className="btc-chart__sessions-title">ICT Sessions</span>
-          <span className="btc-chart__sessions-summary muted">Chỉ khả dụng ở 1m–1h</span>
-        </div>
-      </div>
+      <SideBlock variant="context">
+        <SideHead title="ICT Sessions" subtitle="Intraday only" />
+        <SideEmpty>Chỉ khả dụng ở khung 1m đến 1h</SideEmpty>
+      </SideBlock>
     )
   }
 
-  const sessionShort = ict.activeSession
-    ? SESSION_LABEL[ict.activeSession].replace(/\s*\(.*\)/, '')
-    : '—'
+  const sessionShort = ict.activeSession ? SESSION_LABEL[ict.activeSession] : '—'
+  const adrTone = ict.adrPct > 85 ? 'dn' : ict.adrPct > 60 ? 'hi' : 'up'
 
   return (
-    <div className={`btc-chart__panel btc-chart__sessions-panel${open ? ' is-open' : ''}`}>
-      <button type="button" className="btc-chart__sessions-hdr" onClick={() => setOpen((o) => !o)}>
-        <span className="btc-chart__collapse-caret">{open ? '▾' : '▸'}</span>
-        <span className="btc-chart__sessions-title">ICT Sessions</span>
-        <span className="btc-chart__sessions-summary">
-          <span className={activeKz ? 'btc-chart__sessions-kz-on' : ''}>{sessionShort}</span>
-          {activeKz && <span className="btc-chart__sessions-chip">KZ</span>}
-          <span className="btc-chart__sessions-adr-mini">ADR {ict.adrPct.toFixed(0)}%</span>
-          {lastJudas && (
-            <span className={lastJudas.type === 'bullish' ? 'up' : 'dn'}>
-              {lastJudas.type === 'bullish' ? '▲J' : '▼J'}
-            </span>
-          )}
-        </span>
-      </button>
+    <SideBlock variant="context">
+      <SideHead
+        title="ICT Sessions"
+        subtitle="Daily range decode"
+        collapsible
+        open={open}
+        onToggle={() => setOpen((o) => !o)}
+        badges={
+          <>
+            {activeKz && <SideBadge tone="mint">KZ</SideBadge>}
+            {lastJudas && (
+              <SideBadge tone={lastJudas.type === 'bullish' ? 'up' : 'dn'}>
+                {lastJudas.type === 'bullish' ? 'JUDAS ▲' : 'JUDAS ▼'}
+              </SideBadge>
+            )}
+          </>
+        }
+        summary={
+          <>
+            <span className={activeKz ? 'mint' : ''}>{sessionShort}</span>
+            <span>ADR {ict.adrPct.toFixed(0)}%</span>
+          </>
+        }
+      />
 
       {open && (
-        <div className="btc-chart__sessions-body">
-          <div className="btc-chart__sessions-row">
-            <span className="btc-chart__sessions-key">Phiên hiện tại</span>
-            <span className="btc-chart__sessions-val">
-              {ict.activeSession ? SESSION_LABEL[ict.activeSession] : '—'}
-            </span>
-          </div>
-
-          <div className="btc-chart__sessions-row">
-            <span className="btc-chart__sessions-key">Killzone</span>
-            <span
-              className={'btc-chart__sessions-val ' + (activeKz ? 'btc-chart__sessions-kz-on' : '')}
-            >
-              {activeKz
-                ? `${activeKz.name === 'london' ? 'London' : 'NY'} ACTIVE`
-                : 'Ngoài killzone'}
-            </span>
-          </div>
+        <SideBody>
+          <SideRow
+            label="Phiên hiện tại"
+            value={ict.activeSession ? SESSION_LABEL[ict.activeSession] : '—'}
+            tone={ict.activeSession ? 'neu' : ''}
+          />
+          <SideRow
+            label="Killzone"
+            value={activeKz ? `${activeKz.name === 'london' ? 'London' : 'NY'} active` : 'Outside'}
+            tone={activeKz ? 'mint' : ''}
+          />
 
           {asiaToday && (
-            <div className="btc-chart__sessions-asia">
-              <div className="btc-chart__sessions-row">
-                <span className="btc-chart__sessions-key">Asia High</span>
-                <span className="btc-chart__sessions-val up">{fmtP(asiaToday.high)}</span>
-              </div>
-              <div className="btc-chart__sessions-row">
-                <span className="btc-chart__sessions-key">Asia Low</span>
-                <span className="btc-chart__sessions-val dn">{fmtP(asiaToday.low)}</span>
-              </div>
-            </div>
+            <>
+              <div className="sb-divider" />
+              <StatGrid cols={2}>
+                <StatCell label="Asia High" value={fmtP(asiaToday.high)} tone="up" />
+                <StatCell label="Asia Low" value={fmtP(asiaToday.low)} tone="dn" />
+              </StatGrid>
+            </>
           )}
 
-          <div className="btc-chart__sessions-row">
-            <span className="btc-chart__sessions-key">ADR đã dùng</span>
-            <span className="btc-chart__sessions-val">{ict.adrPct.toFixed(0)}%</span>
-          </div>
-          <div className="btc-chart__sessions-adr">
-            <div
-              className="btc-chart__sessions-adr-fill"
-              style={{
-                width: `${Math.min(100, ict.adrPct)}%`,
-                background: ict.adrPct > 85 ? '#ff7a85' : ict.adrPct > 60 ? '#ffc46b' : '#34d8a4',
-              }}
+          <div>
+            <SideRow label="ADR spent" value={`${ict.adrPct.toFixed(0)}%`} tone={adrTone} />
+            <SideMeter
+              value={ict.adrPct}
+              tone={ict.adrPct > 85 ? 'dn' : ict.adrPct > 60 ? 'hi' : 'up'}
             />
           </div>
 
-          <div className="btc-chart__sessions-judas">
-            <span className="btc-chart__sessions-key">Judas Swing</span>
-            {lastJudas ? (
-              <div
-                className={
-                  'btc-chart__sessions-judas-tag ' + (lastJudas.type === 'bullish' ? 'up' : 'dn')
-                }
-              >
-                {lastJudas.type === 'bullish' ? '▲ Long' : '▼ Short'} · sweep Asia{' '}
-                {lastJudas.sweptSide === 'high' ? 'H' : 'L'} @ {fmtP(lastJudas.sweptLevel)}
-                {lastJudas.volConfirm ? ' · VOL✦' : ''} · {lastJudas.confidence}%
-              </div>
-            ) : (
-              <span className="btc-chart__sessions-val muted">Chưa phát hiện</span>
-            )}
-          </div>
-        </div>
+          <div className="sb-divider" />
+          {lastJudas ? (
+            <SideNote>
+              <span className={lastJudas.type === 'bullish' ? 'up' : 'dn'}>
+                Judas {lastJudas.type === 'bullish' ? '▲' : '▼'}
+              </span>{' '}
+              sweep {lastJudas.sweptSide} @ {fmtP(lastJudas.sweptLevel)} · {lastJudas.confidence}%
+            </SideNote>
+          ) : (
+            <SideNote>Chưa có Judas swing trong cửa sổ hiện tại</SideNote>
+          )}
+        </SideBody>
       )}
-    </div>
+    </SideBlock>
   )
-}
+})

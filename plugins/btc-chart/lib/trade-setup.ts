@@ -9,6 +9,176 @@ import type { LiquidityResult } from './liquidity'
 
 export type { TradeSetup }
 
+const OTE_RATIO = 0.618
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+}
+
+interface EntryCalcResult {
+  entry: number
+  method: string
+}
+
+/**
+ * Derive a limit entry from structural levels (not the live close).
+ * Long: median of support candidates between SL and spot.
+ * Short: median of resistance candidates between spot and SL.
+ */
+function calcLimitEntry(
+  dir: 'long' | 'short',
+  spot: number,
+  sl: number,
+  candidates: number[],
+): EntryCalcResult {
+  if (dir === 'long') {
+    const valid = candidates.filter((p) => Number.isFinite(p) && p > sl)
+    const limitZone = valid.filter((p) => p <= spot)
+    if (limitZone.length >= 2) {
+      return { entry: median(limitZone)!, method: 'Structure confluence (limit)' }
+    }
+    if (limitZone.length === 1) {
+      return { entry: limitZone[0], method: 'Structure level (limit)' }
+    }
+    const ote = sl + (spot - sl) * OTE_RATIO
+    if (ote > sl && ote < spot) {
+      return { entry: ote, method: 'OTE 61.8% pullback' }
+    }
+    return { entry: sl + (spot - sl) * 0.5, method: 'Mid SL–spot zone' }
+  }
+
+  const valid = candidates.filter((p) => Number.isFinite(p) && p < sl)
+  const limitZone = valid.filter((p) => p >= spot)
+  if (limitZone.length >= 2) {
+    return { entry: median(limitZone)!, method: 'Structure confluence (limit)' }
+  }
+  if (limitZone.length === 1) {
+    return { entry: limitZone[0], method: 'Structure level (limit)' }
+  }
+  const ote = sl - (sl - spot) * OTE_RATIO
+  if (ote < sl && ote > spot) {
+    return { entry: ote, method: 'OTE 61.8% pullback' }
+  }
+  return { entry: sl - (sl - spot) * 0.5, method: 'Mid spot–SL zone' }
+}
+
+/** Collect structural prices that can anchor a long limit entry. */
+function collectLongEntryCandidates(
+  i: number,
+  spot: number,
+  swingLow: number,
+  swingHigh: number,
+  nwe: NWE,
+  extra?: TradeSetupExtra,
+): number[] {
+  const out: number[] = []
+  const nweMid = nwe.mid[i]
+  const nweLo = nwe.lower[i]
+  if (nweMid != null) out.push(nweMid)
+  if (nweLo != null) out.push(nweLo * 1.002)
+
+  if (extra?.luxNwe) {
+    const luxMid = extra.luxNwe.mid[i]
+    const luxLo = extra.luxNwe.lower[i]
+    if (luxMid != null) out.push(luxMid)
+    if (luxLo != null) out.push(luxLo * 1.002)
+  }
+
+  if (extra?.liquidity) {
+    const liq = extra.liquidity
+    if (liq.range) {
+      out.push(liq.range.equilibrium)
+      const span = liq.range.high - liq.range.low
+      if (span > 0) out.push(liq.range.low + span * 0.382)
+    }
+    for (const lv of liq.levels) {
+      if ((lv.kind === 'fvg' || lv.kind === 'swing-low') && lv.price < spot) {
+        out.push(lv.price)
+      }
+    }
+    const lastSweep = liq.sweeps.filter((s) => s.type === 'bullish').at(-1)
+    if (lastSweep) out.push(lastSweep.level)
+  }
+
+  if (extra?.boucher) {
+    for (const lv of extra.boucher.ladder) {
+      if (lv.role === 'support' && lv.price < spot) out.push(lv.price)
+    }
+    const lastEntry = extra.boucher.entries.at(-1)
+    if (lastEntry?.dir === 'long') {
+      out.push(lastEntry.price, lastEntry.level)
+    }
+  }
+
+  const range = swingHigh - swingLow
+  if (range > 0) {
+    out.push(swingLow + range * OTE_RATIO)
+    out.push(swingLow + range * 0.705)
+  }
+
+  return out
+}
+
+/** Collect structural prices that can anchor a short limit entry. */
+function collectShortEntryCandidates(
+  i: number,
+  spot: number,
+  swingLow: number,
+  swingHigh: number,
+  nwe: NWE,
+  extra?: TradeSetupExtra,
+): number[] {
+  const out: number[] = []
+  const nweMid = nwe.mid[i]
+  const nweUp = nwe.upper[i]
+  if (nweMid != null) out.push(nweMid)
+  if (nweUp != null) out.push(nweUp * 0.998)
+
+  if (extra?.luxNwe) {
+    const luxMid = extra.luxNwe.mid[i]
+    const luxUp = extra.luxNwe.upper[i]
+    if (luxMid != null) out.push(luxMid)
+    if (luxUp != null) out.push(luxUp * 0.998)
+  }
+
+  if (extra?.liquidity) {
+    const liq = extra.liquidity
+    if (liq.range) {
+      out.push(liq.range.equilibrium)
+      const span = liq.range.high - liq.range.low
+      if (span > 0) out.push(liq.range.high - span * 0.382)
+    }
+    for (const lv of liq.levels) {
+      if ((lv.kind === 'fvg' || lv.kind === 'swing-high') && lv.price > spot) {
+        out.push(lv.price)
+      }
+    }
+    const lastSweep = liq.sweeps.filter((s) => s.type === 'bearish').at(-1)
+    if (lastSweep) out.push(lastSweep.level)
+  }
+
+  if (extra?.boucher) {
+    for (const lv of extra.boucher.ladder) {
+      if (lv.role === 'resistance' && lv.price > spot) out.push(lv.price)
+    }
+    const lastEntry = extra.boucher.entries.at(-1)
+    if (lastEntry?.dir === 'short') {
+      out.push(lastEntry.price, lastEntry.level)
+    }
+  }
+
+  const range = swingHigh - swingLow
+  if (range > 0) {
+    out.push(swingHigh - range * OTE_RATIO)
+    out.push(swingHigh - range * 0.705)
+  }
+
+  return out
+}
+
 /** Extra signals from Boucher + Lien + Lux NWE + ICT + Liquidity for confluence. */
 export interface TradeSetupExtra {
   boucher?: BoucherResult
@@ -282,28 +452,54 @@ export function calcTradeSetup(
   const confidence = Math.min(100, Math.max(bull, bear) * 20 + Math.abs(bull - bear) * 10)
 
   if (dir === 'long') {
-    const entry = price
     const luxLo = extra?.luxNwe?.lower[i]
     const luxUp = extra?.luxNwe?.upper[i]
     const sl = Math.min(swingLow, nweLo ?? swingLow, luxLo ?? swingLow) * 0.998
+    const candidates = collectLongEntryCandidates(i, price, swingLow, swingHigh, nwe, extra)
+    const { entry, method } = calcLimitEntry('long', price, sl, candidates)
     const risk = entry - sl
     const bestUp = luxUp != null && nweUp != null ? Math.max(luxUp, nweUp) : (luxUp ?? nweUp)
     const tp1 = entry + risk * 2
     const tp2 = bestUp != null ? Math.max(bestUp, entry + risk * 3) : entry + risk * 3
     const rr = risk > 0 ? (tp1 - entry) / risk : 2
-    return { dir, entry, sl, tp1, tp2, rr, confidence, reasons, volRatio }
+    return {
+      dir,
+      entry,
+      sl,
+      tp1,
+      tp2,
+      rr,
+      confidence,
+      reasons,
+      volRatio,
+      spotPrice: price,
+      entryMethod: method,
+    }
   }
   if (dir === 'short') {
-    const entry = price
     const luxUp = extra?.luxNwe?.upper[i]
     const luxLo = extra?.luxNwe?.lower[i]
     const sl = Math.max(swingHigh, nweUp ?? swingHigh, luxUp ?? swingHigh) * 1.002
+    const candidates = collectShortEntryCandidates(i, price, swingLow, swingHigh, nwe, extra)
+    const { entry, method } = calcLimitEntry('short', price, sl, candidates)
     const risk = sl - entry
     const bestLo = luxLo != null && nweLo != null ? Math.min(luxLo, nweLo) : (luxLo ?? nweLo)
     const tp1 = entry - risk * 2
     const tp2 = bestLo != null ? Math.min(bestLo, entry - risk * 3) : entry - risk * 3
     const rr = risk > 0 ? (entry - tp1) / risk : 2
-    return { dir, entry, sl, tp1, tp2, rr, confidence, reasons, volRatio }
+    return {
+      dir,
+      entry,
+      sl,
+      tp1,
+      tp2,
+      rr,
+      confidence,
+      reasons,
+      volRatio,
+      spotPrice: price,
+      entryMethod: method,
+    }
   }
 
   // No setup
@@ -317,6 +513,8 @@ export function calcTradeSetup(
     confidence: 0,
     reasons: ['No confluence'],
     volRatio,
+    spotPrice: price,
+    entryMethod: '',
   }
 }
 

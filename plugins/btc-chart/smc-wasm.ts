@@ -4,6 +4,9 @@
  * Strategy: Try load WASM → if fail, use the pure JS computeSMC.
  * Same public API as smc.ts so callers swap import transparently.
  * The same module also backs the Nadaraya-Watson envelope (compute_nwe).
+ *
+ * Perf note: heavy NWE repaint can be further offloaded using ../lib/nwe-worker.ts (Web Worker).
+ * Current calls stay sync on main for simplicity + immediate results in renderData.
  */
 
 import { computeSMC as computeSMCJs } from './smc'

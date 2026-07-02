@@ -1,123 +1,103 @@
 // BTC Chart — indicator readout panels driven by the sidebar snapshot.
 
 import type { SidebarState } from '../lib'
+import {
+  SideBlock,
+  SideBody,
+  SideRow,
+  SideNote,
+  SideEmpty,
+  StatGrid,
+  StatCell,
+  SideBadge,
+} from './sidebar'
 
 export function OrderFlowPanel({ ofLog }: { ofLog: SidebarState['ofLog'] }) {
   return (
-    <div className="btc-chart__panel">
-      <div className="btc-chart__panel-title">Midnight Hunter signals</div>
-      {ofLog.length === 0 ? (
-        <span className="btc-chart__of-empty">Chưa có tín hiệu rebound</span>
-      ) : (
-        ofLog.map((s, idx) => (
-          <div key={idx} className="btc-chart__of-item">
-            <span className={`btc-chart__of-tag ${s.type === 'buy' ? 'is-buy' : 'is-sell'}`}>
-              {s.type === 'buy' ? 'BUY' : 'SELL'}
-            </span>
-            <span className="btc-chart__of-text">
-              ${s.price} · ×{s.ratio}
-            </span>
-            <span className="btc-chart__of-time">{s.time}</span>
+    <SideBlock variant="data">
+      <SideBody>
+        <div className="sb-head__title" style={{ marginBottom: 8 }}>
+          Order Flow
+        </div>
+        {ofLog.length === 0 ? (
+          <SideEmpty>Chưa có tín hiệu rebound</SideEmpty>
+        ) : (
+          <div className="sb-kv-list">
+            {ofLog.map((s, idx) => (
+              <div key={idx} className="sb-row" style={{ alignItems: 'center' }}>
+                <SideBadge tone={s.type === 'buy' ? 'up' : 'dn'}>
+                  {s.type === 'buy' ? 'BUY' : 'SELL'}
+                </SideBadge>
+                <span className="sb-row__value" style={{ flex: 1, textAlign: 'center' }}>
+                  ${s.price} · ×{s.ratio}
+                </span>
+                <span className="sb-row__label">{s.time}</span>
+              </div>
+            ))}
           </div>
-        ))
-      )}
-      <div className="btc-chart__of-note">
-        <div>
-          <b className="dn">SELL ▼</b> — nến trước chọc lên trên dải trên (Upper Band) rồi nến hiện
-          tại đảo chiều giảm.
-        </div>
-        <div>
-          <b className="up">BUY ▲</b> — nến trước chọc xuống dưới dải dưới (Lower Band) rồi nến hiện
-          tại đảo chiều tăng.
-        </div>
-        <div className="btc-chart__of-note-sub">
-          ×N = bội số volume so với SMA20 (tham khảo, không phải điều kiện tín hiệu).
-        </div>
-      </div>
-    </div>
+        )}
+        <SideNote>
+          SELL: nến chọc Upper rồi đảo giảm. BUY: nến chọc Lower rồi đảo tăng. ×N = volume vs SMA20.
+        </SideNote>
+      </SideBody>
+    </SideBlock>
   )
 }
 
 export function BoxFlipPanel({ boxFlip }: { boxFlip: SidebarState['boxFlip'] }) {
   return (
-    <div className="btc-chart__panel">
-      <div className="btc-chart__panel-title">Box breakout flip</div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">Signals</span>
-        <span className="btc-chart__row-val">{boxFlip.count}</span>
-      </div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">Last flip</span>
-        <span
-          className={`btc-chart__row-val ${
-            boxFlip.last === 'B' ? 'up' : boxFlip.last === 'S' ? 'dn' : ''
-          }`}
-        >
-          {boxFlip.last ?? '—'}
-        </span>
-      </div>
-      <div className="btc-chart__of-note">
-        <div>
-          <b className="up">B</b> / <b className="dn">S</b> only prints when box breakout direction
-          flips.
+    <SideBlock variant="data">
+      <SideBody>
+        <div className="sb-head__title" style={{ marginBottom: 8 }}>
+          Box Flip
         </div>
-      </div>
-    </div>
+        <StatGrid cols={2}>
+          <StatCell label="Signals" value={String(boxFlip.count)} />
+          <StatCell
+            label="Last flip"
+            value={boxFlip.last ?? '—'}
+            tone={boxFlip.last === 'B' ? 'up' : boxFlip.last === 'S' ? 'dn' : ''}
+          />
+        </StatGrid>
+        <SideNote>B / S in prints on box breakout direction flip.</SideNote>
+      </SideBody>
+    </SideBlock>
   )
 }
 
 export function MHBandPanel({ sidebar }: { sidebar: SidebarState }) {
   return (
-    <div className="btc-chart__panel">
-      <div className="btc-chart__panel-title">Midnight Hunter Band</div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">Upper</span>
-        <span className="btc-chart__row-val dn">{sidebar.nweUpper}</span>
-      </div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">Mid</span>
-        <span className="btc-chart__row-val neu">{sidebar.nweMid}</span>
-      </div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">Lower</span>
-        <span className="btc-chart__row-val up">{sidebar.nweLower}</span>
-      </div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">Zone</span>
-        <span className={`btc-chart__row-val ${sidebar.nweZone.cls}`}>{sidebar.nweZone.text}</span>
-      </div>
-    </div>
+    <SideBlock variant="data">
+      <SideBody>
+        <div className="sb-head__title" style={{ marginBottom: 8 }}>
+          MH Band
+        </div>
+        <StatGrid cols={2}>
+          <StatCell label="Upper" value={sidebar.nweUpper} tone="dn" />
+          <StatCell label="Mid" value={sidebar.nweMid} tone="neu" />
+          <StatCell label="Lower" value={sidebar.nweLower} tone="up" />
+          <StatCell label="Zone" value={sidebar.nweZone.text} tone="" />
+        </StatGrid>
+      </SideBody>
+    </SideBlock>
   )
 }
 
 export function VolumeProfilePanel({ vp, vpHvn }: { vp: SidebarState['vp']; vpHvn: number }) {
   return (
-    <div className="btc-chart__panel">
-      <div className="btc-chart__panel-title">Volume profile</div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">POC</span>
-        <span className="btc-chart__row-val" style={{ color: 'var(--hi)' }}>
-          {vp.poc}
-        </span>
-      </div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">VAH · 70%</span>
-        <span className="btc-chart__row-val dn">{vp.vah}</span>
-      </div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">VAL · 70%</span>
-        <span className="btc-chart__row-val up">{vp.val}</span>
-      </div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">vs POC</span>
-        <span className="btc-chart__row-val">{vp.pos}</span>
-      </div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">HVN nodes</span>
-        <span className="btc-chart__row-val" style={{ color: 'var(--hi)' }}>
-          {vpHvn}
-        </span>
-      </div>
-    </div>
+    <SideBlock variant="data">
+      <SideBody>
+        <div className="sb-head__title" style={{ marginBottom: 8 }}>
+          Volume Profile
+        </div>
+        <StatGrid cols={2}>
+          <StatCell label="POC" value={vp.poc} tone="hi" />
+          <StatCell label="vs POC" value={vp.pos} />
+          <StatCell label="VAH 70%" value={vp.vah} tone="dn" />
+          <StatCell label="VAL 70%" value={vp.val} tone="up" />
+          <StatCell label="HVN nodes" value={String(vpHvn)} tone="hi" />
+        </StatGrid>
+      </SideBody>
+    </SideBlock>
   )
 }

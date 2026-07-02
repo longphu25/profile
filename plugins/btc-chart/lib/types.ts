@@ -67,6 +67,10 @@ export interface TradeSetup {
   reasons: string[]
   /** Volume ratio vs 20-bar average (e.g. 2.1 = 2.1x avg) */
   volRatio: number
+  /** Close price at calculation time (reference for limit entry offset). */
+  spotPrice: number
+  /** How the limit entry was derived (structure confluence, OTE, etc.). */
+  entryMethod: string
 }
 
 export interface SidebarState {
@@ -171,6 +175,8 @@ export const INITIAL_SIDEBAR: SidebarState = {
     confidence: 0,
     reasons: [],
     volRatio: 0,
+    spotPrice: 0,
+    entryMethod: '',
   },
 }
 

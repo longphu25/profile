@@ -1,6 +1,7 @@
 // BTC Chart — Open Interest + Market Cap panel.
 
 import { fmtV } from '../lib'
+import { Card } from '@/components/ui/card'
 
 interface Props {
   oi: number | null
@@ -11,35 +12,41 @@ interface Props {
 export function OIPanel({ oi, mcap, breakdown }: Props) {
   const ratio = oi && mcap ? oi / mcap : null
   return (
-    <div className="btc-chart__panel">
-      <h4>Open Interest</h4>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">OI (USD)</span>
-        <span className="btc-chart__row-val">{oi != null ? '$' + fmtV(oi) : '—'}</span>
+    <Card className="p-3 text-xs">
+      <div className="font-medium mb-1">Open Interest</div>
+      <div className="flex justify-between">
+        <span className="text-[var(--muted)]">OI (USD)</span>
+        <span>{oi != null ? '$' + fmtV(oi) : '—'}</span>
       </div>
       {breakdown && breakdown.length > 0 && (
-        <div style={{ fontSize: 10, opacity: 0.7, marginBottom: 3 }}>
+        <div className="text-[9px] text-[var(--muted)] mt-1">
           {breakdown.map((b) => (
-            <span key={b.exchange} style={{ marginRight: 8 }}>
+            <span key={b.exchange} className="mr-2">
               {b.exchange}: ${fmtV(b.usd)}
             </span>
           ))}
         </div>
       )}
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">Market Cap</span>
-        <span className="btc-chart__row-val">{mcap != null ? '$' + fmtV(mcap) : '—'}</span>
+      <div className="flex justify-between mt-1">
+        <span className="text-[var(--muted)]">Market Cap</span>
+        <span>{mcap != null ? '$' + fmtV(mcap) : '—'}</span>
       </div>
-      <div className="btc-chart__row">
-        <span className="btc-chart__row-label">OI / MCap</span>
+      <div className="flex justify-between mt-1">
+        <span className="text-[var(--muted)]">OI / MCap</span>
         <span
-          className={`btc-chart__row-val${ratio != null && ratio > 1 ? ' dn' : ratio != null && ratio > 0.5 ? ' up' : ''}`}
+          className={
+            ratio != null && ratio > 1
+              ? 'text-[var(--dn)]'
+              : ratio != null && ratio > 0.5
+                ? 'text-[var(--up)]'
+                : ''
+          }
         >
           {ratio != null ? ratio.toFixed(2) + 'x' : '—'}
         </span>
       </div>
       {ratio != null && (
-        <div style={{ fontSize: 9, opacity: 0.8, marginTop: 2 }}>
+        <div className="text-[9px] text-[var(--muted)] mt-1">
           {ratio > 1.5
             ? '⚠️ Cực kỳ rủi ro, dễ bị squeeze mạnh'
             : ratio > 1
@@ -51,6 +58,6 @@ export function OIPanel({ oi, mcap, breakdown }: Props) {
                   : '🧊 OI thấp, ít quan tâm từ derivatives'}
         </div>
       )}
-    </div>
+    </Card>
   )
 }

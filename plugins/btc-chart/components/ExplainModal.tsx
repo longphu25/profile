@@ -66,7 +66,11 @@ export function ExplainModal({ setup, onClose }: Props) {
 
           {setup.dir && (
             <div className="btc-chart__explain-levels">
-              <span>Entry {fmtP(setup.entry)}</span>
+              <span>
+                Limit entry {fmtP(setup.entry)}
+                {setup.entryMethod ? ` (${setup.entryMethod})` : ''}
+              </span>
+              {setup.spotPrice > 0 && <span className="muted">Spot {fmtP(setup.spotPrice)}</span>}
               <span className="dn">
                 SL {fmtP(setup.sl)} (-{riskPct}%)
               </span>

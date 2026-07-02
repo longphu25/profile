@@ -1,6 +1,7 @@
 // BTC Chart — Technicals readout: one signal row per indicator.
 
 import type { SidebarState } from '../lib'
+import { Card } from '@/components/ui/card'
 
 const ROWS: { label: string; key: keyof SidebarState }[] = [
   { label: 'MH Signal', key: 'sigNwe' },
@@ -17,17 +18,21 @@ const ROWS: { label: string; key: keyof SidebarState }[] = [
 
 export function TechnicalsPanel({ sidebar }: { sidebar: SidebarState }) {
   return (
-    <div className="btc-chart__panel">
-      <div className="btc-chart__panel-title">Technicals</div>
-      {ROWS.map(({ label, key }) => {
-        const sig = sidebar[key] as { text: string; cls: string }
-        return (
-          <div key={label} className="btc-chart__row">
-            <span className="btc-chart__row-label">{label}</span>
-            <span className={`btc-chart__row-val ${sig.cls}`}>{sig.text}</span>
-          </div>
-        )
-      })}
-    </div>
+    <Card className="p-2">
+      <div className="uppercase text-[8.5px] tracking-[1px] text-[var(--muted)] mb-1">
+        TECHNICALS
+      </div>
+      <div className="space-y-px text-[10px]">
+        {ROWS.map(({ label, key }) => {
+          const sig = sidebar[key] as { text: string; cls: string }
+          return (
+            <div key={label} className="flex justify-between font-mono tabular-nums">
+              <span className="text-[var(--muted)]">{label}</span>
+              <span className={sig.cls}>{sig.text}</span>
+            </div>
+          )
+        })}
+      </div>
+    </Card>
   )
 }

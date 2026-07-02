@@ -1,16 +1,25 @@
-// BTC Chart — ICT Liquidity panel: trading range + equilibrium, external
-// (BSL/SSL) vs internal liquidity, inverse-FVG count, latest sweep, and the
-// current liquidity draw target. Collapsed by default; header shows a compact
-// summary, click to expand.
+// BTC Chart — ICT Liquidity: range, BSL/SSL, sweeps, next target.
 
 import { useState } from 'react'
+import React from 'react'
 import { fmtP, type LiquidityResult } from '../lib'
+import {
+  SideBlock,
+  SideHead,
+  SideBody,
+  StatGrid,
+  StatCell,
+  SideBadge,
+  SideRow,
+  SideNote,
+  SideEmpty,
+} from './sidebar'
 
 interface Props {
   liquidity: LiquidityResult
 }
 
-export function LiquidityPanel({ liquidity }: Props) {
+export const LiquidityPanel = React.memo(function LiquidityPanel({ liquidity }: Props) {
   const [open, setOpen] = useState(false)
 
   const { range } = liquidity
@@ -21,110 +30,76 @@ export function LiquidityPanel({ liquidity }: Props) {
 
   if (!range) {
     return (
-      <div className="btc-chart__panel btc-chart__sessions-panel">
-        <div className="btc-chart__sessions-hdr btc-chart__sessions-hdr--static">
-          <span className="btc-chart__sessions-title">Liquidity</span>
-          <span className="btc-chart__sessions-summary muted">Chưa đủ dữ liệu</span>
-        </div>
-      </div>
+      <SideBlock variant="context">
+        <SideHead title="Liquidity" subtitle="ICT range model" />
+        <SideEmpty>Chưa đủ dữ liệu để xác định range</SideEmpty>
+      </SideBlock>
     )
   }
 
   const target = liquidity.nextTarget
+  const bosTone = range.bosBias === 'bull' ? 'up' : range.bosBias === 'bear' ? 'dn' : ''
 
   return (
-    <div className={`btc-chart__panel btc-chart__sessions-panel${open ? ' is-open' : ''}`}>
-      <button type="button" className="btc-chart__sessions-hdr" onClick={() => setOpen((o) => !o)}>
-        <span className="btc-chart__collapse-caret">{open ? '▾' : '▸'}</span>
-        <span className="btc-chart__sessions-title">Liquidity</span>
-        <span className="btc-chart__sessions-summary">
-          {range.hasBOS && <span className="btc-chart__sessions-chip">BOS</span>}
-          {lastSweep && (
-            <span className={lastSweep.type === 'bullish' ? 'up' : 'dn'}>
-              {lastSweep.type === 'bullish' ? '▲Sweep' : '▼Sweep'}
-            </span>
-          )}
-          {target && <span className="btc-chart__sessions-adr-mini">→ {fmtP(target.price)}</span>}
-        </span>
-      </button>
+    <SideBlock variant="context">
+      <SideHead
+        title="Liquidity"
+        subtitle="Premium / discount"
+        collapsible
+        open={open}
+        onToggle={() => setOpen((o) => !o)}
+        badges={
+          <>
+            {range.hasBOS && <SideBadge tone="mint">BOS</SideBadge>}
+            {lastSweep && (
+              <SideBadge tone={lastSweep.type === 'bullish' ? 'up' : 'dn'}>
+                {lastSweep.type === 'bullish' ? 'SWEEP ▲' : 'SWEEP ▼'}
+              </SideBadge>
+            )}
+          </>
+        }
+        summary={target ? `→ ${fmtP(target.price)}` : undefined}
+      />
 
       {open && (
-        <div className="btc-chart__sessions-body">
-          <div className="btc-chart__sessions-asia">
-            <div className="btc-chart__sessions-row">
-              <span className="btc-chart__sessions-key">Range High (BSL)</span>
-              <span className="btc-chart__sessions-val up">{fmtP(range.high)}</span>
-            </div>
-            <div className="btc-chart__sessions-row">
-              <span className="btc-chart__sessions-key">Equilibrium</span>
-              <span className="btc-chart__sessions-val">{fmtP(range.equilibrium)}</span>
-            </div>
-            <div className="btc-chart__sessions-row">
-              <span className="btc-chart__sessions-key">Range Low (SSL)</span>
-              <span className="btc-chart__sessions-val dn">{fmtP(range.low)}</span>
-            </div>
-          </div>
+        <SideBody>
+          <StatGrid cols={3}>
+            <StatCell label="High" value={fmtP(range.high)} tone="dn" />
+            <StatCell label="EQ 50%" value={fmtP(range.equilibrium)} tone="neu" />
+            <StatCell label="Low" value={fmtP(range.low)} tone="up" />
+          </StatGrid>
 
-          <div className="btc-chart__sessions-row">
-            <span className="btc-chart__sessions-key">BOS</span>
-            <span
-              className={
-                'btc-chart__sessions-val ' +
-                (range.bosBias === 'bull' ? 'up' : range.bosBias === 'bear' ? 'dn' : 'muted')
+          <div className="sb-panel-grid">
+            <SideRow
+              label="BOS bias"
+              value={range.hasBOS ? range.bosBias.toUpperCase() : '—'}
+              tone={bosTone}
+            />
+            <SideRow label="Pools" value={`${externalCount}E · ${internalCount}I`} />
+            <SideRow
+              label="iFVG"
+              value={
+                lastIfvg
+                  ? `${lastIfvg.flippedBias === 'bull' ? '▲' : '▼'} ${liquidity.inverseFvgs.length}`
+                  : '—'
               }
-            >
-              {range.hasBOS ? `Có (${range.bosBias})` : 'Chưa'}
-            </span>
+            />
+            <SideRow label="Next draw" value={target ? fmtP(target.price) : '—'} tone="neu" />
           </div>
 
-          <div className="btc-chart__sessions-row">
-            <span className="btc-chart__sessions-key">Liquidity pools</span>
-            <span className="btc-chart__sessions-val">
-              {externalCount} ext · {internalCount} int
-            </span>
-          </div>
-
-          <div className="btc-chart__sessions-row">
-            <span className="btc-chart__sessions-key">Inverse FVG</span>
-            <span className="btc-chart__sessions-val">
-              {lastIfvg ? (
-                <span className={lastIfvg.flippedBias === 'bull' ? 'up' : 'dn'}>
-                  {lastIfvg.flippedBias === 'bull' ? '▲ bull' : '▼ bear'} (
-                  {liquidity.inverseFvgs.length})
+          {lastSweep && (
+            <>
+              <div className="sb-divider" />
+              <SideNote>
+                <span className={lastSweep.type === 'bullish' ? 'up' : 'dn'}>
+                  Last sweep {lastSweep.side.toUpperCase()}
                 </span>
-              ) : (
-                <span className="muted">—</span>
-              )}
-            </span>
-          </div>
-
-          <div className="btc-chart__sessions-judas">
-            <span className="btc-chart__sessions-key">Sweep gần nhất</span>
-            {lastSweep ? (
-              <div
-                className={
-                  'btc-chart__sessions-judas-tag ' + (lastSweep.type === 'bullish' ? 'up' : 'dn')
-                }
-              >
-                {lastSweep.type === 'bullish' ? '▲ Long' : '▼ Short'} · quét{' '}
-                {lastSweep.side === 'high' ? 'BSL' : 'SSL'} @ {fmtP(lastSweep.level)}
-                {lastSweep.inKillzone ? ' · KZ✦' : ''} · {lastSweep.confidence}%
-              </div>
-            ) : (
-              <span className="btc-chart__sessions-val muted">Chưa phát hiện</span>
-            )}
-          </div>
-
-          {target && (
-            <div className="btc-chart__sessions-row">
-              <span className="btc-chart__sessions-key">Draw kế tiếp</span>
-              <span className="btc-chart__sessions-val">
-                {target.label} @ {fmtP(target.price)}
-              </span>
-            </div>
+                {lastSweep.inKillzone ? ' · Killzone' : ''} · {lastSweep.confidence}% conf
+              </SideNote>
+            </>
           )}
-        </div>
+        </SideBody>
       )}
-    </div>
+    </SideBlock>
   )
-}
+})

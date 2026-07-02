@@ -1,12 +1,12 @@
-// BTC Chart — Unified Funding Rate + NWE Signal Panel
-// Combines funding rate sentiment with Nadaraya-Watson Envelope signals
-// to provide actionable trading recommendations.
+// BTC Chart — Funding Rate + NWE bias combined panel.
 
 import { useMemo } from 'react'
 import type { FundingState } from '../lib/types'
+import React from 'react'
 import type { NadarayaWatsonResult } from '../lib/nadaraya-watson'
 import type { Candle } from '../lib/types'
 import { calcRSI } from '../lib/indicators'
+import { SideBlock, SideBody, SideRow, SideBadge, SideNote, StatGrid, StatCell } from './sidebar'
 
 export interface FundingNwePanelProps {
   funding: FundingState
@@ -20,7 +20,6 @@ interface SignalAnalysis {
   strength: number
   reasons: string[]
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
-  sentiment: string
 }
 
 function analyzeSignals(
@@ -31,117 +30,76 @@ function analyzeSignals(
   const reasons: string[] = []
   let score = 0
 
-  // Extract funding rate from breakdown
   const avgRate =
     funding.breakdown.length > 0
       ? funding.breakdown.reduce((sum, b) => sum + b.rate, 0) / funding.breakdown.length
       : 0
 
-  // Funding rate analysis
   if (avgRate < -0.01) {
     score += 2
-    reasons.push(`Funding rate âm sâu (${avgRate.toFixed(4)}%) → Short overcrowded`)
+    reasons.push(`Funding âm sâu (${avgRate.toFixed(4)}%)`)
   } else if (avgRate > 0.01) {
     score -= 2
-    reasons.push(`Funding rate dương cao (${avgRate.toFixed(4)}%) → Long overcrowded`)
+    reasons.push(`Funding dương cao (${avgRate.toFixed(4)}%)`)
   } else if (avgRate < 0) {
     score += 1
-    reasons.push(`Funding rate âm nhẹ (${avgRate.toFixed(4)}%) → Short bias`)
+    reasons.push(`Funding âm nhẹ (${avgRate.toFixed(4)}%)`)
   } else if (avgRate > 0) {
     score -= 1
-    reasons.push(`Funding rate dương nhẹ (${avgRate.toFixed(4)}%) → Long bias`)
+    reasons.push(`Funding dương nhẹ (${avgRate.toFixed(4)}%)`)
   }
 
-  // NWE signal analysis
   const lastSignal = nwe.signals[nwe.signals.length - 1]
   if (lastSignal) {
     const barsAgo = candles.length - 1 - lastSignal.index
     if (barsAgo <= 3) {
       if (lastSignal.type === 'buy') {
         score += 2
-        reasons.push(`NWE tín hiệu BUY gần đây (${barsAgo} nến trước)`)
+        reasons.push(`NWE BUY (${barsAgo} bars ago)`)
       } else {
         score -= 2
-        reasons.push(`NWE tín hiệu SELL gần đây (${barsAgo} nến trước)`)
+        reasons.push(`NWE SELL (${barsAgo} bars ago)`)
       }
     }
   }
 
-  // Price position relative to NWE bands
-  if (candles.length > 0) {
-    const lastCandle = candles[candles.length - 1]
-    const lastUpper = nwe.upper[nwe.upper.length - 1]
-    const lastLower = nwe.lower[nwe.lower.length - 1]
-    const lastMid = nwe.mid[nwe.mid.length - 1]
-
-    if (lastUpper && lastLower && lastMid) {
-      const price = lastCandle.close
-      const bandWidth = lastUpper - lastLower
-
-      if (price <= lastLower) {
-        score += 2
-        reasons.push('Giá ở dải NWE dưới → Quá bán')
-      } else if (price >= lastUpper) {
-        score -= 2
-        reasons.push('Giá ở dải NWE trên → Quá mua')
-      } else if (price < lastMid - bandWidth * 0.2) {
-        score += 1
-        reasons.push('Giá gần dải NWE dưới')
-      } else if (price > lastMid + bandWidth * 0.2) {
-        score -= 1
-        reasons.push('Giá gần dải NWE trên')
-      }
-    }
-  }
-
-  // RSI analysis
   if (candles.length >= 14) {
     const rsi = calcRSI(candles, 14)
     const lastRsi = rsi[rsi.length - 1]
     if (lastRsi !== null) {
       if (lastRsi < 30) {
         score += 2
-        reasons.push(`RSI quá bán (${lastRsi.toFixed(1)})`)
+        reasons.push(`RSI oversold (${lastRsi.toFixed(1)})`)
       } else if (lastRsi > 70) {
         score -= 2
-        reasons.push(`RSI quá mua (${lastRsi.toFixed(1)})`)
-      } else if (lastRsi < 40) {
-        score += 1
-        reasons.push(`RSI thấp (${lastRsi.toFixed(1)})`)
-      } else if (lastRsi > 60) {
-        score -= 1
-        reasons.push(`RSI cao (${lastRsi.toFixed(1)})`)
+        reasons.push(`RSI overbought (${lastRsi.toFixed(1)})`)
       }
     }
   }
 
-  // Determine direction and strength
   let direction: 'LONG' | 'SHORT' | 'NEUTRAL'
-  let strength: number
   let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
-  let sentiment: string
 
   if (score >= 3) {
     direction = 'LONG'
-    strength = Math.min(score / 5, 1)
     riskLevel = score >= 5 ? 'LOW' : 'MEDIUM'
-    sentiment = 'Bullish'
   } else if (score <= -3) {
     direction = 'SHORT'
-    strength = Math.min(Math.abs(score) / 5, 1)
     riskLevel = score <= -5 ? 'LOW' : 'MEDIUM'
-    sentiment = 'Bearish'
   } else {
     direction = 'NEUTRAL'
-    strength = Math.abs(score) / 3
     riskLevel = 'HIGH'
-    sentiment = 'Neutral'
   }
 
-  return { direction, strength, reasons, riskLevel, sentiment }
+  return { direction, strength: Math.min(Math.abs(score) / 5, 1), reasons, riskLevel }
 }
 
-export function FundingNwePanel({ funding, nwe, candles, symbol }: FundingNwePanelProps) {
+export const FundingNwePanel = React.memo(function FundingNwePanel({
+  funding,
+  nwe,
+  candles,
+  symbol,
+}: FundingNwePanelProps) {
   const analysis = useMemo(() => analyzeSignals(funding, nwe, candles), [funding, nwe, candles])
 
   const avgRate =
@@ -149,164 +107,65 @@ export function FundingNwePanel({ funding, nwe, candles, symbol }: FundingNwePan
       ? funding.breakdown.reduce((sum, b) => sum + b.rate, 0) / funding.breakdown.length
       : 0
 
-  const getDirectionColor = () => {
-    switch (analysis.direction) {
-      case 'LONG':
-        return '#22c55e'
-      case 'SHORT':
-        return '#ef4444'
-      default:
-        return '#9ca3af'
-    }
-  }
+  const dirTone = analysis.direction === 'LONG' ? 'up' : analysis.direction === 'SHORT' ? 'dn' : ''
+  const riskTone =
+    analysis.riskLevel === 'LOW' ? 'up' : analysis.riskLevel === 'MEDIUM' ? 'hi' : 'dn'
 
-  const getDirectionIcon = () => {
-    switch (analysis.direction) {
-      case 'LONG':
-        return '↗'
-      case 'SHORT':
-        return '↘'
-      default:
-        return '→'
-    }
-  }
-
-  const getStrengthLabel = () => {
-    if (analysis.strength >= 0.8) return 'Rất mạnh'
-    if (analysis.strength >= 0.6) return 'Mạnh'
-    if (analysis.strength >= 0.4) return 'Trung bình'
-    return 'Yếu'
-  }
-
-  const getRiskColor = () => {
-    switch (analysis.riskLevel) {
-      case 'LOW':
-        return '#22c55e'
-      case 'MEDIUM':
-        return '#f59e0b'
-      default:
-        return '#ef4444'
-    }
-  }
-
-  const getRiskIcon = () => {
-    switch (analysis.riskLevel) {
-      case 'LOW':
-        return '✓'
-      case 'MEDIUM':
-        return '⚠'
-      default:
-        return '⚠'
-    }
-  }
+  const fundTone = funding.cls || (avgRate < 0 ? 'up' : avgRate > 0.05 ? 'dn' : '')
+  const strengthPct = `${Math.round(analysis.strength * 100)}%`
 
   return (
-    <div className="btc-funding-nwe-unified">
-      {/* Header with Symbol and Direction */}
-      <div className="btc-fnwe-header">
-        <div className="btc-fnwe-symbol-section">
-          <span className="btc-fnwe-symbol">{symbol}</span>
-          <span className="btc-fnwe-sentiment">{analysis.sentiment}</span>
+    <SideBlock variant="market" className="sb-block--funding">
+      <div className="sb-funding-hero">
+        <div className="sb-funding-hero__head">
+          <span className="sb-funding-hero__kicker">Funding Rate</span>
+          <span className="sb-funding-hero__sym">{symbol}</span>
         </div>
-        <div
-          className="btc-fnwe-direction-badge"
-          style={{
-            background: `${getDirectionColor()}15`,
-            borderColor: getDirectionColor(),
-            color: getDirectionColor(),
-          }}
-        >
-          <span className="btc-fnwe-direction-icon">{getDirectionIcon()}</span>
-          <span className="btc-fnwe-direction-text">{analysis.direction}</span>
+        <div className={`sb-funding-hero__rate ${fundTone}`}>{funding.val}</div>
+        <div className="sb-funding-hero__meta">
+          <span className={`sb-funding-hero__sentiment ${fundTone}`}>{funding.sub}</span>
+          <SideBadge
+            tone={
+              analysis.direction === 'LONG' ? 'up' : analysis.direction === 'SHORT' ? 'dn' : 'muted'
+            }
+          >
+            {analysis.direction}
+          </SideBadge>
         </div>
       </div>
 
-      {/* Funding Rate Section */}
-      <div className="btc-fnwe-section">
-        <div className="btc-fnwe-section-title">
-          <span className="btc-fnwe-icon">💰</span>
-          Funding Rate
-        </div>
-        <div className="btc-fnwe-rate-display">
-          <div className={`btc-fnwe-rate-value ${funding.cls}`}>
-            {(avgRate >= 0 ? '+' : '') + avgRate.toFixed(4)}%
-          </div>
-          <div className={`btc-fnwe-rate-sentiment ${funding.cls}`}>{funding.sub}</div>
-        </div>
+      <SideBody>
         {funding.breakdown.length > 0 && (
-          <div className="btc-fnwe-breakdown">
+          <div className="sb-kv-list sb-kv-list--funding">
             {funding.breakdown.map((b) => (
-              <div key={b.name} className="btc-fnwe-breakdown-item">
-                <span className="btc-fnwe-exchange-name">{b.name}</span>
-                <span
-                  className={`btc-fnwe-exchange-rate ${b.rate < 0 ? 'positive' : b.rate > 0.05 ? 'negative' : ''}`}
-                >
-                  {(b.rate >= 0 ? '+' : '') + b.rate.toFixed(4)}%
-                </span>
-              </div>
+              <SideRow
+                key={b.name}
+                label={b.name}
+                value={`${b.rate >= 0 ? '+' : ''}${b.rate.toFixed(4)}%`}
+                tone={b.rate < 0 ? 'up' : b.rate > 0.05 ? 'dn' : ''}
+                className="sb-row--funding"
+              />
             ))}
           </div>
         )}
-      </div>
 
-      {/* Signal Analysis Section */}
-      <div className="btc-fnwe-section">
-        <div className="btc-fnwe-section-title">
-          <span className="btc-fnwe-icon">📊</span>
-          Phân tích tín hiệu
-        </div>
-        <div className="btc-fnwe-analysis-grid">
-          <div className="btc-fnwe-analysis-item">
-            <span className="btc-fnwe-analysis-label">Hướng</span>
-            <span className="btc-fnwe-analysis-value" style={{ color: getDirectionColor() }}>
-              {analysis.direction}
-            </span>
-          </div>
-          <div className="btc-fnwe-analysis-item">
-            <span className="btc-fnwe-analysis-label">Độ mạnh</span>
-            <span className="btc-fnwe-analysis-value">{getStrengthLabel()}</span>
-          </div>
-          <div className="btc-fnwe-analysis-item">
-            <span className="btc-fnwe-analysis-label">Rủi ro</span>
-            <span className="btc-fnwe-analysis-value" style={{ color: getRiskColor() }}>
-              {getRiskIcon()} {analysis.riskLevel}
-            </span>
-          </div>
-        </div>
-        {analysis.reasons.length > 0 && (
-          <div className="btc-fnwe-reasons">
-            {analysis.reasons.map((reason, idx) => (
-              <div key={idx} className="btc-fnwe-reason-item">
-                <span className="btc-fnwe-reason-bullet">•</span>
-                <span className="btc-fnwe-reason-text">{reason}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {analysis.reasons.length === 0 && (
-          <div className="btc-fnwe-no-signal">Chưa có tín hiệu rõ ràng</div>
-        )}
-      </div>
+        <StatGrid cols={3}>
+          <StatCell label="Bias" value={analysis.direction} tone={dirTone} />
+          <StatCell label="Risk" value={analysis.riskLevel} tone={riskTone} />
+          <StatCell
+            label="Strength"
+            value={strengthPct}
+            tone={analysis.strength >= 0.6 ? 'hi' : ''}
+          />
+        </StatGrid>
 
-      {/* Trading Rules */}
-      <div className="btc-fnwe-rules">
-        <div className="btc-fnwe-rule-item">
-          <span className="btc-fnwe-rule-icon positive">↓</span>
-          <span className="btc-fnwe-rule-text">
-            FR &lt; -0.01% → <strong>LONG</strong>
-          </span>
-        </div>
-        <div className="btc-fnwe-rule-item">
-          <span className="btc-fnwe-rule-icon negative">↑</span>
-          <span className="btc-fnwe-rule-text">
-            FR &gt; +0.01% → <strong>SHORT</strong>
-          </span>
-        </div>
-        <div className="btc-fnwe-rule-item">
-          <span className="btc-fnwe-rule-icon neutral">⚡</span>
-          <span className="btc-fnwe-rule-text">Kết hợp NWE + RSI để xác nhận</span>
-        </div>
-      </div>
-    </div>
+        {analysis.reasons[0] && <SideNote>{analysis.reasons[0]}</SideNote>}
+
+        <SideNote>
+          FR &lt; -0.01% lean <span className="up">LONG</span> · FR &gt; +0.01% lean{' '}
+          <span className="dn">SHORT</span>
+        </SideNote>
+      </SideBody>
+    </SideBlock>
   )
-}
+})

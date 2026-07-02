@@ -1,5 +1,5 @@
 // BTC Chart — Volume Profile drawer (canvas).
-// Renders a horizontal-bar profile + heatmap on the right side of the price chart.
+// Renders profile bars + a heatmap strip docked at the chart's right edge.
 
 export interface VPCandle {
   time: number
@@ -20,9 +20,11 @@ export interface VPInfo {
 
 export interface VPOptions {
   bins?: number
-  /** Width of the overlay canvas in pixels. */
-  width?: number
-  /** Show heatmap column behind the bars (volume intensity gradient). */
+  /** Width of the profile bar column in pixels. */
+  profileWidth?: number
+  /** Width of the heatmap intensity strip in pixels. */
+  heatmapWidth?: number
+  /** Show heatmap strip flush against the price scale. */
   heatmap?: boolean
   /** Highlight rows ≥ this fraction of POC volume as High Volume Nodes. */
   hvnRatio?: number
@@ -38,6 +40,10 @@ interface Profile {
   valIdx: number
   totalVol: number
 }
+
+const HEATMAP_W_DEFAULT = 14
+const PROFILE_W_DEFAULT = 168
+const COL_GAP = 2
 
 const fmt = (n: number) =>
   n >= 10000 ? n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : n.toFixed(2)
@@ -88,11 +94,13 @@ export function drawVolumeProfile(
   visible: boolean,
   opts: VPOptions = {},
 ): VPInfo {
-  const W = opts.width ?? 220
-  const H = mainEl.clientHeight
   const bins = opts.bins ?? 64
-  const heatmap = opts.heatmap ?? true
+  const showHeatmap = opts.heatmap ?? true
   const hvnRatio = opts.hvnRatio ?? 0.8
+  const profileW = opts.profileWidth ?? PROFILE_W_DEFAULT
+  const heatmapW = opts.heatmapWidth ?? HEATMAP_W_DEFAULT
+  const W = showHeatmap ? profileW + COL_GAP + heatmapW : profileW
+  const H = mainEl.clientHeight
 
   canvas.width = W
   canvas.height = H
@@ -110,46 +118,26 @@ export function drawVolumeProfile(
   const { rows, pocIdx, vahIdx, valIdx, step, minP } = vp
   const maxVol = Math.max(...rows.map((r) => r.total)) || 1
   const rowH = H / rows.length
-  const barW = W - 14 // leave space for label gutter
+  const profileX = 0
+  const heatmapX = profileW + COL_GAP
+  const barW = profileW - 10
 
-  // ── 1. Heatmap column (5px strip on the very left) ─────────────────
-  if (heatmap) {
-    const stripW = 5
-    rows.forEach((r, i) => {
-      const y = H - (i + 1) * rowH
-      const t = r.total / maxVol
-      const alpha = 0.06 + t * 0.55
-      // amber → mint gradient by intensity
-      const c =
-        t > 0.66
-          ? `rgba(255,196,107,${alpha})`
-          : t > 0.33
-            ? `rgba(128,255,213,${alpha * 0.9})`
-            : `rgba(190,255,234,${alpha * 0.6})`
-      ctx.fillStyle = c
-      ctx.fillRect(0, y, stripW, rowH)
-    })
-  }
-
-  // ── 2. Value Area band (subtle backdrop) ───────────────────────────
+  // ── 1. Profile buy/sell bars (left column) ─────────────────────────
   const vaY = H - (vahIdx + 1) * rowH
   const vaH = (vahIdx - valIdx + 1) * rowH
   ctx.fillStyle = 'rgba(255,196,107,0.05)'
-  ctx.fillRect(8, vaY, W - 8, vaH)
+  ctx.fillRect(profileX, vaY, profileW, vaH)
 
-  // ── 3. Buy/Sell horizontal bars ────────────────────────────────────
-  const offsetX = heatmap ? 8 : 0
   let hvnCount = 0
   rows.forEach((r, i) => {
     const y = H - (i + 1) * rowH
-    const buyW = (r.buy / maxVol) * (barW - offsetX)
-    const sellW = (r.sell / maxVol) * (barW - offsetX)
+    const buyW = (r.buy / maxVol) * barW
+    const sellW = (r.sell / maxVol) * barW
     const isPOC = i === pocIdx
     const isVA = i >= valIdx && i <= vahIdx
     const isHVN = !isPOC && r.total >= maxVol * hvnRatio
     if (isHVN) hvnCount++
 
-    // Sell side first (red), then buy side (green) stacked horizontally.
     ctx.fillStyle = isPOC
       ? 'rgba(255,196,107,0.95)'
       : isHVN
@@ -157,7 +145,7 @@ export function drawVolumeProfile(
         : isVA
           ? 'rgba(255,122,133,0.6)'
           : 'rgba(255,122,133,0.3)'
-    ctx.fillRect(offsetX, y + 0.5, sellW, rowH - 1)
+    ctx.fillRect(profileX, y + 0.5, sellW, rowH - 1)
 
     ctx.fillStyle = isPOC
       ? 'rgba(255,196,107,0.95)'
@@ -166,45 +154,62 @@ export function drawVolumeProfile(
         : isVA
           ? 'rgba(52,216,164,0.6)'
           : 'rgba(52,216,164,0.3)'
-    ctx.fillRect(offsetX + sellW, y + 0.5, buyW, rowH - 1)
+    ctx.fillRect(profileX + sellW, y + 0.5, buyW, rowH - 1)
 
-    // HVN ring marker on the right gutter
     if (isHVN) {
       ctx.fillStyle = 'rgba(255,196,107,0.9)'
       ctx.beginPath()
-      ctx.arc(W - 4, y + rowH / 2, 2, 0, Math.PI * 2)
+      ctx.arc(profileX + profileW - 4, y + rowH / 2, 2, 0, Math.PI * 2)
       ctx.fill()
     }
   })
 
-  // ── 4. POC line ────────────────────────────────────────────────────
+  // ── 2. Heatmap strip (right column, flush to price scale) ────────────
+  if (showHeatmap) {
+    rows.forEach((r, i) => {
+      const y = H - (i + 1) * rowH
+      const t = r.total / maxVol
+      const alpha = 0.08 + t * 0.62
+      const c =
+        t > 0.66
+          ? `rgba(255,196,107,${alpha})`
+          : t > 0.33
+            ? `rgba(128,255,213,${alpha * 0.9})`
+            : `rgba(190,255,234,${alpha * 0.6})`
+      ctx.fillStyle = c
+      ctx.fillRect(heatmapX, y, heatmapW, rowH)
+    })
+
+    ctx.fillStyle = 'rgba(232, 184, 74, 0.18)'
+    ctx.fillRect(heatmapX - 1, 0, 1, H)
+  }
+
+  // ── 3. POC line across profile column ────────────────────────────────
   const pocY = H - (pocIdx + 0.5) * rowH
   ctx.strokeStyle = '#ffc46b'
   ctx.lineWidth = 1
   ctx.setLineDash([4, 3])
   ctx.beginPath()
-  ctx.moveTo(0, pocY)
-  ctx.lineTo(W, pocY)
+  ctx.moveTo(profileX, pocY)
+  ctx.lineTo(profileX + profileW, pocY)
   ctx.stroke()
   ctx.setLineDash([])
 
-  // POC pill label
   const pocPrice = minP + pocIdx * step
   const pocLabel = 'POC ' + fmt(pocPrice)
   ctx.font = 'bold 9px ui-monospace, monospace'
   const pocLabelW = ctx.measureText(pocLabel).width + 8
   ctx.fillStyle = 'rgba(255,196,107,0.95)'
-  roundRect(ctx, 6, pocY - 7, pocLabelW, 13, 3)
+  roundRect(ctx, profileX + 2, pocY - 7, pocLabelW, 13, 3)
   ctx.fill()
   ctx.fillStyle = '#071011'
-  ctx.fillText(pocLabel, 10, pocY + 2)
+  ctx.fillText(pocLabel, profileX + 6, pocY + 2)
 
-  // VAH / VAL minor labels
   ctx.font = '9px ui-monospace, monospace'
   ctx.fillStyle = 'rgba(255,122,133,0.85)'
-  ctx.fillText('VAH', 8, H - (vahIdx + 0.5) * rowH - 2)
+  ctx.fillText('VAH', profileX + 2, H - (vahIdx + 0.5) * rowH - 2)
   ctx.fillStyle = 'rgba(52,216,164,0.85)'
-  ctx.fillText('VAL', 8, H - (valIdx + 0.5) * rowH + 9)
+  ctx.fillText('VAL', profileX + 2, H - (valIdx + 0.5) * rowH + 9)
 
   const poc = minP + pocIdx * step
   const vah = minP + vahIdx * step

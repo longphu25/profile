@@ -1,47 +1,43 @@
 // BTC Chart — ML signal gauge and its feature-weight breakdown.
 
+import React from 'react'
 import { FEATURE_LABEL, type MLResult } from '../lib'
+import { SideBlock, SideHero, SideBody, StatGrid, StatCell } from './sidebar'
 
-export function SignalPanel({ ml }: { ml: MLResult }) {
+export const SignalPanel = React.memo(function SignalPanel({ ml }: { ml: MLResult }) {
+  const pct = Math.round(ml.score * 100)
+
   return (
-    <div className="btc-chart__panel">
-      <div className="btc-chart__panel-title">Signal</div>
-      <div
-        className={`btc-chart__ml ${ml.score > 0.55 ? 'is-buy' : ml.score < 0.45 ? 'is-sell' : ''}`}
-      >
-        <div className="btc-chart__ml-head">
-          <span className="btc-chart__ml-label" style={{ color: ml.color }}>
-            {ml.label}
-          </span>
-          <span className="btc-chart__ml-pct">{Math.round(ml.score * 100)}%</span>
-        </div>
-        <div className="btc-chart__ml-bar-wrap">
-          <div
-            className="btc-chart__ml-bar"
-            style={{ width: Math.round(ml.score * 100) + '%', background: ml.color }}
-          />
-        </div>
-        <div className="btc-chart__ml-foot">Confidence · Lux NWE + MA + RSI + MACD</div>
-      </div>
-    </div>
+    <SideBlock variant="signal">
+      <SideHero
+        kicker="ML Signal"
+        title={ml.label}
+        pct={pct}
+        color={ml.color}
+        hint="Lux NWE · MA50/200 · RSI · MACD confluence"
+      />
+    </SideBlock>
   )
-}
+})
 
 export function FeatureWeightsPanel({ ml }: { ml: MLResult }) {
   return (
-    <div className="btc-chart__panel">
-      <div className="btc-chart__panel-title">Feature weights</div>
-      <div className="btc-chart__features">
-        {Object.entries(ml.features).map(([k, v]) => (
-          <div key={k} className="btc-chart__feat">
-            <div className="btc-chart__feat-name">{FEATURE_LABEL[k] ?? k}</div>
-            <div className={`btc-chart__feat-val ${v >= 0 ? 'up' : 'dn'}`}>
-              {v >= 0 ? '+' : ''}
-              {v.toFixed(2)}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+    <SideBlock variant="data">
+      <SideBody>
+        <div className="sb-head__title" style={{ marginBottom: 6 }}>
+          Feature Weights
+        </div>
+        <StatGrid cols={2}>
+          {Object.entries(ml.features).map(([k, v]) => (
+            <StatCell
+              key={k}
+              label={FEATURE_LABEL[k] ?? k}
+              value={`${v >= 0 ? '+' : ''}${v.toFixed(2)}`}
+              tone={v >= 0 ? 'up' : 'dn'}
+            />
+          ))}
+        </StatGrid>
+      </SideBody>
+    </SideBlock>
   )
 }

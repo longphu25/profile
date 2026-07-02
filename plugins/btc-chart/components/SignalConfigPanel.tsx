@@ -10,6 +10,8 @@ import {
   type SignalConfig,
   type FeatureKey,
 } from '../lib'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 interface Props {
   config: SignalConfig
@@ -45,45 +47,66 @@ export function SignalConfigPanel({ config, onChange }: Props) {
   }
 
   return (
-    <div className="btc-chart__panel btc-chart__sigcfg">
-      <button
-        type="button"
-        className="btc-chart__sigcfg-toggle"
+    <Card className="overflow-hidden">
+      <div
+        role="button"
+        tabIndex={0}
+        className="flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-sm hover:bg-[var(--surface-3)]/40 border-b border-[var(--border)] cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--mint)]"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setOpen((o) => !o)
+          }
+        }}
       >
-        <span className="btc-chart__sigcfg-caret">{open ? '▾' : '▸'}</span>
-        Signal Config
-        <span className="muted">
+        <span className="text-[var(--muted)]">{open ? '▾' : '▸'}</span>
+        <span className="font-medium flex-1">Signal Config</span>
+        <span className="text-[10px] text-[var(--muted)]">
           {activePreset ? activePreset.name : `${enabledCount}/${ALL_FEATURES.length}`}
         </span>
-      </button>
+      </div>
 
       {open && (
         <div className="btc-chart__sigcfg-body">
           {/* Presets */}
           <div className="btc-chart__sigcfg-presets">
             {SIGNAL_PRESETS.map((p) => (
-              <button
+              <Button
                 key={p.id}
                 type="button"
-                className={`btc-chart__sigcfg-preset${activePreset?.id === p.id ? ' is-on' : ''}`}
+                variant={activePreset?.id === p.id ? 'default' : 'outline'}
+                size="sm"
+                className="text-[10px] h-7"
                 onClick={() => applyPreset(p.id)}
                 title={p.description}
               >
                 {p.name}
-              </button>
+              </Button>
             ))}
           </div>
 
           {/* Quick actions */}
-          <div className="btc-chart__sigcfg-actions">
-            <button type="button" onClick={selectAll}>
+          <div className="flex gap-1 mt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-[10px] h-7"
+              onClick={selectAll}
+            >
               Bat tat ca
-            </button>
-            <button type="button" onClick={clearAll}>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-[10px] h-7"
+              onClick={clearAll}
+            >
               Tat tat ca
-            </button>
+            </Button>
           </div>
 
           {/* Feature toggles by group */}
@@ -102,6 +125,6 @@ export function SignalConfigPanel({ config, onChange }: Props) {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   )
 }

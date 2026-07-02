@@ -5,7 +5,7 @@
 // in the host HTML page. The plugin reads window.LightweightCharts at mount time.
 
 import type { Plugin, HostAPI } from '../../src/plugins/types'
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './style.css'
 import {
@@ -17,6 +17,7 @@ import {
   type ChartConfig,
   type VisFlags,
   type OscView,
+  type NadarayaConfig,
 } from './storage'
 import {
   AlertSound,
@@ -34,32 +35,62 @@ import { drawOrderFlow, type OFOverlaySignal } from './order-flow-overlay'
 import { computeSMC, initSmcWasm, computeNadarayaWatson, type SMCResult } from './smc-wasm'
 import { buildBoxFlipSignals, type BoxFlipResult } from './box-flip'
 import { downloadChartSnapshot } from './snapshot'
-import {
-  AlertsPanel,
-  PositionsPanel,
-  SignalPanel,
-  FeatureWeightsPanel,
-  StatsPanel,
-  FearGreedPanel,
-  OrderFlowPanel,
-  BoxFlipPanel,
-  MHBandPanel,
-  VolumeProfilePanel,
-  TechnicalsPanel,
-  VolumeSpikePanel,
-  ChartHeader,
-  IndicatorToolbar,
-  TradeSetupPanel,
-  OIPanel,
-  ScalpingPanel,
-  ReversalPanel,
-  SignalConfigPanel,
-  SidebarAccordion,
-  WhalePanel,
-  FundingNwePanel,
-  SessionsPanel,
-  LiquidityPanel,
-} from './components'
+// Direct imports (avoid barrel for better bundle analyzability per best practices)
+import { AlertsPanel } from './components/AlertsPanel'
+import { PositionsPanel } from './components/PositionsPanel'
+import { StatsPanel, FearGreedPanel } from './components/MarketPanels'
+
+import { BoxFlipPanel, MHBandPanel } from './components/IndicatorReadouts'
+import { VolumeSpikePanel } from './components/VolumeSpikePanel'
+import { ChartHeader } from './components/ChartHeader'
+import { ChartToolbarPanel } from './components/ChartToolbarPanel'
+import { ALL_IND_KEYS } from './lib/indicator-groups'
+
+import { SidebarAccordion } from './components/SidebarAccordion'
+import { RailSection } from './components/sidebar'
+// (FundingNwe / Sessions / Liquidity / OI / Technicals are lazy-loaded below)
+
+// Lazy loaded heavier panels (code split + initial perf)
+const SignalConfigPanelLazy = lazy(() =>
+  import('./components/SignalConfigPanel').then((m) => ({ default: m.SignalConfigPanel })),
+)
+const VolumeProfilePanel = lazy(() =>
+  import('./components/IndicatorReadouts').then((m) => ({ default: m.VolumeProfilePanel })),
+)
+const OrderFlowPanel = lazy(() =>
+  import('./components/IndicatorReadouts').then((m) => ({ default: m.OrderFlowPanel })),
+)
+const ScalpingPanel = lazy(() =>
+  import('./components/ScalpingPanel').then((m) => ({ default: m.ScalpingPanel })),
+)
+const ReversalPanel = lazy(() =>
+  import('./components/ReversalPanel').then((m) => ({ default: m.ReversalPanel })),
+)
+const WhalePanel = lazy(() =>
+  import('./components/WhalePanel').then((m) => ({ default: m.WhalePanel })),
+)
+const FundingNwePanelLazy = lazy(() =>
+  import('./components/FundingNwePanel').then((m) => ({ default: m.FundingNwePanel })),
+)
+const SessionsPanelLazy = lazy(() =>
+  import('./components/SessionsPanel').then((m) => ({ default: m.SessionsPanel })),
+)
+const LiquidityPanelLazy = lazy(() =>
+  import('./components/LiquidityPanel').then((m) => ({ default: m.LiquidityPanel })),
+)
+const OIPanelLazy = lazy(() => import('./components/OIPanel').then((m) => ({ default: m.OIPanel })))
+const TechnicalsPanelLazy = lazy(() =>
+  import('./components/TechnicalsPanel').then((m) => ({ default: m.TechnicalsPanel })),
+)
+const SignalPanelLazy = lazy(() =>
+  import('./components/SignalPanel').then((m) => ({ default: m.SignalPanel })),
+)
+const FeatureWeightsPanelLazy = lazy(() =>
+  import('./components/SignalPanel').then((m) => ({ default: m.FeatureWeightsPanel })),
+)
+const TradeSetupPanelLazy = lazy(() =>
+  import('./components/TradeSetupPanel').then((m) => ({ default: m.TradeSetupPanel })),
+)
 import {
   usePositions,
   useTicker,
@@ -73,6 +104,7 @@ import {
 import {
   CHART,
   LIMIT,
+  NWE_DEFAULT_WINDOW,
   type Interval,
   SYMBOLS,
   loadSymbols,
@@ -204,7 +236,7 @@ function BtcChartView() {
   // Interval mirror so renderData (deps []) can read the current timeframe —
   // ICT session logic only runs on intraday frames.
   const intervalRef = useRef<Interval>(cfgInit.interval as Interval)
-  const vpOptsRef = useRef({ heatmap: true, hvnRatio: 0.8 })
+  const vpOptsRef = useRef({ hvnRatio: 0.8 })
   const alertsRef = useRef<AlertRule[]>([...cfgInit.alerts])
   const soundRef = useRef<AlertSound>(new AlertSound())
   const lastPriceRef = useRef<number | null>(null)
@@ -214,25 +246,39 @@ function BtcChartView() {
   // Latest computed indicator snapshot — read from inside the WS handler.
   const sidebarRef = useRef<SidebarState>(INITIAL_SIDEBAR)
 
+  // Simple memo for expensive WASM/JS computes (keyed by length + last bar time)
+  const nweCacheKeyRef = useRef<string>('')
+  const nweCacheRef = useRef<any>(null)
+  const smcCacheKeyRef = useRef<string>('')
+  const smcCacheRef = useRef<SMCResult | null>(null)
+
   const [interval, setInterval_] = useState<Interval>(cfgInit.interval as Interval)
   const [symbol, setSymbol] = useState<SymbolId>((cfgInit.symbol as SymbolId) || 'BTCUSDT')
   const [customSymbols, setCustomSymbols] = useState<SymbolEntry[]>(loadCustomSymbols)
   const [remoteSymbols, setRemoteSymbols] = useState<readonly SymbolEntry[]>(SYMBOLS)
-  const allSymbols: SymbolEntry[] = [
-    ...remoteSymbols,
-    ...customSymbols.filter((c) => !remoteSymbols.some((s) => s.symbol === c.symbol)),
-  ]
-  const symbolInfo: SymbolEntry = allSymbols.find((s) => s.symbol === symbol) || {
-    symbol,
-    base: symbol.replace(/USDT$/, ''),
-    quote: 'USDT',
-    exchange: 'binance' as Exchange,
-  }
+  const allSymbols = useMemo<SymbolEntry[]>(
+    () => [
+      ...remoteSymbols,
+      ...customSymbols.filter((c) => !remoteSymbols.some((s) => s.symbol === c.symbol)),
+    ],
+    [remoteSymbols, customSymbols],
+  )
+  const symbolInfo: SymbolEntry = useMemo(() => {
+    return (
+      allSymbols.find((s) => s.symbol === symbol) || {
+        symbol,
+        base: symbol.replace(/USDT$/, ''),
+        quote: 'USDT',
+        exchange: 'binance' as Exchange,
+      }
+    )
+  }, [allSymbols, symbol])
+
   // Also keep a ref so effects always see the latest value without stale closures
   const symbolInfoRef = useRef(symbolInfo)
   symbolInfoRef.current = symbolInfo
   const [vis, setVis] = useState<VisFlags>(visRef.current)
-  const [vpOpts, setVpOpts] = useState(vpOptsRef.current)
+  const [toolsOpen, setToolsOpen] = useState(false)
   const [oscOpen, setOscOpen] = useState<boolean>(cfgInit.oscOpen)
   const [oscView, setOscView] = useState<OscView>(cfgInit.oscView)
   const [oscHeight, setOscHeight] = useState<number>(cfgInit.oscHeight)
@@ -243,6 +289,20 @@ function BtcChartView() {
   oscViewRef.current = oscView
   const oscOpenRef = useRef<boolean>(cfgInit.oscOpen)
   oscOpenRef.current = oscOpen
+
+  // NWE (LuxAlgo) config - reactive + ref for renderData
+  const [nweCfg, setNweCfg] = useState<NadarayaConfig>(
+    () =>
+      (cfgInit.luxNwe as NadarayaConfig) ?? {
+        bandwidth: 8,
+        multiplier: 3,
+        repaint: false,
+        maxBarsBack: NWE_DEFAULT_WINDOW,
+      },
+  )
+  const nweCfgRef = useRef<NadarayaConfig>(nweCfg)
+  nweCfgRef.current = nweCfg
+
   const [alerts, setAlerts] = useState<AlertRule[]>(alertsRef.current)
   const [sound, setSound] = useState(cfgInit.sound)
   const [notifAllowed, setNotifAllowed] = useState(cfgInit.notifications)
@@ -413,9 +473,6 @@ function BtcChartView() {
     htfRef.current = htfQuery.data?.candles ?? null
   }, [htfQuery.data])
   useEffect(() => {
-    vpOptsRef.current = vpOpts
-  }, [vpOpts])
-  useEffect(() => {
     alertsRef.current = alerts
   }, [alerts])
   useEffect(() => {
@@ -446,6 +503,7 @@ function BtcChartView() {
         oscHeight,
         spikeMult,
         signalConfig,
+        luxNwe: nweCfg,
       })
     },
     [
@@ -460,6 +518,7 @@ function BtcChartView() {
       oscHeight,
       spikeMult,
       signalConfig,
+      nweCfg,
     ],
   )
   useEffect(() => {
@@ -505,8 +564,37 @@ function BtcChartView() {
       bufferPct: 0.0007,
     })
     // LuxAlgo Nadaraya-Watson Envelope (WASM-backed, JS fallback)
-    const luxNweCfg = cfgInit.luxNwe ?? { bandwidth: 8, multiplier: 3, repaint: true }
-    const luxNwe = computeNadarayaWatson(data, luxNweCfg)
+    // Guard: compute for vis.luxNwe OR TradeSetup (which relies on recent signals + upper/lower for SL/TP).
+    // Memo + smaller window (default 250) when repaint to keep perf good.
+    let luxNwe: any
+    const currentNweCfg = nweCfgRef.current
+    const nweKey = `${data.length}:${data[data.length - 1]?.time ?? 0}:${currentNweCfg.repaint}:${currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW}`
+    if (nweKey === nweCacheKeyRef.current && nweCacheRef.current) {
+      luxNwe = nweCacheRef.current
+    } else {
+      const t0 = performance.now()
+      const win = Math.min(currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW, data.length)
+      // For repaint, use a sliced window to reduce compute cost (the function will limit anyway)
+      const nweInput = currentNweCfg.repaint ? data.slice(-win) : data
+      luxNwe = computeNadarayaWatson(nweInput, { ...currentNweCfg, maxBarsBack: win })
+      // If we sliced, the result arrays are shorter. Align by padding front with nulls so indices match 'data'.
+      if (currentNweCfg.repaint && nweInput.length < data.length) {
+        const pad = data.length - nweInput.length
+        luxNwe = {
+          mid: [...Array(pad).fill(null), ...luxNwe.mid],
+          upper: [...Array(pad).fill(null), ...luxNwe.upper],
+          lower: [...Array(pad).fill(null), ...luxNwe.lower],
+          signals: luxNwe.signals.map((s: any) => ({ ...s, index: s.index + pad })),
+        }
+      }
+      const t1 = performance.now()
+      // eslint-disable-next-line no-console
+      console.log(
+        `[perf] NWE ${currentNweCfg.repaint ? 'repaint' : 'non-repaint'} compute: ${(t1 - t0).toFixed(2)}ms (win=${win}, n=${data.length})`,
+      )
+      nweCacheKeyRef.current = nweKey
+      nweCacheRef.current = luxNwe
+    }
     // ICT sessions + Judas swing (intraday only; empty on 4h/1d)
     const ict = computeICT(data, intervalRef.current)
     ictDataRef.current = ict
@@ -795,7 +883,7 @@ function BtcChartView() {
     if (vpCanvasRef.current && mainElRef.current) {
       const info = drawVP(vpCanvasRef.current, mainElRef.current, data.slice(-LIMIT), visFlags.vp, {
         ...vpOptsRef.current,
-        width: 220,
+        heatmap: visFlags.heatmap,
       })
       setSidebar((s) => ({
         ...s,
@@ -806,16 +894,29 @@ function BtcChartView() {
 
     // ── SMC overlay ──
     // Compute when SMC is shown OR liquidity is on (liquidity reuses FVGs/BOS).
-    const smcResult =
-      visFlags.smc || visFlags.liquidity
-        ? computeSMC(data, {
-            structure: true,
-            orderBlocks: true,
-            fvg: true,
-            swingLen: 10,
-            internalLen: 5,
-          })
-        : { structures: [], orderBlocks: [], fvgs: [] }
+    let smcResult: SMCResult
+    if (visFlags.smc || visFlags.liquidity) {
+      const smcKey = `${data.length}:${data[data.length - 1]?.time ?? 0}`
+      if (smcKey === smcCacheKeyRef.current && smcCacheRef.current) {
+        smcResult = smcCacheRef.current
+      } else {
+        const t0 = performance.now()
+        smcResult = computeSMC(data, {
+          structure: true,
+          orderBlocks: true,
+          fvg: true,
+          swingLen: 10,
+          internalLen: 5,
+        })
+        const t1 = performance.now()
+        // eslint-disable-next-line no-console
+        console.log(`[perf] SMC compute: ${(t1 - t0).toFixed(2)}ms (n=${data.length})`)
+        smcCacheKeyRef.current = smcKey
+        smcCacheRef.current = smcResult
+      }
+    } else {
+      smcResult = { structures: [], orderBlocks: [], fvgs: [] }
+    }
     smcDataRef.current = smcResult
     if (smcCanvasRef.current && mainElRef.current && refs.mainChart) {
       drawSMCOverlay(
@@ -1397,7 +1498,10 @@ function BtcChartView() {
           mainElRef.current,
           candlesRef.current.slice(-LIMIT),
           visRef.current.vp,
-          vpOptsRef.current,
+          {
+            ...vpOptsRef.current,
+            heatmap: visRef.current.heatmap,
+          },
         )
         setSidebar((s) => ({
           ...s,
@@ -1999,16 +2103,6 @@ function BtcChartView() {
     [renderData],
   )
 
-  // ── VP options ──────────────────────────────────────────────────────
-  const toggleHeatmap = useCallback(() => {
-    setVpOpts((o) => {
-      const next = { ...o, heatmap: !o.heatmap }
-      vpOptsRef.current = next
-      queueMicrotask(() => renderData(candlesRef.current))
-      return next
-    })
-  }, [renderData])
-
   const updateSignalConfig = useCallback(
     (cfg: SignalConfig) => {
       setSignalConfig(cfg)
@@ -2017,6 +2111,28 @@ function BtcChartView() {
     },
     [renderData],
   )
+
+  const updateNweConfig = useCallback(
+    (patch: Partial<NadarayaConfig>) => {
+      setNweCfg((prev) => {
+        const next = {
+          ...prev,
+          ...patch,
+          maxBarsBack: patch.maxBarsBack ?? prev.maxBarsBack ?? NWE_DEFAULT_WINDOW,
+        }
+        nweCfgRef.current = next
+        // Invalidate memo so next render recomputes with new params
+        nweCacheKeyRef.current = ''
+        if (candlesRef.current.length) queueMicrotask(() => renderData(candlesRef.current))
+        return next
+      })
+    },
+    [renderData],
+  )
+
+  const toggleOscOpen = useCallback(() => {
+    setOscOpen((o) => !o)
+  }, [])
 
   // ── Oscillator pane resize (drag the top edge) ──────────────────────
   const startOscResize = useCallback(
@@ -2106,7 +2222,19 @@ function BtcChartView() {
       oscHeight,
       spikeMult,
     })
-  }, [interval, symbol, vis, alerts, sound, notifAllowed, oscOpen, oscView, oscHeight, spikeMult])
+  }, [
+    interval,
+    symbol,
+    vis,
+    alerts,
+    sound,
+    notifAllowed,
+    oscOpen,
+    oscView,
+    oscHeight,
+    spikeMult,
+    nweCfg,
+  ])
 
   const importNow = useCallback(
     async (file: File) => {
@@ -2123,6 +2251,11 @@ function BtcChartView() {
         setOscHeight(cfg.oscHeight)
         setSpikeMult(cfg.spikeMult)
         spikeMultRef.current = cfg.spikeMult
+        if (cfg.luxNwe) {
+          setNweCfg(cfg.luxNwe as NadarayaConfig)
+          nweCfgRef.current = cfg.luxNwe as NadarayaConfig
+        }
+        cfg.minimal = cfg.minimal ?? false
         if (cfg.interval !== interval) setInterval_(cfg.interval as Interval)
         // restore zoom if present
         if (cfg.zoom && chartRefs.current?.mainChart) {
@@ -2226,43 +2359,52 @@ function BtcChartView() {
           </button>
         </div>
       )}
-      {/* Header */}
-      <ChartHeader
-        symbolInfo={symbolInfo}
-        symbol={symbol}
-        symbols={allSymbols}
-        interval={interval}
-        price={price}
-        ohlcv={ohlcv}
-        onSelectSymbol={selectSymbol}
-        onSelectInterval={selectInterval}
-        onAddCustomSymbol={addCustomSymbol}
-      />
-      {/* Toolbar */}
-      <IndicatorToolbar
-        vis={vis}
-        onToggle={toggle}
-        heatmap={vpOpts.heatmap}
-        onToggleHeatmap={toggleHeatmap}
-        soundEnabled={sound.enabled}
-        onToggleSound={toggleSound}
-        notifAllowed={notifAllowed}
-        onRequestNotif={requestNotif}
-        onSnapshot={snapshot}
-        onExport={exportNow}
-        onImport={importNow}
-      />
+      <div className="btc-chart__chrome">
+        <ChartHeader
+          symbolInfo={symbolInfo}
+          symbol={symbol}
+          symbols={allSymbols}
+          interval={interval}
+          price={price}
+          ohlcv={ohlcv}
+          activeLayerCount={ALL_IND_KEYS.filter((k) => vis[k]).length}
+          toolsOpen={toolsOpen}
+          onToggleTools={() => setToolsOpen((o) => !o)}
+          onSelectSymbol={selectSymbol}
+          onSelectInterval={selectInterval}
+          onAddCustomSymbol={addCustomSymbol}
+        />
+      </div>
+
       {/* Body */}
       <div className="btc-chart__body">
+        {toolsOpen && (
+          <ChartToolbarPanel
+            vis={vis}
+            nweCfg={nweCfg}
+            onToggle={toggle}
+            onUpdateNweConfig={updateNweConfig}
+            onClose={() => setToolsOpen(false)}
+            soundEnabled={sound.enabled}
+            onToggleSound={toggleSound}
+            notifAllowed={notifAllowed}
+            onRequestNotif={requestNotif}
+            onSnapshot={snapshot}
+            onExport={exportNow}
+            onImport={importNow}
+          />
+        )}
         <div className="btc-chart__col">
-          <div className="btc-chart__legend" ref={legendRef} />
-          <canvas className="btc-chart__of-canvas" ref={ofCanvasRef} />
-          <canvas className="btc-chart__ict-canvas" ref={ictCanvasRef} />
-          <canvas className="btc-chart__liq-canvas" ref={liqCanvasRef} />
-          <canvas className="btc-chart__smc-canvas" ref={smcCanvasRef} />
-          <canvas className="btc-chart__box-canvas" ref={boxCanvasRef} />
-          <div className="btc-chart__main" ref={mainElRef} />
-          <canvas className="btc-chart__vp-canvas" ref={vpCanvasRef} />
+          <div className="btc-chart__chart-stage">
+            <div className="btc-chart__legend" ref={legendRef} />
+            <canvas className="btc-chart__of-canvas" ref={ofCanvasRef} />
+            <canvas className="btc-chart__ict-canvas" ref={ictCanvasRef} />
+            <canvas className="btc-chart__liq-canvas" ref={liqCanvasRef} />
+            <canvas className="btc-chart__smc-canvas" ref={smcCanvasRef} />
+            <canvas className="btc-chart__box-canvas" ref={boxCanvasRef} />
+            <div className="btc-chart__main" ref={mainElRef} />
+            <canvas className="btc-chart__vp-canvas" ref={vpCanvasRef} />
+          </div>
           {/* Oscillator pane — RSI / ADX / StochRSI / OBV, resizable + collapsible */}
           <div
             className={`btc-chart__osc-wrap${oscOpen ? ' is-open' : ''}`}
@@ -2281,7 +2423,7 @@ function BtcChartView() {
               <button
                 type="button"
                 className="btc-chart__osc-toggle"
-                onClick={() => setOscOpen((o) => !o)}
+                onClick={toggleOscOpen}
                 aria-expanded={oscOpen}
               >
                 <span className="btc-chart__osc-caret">{oscOpen ? '▾' : '▸'}</span>
@@ -2376,140 +2518,201 @@ function BtcChartView() {
 
         {/* Sidebar */}
         <div className="btc-chart__sidebar">
-          {/* Always visible */}
-          <SignalPanel ml={sidebar.ml} />
-          <TradeSetupPanel setup={sidebar.tradeSetup} />
-          <SessionsPanel ict={ictResult} />
-          <LiquidityPanel liquidity={liquidityResult} />
-          <FundingNwePanel
-            funding={funding}
-            nwe={luxNweResult}
-            candles={candlesRef.current}
-            symbol={symbol}
-          />
-          <ScalpingPanel
-            scalp={boucherScalp}
-            interval={interval}
-            enabled={boucherEnabled}
-            onToggle={() => setBoucherEnabled((v) => !v)}
-          />
-          <ReversalPanel
-            lien={lienReversal}
-            enabled={lienEnabled}
-            onToggle={() => setLienEnabled((v) => !v)}
-          />
+          <RailSection label="Signals">
+            <Suspense fallback={<div className="sb-empty">Loading signal…</div>}>
+              <SignalPanelLazy ml={sidebar.ml} />
+            </Suspense>
+            <Suspense fallback={<div className="sb-empty">Loading setup…</div>}>
+              <TradeSetupPanelLazy setup={sidebar.tradeSetup} />
+            </Suspense>
+            <Suspense fallback={<div className="sb-empty">Loading funding…</div>}>
+              <FundingNwePanelLazy
+                funding={funding}
+                nwe={luxNweResult}
+                candles={candlesRef.current}
+                symbol={symbol}
+              />
+            </Suspense>
+          </RailSection>
 
-          {/* Accordion panels (collapsed by default, activate indicator on open) */}
-          <SidebarAccordion title="Signal Config" onToggle={() => {}}>
-            <SignalConfigPanel config={signalConfig} onChange={updateSignalConfig} />
-          </SidebarAccordion>
-          <SidebarAccordion title="Positions">
-            <PositionsPanel
-              positions={positions}
-              showForm={showPosForm}
-              setShowForm={setShowPosForm}
-              form={posForm}
-              setForm={setPosForm}
-              onAdd={addPosition}
-              onRemove={removePosition}
-              markPrice={markPrice}
-              suggestions={posSuggestions}
-            />
-          </SidebarAccordion>
-          <SidebarAccordion title="Open Interest">
-            <OIPanel
-              oi={oiQuery.data?.totalUsd ?? null}
-              mcap={mcap}
-              breakdown={oiQuery.data?.breakdown}
-            />
-          </SidebarAccordion>
-          <SidebarAccordion
-            title="Whale Tracker"
-            onToggle={(open) => {
-              if (open && !vis.whale) toggle('whale')
-            }}
-          >
-            <WhalePanel
-              whaleAlerts={whaleTracker.whaleAlerts}
-              exchangeFlow={whaleTracker.exchangeFlow}
-              whaleStats={whaleTracker.whaleStats}
-              recentBuyVolume={whaleTracker.recentBuyVolume}
-              recentSellVolume={whaleTracker.recentSellVolume}
-              onClear={whaleTracker.clearAlerts}
-            />
-          </SidebarAccordion>
-          <SidebarAccordion title="24h Stats">
-            <StatsPanel stats={stats} />
-          </SidebarAccordion>
-          <SidebarAccordion
-            title="Order Flow"
-            onToggle={(open) => {
-              if (open && !vis.of) toggle('of')
-            }}
-          >
-            <OrderFlowPanel ofLog={sidebar.ofLog} />
-          </SidebarAccordion>
-          <SidebarAccordion
-            title="Box Flip"
-            onToggle={(open) => {
-              if (open && !vis.boxFlip) toggle('boxFlip')
-            }}
-          >
-            <BoxFlipPanel boxFlip={sidebar.boxFlip} />
-          </SidebarAccordion>
-          <SidebarAccordion
-            title="MH Band"
-            onToggle={(open) => {
-              if (open && !vis.nwe) toggle('nwe')
-            }}
-          >
-            <MHBandPanel sidebar={sidebar} />
-          </SidebarAccordion>
-          <SidebarAccordion title="Alerts">
-            <AlertsPanel
-              alerts={alerts}
-              onAdd={addAlert}
-              onRemove={removeAlert}
-              onToggle={toggleAlert}
-              onReset={resetAlert}
-              currentPrice={candlesRef.current[candlesRef.current.length - 1]?.close ?? null}
-              currentRsi={sidebar.rsiNow}
-            />
-          </SidebarAccordion>
-          <SidebarAccordion title="Technicals">
-            <TechnicalsPanel sidebar={sidebar} />
-          </SidebarAccordion>
-          <SidebarAccordion
-            title="Volume Spike"
-            onToggle={(open) => {
-              if (open && !vis.volSpike) toggle('volSpike')
-            }}
-          >
-            <VolumeSpikePanel
-              enabled={vis.volSpike}
-              onToggle={() => toggle('volSpike')}
-              spikeMult={spikeMult}
-              onChange={(val) => {
-                setSpikeMult(val)
-                spikeMultRef.current = val
-                if (candlesRef.current.length) queueMicrotask(() => renderData(candlesRef.current))
+          <RailSection label="Context">
+            <Suspense fallback={<div className="sb-empty">Loading sessions…</div>}>
+              <SessionsPanelLazy ict={ictResult} />
+            </Suspense>
+            <Suspense fallback={<div className="sb-empty">Loading liquidity…</div>}>
+              <LiquidityPanelLazy liquidity={liquidityResult} />
+            </Suspense>
+          </RailSection>
+
+          <RailSection label="Strategies">
+            <Suspense fallback={<div className="sb-empty">Loading scalping…</div>}>
+              <ScalpingPanel
+                scalp={boucherScalp}
+                interval={interval}
+                enabled={boucherEnabled}
+                onToggle={() => setBoucherEnabled((v) => !v)}
+              />
+            </Suspense>
+            <Suspense fallback={<div className="sb-empty">Loading reversal…</div>}>
+              <ReversalPanel
+                lien={lienReversal}
+                enabled={lienEnabled}
+                onToggle={() => setLienEnabled((v) => !v)}
+              />
+            </Suspense>
+          </RailSection>
+
+          <RailSection label="Tools">
+            <SidebarAccordion title="Signal Config" onToggle={() => {}}>
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <SignalConfigPanelLazy config={signalConfig} onChange={updateSignalConfig} />
+              </Suspense>
+            </SidebarAccordion>
+            <SidebarAccordion title="Positions">
+              <PositionsPanel
+                positions={positions}
+                showForm={showPosForm}
+                setShowForm={setShowPosForm}
+                form={posForm}
+                setForm={setPosForm}
+                onAdd={addPosition}
+                onRemove={removePosition}
+                markPrice={markPrice}
+                suggestions={posSuggestions}
+              />
+            </SidebarAccordion>
+            <SidebarAccordion title="Open Interest">
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <OIPanelLazy
+                  oi={oiQuery.data?.totalUsd ?? null}
+                  mcap={mcap}
+                  breakdown={oiQuery.data?.breakdown}
+                />
+              </Suspense>
+            </SidebarAccordion>
+            <SidebarAccordion
+              title="Whale Tracker"
+              onToggle={(open) => {
+                if (open && !vis.whale) toggle('whale')
               }}
-            />
-          </SidebarAccordion>
-          <SidebarAccordion title="Feature Weights">
-            <FeatureWeightsPanel ml={sidebar.ml} />
-          </SidebarAccordion>
-          <SidebarAccordion
-            title="Volume Profile"
-            onToggle={(open) => {
-              if (open && !vis.vp) toggle('vp')
-            }}
-          >
-            <VolumeProfilePanel vp={sidebar.vp} vpHvn={sidebar.vpHvn} />
-          </SidebarAccordion>
-          <SidebarAccordion title="Fear & Greed">
-            <FearGreedPanel fng={fng} />
-          </SidebarAccordion>
+            >
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading whale...</div>}
+              >
+                <WhalePanel
+                  whaleAlerts={whaleTracker.whaleAlerts}
+                  exchangeFlow={whaleTracker.exchangeFlow}
+                  whaleStats={whaleTracker.whaleStats}
+                  recentBuyVolume={whaleTracker.recentBuyVolume}
+                  recentSellVolume={whaleTracker.recentSellVolume}
+                  onClear={whaleTracker.clearAlerts}
+                />
+              </Suspense>
+            </SidebarAccordion>
+            <SidebarAccordion title="24h Stats">
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <StatsPanel stats={stats} />
+              </Suspense>
+            </SidebarAccordion>
+            <SidebarAccordion
+              title="Order Flow"
+              onToggle={(open) => {
+                if (open && !vis.of) toggle('of')
+              }}
+            >
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <OrderFlowPanel ofLog={sidebar.ofLog} />
+              </Suspense>
+            </SidebarAccordion>
+            <SidebarAccordion
+              title="Box Flip"
+              onToggle={(open) => {
+                if (open && !vis.boxFlip) toggle('boxFlip')
+              }}
+            >
+              <BoxFlipPanel boxFlip={sidebar.boxFlip} />
+            </SidebarAccordion>
+            <SidebarAccordion
+              title="MH Band"
+              onToggle={(open) => {
+                if (open && !vis.nwe) toggle('nwe')
+              }}
+            >
+              <MHBandPanel sidebar={sidebar} />
+            </SidebarAccordion>
+            <SidebarAccordion title="Alerts">
+              <AlertsPanel
+                alerts={alerts}
+                onAdd={addAlert}
+                onRemove={removeAlert}
+                onToggle={toggleAlert}
+                onReset={resetAlert}
+                currentPrice={candlesRef.current[candlesRef.current.length - 1]?.close ?? null}
+                currentRsi={sidebar.rsiNow}
+              />
+            </SidebarAccordion>
+            <SidebarAccordion title="Technicals">
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <TechnicalsPanelLazy sidebar={sidebar} />
+              </Suspense>
+            </SidebarAccordion>
+            <SidebarAccordion
+              title="Volume Spike"
+              onToggle={(open) => {
+                if (open && !vis.volSpike) toggle('volSpike')
+              }}
+            >
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <VolumeSpikePanel
+                  enabled={vis.volSpike}
+                  onToggle={() => toggle('volSpike')}
+                  spikeMult={spikeMult}
+                  onChange={(val) => {
+                    setSpikeMult(val)
+                    spikeMultRef.current = val
+                    if (candlesRef.current.length)
+                      queueMicrotask(() => renderData(candlesRef.current))
+                  }}
+                />
+              </Suspense>
+            </SidebarAccordion>
+            <SidebarAccordion title="Feature Weights">
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <FeatureWeightsPanelLazy ml={sidebar.ml} />
+              </Suspense>
+            </SidebarAccordion>
+            <SidebarAccordion
+              title="Volume Profile"
+              onToggle={(open) => {
+                if (open && !vis.vp) toggle('vp')
+              }}
+            >
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <VolumeProfilePanel vp={sidebar.vp} vpHvn={sidebar.vpHvn} />
+              </Suspense>
+            </SidebarAccordion>
+            <SidebarAccordion title="Fear & Greed">
+              <Suspense fallback={<div className="sb-empty">Loading…</div>}>
+                <FearGreedPanel fng={fng} />
+              </Suspense>
+            </SidebarAccordion>
+          </RailSection>
         </div>
       </div>
       {/* Status */}

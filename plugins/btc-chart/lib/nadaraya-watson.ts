@@ -25,8 +25,8 @@ export interface NadarayaWatsonConfig {
 const DEFAULT_CONFIG: NadarayaWatsonConfig = {
   bandwidth: 8,
   multiplier: 3,
-  repaint: true,
-  maxBarsBack: 500,
+  repaint: false,
+  maxBarsBack: 250,
 }
 
 /**
