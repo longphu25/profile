@@ -308,6 +308,8 @@ export default defineConfig({
       external: ['gsap', 'motion'],
       checks: {
         pluginTimings: false,
+        // @noble/curves (via @solana/web3.js) uses @__PURE__ in positions Rolldown cannot use.
+        invalidAnnotation: false,
       },
       preserveEntrySignatures: 'exports-only',
       output: {

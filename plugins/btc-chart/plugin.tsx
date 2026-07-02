@@ -40,7 +40,6 @@ import { AlertsPanel } from './components/AlertsPanel'
 import { PositionsPanel } from './components/PositionsPanel'
 import { StatsPanel, FearGreedPanel } from './components/MarketPanels'
 
-import { BoxFlipPanel, MHBandPanel } from './components/IndicatorReadouts'
 import { VolumeSpikePanel } from './components/VolumeSpikePanel'
 import { ChartHeader } from './components/ChartHeader'
 import { ChartToolbarPanel } from './components/ChartToolbarPanel'
@@ -59,6 +58,12 @@ const VolumeProfilePanel = lazy(() =>
 )
 const OrderFlowPanel = lazy(() =>
   import('./components/IndicatorReadouts').then((m) => ({ default: m.OrderFlowPanel })),
+)
+const BoxFlipPanelLazy = lazy(() =>
+  import('./components/IndicatorReadouts').then((m) => ({ default: m.BoxFlipPanel })),
+)
+const MHBandPanelLazy = lazy(() =>
+  import('./components/IndicatorReadouts').then((m) => ({ default: m.MHBandPanel })),
 )
 const ScalpingPanel = lazy(() =>
   import('./components/ScalpingPanel').then((m) => ({ default: m.ScalpingPanel })),
@@ -2639,7 +2644,11 @@ function BtcChartView() {
                 if (open && !vis.boxFlip) toggle('boxFlip')
               }}
             >
-              <BoxFlipPanel boxFlip={sidebar.boxFlip} />
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <BoxFlipPanelLazy boxFlip={sidebar.boxFlip} />
+              </Suspense>
             </SidebarAccordion>
             <SidebarAccordion
               title="MH Band"
@@ -2647,7 +2656,11 @@ function BtcChartView() {
                 if (open && !vis.nwe) toggle('nwe')
               }}
             >
-              <MHBandPanel sidebar={sidebar} />
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <MHBandPanelLazy sidebar={sidebar} />
+              </Suspense>
             </SidebarAccordion>
             <SidebarAccordion title="Alerts">
               <AlertsPanel
