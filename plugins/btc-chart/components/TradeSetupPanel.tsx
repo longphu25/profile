@@ -130,6 +130,35 @@ function SizingTop({
   )
 }
 
+/** Collapsed: entry + SL only for fast order placement. */
+function QuickLevels({
+  dir,
+  dirTone,
+  entry,
+  sl,
+}: {
+  dir: 'long' | 'short'
+  dirTone: 'up' | 'dn'
+  entry: number
+  sl: number
+}) {
+  return (
+    <div className={`sb-trade-quick sb-trade-quick--${dirTone}`}>
+      <span className={`sb-trade-quick__dir ${dirTone}`}>{dir === 'long' ? 'LONG' : 'SHORT'}</span>
+      <div className="sb-trade-quick__grid">
+        <div className="sb-trade-quick__cell sb-trade-quick__cell--entry">
+          <span className="sb-trade-quick__label">Entry</span>
+          <span className="sb-trade-quick__price">{fmtP(entry)}</span>
+        </div>
+        <div className="sb-trade-quick__cell sb-trade-quick__cell--sl">
+          <span className="sb-trade-quick__label">SL</span>
+          <span className="sb-trade-quick__price">{fmtP(sl)}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PlanRow({ label, price, delta, hint, tone }: PlanRowProps) {
   return (
     <div className={`sb-trade-plan__row sb-trade-plan__row--${tone}`}>
@@ -213,14 +242,14 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup, ml }: Prop
     .filter(Boolean)
     .join(' · ')
 
-  const compactMeta = `R:R ${rrLabel} · Risk ${riskPct}% · ${setup.reasons.length} signals`
   const conflict = ml ? detectSignalConflict(ml, setup) : null
+  const quickSubtitle = `${fmtP(setup.entry)} · SL ${fmtP(setup.sl)}`
 
   return (
     <SideBlock variant="trade" tone={isLong ? 'long' : 'short'} className="sb-trade-cockpit">
       <SideHead
         title="Trade Setup"
-        subtitle={open ? 'Limit plan' : setup.entryMethod}
+        subtitle={open ? 'Chi tiết' : quickSubtitle}
         collapsible
         open={open}
         onToggle={() => setOpen((o) => !o)}
@@ -236,30 +265,21 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup, ml }: Prop
 
       {conflict?.hasConflict && <ConflictBanner message={conflict.message} />}
 
-      <SizingTop
-        capital={capital}
-        leverage={leverage}
-        onCapital={setCapital}
-        onLeverage={setLeverage}
-        positionSize={positionSize}
-        lossAtSL={lossAtSL}
-        profitAtTP1={profitAtTP1}
-        profitAtTP2={profitAtTP2}
-      />
-
-      {!open && (
-        <div className={`sb-trade-compact sb-trade-compact--${dirTone}`}>
-          <div className="sb-trade-compact__hero">
-            <span className={`sb-trade-compact__dir ${dirTone}`}>{isLong ? 'LONG' : 'SHORT'}</span>
-            <span className="sb-trade-compact__entry">{fmtP(setup.entry)}</span>
-            <span className="sb-trade-compact__conf">{setup.confidence}%</span>
-          </div>
-          <p className="sb-trade-compact__meta">{compactMeta}</p>
-        </div>
-      )}
+      {!open && <QuickLevels dir={setup.dir} dirTone={dirTone} entry={setup.entry} sl={setup.sl} />}
 
       {open && (
         <>
+          <SizingTop
+            capital={capital}
+            leverage={leverage}
+            onCapital={setCapital}
+            onLeverage={setLeverage}
+            positionSize={positionSize}
+            lossAtSL={lossAtSL}
+            profitAtTP1={profitAtTP1}
+            profitAtTP2={profitAtTP2}
+          />
+
           <div className={`sb-trade-verdict sb-trade-verdict--${dirTone}`}>
             <span className={`sb-trade-verdict__dir ${dirTone}`}>{isLong ? 'LONG' : 'SHORT'}</span>
             <span

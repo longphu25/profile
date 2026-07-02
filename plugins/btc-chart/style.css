@@ -2130,7 +2130,64 @@
   box-shadow: inset 0 0 0 1px var(--mint);
 }
 
-/* Collapsed trade summary when signal is active */
+/* Collapsed: entry + SL for quick orders */
+.sb-trade-quick {
+  padding: 6px 12px 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sb-trade-quick__dir {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+.sb-trade-quick__dir.up { color: var(--up); }
+.sb-trade-quick__dir.dn { color: var(--dn); }
+.sb-trade-quick__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.sb-trade-quick__cell {
+  padding: 8px 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+.sb-trade-quick__cell--entry {
+  border-top-color: color-mix(in srgb, var(--mint) 45%, var(--border));
+}
+.sb-trade-quick__cell--sl {
+  border-top-color: color-mix(in srgb, var(--dn) 45%, var(--border));
+}
+.sb-trade-quick__label {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sb-trade-quick__price {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: clamp(0.95rem, 3.2vw, 1.1rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1.1;
+}
+.sb-trade-quick__cell--entry .sb-trade-quick__price {
+  color: var(--mint);
+}
+.sb-trade-quick__cell--sl .sb-trade-quick__price {
+  color: var(--dn);
+}
+
 .sb-trade-compact {
   padding: 2px 12px 10px 14px;
   border-bottom: 1px solid var(--border);
