@@ -7,8 +7,7 @@
 import type { Plugin, HostAPI } from '../../src/plugins/types'
 import { useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import './style.css'
-import './stitch-theme.css'
+// Styles injected via Shadow DOM <link> (see BtcChartPage styleUrls), not JS imports.
 import {
   loadConfig,
   saveConfig,

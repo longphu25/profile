@@ -24,8 +24,13 @@ function copyPluginAssets(): VitePlugin {
     name: 'copy-plugin-assets',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        const match = req.url?.split('?')[0].match(/^\/plugins\/([^/]+)\/style\.css$/)
+        const raw = req.url ?? ''
+        const path = raw.split('?')[0]
+        const query = raw.includes('?') ? raw.slice(raw.indexOf('?') + 1) : ''
+        const match = path.match(/^\/plugins\/([^/]+)\/style\.css$/)
         if (!match) return next()
+        // Vite CSS module imports (?import) need the JS shim, not raw CSS.
+        if (query.includes('import') || query.includes('inline')) return next()
         const css = readPluginCss(pluginsDir, match[1])
         if (!css) return next()
         res.setHeader('Content-Type', 'text/css; charset=utf-8')
