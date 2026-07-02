@@ -2072,7 +2072,8 @@
   color: var(--muted);
   margin-bottom: 3px;
 }
-.sb-input-field input {
+.sb-input-field input,
+.btc-chart__numeric-input {
   width: 100%;
   height: 28px;
   background: var(--surface-2);
@@ -2082,10 +2083,16 @@
   font-family: var(--font-mono);
   font-size: 10px;
   padding: 0 8px;
+  touch-action: manipulation;
 }
-.sb-input-field input:focus {
+.sb-input-field input:focus,
+.btc-chart__numeric-input:focus {
   outline: none;
   border-color: var(--mint);
+}
+.btc-chart__nwe-setting-input {
+  display: block;
+  min-width: 0;
 }
 .sb-calc-box {
   background: var(--surface-2);
@@ -3126,6 +3133,17 @@
     padding: 8px 12px;
     left: 8px;
     right: 8px;
+  }
+
+  .sb-input-field input,
+  .btc-chart__numeric-input,
+  .btc-chart__nwe-input,
+  .btc-chart__custom-input,
+  .btc-chart input[type='number'],
+  .btc-chart input[type='text'] {
+    font-size: 16px;
+    min-height: 44px;
+    padding: 10px 12px;
   }
 }
 

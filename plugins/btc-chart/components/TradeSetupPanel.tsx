@@ -2,7 +2,9 @@
 
 import { useState, memo } from 'react'
 import { fmtP, type TradeSetup } from '../lib'
+import { parseBoundedInt } from '../lib/numeric-field'
 import { ExplainModal } from './ExplainModal'
+import { NumericFieldInput } from './NumericFieldInput'
 import { SideBlock, SideHead, SideNote, SideBadge } from './sidebar'
 
 interface Props {
@@ -101,28 +103,24 @@ function SizingTop({
       </div>
 
       <div className="sb-trade-inputs">
-        <div className="sb-input-field">
-          <label htmlFor="sb-capital">Vốn (USD)</label>
-          <input
-            id="sb-capital"
-            type="number"
-            min={1}
-            step={1}
-            value={capital}
-            onChange={(e) => onCapital(Math.max(1, +e.target.value || 1))}
-          />
-        </div>
-        <div className="sb-input-field">
-          <label htmlFor="sb-lev">Leverage</label>
-          <input
-            id="sb-lev"
-            type="number"
-            min={1}
-            max={125}
-            value={leverage}
-            onChange={(e) => onLeverage(Math.max(1, Math.min(125, +e.target.value || 1)))}
-          />
-        </div>
+        <NumericFieldInput
+          id="sb-capital"
+          label="Vốn (USD)"
+          value={capital}
+          onChange={onCapital}
+          min={1}
+          step={1}
+          parse={(raw, fallback) => parseBoundedInt(raw, fallback, 1, 1_000_000_000)}
+        />
+        <NumericFieldInput
+          id="sb-lev"
+          label="Leverage"
+          value={leverage}
+          onChange={onLeverage}
+          min={1}
+          max={125}
+          parse={(raw, fallback) => parseBoundedInt(raw, fallback, 1, 125)}
+        />
       </div>
 
       <p className="sb-trade-sizing-top__meta">

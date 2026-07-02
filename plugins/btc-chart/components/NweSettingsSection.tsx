@@ -3,6 +3,8 @@
 import React from 'react'
 import type { NadarayaConfig } from '../storage'
 import { NWE_DEFAULT_WINDOW } from '../lib/constants'
+import { parseBoundedFloat, parseBoundedInt } from '../lib/numeric-field'
+import { NumericFieldInput } from './NumericFieldInput'
 
 export interface NweSettingsSectionProps {
   cfg: NadarayaConfig
@@ -31,55 +33,49 @@ export const NweSettingsSection = React.memo(function NweSettingsSection({
 
         <div className="btc-chart__nwe-setting-field">
           <span className="btc-chart__nwe-setting-label">Bandwidth</span>
-          <input
-            type="number"
-            className="btc-chart__nwe-input"
+          <NumericFieldInput
+            id="nwe-bandwidth"
             value={cfg.bandwidth}
+            onChange={(bandwidth) => onChange({ bandwidth })}
+            className="btc-chart__nwe-setting-input"
+            inputClassName="btc-chart__nwe-input btc-chart__numeric-input"
             min={2}
             max={24}
             step={1}
-            onChange={(e) =>
-              onChange({
-                bandwidth: Math.max(2, Math.min(24, parseInt(e.target.value, 10) || cfg.bandwidth)),
-              })
-            }
+            aria-label="NWE bandwidth"
+            parse={(raw, fallback) => parseBoundedInt(raw, fallback, 2, 24)}
           />
         </div>
 
         <div className="btc-chart__nwe-setting-field">
           <span className="btc-chart__nwe-setting-label">Multiplier</span>
-          <input
-            type="number"
-            className="btc-chart__nwe-input"
+          <NumericFieldInput
+            id="nwe-multiplier"
             value={cfg.multiplier}
+            onChange={(multiplier) => onChange({ multiplier })}
+            className="btc-chart__nwe-setting-input"
+            inputClassName="btc-chart__nwe-input btc-chart__numeric-input"
             min={1}
             max={6}
             step={0.5}
-            onChange={(e) =>
-              onChange({
-                multiplier: Math.max(1, Math.min(6, parseFloat(e.target.value) || cfg.multiplier)),
-              })
-            }
+            aria-label="NWE multiplier"
+            parse={(raw, fallback) => parseBoundedFloat(raw, fallback, 1, 6)}
           />
         </div>
 
         <div className="btc-chart__nwe-setting-field">
           <span className="btc-chart__nwe-setting-label">Window</span>
-          <input
-            type="number"
-            className="btc-chart__nwe-input"
+          <NumericFieldInput
+            id="nwe-window"
             value={cfg.maxBarsBack ?? NWE_DEFAULT_WINDOW}
+            onChange={(maxBarsBack) => onChange({ maxBarsBack })}
+            className="btc-chart__nwe-setting-input"
+            inputClassName="btc-chart__nwe-input btc-chart__numeric-input"
             min={100}
             max={600}
             step={50}
-            onChange={(e) =>
-              onChange({
-                maxBarsBack: Math.max(
-                  100,
-                  Math.min(600, parseInt(e.target.value, 10) || NWE_DEFAULT_WINDOW),
-                ),
-              })
-            }
+            aria-label="NWE window bars"
+            parse={(raw, fallback) => parseBoundedInt(raw, fallback, 100, 600)}
           />
           <span className="btc-chart__nwe-setting-hint">bars</span>
         </div>

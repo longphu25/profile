@@ -1,7 +1,7 @@
 {
   "name": "profile",
   "private": true,
-  "version": "0.100.2",
+  "version": "0.100.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -65,7 +65,8 @@
     "react-haiku": "^2.4.1",
     "shepherd.js": "^15.2.2",
     "swapy": "^1.0.5",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
