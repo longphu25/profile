@@ -264,9 +264,12 @@ function DashboardInner() {
     setActiveTab((prev) => (prev === id ? null : prev))
   }, [])
 
-  // Auto-load first plugin
+  // Auto-load first plugin once on mount
   useEffect(() => {
-    if (loaded.length === 0 && SUI_PLUGINS.length > 0) handleLoad(SUI_PLUGINS[0])
+    if (loaded.length === 0 && SUI_PLUGINS.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      handleLoad(SUI_PLUGINS[0])
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const activePlugin = loaded.find((l) => l.meta.id === activeTab)
@@ -305,6 +308,7 @@ function DashboardInner() {
               <div className="flex items-center gap-2 relative">
                 {/* Active account button — click to open picker */}
                 <button
+                  type="button"
                   onClick={() => setShowAccountPicker(!showAccountPicker)}
                   className="cursor-pointer flex items-center gap-1.5 rounded-md bg-[#4da2ff]/10 px-2.5 py-1.5 font-mono text-xs text-[#4da2ff] transition-colors hover:bg-[#4da2ff]/20"
                 >
@@ -333,6 +337,7 @@ function DashboardInner() {
                         Accounts ({allAccounts.length})
                       </span>
                       <button
+                        type="button"
                         onClick={() => setShowWallets(true)}
                         className="cursor-pointer text-[10px] text-[#4da2ff] hover:underline"
                       >
@@ -344,6 +349,7 @@ function DashboardInner() {
                         const isActive = a.account.address === account.address
                         return (
                           <button
+                            type="button"
                             key={a.account.address}
                             onClick={() => handleSwitchAccount(a.account)}
                             className={`cursor-pointer flex items-center gap-2.5 rounded-md border px-3 py-2 text-left text-xs transition-colors ${
@@ -373,6 +379,7 @@ function DashboardInner() {
                         <div className="mb-1.5 text-xs text-[#666]">Available wallets</div>
                         {wallets.map((w) => (
                           <button
+                            type="button"
                             key={w.name}
                             onClick={() => handleConnect(w)}
                             className="flex cursor-pointer items-center gap-2 rounded-md border border-[#1e1e22] px-3 py-2 text-left text-xs text-[#ccc] transition-colors hover:border-[#4da2ff]/50 hover:bg-[#18181c] w-full mb-1"
@@ -386,12 +393,14 @@ function DashboardInner() {
 
                     <div className="mt-3 flex justify-between border-t border-[#1e1e22] pt-2">
                       <button
+                        type="button"
                         onClick={() => setShowAccountPicker(false)}
                         className="cursor-pointer text-xs text-[#666] hover:text-[#aaa]"
                       >
                         Close
                       </button>
                       <button
+                        type="button"
                         onClick={handleDisconnect}
                         className="cursor-pointer text-xs text-[#f87171] hover:underline"
                       >
@@ -404,6 +413,7 @@ function DashboardInner() {
             ) : (
               <div className="relative">
                 <button
+                  type="button"
                   onClick={() => setShowWallets(!showWallets)}
                   disabled={connection.isConnecting}
                   className="cursor-pointer rounded-md bg-[#4da2ff] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#3d8ce6] disabled:opacity-50"
@@ -418,6 +428,7 @@ function DashboardInner() {
                       <div className="flex flex-col gap-1.5">
                         {wallets.map((wallet) => (
                           <button
+                            type="button"
                             key={wallet.name}
                             onClick={() => handleConnect(wallet)}
                             className="flex cursor-pointer items-center gap-2.5 rounded-md border border-[#1e1e22] px-3 py-2 text-left text-xs text-[#ccc] transition-colors hover:border-[#4da2ff]/50 hover:bg-[#18181c]"
@@ -431,6 +442,7 @@ function DashboardInner() {
                       </div>
                     )}
                     <button
+                      type="button"
                       onClick={() => setShowWallets(false)}
                       className="mt-2 w-full cursor-pointer rounded px-2 py-1 text-xs text-[#666] transition-colors hover:text-[#aaa]"
                     >
@@ -464,6 +476,7 @@ function DashboardInner() {
               const isLoading = loadingId === meta.id
               return (
                 <button
+                  type="button"
                   key={meta.id}
                   onClick={() => handleLoad(meta)}
                   disabled={isLoading}
@@ -522,6 +535,7 @@ function DashboardInner() {
                     {meta.label} <span className="text-[#555]">v{plugin.version}</span>
                   </span>
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleUnload(meta.id)

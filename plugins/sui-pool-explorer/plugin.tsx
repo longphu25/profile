@@ -269,6 +269,7 @@ function PoolExplorerContent() {
         <div className="sui-pools__title-row">
           <h3 className="sui-pools__title">DeepBook Pools</h3>
           <button
+            type="button"
             className="sui-pools__refresh"
             onClick={fetchPools}
             disabled={loading}
@@ -284,6 +285,7 @@ function PoolExplorerContent() {
       <div className="sui-pools__network-row">
         {(['mainnet', 'testnet'] as const).map((n) => (
           <button
+            type="button"
             key={n}
             className={`sui-pools__network-btn ${network === n ? 'sui-pools__network-btn--active' : ''}`}
             onClick={() => setNetwork(n)}
@@ -324,7 +326,7 @@ function PoolExplorerContent() {
       {error && (
         <div className="sui-pools__error">
           {error}
-          <button className="sui-pools__retry" onClick={fetchPools}>
+          <button type="button" className="sui-pools__retry" onClick={fetchPools}>
             Retry
           </button>
         </div>
@@ -338,7 +340,11 @@ function PoolExplorerContent() {
         <div className="sui-pools__detail">
           <div className="sui-pools__detail-header">
             <h4 className="sui-pools__detail-title">{selected.pool_name}</h4>
-            <button className="sui-pools__detail-close" onClick={() => setSelected(null)}>
+            <button
+              type="button"
+              className="sui-pools__detail-close"
+              onClick={() => setSelected(null)}
+            >
               ✕
             </button>
           </div>

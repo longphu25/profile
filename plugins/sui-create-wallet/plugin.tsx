@@ -170,6 +170,7 @@ function CreateWalletContent() {
       {/* Mode selector */}
       <div className="sui-cw__modes">
         <button
+          type="button"
           className={`sui-cw__mode ${mode === 'mnemonic' ? 'sui-cw__mode--active' : ''}`}
           onClick={() => {
             setMode('mnemonic')
@@ -179,6 +180,7 @@ function CreateWalletContent() {
           New Mnemonic
         </button>
         <button
+          type="button"
           className={`sui-cw__mode ${mode === 'random' ? 'sui-cw__mode--active' : ''}`}
           onClick={() => {
             setMode('random')
@@ -188,6 +190,7 @@ function CreateWalletContent() {
           Random Key
         </button>
         <button
+          type="button"
           className={`sui-cw__mode ${mode === 'import' ? 'sui-cw__mode--active' : ''}`}
           onClick={() => {
             setMode('import')
@@ -226,7 +229,7 @@ function CreateWalletContent() {
       )}
 
       {/* Generate button */}
-      <button className="sui-cw__btn" onClick={handleGenerate}>
+      <button type="button" className="sui-cw__btn" onClick={handleGenerate}>
         {mode === 'import' ? 'Derive Wallet' : 'Generate Wallet'}
       </button>
 
@@ -238,7 +241,7 @@ function CreateWalletContent() {
         <div className="sui-cw__result">
           <div className="sui-cw__result-header">
             <span className="sui-cw__scheme-badge">Secp256k1</span>
-            <button className="sui-cw__clear" onClick={handleClear}>
+            <button type="button" className="sui-cw__clear" onClick={handleClear}>
               Clear
             </button>
           </div>
@@ -267,6 +270,7 @@ function CreateWalletContent() {
               <div className="sui-cw__field-label">
                 <span>Mnemonic</span>
                 <button
+                  type="button"
                   className="sui-cw__copy"
                   onClick={() => handleCopy(wallet.mnemonic!, 'mnemonic')}
                 >
@@ -289,6 +293,7 @@ function CreateWalletContent() {
             <div className="sui-cw__field-label">
               <span>Address</span>
               <button
+                type="button"
                 className="sui-cw__copy"
                 onClick={() => handleCopy(wallet.address, 'address')}
               >
@@ -303,6 +308,7 @@ function CreateWalletContent() {
             <div className="sui-cw__field-label">
               <span>Public Key (compressed)</span>
               <button
+                type="button"
                 className="sui-cw__copy"
                 onClick={() => handleCopy(wallet.publicKey, 'pubkey')}
               >
@@ -318,6 +324,7 @@ function CreateWalletContent() {
               <span>Private Key</span>
               <div className="sui-cw__field-actions">
                 <button
+                  type="button"
                   className="sui-cw__toggle"
                   onClick={() => setShowPrivateKey(!showPrivateKey)}
                 >
@@ -325,6 +332,7 @@ function CreateWalletContent() {
                 </button>
                 {showPrivateKey && (
                   <button
+                    type="button"
                     className="sui-cw__copy"
                     onClick={() => handleCopy(wallet.privateKey, 'privkey')}
                   >

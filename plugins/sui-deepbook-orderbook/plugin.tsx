@@ -152,7 +152,7 @@ function OrderbookContent() {
       <div className="sui-ob__header">
         <div className="sui-ob__title-row">
           <h3 className="sui-ob__title">Orderbook</h3>
-          <button className="sui-ob__refresh" onClick={fetchBook} disabled={loading}>
+          <button type="button" className="sui-ob__refresh" onClick={fetchBook} disabled={loading}>
             {loading ? '⏳' : '↻'}
           </button>
         </div>
@@ -201,7 +201,7 @@ function OrderbookContent() {
       {error && (
         <div className="sui-ob__error">
           {error}
-          <button className="sui-ob__retry" onClick={fetchBook}>
+          <button type="button" className="sui-ob__retry" onClick={fetchBook}>
             Retry
           </button>
         </div>

@@ -129,6 +129,7 @@ export function SolanaDashboard() {
               const isActive = activeTab === p.id
               return (
                 <button
+                  type="button"
                   key={p.id}
                   className={`cursor-pointer rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                     isActive

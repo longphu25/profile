@@ -587,6 +587,7 @@ function SealVotingContent() {
       <div className="sui-sv2__tabs">
         {(['create', 'vote', 'tally'] as const).map((t) => (
           <button
+            type="button"
             key={t}
             className={`sui-sv2__tab ${tab === t ? 'sui-sv2__tab--active' : ''}`}
             onClick={() => {
@@ -624,13 +625,13 @@ function SealVotingContent() {
                   placeholder={`Option ${i + 1}`}
                 />
                 {options.length > 2 && (
-                  <button className="sui-sv2__btn-x" onClick={() => removeOption(i)}>
+                  <button type="button" className="sui-sv2__btn-x" onClick={() => removeOption(i)}>
                     x
                   </button>
                 )}
               </div>
             ))}
-            <button className="sui-sv2__btn-add" onClick={addOption}>
+            <button type="button" className="sui-sv2__btn-add" onClick={addOption}>
               + Add Option
             </button>
           </div>
@@ -645,12 +646,13 @@ function SealVotingContent() {
                 onChange={(e) => setVoterInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addVoter()}
               />
-              <button className="sui-sv2__btn-add" onClick={addVoter}>
+              <button type="button" className="sui-sv2__btn-add" onClick={addVoter}>
                 Add
               </button>
             </div>
             {walletAddr && !voters.includes(walletAddr) && (
               <button
+                type="button"
                 className="sui-sv2__btn-add"
                 onClick={() => setVoters([...voters, walletAddr])}
               >
@@ -660,7 +662,7 @@ function SealVotingContent() {
             {voters.map((v, i) => (
               <div key={i} className="sui-sv2__voter-row">
                 <span className="sui-sv2__voter-addr">{shortenAddr(v)}</span>
-                <button className="sui-sv2__btn-x" onClick={() => removeVoter(i)}>
+                <button type="button" className="sui-sv2__btn-x" onClick={() => removeVoter(i)}>
                   x
                 </button>
               </div>
@@ -668,6 +670,7 @@ function SealVotingContent() {
           </div>
 
           <button
+            type="button"
             className="sui-sv2__btn"
             onClick={handleCreate}
             disabled={!walletAddr || !packageId.trim()}
@@ -690,6 +693,7 @@ function SealVotingContent() {
               onChange={(e) => setVoteSessionId(e.target.value)}
             />
             <button
+              type="button"
               className="sui-sv2__btn-add"
               onClick={handleLoadSession}
               disabled={loadingSession}
@@ -727,6 +731,7 @@ function SealVotingContent() {
                     ))}
                   </div>
                   <button
+                    type="button"
                     className="sui-sv2__btn"
                     onClick={handleVote}
                     disabled={selectedOption === null || !walletAddr}
@@ -753,7 +758,7 @@ function SealVotingContent() {
               value={tallySessionId}
               onChange={(e) => setTallySessionId(e.target.value)}
             />
-            <button className="sui-sv2__btn-add" onClick={handleLoadTally}>
+            <button type="button" className="sui-sv2__btn-add" onClick={handleLoadTally}>
               Load
             </button>
           </div>
@@ -771,6 +776,7 @@ function SealVotingContent() {
 
               {!tallySession.isClosed && (
                 <button
+                  type="button"
                   className="sui-sv2__btn sui-sv2__btn--warn"
                   onClick={handleClose}
                   disabled={!walletAddr}
@@ -806,6 +812,7 @@ function SealVotingContent() {
                     </label>
                   </div>
                   <button
+                    type="button"
                     className="sui-sv2__btn"
                     onClick={handleTally}
                     disabled={tallying || !walletAddr}

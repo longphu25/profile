@@ -139,6 +139,7 @@ function BalanceManagerCard({
       )}
       <div style={{ display: 'flex', gap: 4 }}>
         <button
+          type="button"
           className="sui-hb__btn sui-hb__btn--red sui-hb__btn--sm"
           style={{ flex: 1, fontSize: 10 }}
           disabled={running || !hasKey}
@@ -147,6 +148,7 @@ function BalanceManagerCard({
           Withdraw All
         </button>
         <button
+          type="button"
           className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
           style={{ flex: 1, fontSize: 10 }}
           onClick={onReset}
@@ -2848,6 +2850,7 @@ function HedgingBotContent() {
                             )}
                           </span>
                           <button
+                            type="button"
                             style={{
                               fontSize: 8,
                               background: 'none',
@@ -2946,6 +2949,7 @@ function HedgingBotContent() {
                   Suiscan
                 </a>
                 <button
+                  type="button"
                   className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                   style={{ flex: 1 }}
                   onClick={() => navigator.clipboard.writeText(acct.addr!)}
@@ -3093,6 +3097,7 @@ function HedgingBotContent() {
         {/* Actions */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
           <button
+            type="button"
             className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
             style={{ flex: 1 }}
             onClick={() => {
@@ -3110,6 +3115,7 @@ function HedgingBotContent() {
           </button>
           {(mmIdA || mmIdB) && (
             <button
+              type="button"
               className="sui-hb__btn sui-hb__btn--sm"
               style={{ flex: 1, background: '#dc2626', color: '#fff' }}
               disabled={running}
@@ -3119,6 +3125,7 @@ function HedgingBotContent() {
             </button>
           )}
           <button
+            type="button"
             className="sui-hb__btn sui-hb__btn--yellow sui-hb__btn--sm"
             style={{ flex: 1 }}
             disabled={running}
@@ -3143,6 +3150,7 @@ function HedgingBotContent() {
                 Balance Managers (On-Chain)
               </div>
               <button
+                type="button"
                 className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                 onClick={fetchMgrBals}
                 disabled={mgrBalsLoading}
@@ -3228,6 +3236,7 @@ function HedgingBotContent() {
       <div className="sui-hb__tabs">
         {(['setup', 'dashboard', 'accounts'] as const).map((t) => (
           <button
+            type="button"
             key={t}
             className={`sui-hb__tab ${tab === t ? 'sui-hb__tab--active' : ''}`}
             onClick={() => setTab(t)}
@@ -3269,6 +3278,7 @@ function HedgingBotContent() {
                 {/* Generate 2 fresh wallets */}
                 <div style={{ marginBottom: 10 }}>
                   <button
+                    type="button"
                     className="sui-hb__btn sui-hb__btn--sm"
                     onClick={handleGenerate2Wallets}
                     disabled={running}
@@ -3314,6 +3324,7 @@ function HedgingBotContent() {
                     ))}
                     <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                       <button
+                        type="button"
                         className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                         onClick={handleExportKeystore}
                         style={{ flex: 1 }}
@@ -3321,6 +3332,7 @@ function HedgingBotContent() {
                         Export .keystore
                       </button>
                       <button
+                        type="button"
                         className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                         onClick={handleEncryptExport}
                         style={{ flex: 1 }}
@@ -3345,6 +3357,7 @@ function HedgingBotContent() {
                     style={{ display: 'none' }}
                   />
                   <button
+                    type="button"
                     className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                     onClick={() => fileRef.current?.click()}
                     disabled={running}
@@ -3367,6 +3380,7 @@ function HedgingBotContent() {
                     style={{ display: 'none' }}
                   />
                   <button
+                    type="button"
                     className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                     onClick={() => encFileRef.current?.click()}
                     disabled={running}
@@ -3375,6 +3389,7 @@ function HedgingBotContent() {
                     Open .vault file
                   </button>
                   <button
+                    type="button"
                     className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                     onClick={handleEncryptExport}
                     disabled={running || (!keyA && !keyB)}
@@ -3412,6 +3427,7 @@ function HedgingBotContent() {
                             {shortAddr(k.addr)}
                           </span>
                           <button
+                            type="button"
                             className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                             style={{ padding: '2px 8px', fontSize: 10 }}
                             onClick={() => setKeyA(k.key)}
@@ -3420,6 +3436,7 @@ function HedgingBotContent() {
                             {keyA === k.key ? 'A ✓' : '→ A'}
                           </button>
                           <button
+                            type="button"
                             className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                             style={{ padding: '2px 8px', fontSize: 10 }}
                             onClick={() => setKeyB(k.key)}
@@ -3659,6 +3676,7 @@ function HedgingBotContent() {
                       {detectLogServiceType(webhookUrl).toUpperCase()}
                     </span>
                     <button
+                      type="button"
                       className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                       onClick={async () => {
                         const ok = await testLogEndpoint({
@@ -3676,6 +3694,7 @@ function HedgingBotContent() {
                       Test
                     </button>
                     <button
+                      type="button"
                       className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                       onClick={() => {
                         setWebhookUrl('')
@@ -3754,6 +3773,7 @@ function HedgingBotContent() {
                 {!running ? (
                   <>
                     <button
+                      type="button"
                       className="sui-hb__btn"
                       onClick={start}
                       disabled={!keysReady || balancing}
@@ -3766,7 +3786,7 @@ function HedgingBotContent() {
                     </button>
                   </>
                 ) : (
-                  <button className="sui-hb__btn sui-hb__btn--red" onClick={stop}>
+                  <button type="button" className="sui-hb__btn sui-hb__btn--red" onClick={stop}>
                     Stop Bot
                   </button>
                 )}
@@ -3792,6 +3812,7 @@ function HedgingBotContent() {
               <div className="sui-hb__controls">
                 {!running ? (
                   <button
+                    type="button"
                     className="sui-hb__btn sui-hb__btn--sm"
                     onClick={start}
                     disabled={!keysReady}
@@ -3799,7 +3820,11 @@ function HedgingBotContent() {
                     Start
                   </button>
                 ) : (
-                  <button className="sui-hb__btn sui-hb__btn--red sui-hb__btn--sm" onClick={stop}>
+                  <button
+                    type="button"
+                    className="sui-hb__btn sui-hb__btn--red sui-hb__btn--sm"
+                    onClick={stop}
+                  >
                     Stop
                   </button>
                 )}
@@ -3888,6 +3913,7 @@ function HedgingBotContent() {
                   </div>
                   {history.length > 0 && (
                     <button
+                      type="button"
                       className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                       onClick={() => {
                         const csv =
@@ -3954,6 +3980,7 @@ function HedgingBotContent() {
                   <div style={{ display: 'flex', gap: 6 }}>
                     {logs.length > 0 && (
                       <button
+                        type="button"
                         className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                         onClick={() => {
                           const text = logs
@@ -3973,6 +4000,7 @@ function HedgingBotContent() {
                       </button>
                     )}
                     <button
+                      type="button"
                       className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                       onClick={() => setLogs([])}
                     >
@@ -4075,6 +4103,7 @@ function HedgingBotContent() {
             )}
             <div className="sui-hb__btn-row">
               <button
+                type="button"
                 className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                 onClick={() => {
                   setPwDialog(null)
@@ -4084,6 +4113,7 @@ function HedgingBotContent() {
                 Cancel
               </button>
               <button
+                type="button"
                 className="sui-hb__btn sui-hb__btn--sm"
                 onClick={() => {
                   if (pwDialog.mode === 'encrypt') {

@@ -285,6 +285,7 @@ function SealAllowlistContent() {
       <div className="sui-sa__tabs">
         {(['setup', 'encrypt', 'decrypt'] as const).map((t) => (
           <button
+            type="button"
             key={t}
             className={`sui-sa__tab ${tab === t ? 'sui-sa__tab--active' : ''}`}
             onClick={() => {
@@ -307,6 +308,7 @@ function SealAllowlistContent() {
                 Deploy a shared Allowlist object on-chain. You'll get an AdminCap to manage members.
               </p>
               <button
+                type="button"
                 className="sui-sa__btn"
                 onClick={handleCreateAllowlist}
                 disabled={!walletAddr}
@@ -321,7 +323,7 @@ function SealAllowlistContent() {
               <div className="sui-sa__meta">
                 <div className="sui-sa__meta-row">
                   <span className="sui-sa__meta-label">Allowlist</span>
-                  <button className="sui-sa__copy" onClick={() => copy(allowlistId)}>
+                  <button type="button" className="sui-sa__copy" onClick={() => copy(allowlistId)}>
                     {copied ? 'Copied!' : shortenHex(allowlistId)}
                   </button>
                 </div>
@@ -339,7 +341,11 @@ function SealAllowlistContent() {
                   value={memberAddr}
                   onChange={(e) => setMemberAddr(e.target.value)}
                 />
-                <button className="sui-sa__btn sui-sa__btn--sm" onClick={handleAddMember}>
+                <button
+                  type="button"
+                  className="sui-sa__btn sui-sa__btn--sm"
+                  onClick={handleAddMember}
+                >
                   Add
                 </button>
               </div>
@@ -352,7 +358,11 @@ function SealAllowlistContent() {
                   {members.map((m) => (
                     <div key={m} className="sui-sa__member-row">
                       <span className="sui-sa__member-addr">{shortenHex(m)}</span>
-                      <button className="sui-sa__btn-del" onClick={() => handleRemoveMember(m)}>
+                      <button
+                        type="button"
+                        className="sui-sa__btn-del"
+                        onClick={() => handleRemoveMember(m)}
+                      >
                         Remove
                       </button>
                     </div>
@@ -384,14 +394,19 @@ function SealAllowlistContent() {
                 onChange={(e) => setPlaintext(e.target.value)}
                 rows={3}
               />
-              <button className="sui-sa__btn" onClick={handleEncrypt} disabled={!plaintext.trim()}>
+              <button
+                type="button"
+                className="sui-sa__btn"
+                onClick={handleEncrypt}
+                disabled={!plaintext.trim()}
+              >
                 Encrypt
               </button>
               {encStatus && <div className="sui-sa__status">{encStatus}</div>}
               {ciphertext && (
                 <div className="sui-sa__output">
                   <pre className="sui-sa__pre">{ciphertext}</pre>
-                  <button className="sui-sa__copy" onClick={() => copy(ciphertext)}>
+                  <button type="button" className="sui-sa__copy" onClick={() => copy(ciphertext)}>
                     {copied ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
@@ -417,6 +432,7 @@ function SealAllowlistContent() {
             rows={4}
           />
           <button
+            type="button"
             className="sui-sa__btn"
             onClick={handleDecrypt}
             disabled={!walletAddr || !decryptInput.trim()}

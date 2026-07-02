@@ -38,6 +38,7 @@ function ClaimCta({ round }: { round: RoundMock }) {
   }
   return (
     <button
+      type="button"
       style={{
         background: `linear-gradient(135deg, ${MINT}, #28d8c1)`,
         color: INK,

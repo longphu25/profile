@@ -54,6 +54,7 @@ export function PositionsPanel({
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--border)] text-sm">
         <div className="font-medium">Positions</div>
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           className="h-6 px-2 text-xs"
@@ -134,7 +135,7 @@ export function PositionsPanel({
             value={form.sl}
             onChange={(e) => setForm((f) => ({ ...f, sl: e.target.value }))}
           />
-          <Button onClick={onAdd} size="sm" className="w-full text-xs h-7">
+          <Button type="button" onClick={onAdd} size="sm" className="w-full text-xs h-7">
             Thêm vị thế
           </Button>
         </div>

@@ -12,6 +12,7 @@ export function NetworkSelector({ current, onChange }: NetworkSelectorProps) {
     <div className="swp__network">
       {NETWORKS.map((n) => (
         <button
+          type="button"
           key={n}
           className={`swp__network-btn ${current === n ? 'swp__network-btn--active' : ''}`}
           onClick={() => onChange(n)}

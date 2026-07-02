@@ -46,6 +46,7 @@ function SortablePluginCard({
 
       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         <button
+          type="button"
           onClick={onConfigure}
           className="cursor-pointer rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
           title="Configure"
@@ -53,6 +54,7 @@ function SortablePluginCard({
           <Settings className="h-3.5 w-3.5" />
         </button>
         <button
+          type="button"
           onClick={onRemove}
           className="cursor-pointer rounded-lg p-1.5 text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-red-400"
           title="Remove"
@@ -148,6 +150,7 @@ ${pluginScripts}
       >
         <div className="sticky top-0 z-50 flex items-center justify-between border-b border-zinc-800 bg-zinc-950/90 px-4 py-2 backdrop-blur-sm">
           <button
+            type="button"
             onClick={() => setPreviewMode(false)}
             className="flex cursor-pointer items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
           >
@@ -198,6 +201,7 @@ ${pluginScripts}
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={toggleTheme}
             className="cursor-pointer rounded-lg border border-zinc-700 p-2 text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
             title={`Switch to ${page.theme === 'dark' ? 'light' : 'dark'} mode`}
@@ -205,6 +209,7 @@ ${pluginScripts}
             {page.theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
           <button
+            type="button"
             onClick={() => setPreviewMode(true)}
             className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100"
           >
@@ -212,6 +217,7 @@ ${pluginScripts}
             Preview
           </button>
           <button
+            type="button"
             onClick={handleExport}
             className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
           >
@@ -246,6 +252,7 @@ ${pluginScripts}
           <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
             <p className="mb-4 text-sm">No plugins added yet</p>
             <button
+              type="button"
               onClick={onOpenMarketplace}
               className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
             >
@@ -259,6 +266,7 @@ ${pluginScripts}
       {page.plugins.length > 0 && (
         <div className="border-t border-zinc-800 p-4">
           <button
+            type="button"
             onClick={onOpenMarketplace}
             className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-700 py-3 text-sm text-zinc-400 transition-colors hover:border-blue-600 hover:text-blue-400"
           >

@@ -173,6 +173,7 @@ function PaymentContent() {
           </span>
           {sharedHost && (
             <button
+              type="button"
               className="sui-pay__action sui-pay__action--connect"
               onClick={() => sharedHost!.requestConnect()}
             >
@@ -185,12 +186,14 @@ function PaymentContent() {
       {/* Tabs */}
       <div className="sui-pay__tabs">
         <button
+          type="button"
           className={`sui-pay__tab ${tab === 'create' ? 'sui-pay__tab--active' : ''}`}
           onClick={() => setTab('create')}
         >
           Create Request
         </button>
         <button
+          type="button"
           className={`sui-pay__tab ${tab === 'pay' ? 'sui-pay__tab--active' : ''}`}
           onClick={() => setTab('pay')}
         >
@@ -242,6 +245,7 @@ function PaymentContent() {
             </div>
 
             <button
+              type="button"
               className="sui-pay__action"
               disabled={!isConnected || !amount || Number(amount) <= 0}
               onClick={handleCreate}
@@ -254,7 +258,7 @@ function PaymentContent() {
             <div className="sui-pay__result">
               <div className="sui-pay__result-title">Payment Request Created</div>
               <div className="sui-pay__link-box">{generatedUri}</div>
-              <button className="sui-pay__copy-btn" onClick={copyUri}>
+              <button type="button" className="sui-pay__copy-btn" onClick={copyUri}>
                 {copied ? '✓ Copied' : 'Copy Link'}
               </button>
             </div>
@@ -277,6 +281,7 @@ function PaymentContent() {
           </div>
 
           <button
+            type="button"
             className="sui-pay__action"
             disabled={!isConnected || !payUri || paying}
             onClick={handlePay}

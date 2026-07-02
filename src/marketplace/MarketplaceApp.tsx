@@ -77,6 +77,7 @@ export function MarketplaceApp() {
 
         <div className="flex items-center gap-1 rounded-lg bg-zinc-900 p-1">
           <button
+            type="button"
             onClick={() => setView('builder')}
             className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               view === 'builder' ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
@@ -86,6 +87,7 @@ export function MarketplaceApp() {
             Builder
           </button>
           <button
+            type="button"
             onClick={() => setView('marketplace')}
             className={`flex cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               view === 'marketplace'

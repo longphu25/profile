@@ -91,6 +91,7 @@ function App() {
       <nav className="sol-app__tabs">
         {TABS.map((t) => (
           <button
+            type="button"
             key={t.id}
             className={`sol-app__tab ${t.id === activeTab ? 'sol-app__tab--active' : ''}`}
             onClick={() => setActiveTab(t.id)}

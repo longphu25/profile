@@ -38,7 +38,7 @@ export function WhalePanel({
     <div className="btc-whale-panel">
       <div className="btc-whale-header">
         <span className="btc-whale-title">Whale Tracker</span>
-        <button className="btc-whale-clear" onClick={onClear} title="Clear alerts">
+        <button type="button" className="btc-whale-clear" onClick={onClear} title="Clear alerts">
           ✕
         </button>
       </div>

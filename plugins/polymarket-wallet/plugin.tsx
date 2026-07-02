@@ -276,6 +276,7 @@ function PolymarketWalletComponent() {
             <div className="pmw-connected__addr" title={wallet.address}>
               {shortenAddr(wallet.address)}
               <button
+                type="button"
                 className="pmw-copy"
                 onClick={() => copy(wallet.address, 'addr')}
                 title="Copy"
@@ -309,13 +310,17 @@ function PolymarketWalletComponent() {
         {/* Private key (only for generated/imported) */}
         {hasPK && (
           <div className="pmw-secret-section">
-            <button className="pmw-reveal-btn" onClick={() => setShowPK(!showPK)}>
+            <button type="button" className="pmw-reveal-btn" onClick={() => setShowPK(!showPK)}>
               {showPK ? 'Hide' : 'Show'} Private Key
             </button>
             {showPK && (
               <div className="pmw-secret-box">
                 <code className="pmw-secret-box__code">{wallet.privateKey}</code>
-                <button className="pmw-copy" onClick={() => copy(wallet.privateKey!, 'pk')}>
+                <button
+                  type="button"
+                  className="pmw-copy"
+                  onClick={() => copy(wallet.privateKey!, 'pk')}
+                >
                   {copied === 'pk' ? '✓' : '⧉'}
                 </button>
               </div>
@@ -326,7 +331,11 @@ function PolymarketWalletComponent() {
         {/* Mnemonic (only for generated) */}
         {wallet.mnemonic && (
           <div className="pmw-secret-section">
-            <button className="pmw-reveal-btn" onClick={() => setShowMnemonic(!showMnemonic)}>
+            <button
+              type="button"
+              className="pmw-reveal-btn"
+              onClick={() => setShowMnemonic(!showMnemonic)}
+            >
               {showMnemonic ? 'Hide' : 'Show'} Recovery Phrase
             </button>
             {showMnemonic && (
@@ -338,6 +347,7 @@ function PolymarketWalletComponent() {
                   </span>
                 ))}
                 <button
+                  type="button"
                   className="pmw-copy pmw-copy--block"
                   onClick={() => copy(wallet.mnemonic!, 'mn')}
                 >
@@ -375,7 +385,7 @@ function PolymarketWalletComponent() {
           </div>
         )}
 
-        <button className="pmw-disconnect" onClick={handleDisconnect}>
+        <button type="button" className="pmw-disconnect" onClick={handleDisconnect}>
           Disconnect
         </button>
       </div>
@@ -404,6 +414,7 @@ function PolymarketWalletComponent() {
 
       <div className="pmw-tabs">
         <button
+          type="button"
           className={'pmw-tab' + (tab === 'browser' ? ' pmw-tab--active' : '')}
           onClick={() => {
             setTab('browser')
@@ -413,6 +424,7 @@ function PolymarketWalletComponent() {
           Browser
         </button>
         <button
+          type="button"
           className={'pmw-tab' + (tab === 'create' ? ' pmw-tab--active' : '')}
           onClick={() => {
             setTab('create')
@@ -422,6 +434,7 @@ function PolymarketWalletComponent() {
           Create
         </button>
         <button
+          type="button"
           className={'pmw-tab' + (tab === 'import' ? ' pmw-tab--active' : '')}
           onClick={() => {
             setTab('import')
@@ -442,6 +455,7 @@ function PolymarketWalletComponent() {
           </p>
           {hasProvider ? (
             <button
+              type="button"
               className="pmw-btn pmw-btn--browser"
               onClick={handleBrowserConnect}
               disabled={connecting}
@@ -489,7 +503,7 @@ function PolymarketWalletComponent() {
             Generate a new Polygon wallet with a 12-word recovery phrase for Polymarket CLOB
             trading.
           </p>
-          <button className="pmw-btn pmw-btn--primary" onClick={handleCreate}>
+          <button type="button" className="pmw-btn pmw-btn--primary" onClick={handleCreate}>
             Generate Wallet
           </button>
         </div>
@@ -512,7 +526,7 @@ function PolymarketWalletComponent() {
             autoComplete="off"
             spellCheck={false}
           />
-          <button className="pmw-btn pmw-btn--primary" onClick={handleImport}>
+          <button type="button" className="pmw-btn pmw-btn--primary" onClick={handleImport}>
             Import Wallet
           </button>
         </div>

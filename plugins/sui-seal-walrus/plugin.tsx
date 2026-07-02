@@ -263,6 +263,7 @@ function SealWalrusContent() {
       {/* Tabs */}
       <div className="sui-sw__tabs">
         <button
+          type="button"
           className={`sui-sw__tab ${tab === 'upload' ? 'sui-sw__tab--active' : ''}`}
           onClick={() => {
             setTab('upload')
@@ -272,6 +273,7 @@ function SealWalrusContent() {
           Encrypt & Upload
         </button>
         <button
+          type="button"
           className={`sui-sw__tab ${tab === 'download' ? 'sui-sw__tab--active' : ''}`}
           onClick={() => {
             setTab('download')
@@ -331,7 +333,7 @@ function SealWalrusContent() {
 
           {uploadStep && <div className="sui-sw__step">{uploadStep}</div>}
 
-          <button className="sui-sw__btn" onClick={handleUpload} disabled={uploading}>
+          <button type="button" className="sui-sw__btn" onClick={handleUpload} disabled={uploading}>
             {uploading ? 'Processing…' : 'Encrypt & Upload'}
           </button>
 
@@ -340,7 +342,11 @@ function SealWalrusContent() {
               <div className="sui-sw__result-title">Uploaded Successfully</div>
               <div className="sui-sw__meta-row">
                 <span className="sui-sw__meta-label">Blob ID</span>
-                <button className="sui-sw__copy" onClick={() => copy(uploadResult.blobId, 'blob')}>
+                <button
+                  type="button"
+                  className="sui-sw__copy"
+                  onClick={() => copy(uploadResult.blobId, 'blob')}
+                >
                   {copied === 'blob' ? 'Copied!' : shortenHex(uploadResult.blobId, 8)}
                 </button>
               </div>
@@ -361,7 +367,11 @@ function SealWalrusContent() {
               {history.map((h, i) => (
                 <div key={i} className="sui-sw__history-row">
                   <span className="sui-sw__history-name">{h.fileName}</span>
-                  <button className="sui-sw__copy" onClick={() => copy(h.blobId, `h${i}`)}>
+                  <button
+                    type="button"
+                    className="sui-sw__copy"
+                    onClick={() => copy(h.blobId, `h${i}`)}
+                  >
                     {copied === `h${i}` ? 'Copied!' : 'Copy Blob ID'}
                   </button>
                 </div>
@@ -404,6 +414,7 @@ function SealWalrusContent() {
           {dlStep && <div className="sui-sw__step">{dlStep}</div>}
 
           <button
+            type="button"
             className="sui-sw__btn"
             onClick={handleDownload}
             disabled={downloading || !walletAddr}
@@ -424,6 +435,7 @@ function SealWalrusContent() {
               <div className="sui-sw__actions">
                 {dlResult.text !== null && (
                   <button
+                    type="button"
                     className="sui-sw__copy"
                     onClick={() => {
                       navigator.clipboard.writeText(dlResult.text!)
@@ -434,7 +446,7 @@ function SealWalrusContent() {
                     {copied === 'dl' ? 'Copied!' : 'Copy Text'}
                   </button>
                 )}
-                <button className="sui-sw__btn-sm" onClick={downloadFile}>
+                <button type="button" className="sui-sw__btn-sm" onClick={downloadFile}>
                   Download File
                 </button>
               </div>

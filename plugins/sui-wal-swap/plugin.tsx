@@ -239,6 +239,7 @@ function WalSwapContent() {
       <div className="sui-walswap__pairs">
         {PAIRS.map((p) => (
           <button
+            type="button"
             key={p.key}
             className={`sui-walswap__pair-btn ${pair === p.key ? 'sui-walswap__pair-btn--active' : ''}`}
             onClick={() => {
@@ -294,6 +295,7 @@ function WalSwapContent() {
             <div className="sui-walswap__card-sub">
               <span>Balance: {formatNum(fromBal)}</span>
               <button
+                type="button"
                 className="sui-walswap__balance-btn"
                 onClick={() => setAmount(String(fromBal))}
               >
@@ -304,7 +306,7 @@ function WalSwapContent() {
 
           {/* Flip */}
           <div className="sui-walswap__flip">
-            <button className="sui-walswap__flip-btn" onClick={handleFlip}>
+            <button type="button" className="sui-walswap__flip-btn" onClick={handleFlip}>
               ↕
             </button>
           </div>
@@ -356,6 +358,7 @@ function WalSwapContent() {
                 <span className="sui-walswap__slippage">
                   {[0.1, 0.5, 1.0].map((s) => (
                     <button
+                      type="button"
                       key={s}
                       className={`sui-walswap__slip-btn ${slippage === s ? 'sui-walswap__slip-btn--active' : ''}`}
                       onClick={() => setSlippage(s)}
@@ -375,6 +378,7 @@ function WalSwapContent() {
           {/* Action */}
           {!isConnected && sharedHost ? (
             <button
+              type="button"
               className="sui-walswap__action sui-walswap__action--connect"
               onClick={() => sharedHost!.requestConnect()}
             >
@@ -382,6 +386,7 @@ function WalSwapContent() {
             </button>
           ) : (
             <button
+              type="button"
               className="sui-walswap__action"
               disabled={
                 amountNum <= 0 || !est || est.output <= 0 || swapping || amountNum > fromBal

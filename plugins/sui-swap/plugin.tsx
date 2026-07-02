@@ -219,7 +219,12 @@ function SwapContent() {
       />
 
       <div className="sui-swap__flip">
-        <button className="sui-swap__flip-btn" onClick={handleFlip} title="Swap direction">
+        <button
+          type="button"
+          className="sui-swap__flip-btn"
+          onClick={handleFlip}
+          title="Swap direction"
+        >
           ↕
         </button>
       </div>
@@ -267,6 +272,7 @@ function SwapContent() {
 
       {!isConnected && sharedHost ? (
         <button
+          type="button"
           className="sui-swap__action sui-swap__action--connect"
           onClick={() => sharedHost!.requestConnect()}
         >
@@ -274,6 +280,7 @@ function SwapContent() {
         </button>
       ) : (
         <button
+          type="button"
           className="sui-swap__action"
           disabled={amountNum <= 0 || quotes.length === 0 || swapping || !selectedRoute}
           onClick={handleSwap}

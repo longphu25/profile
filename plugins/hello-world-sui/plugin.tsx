@@ -114,6 +114,7 @@ function HelloSuiComponent() {
         />
 
         <button
+          type="button"
           className="sui-plugin__btn"
           onClick={handleRequestSui}
           disabled={status === 'loading'}

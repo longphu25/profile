@@ -199,11 +199,11 @@ function HedgingMonitorContent() {
           onKeyDown={(e) => e.key === 'Enter' && connect()}
         />
         {connected ? (
-          <button className="sui-hm__btn sui-hm__btn--red" onClick={disconnect}>
+          <button type="button" className="sui-hm__btn sui-hm__btn--red" onClick={disconnect}>
             Disconnect
           </button>
         ) : (
-          <button className="sui-hm__btn" onClick={connect} disabled={loading}>
+          <button type="button" className="sui-hm__btn" onClick={connect} disabled={loading}>
             {loading ? 'Connecting...' : 'Connect'}
           </button>
         )}
@@ -227,6 +227,7 @@ function HedgingMonitorContent() {
           {/* Controls */}
           <div className="sui-hm__controls">
             <button
+              type="button"
               className="sui-hm__btn sui-hm__btn--green sui-hm__btn--sm"
               onClick={() => sendAction('start')}
               disabled={actionLoading || s.runLabel === 'RUNNING'}
@@ -234,6 +235,7 @@ function HedgingMonitorContent() {
               Start
             </button>
             <button
+              type="button"
               className="sui-hm__btn sui-hm__btn--red sui-hm__btn--sm"
               onClick={() => sendAction('stop-clean')}
               disabled={actionLoading || s.runLabel === 'STOPPED'}

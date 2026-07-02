@@ -54,6 +54,7 @@ export function QuickPredictPanelWrapper() {
     >
       <div className="bg-surface-container rounded-lg shadow-xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col relative">
         <button
+          type="button"
           className="absolute top-3 right-3 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-surface-container-highest text-on-surface-variant hover:text-on-surface cursor-pointer transition-colors"
           onClick={() => setOpen(false)}
           aria-label="Close"

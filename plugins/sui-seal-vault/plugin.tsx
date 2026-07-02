@@ -249,7 +249,12 @@ function SealVaultContent() {
           value={secret}
           onChange={(e) => setSecret(e.target.value)}
         />
-        <button className="sui-sv__btn" onClick={handleAdd} disabled={saving || !walletAddr}>
+        <button
+          type="button"
+          className="sui-sv__btn"
+          onClick={handleAdd}
+          disabled={saving || !walletAddr}
+        >
           {saving ? 'Encrypting…' : 'Add Secret'}
         </button>
       </div>
@@ -271,6 +276,7 @@ function SealVaultContent() {
               <div className="sui-sv__revealed">
                 <code className="sui-sv__revealed-text">{revealedText}</code>
                 <button
+                  type="button"
                   className="sui-sv__copy"
                   onClick={() => {
                     navigator.clipboard.writeText(revealedText)
@@ -281,6 +287,7 @@ function SealVaultContent() {
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
                 <button
+                  type="button"
                   className="sui-sv__btn-sm sui-sv__btn-hide"
                   onClick={() => {
                     setRevealedIdx(null)
@@ -293,13 +300,18 @@ function SealVaultContent() {
             ) : (
               <div className="sui-sv__entry-actions">
                 <button
+                  type="button"
                   className="sui-sv__btn-sm"
                   onClick={() => handleReveal(i)}
                   disabled={decryptingIdx !== null || !walletAddr}
                 >
                   {decryptingIdx === i ? 'Decrypting…' : 'Reveal'}
                 </button>
-                <button className="sui-sv__btn-sm sui-sv__btn-del" onClick={() => handleDelete(i)}>
+                <button
+                  type="button"
+                  className="sui-sv__btn-sm sui-sv__btn-del"
+                  onClick={() => handleDelete(i)}
+                >
                   Delete
                 </button>
               </div>

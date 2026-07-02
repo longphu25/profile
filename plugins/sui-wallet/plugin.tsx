@@ -204,6 +204,7 @@ function WalletContent() {
 
         {!showWallets ? (
           <button
+            type="button"
             className="sui-wallet__connect-btn"
             onClick={() => setShowWallets(true)}
             disabled={connection.isConnecting}
@@ -219,6 +220,7 @@ function WalletContent() {
             ) : (
               wallets.map((wallet) => (
                 <button
+                  type="button"
                   key={wallet.name}
                   className="sui-wallet__wallet-btn"
                   onClick={() => handleConnect(wallet)}
@@ -231,6 +233,7 @@ function WalletContent() {
               ))
             )}
             <button
+              type="button"
               className="sui-wallet__disconnect-btn"
               onClick={() => setShowWallets(false)}
               style={{ marginTop: '0.5rem' }}
@@ -261,7 +264,7 @@ function WalletContent() {
               </option>
             ))}
           </select>
-          <button className="sui-wallet__disconnect-btn" onClick={handleDisconnect}>
+          <button type="button" className="sui-wallet__disconnect-btn" onClick={handleDisconnect}>
             Disconnect
           </button>
         </div>

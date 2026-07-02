@@ -185,7 +185,12 @@ function MarginManagerContent() {
         <div className="sui-mm__title-row">
           <h3 className="sui-mm__title">Margin Manager</h3>
           {managers.length > 0 && (
-            <button className="sui-mm__refresh" onClick={handleSubmit} disabled={loading}>
+            <button
+              type="button"
+              className="sui-mm__refresh"
+              onClick={handleSubmit}
+              disabled={loading}
+            >
               {loading ? '⏳' : '↻'}
             </button>
           )}
@@ -203,7 +208,7 @@ function MarginManagerContent() {
           onChange={(e) => setAddress(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
         />
-        <button className="sui-mm__btn" onClick={handleSubmit} disabled={loading}>
+        <button type="button" className="sui-mm__btn" onClick={handleSubmit} disabled={loading}>
           {loading ? 'Loading...' : 'Inspect'}
         </button>
       </div>
@@ -211,7 +216,7 @@ function MarginManagerContent() {
       {error && (
         <div className="sui-mm__error">
           {error}
-          <button className="sui-mm__retry" onClick={handleSubmit}>
+          <button type="button" className="sui-mm__retry" onClick={handleSubmit}>
             Retry
           </button>
         </div>

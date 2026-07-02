@@ -67,7 +67,13 @@ export function HedgingBotPage() {
       <header className="border-b border-[#1e293b] px-4 py-2.5">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5 text-[#22c55e]">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-5 w-5 text-[#22c55e]"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
             <div>
@@ -82,6 +88,7 @@ export function HedgingBotPage() {
           <div className="flex gap-1">
             {PLUGINS.map((p) => (
               <button
+                type="button"
                 key={p.id}
                 onClick={() => setActiveTab(p.id)}
                 className={`px-3 py-1.5 text-xs rounded-md transition-colors cursor-pointer ${
@@ -90,11 +97,13 @@ export function HedgingBotPage() {
                     : 'text-[#64748b] hover:text-[#f8fafc] hover:bg-[#0f172a]'
                 }`}
               >
-                {loaded.has(p.id) ? '' : '○ '}{p.label}
+                {loaded.has(p.id) ? '' : '○ '}
+                {p.label}
               </button>
             ))}
             {/* Both view */}
             <button
+              type="button"
               onClick={() => setActiveTab('both')}
               className={`px-3 py-1.5 text-xs rounded-md transition-colors cursor-pointer ${
                 activeTab === 'both'
@@ -122,7 +131,10 @@ export function HedgingBotPage() {
                 )}
                 {loaded.has(p.id) ? (
                   <ShadowContainer styleUrls={[p.styleUrl]}>
-                    {(() => { const C = suiHostAPI.getComponent(p.name); return C ? <C /> : null })()}
+                    {(() => {
+                      const C = suiHostAPI.getComponent(p.name)
+                      return C ? <C /> : null
+                    })()}
                   </ShadowContainer>
                 ) : !errors[p.id] ? (
                   <div className="text-center text-[#64748b] py-8 text-xs">Loading {p.label}…</div>
@@ -143,10 +155,15 @@ export function HedgingBotPage() {
                   )}
                   {loaded.has(p.id) ? (
                     <ShadowContainer styleUrls={[p.styleUrl]}>
-                      {(() => { const C = suiHostAPI.getComponent(p.name); return C ? <C /> : null })()}
+                      {(() => {
+                        const C = suiHostAPI.getComponent(p.name)
+                        return C ? <C /> : null
+                      })()}
                     </ShadowContainer>
                   ) : !errors[p.id] ? (
-                    <div className="text-center text-[#64748b] py-12 text-xs">Loading {p.label}…</div>
+                    <div className="text-center text-[#64748b] py-12 text-xs">
+                      Loading {p.label}…
+                    </div>
                   ) : null}
                 </div>
               ))}

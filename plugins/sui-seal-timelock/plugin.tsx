@@ -237,6 +237,7 @@ function SealTimelockContent() {
           <span className="sui-st__label">seconds</span>
         </div>
         <button
+          type="button"
           className="sui-st__btn"
           onClick={handleEncrypt}
           disabled={!walletAddr || !plaintext.trim()}
@@ -247,7 +248,7 @@ function SealTimelockContent() {
         {ciphertext && (
           <div className="sui-st__output">
             <pre className="sui-st__pre">{ciphertext}</pre>
-            <button className="sui-st__copy" onClick={() => copy(ciphertext)}>
+            <button type="button" className="sui-st__copy" onClick={() => copy(ciphertext)}>
               {copied ? 'Copied!' : 'Copy'}
             </button>
           </div>
@@ -284,6 +285,7 @@ function SealTimelockContent() {
         )}
 
         <button
+          type="button"
           className="sui-st__btn"
           onClick={handleDecrypt}
           disabled={!walletAddr || !decryptInput.trim()}

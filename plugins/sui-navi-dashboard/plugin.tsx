@@ -181,6 +181,7 @@ function NaviDashboardContent() {
       <div className="sui-nv__tabs">
         {(['overview', 'pools', 'portfolio', 'swap', 'tx'] as const).map((t) => (
           <button
+            type="button"
             key={t}
             className={`sui-nv__tab ${tab === t ? 'sui-nv__tab--active' : ''}`}
             onClick={() => {
@@ -244,6 +245,7 @@ function NaviDashboardContent() {
             <span className="sui-nv__sort-label">Sort:</span>
             {(['tvl', 'supplyApy', 'borrowApy'] as const).map((s) => (
               <button
+                type="button"
                 key={s}
                 className={`sui-nv__sort-btn ${poolSort === s ? 'sui-nv__sort-btn--active' : ''}`}
                 onClick={() => setPoolSort(s)}
@@ -280,7 +282,12 @@ function NaviDashboardContent() {
             <div className="sui-nv__warn">Connect wallet to view portfolio</div>
           ) : (
             <>
-              <button className="sui-nv__btn-sm" onClick={loadPortfolio} disabled={loading}>
+              <button
+                type="button"
+                className="sui-nv__btn-sm"
+                onClick={loadPortfolio}
+                disabled={loading}
+              >
                 {loading ? 'Loading…' : 'Refresh'}
               </button>
 
@@ -357,7 +364,12 @@ function NaviDashboardContent() {
               placeholder="To (USDC)"
             />
           </div>
-          <button className="sui-nv__btn" onClick={handleSwapQuote} disabled={loading}>
+          <button
+            type="button"
+            className="sui-nv__btn"
+            onClick={handleSwapQuote}
+            disabled={loading}
+          >
             {loading ? 'Quoting…' : 'Get Quote'}
           </button>
           {quote && <pre className="sui-nv__json">{JSON.stringify(quote, null, 2)}</pre>}
@@ -375,7 +387,12 @@ function NaviDashboardContent() {
               onChange={(e) => setTxDigest(e.target.value)}
               placeholder="Transaction digest"
             />
-            <button className="sui-nv__btn-sm" onClick={handleExplainTx} disabled={loading}>
+            <button
+              type="button"
+              className="sui-nv__btn-sm"
+              onClick={handleExplainTx}
+              disabled={loading}
+            >
               {loading ? '…' : 'Explain'}
             </button>
           </div>

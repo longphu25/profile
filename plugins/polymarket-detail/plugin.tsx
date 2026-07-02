@@ -194,7 +194,7 @@ function PolymarketDetailComponent() {
       <div className="pmd-error">
         <p>Failed to load event</p>
         <p className="pmd-error__detail">{error}</p>
-        <button className="pmd-back" onClick={handleBack}>
+        <button type="button" className="pmd-back" onClick={handleBack}>
           Back to Markets
         </button>
       </div>
@@ -212,7 +212,7 @@ function PolymarketDetailComponent() {
   return (
     <div className="pmd-root">
       {/* Back button */}
-      <button className="pmd-back" onClick={handleBack}>
+      <button type="button" className="pmd-back" onClick={handleBack}>
         ← Back to Markets
       </button>
 

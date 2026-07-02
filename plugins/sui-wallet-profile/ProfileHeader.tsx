@@ -44,7 +44,12 @@ export function ProfileHeader({
         {suinsName && <div className="swp__profile-name">{suinsName}</div>}
         <div className="swp__profile-addr">
           <span>{shortenAddress(address)}</span>
-          <button className="swp__copy-btn" onClick={copyAddress} title="Copy address">
+          <button
+            type="button"
+            className="swp__copy-btn"
+            onClick={copyAddress}
+            title="Copy address"
+          >
             {copied ? '✓' : '⎘'}
           </button>
           <a
@@ -59,7 +64,7 @@ export function ProfileHeader({
         </div>
         <div className="swp__profile-wallet">{walletName}</div>
       </div>
-      <button className="swp__disconnect-btn" onClick={onDisconnect}>
+      <button type="button" className="swp__disconnect-btn" onClick={onDisconnect}>
         Disconnect
       </button>
     </div>

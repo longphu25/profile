@@ -92,6 +92,7 @@ function App() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button
+            type="button"
             style={{ ...pill(false), fontSize: 14 }}
             onClick={() => {
               const i = (VARIANTS.indexOf(variant) + 2) % 3
@@ -113,6 +114,7 @@ function App() {
             {variant} — {VARIANT_NAME[variant]}
           </span>
           <button
+            type="button"
             style={{ ...pill(false), fontSize: 14 }}
             onClick={() => {
               const i = (VARIANTS.indexOf(variant) + 1) % 3
@@ -136,6 +138,7 @@ function App() {
         >
           {PHASES.map((p: Phase) => (
             <button
+              type="button"
               key={p}
               style={pill(round.phase === p)}
               onClick={() => setRound((r) => jumpTo(r, p))}
@@ -143,10 +146,10 @@ function App() {
               {PHASE_LABEL[p]}
             </button>
           ))}
-          <button style={pill(false)} onClick={() => setPaused((v) => !v)}>
+          <button type="button" style={pill(false)} onClick={() => setPaused((v) => !v)}>
             {paused ? '▶ play' : '⏸ pause'}
           </button>
-          <button style={pill(false)} onClick={() => setRound(initialRound())}>
+          <button type="button" style={pill(false)} onClick={() => setRound(initialRound())}>
             ↺ reset
           </button>
         </div>

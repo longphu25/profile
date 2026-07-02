@@ -224,6 +224,7 @@ function SealWalrusUploadContent() {
 
       {/* Upload button */}
       <button
+        type="button"
         className="sui-sew__btn"
         onClick={upload}
         disabled={busy || !file || !walletAddr || !policyId}
@@ -260,6 +261,7 @@ function SealWalrusUploadContent() {
           <div className="sui-sew__url-row">
             <input className="sui-sew__input sui-sew__input--url" readOnly value={result.url} />
             <button
+              type="button"
               className={`sui-sew__copy ${copied ? 'sui-sew__copy--ok' : ''}`}
               onClick={copyUrl}
             >

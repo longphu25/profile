@@ -11,6 +11,7 @@ export function ModeSelector({ mode, onChange }: ModeSelectorProps) {
   return (
     <div className="sui-wup__modes">
       <button
+        type="button"
         className={`sui-wup__mode ${mode === 'publisher' ? 'sui-wup__mode--active' : ''}`}
         onClick={() => onChange('publisher')}
       >
@@ -19,6 +20,7 @@ export function ModeSelector({ mode, onChange }: ModeSelectorProps) {
         <div className="sui-wup__mode-note">Publisher owns blob object</div>
       </button>
       <button
+        type="button"
         className={`sui-wup__mode ${mode === 'direct' ? 'sui-wup__mode--active' : ''}`}
         onClick={() => onChange('direct')}
       >

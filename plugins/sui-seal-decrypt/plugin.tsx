@@ -205,7 +205,12 @@ function SealDecryptContent() {
 
       <div className="sui-sd__step">{stepLabels[step]}</div>
 
-      <button className="sui-sd__btn" onClick={handleDecrypt} disabled={decrypting || !walletAddr}>
+      <button
+        type="button"
+        className="sui-sd__btn"
+        onClick={handleDecrypt}
+        disabled={decrypting || !walletAddr}
+      >
         {decrypting ? 'Decrypting…' : 'Decrypt'}
       </button>
 
@@ -224,6 +229,7 @@ function SealDecryptContent() {
           <div className="sui-sd__actions">
             {decryptedText !== null && (
               <button
+                type="button"
                 className="sui-sd__copy"
                 onClick={() => {
                   navigator.clipboard.writeText(decryptedText)
@@ -234,7 +240,7 @@ function SealDecryptContent() {
                 {copied ? 'Copied!' : 'Copy Text'}
               </button>
             )}
-            <button className="sui-sd__btn-sm" onClick={downloadDecrypted}>
+            <button type="button" className="sui-sd__btn-sm" onClick={downloadDecrypted}>
               Download
             </button>
           </div>

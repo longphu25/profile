@@ -21,6 +21,7 @@ export function VolumeSpikePanel({
       <div className="flex items-center justify-between mb-1">
         <div className="text-sm font-medium">Volume spike</div>
         <Button
+          type="button"
           variant={enabled ? 'default' : 'outline'}
           size="sm"
           className="h-6 px-2 text-[10px]"

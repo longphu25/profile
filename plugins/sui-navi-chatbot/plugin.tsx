@@ -797,6 +797,7 @@ function NaviChatbotContent() {
               <div className="navi-cb__actions">
                 {msg.actions.map((a, j) => (
                   <button
+                    type="button"
                     key={j}
                     className="navi-cb__action-btn"
                     onClick={() => handleAction(a.query)}
@@ -831,7 +832,12 @@ function NaviChatbotContent() {
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           disabled={loading}
         />
-        <button className="navi-cb__send" onClick={handleSend} disabled={loading || !input.trim()}>
+        <button
+          type="button"
+          className="navi-cb__send"
+          onClick={handleSend}
+          disabled={loading || !input.trim()}
+        >
           <svg
             viewBox="0 0 24 24"
             fill="none"

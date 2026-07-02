@@ -171,6 +171,7 @@ function LendingContent() {
         <div className="sui-lending__title-row">
           <h3 className="sui-lending__title">Scallop Lending Pools</h3>
           <button
+            type="button"
             className="sui-lending__refresh"
             onClick={fetchMarket}
             disabled={loading}
@@ -203,6 +204,7 @@ function LendingContent() {
       {/* Tabs */}
       <div className="sui-lending__tabs">
         <button
+          type="button"
           className={`sui-lending__tab ${tab === 'supply' ? 'sui-lending__tab--active' : ''}`}
           onClick={() => {
             setTab('supply')
@@ -213,6 +215,7 @@ function LendingContent() {
           Supply
         </button>
         <button
+          type="button"
           className={`sui-lending__tab ${tab === 'borrow' ? 'sui-lending__tab--active' : ''}`}
           onClick={() => {
             setTab('borrow')
@@ -223,6 +226,7 @@ function LendingContent() {
           Borrow
         </button>
         <button
+          type="button"
           className={`sui-lending__tab ${tab === 'collateral' ? 'sui-lending__tab--active' : ''}`}
           onClick={() => setTab('collateral')}
         >
@@ -243,7 +247,7 @@ function LendingContent() {
       {error && (
         <div className="sui-lending__error">
           {error}
-          <button className="sui-lending__retry" onClick={fetchMarket}>
+          <button type="button" className="sui-lending__retry" onClick={fetchMarket}>
             Retry
           </button>
         </div>

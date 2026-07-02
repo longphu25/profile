@@ -61,7 +61,9 @@ function AnalysisContent() {
   const [ob, setOb] = useState<OrderbookSnapshot | null>(null)
   const [loading, setLoading] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const [poolRanking, setPoolRanking] = useState<{ pool: string; price: number; chg: number; spread: number; vol: number; score: number }[]>([])
+  const [poolRanking, setPoolRanking] = useState<
+    { pool: string; price: number; chg: number; spread: number; vol: number; score: number }[]
+  >([])
 
   // Sync network from host
   useEffect(() => {
@@ -75,9 +77,10 @@ function AnalysisContent() {
 
   // Fetch pool list
   useEffect(() => {
-    const base = network === 'testnet'
-      ? 'https://deepbook-indexer.testnet.mystenlabs.com'
-      : 'https://deepbook-indexer.mainnet.mystenlabs.com'
+    const base =
+      network === 'testnet'
+        ? 'https://deepbook-indexer.testnet.mystenlabs.com'
+        : 'https://deepbook-indexer.mainnet.mystenlabs.com'
     fetch(`${base}/get_pools`)
       .then((r) => r.json())
       .then((data: { pool_name: string }[]) => {
@@ -88,20 +91,42 @@ function AnalysisContent() {
     // Fetch pool ranking
     fetch(`${base}/summary`)
       .then((r) => r.json())
-      .then((data: { trading_pairs: string; last_price: number; price_change_percent_24h: number; quote_volume: number; highest_bid: number; lowest_ask: number }[]) => {
-        const rows = data
-          .filter((d) => d.last_price > 0 && d.quote_volume > 500 && d.highest_bid > 0 && d.lowest_ask > 0)
-          .map((d) => {
-            const spread = ((d.lowest_ask - d.highest_bid) / d.last_price) * 100
-            const chg = Math.abs(d.price_change_percent_24h)
-            const score = (d.quote_volume / 10000) * Math.min(chg || 0.01, 5) / Math.max(spread, 0.001)
-            return { pool: d.trading_pairs, price: d.last_price, chg, spread, vol: d.quote_volume, score }
-          })
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 10)
-        setPoolRanking(rows)
-        if (sharedHost) sharedHost.setSharedData('deepbook:poolRanking', rows)
-      })
+      .then(
+        (
+          data: {
+            trading_pairs: string
+            last_price: number
+            price_change_percent_24h: number
+            quote_volume: number
+            highest_bid: number
+            lowest_ask: number
+          }[],
+        ) => {
+          const rows = data
+            .filter(
+              (d) =>
+                d.last_price > 0 && d.quote_volume > 500 && d.highest_bid > 0 && d.lowest_ask > 0,
+            )
+            .map((d) => {
+              const spread = ((d.lowest_ask - d.highest_bid) / d.last_price) * 100
+              const chg = Math.abs(d.price_change_percent_24h)
+              const score =
+                ((d.quote_volume / 10000) * Math.min(chg || 0.01, 5)) / Math.max(spread, 0.001)
+              return {
+                pool: d.trading_pairs,
+                price: d.last_price,
+                chg,
+                spread,
+                vol: d.quote_volume,
+                score,
+              }
+            })
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 10)
+          setPoolRanking(rows)
+          if (sharedHost) sharedHost.setSharedData('deepbook:poolRanking', rows)
+        },
+      )
       .catch(() => {})
   }, [network])
 
@@ -155,16 +180,20 @@ function AnalysisContent() {
           style={{ flex: 1 }}
         >
           {pools.map((p) => (
-            <option key={p} value={p}>{p.replace('_', ' / ')}</option>
+            <option key={p} value={p}>
+              {p.replace('_', ' / ')}
+            </option>
           ))}
         </select>
         <button
+          type="button"
           className={`sui-da__btn sui-da__btn--sm ${autoRefresh ? '' : 'sui-da__btn--ghost'}`}
           onClick={() => setAutoRefresh(!autoRefresh)}
         >
           {autoRefresh ? 'Live' : 'Paused'}
         </button>
         <button
+          type="button"
           className="sui-da__btn sui-da__btn--ghost sui-da__btn--sm"
           onClick={runAnalysisFn}
           disabled={loading}
@@ -177,14 +206,28 @@ function AnalysisContent() {
       {poolRanking.length > 0 && (
         <div className="sui-da__card">
           <div className="sui-da__card-title">Top 10 Pools — Trading Score</div>
-          <div style={{ fontSize: 9, color: '#475569', marginBottom: 6 }}>Score = volume × volatility / spread. Click to analyze.</div>
+          <div style={{ fontSize: 9, color: '#475569', marginBottom: 6 }}>
+            Score = volume × volatility / spread. Click to analyze.
+          </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 9, marginBottom: 8 }}>
-            <span><span style={{ color: '#22c55e' }}>●</span> 24h &lt;1% safe</span>
-            <span><span style={{ color: '#eab308' }}>●</span> 24h 1-3% moderate</span>
-            <span><span style={{ color: '#ef4444' }}>●</span> 24h &gt;3% volatile</span>
-            <span style={{ marginLeft: 4 }}><span style={{ color: '#22c55e' }}>■</span> spread &lt;0.05%</span>
-            <span><span style={{ color: '#94a3b8' }}>■</span> spread &lt;0.2%</span>
-            <span><span style={{ color: '#eab308' }}>■</span> spread &gt;0.2%</span>
+            <span>
+              <span style={{ color: '#22c55e' }}>●</span> 24h &lt;1% safe
+            </span>
+            <span>
+              <span style={{ color: '#eab308' }}>●</span> 24h 1-3% moderate
+            </span>
+            <span>
+              <span style={{ color: '#ef4444' }}>●</span> 24h &gt;3% volatile
+            </span>
+            <span style={{ marginLeft: 4 }}>
+              <span style={{ color: '#22c55e' }}>■</span> spread &lt;0.05%
+            </span>
+            <span>
+              <span style={{ color: '#94a3b8' }}>■</span> spread &lt;0.2%
+            </span>
+            <span>
+              <span style={{ color: '#eab308' }}>■</span> spread &gt;0.2%
+            </span>
             <span style={{ marginLeft: 4 }}>★ top 3</span>
           </div>
           <div style={{ overflowX: 'auto' }}>
@@ -194,8 +237,12 @@ function AnalysisContent() {
                   <th style={{ textAlign: 'left', padding: '3px 4px', fontWeight: 600 }}>#</th>
                   <th style={{ textAlign: 'left', padding: '3px 4px', fontWeight: 600 }}>Pool</th>
                   <th style={{ textAlign: 'right', padding: '3px 4px', fontWeight: 600 }}>24h %</th>
-                  <th style={{ textAlign: 'right', padding: '3px 4px', fontWeight: 600 }}>Spread</th>
-                  <th style={{ textAlign: 'right', padding: '3px 4px', fontWeight: 600 }}>Volume</th>
+                  <th style={{ textAlign: 'right', padding: '3px 4px', fontWeight: 600 }}>
+                    Spread
+                  </th>
+                  <th style={{ textAlign: 'right', padding: '3px 4px', fontWeight: 600 }}>
+                    Volume
+                  </th>
                   <th style={{ textAlign: 'right', padding: '3px 4px', fontWeight: 600 }}>Score</th>
                 </tr>
               </thead>
@@ -211,19 +258,55 @@ function AnalysisContent() {
                     onClick={() => setPool(r.pool)}
                   >
                     <td style={{ padding: '4px', color: '#475569' }}>{i + 1}</td>
-                    <td style={{ padding: '4px', color: r.pool === pool ? '#22c55e' : '#f8fafc', fontWeight: r.pool === pool ? 600 : 400 }}>
+                    <td
+                      style={{
+                        padding: '4px',
+                        color: r.pool === pool ? '#22c55e' : '#f8fafc',
+                        fontWeight: r.pool === pool ? 600 : 400,
+                      }}
+                    >
                       {r.pool.replace('_', '/')}
                     </td>
-                    <td style={{ padding: '4px', textAlign: 'right', color: r.chg > 3 ? '#ef4444' : r.chg > 1 ? '#eab308' : '#22c55e' }}>
+                    <td
+                      style={{
+                        padding: '4px',
+                        textAlign: 'right',
+                        color: r.chg > 3 ? '#ef4444' : r.chg > 1 ? '#eab308' : '#22c55e',
+                      }}
+                    >
                       {r.chg.toFixed(2)}%
                     </td>
-                    <td style={{ padding: '4px', textAlign: 'right', color: r.spread < 0.05 ? '#22c55e' : r.spread < 0.2 ? '#94a3b8' : '#eab308' }}>
+                    <td
+                      style={{
+                        padding: '4px',
+                        textAlign: 'right',
+                        color: r.spread < 0.05 ? '#22c55e' : r.spread < 0.2 ? '#94a3b8' : '#eab308',
+                      }}
+                    >
                       {r.spread.toFixed(3)}%
                     </td>
-                    <td style={{ padding: '4px', textAlign: 'right', color: '#94a3b8', fontFamily: "'Fira Code', monospace" }}>
-                      {r.vol >= 1e6 ? `$${(r.vol / 1e6).toFixed(1)}M` : r.vol >= 1e3 ? `$${(r.vol / 1e3).toFixed(0)}K` : `$${r.vol.toFixed(0)}`}
+                    <td
+                      style={{
+                        padding: '4px',
+                        textAlign: 'right',
+                        color: '#94a3b8',
+                        fontFamily: "'Fira Code', monospace",
+                      }}
+                    >
+                      {r.vol >= 1e6
+                        ? `$${(r.vol / 1e6).toFixed(1)}M`
+                        : r.vol >= 1e3
+                          ? `$${(r.vol / 1e3).toFixed(0)}K`
+                          : `$${r.vol.toFixed(0)}`}
                     </td>
-                    <td style={{ padding: '4px', textAlign: 'right', fontFamily: "'Fira Code', monospace", color: i < 3 ? '#22c55e' : '#94a3b8' }}>
+                    <td
+                      style={{
+                        padding: '4px',
+                        textAlign: 'right',
+                        fontFamily: "'Fira Code', monospace",
+                        color: i < 3 ? '#22c55e' : '#94a3b8',
+                      }}
+                    >
                       {r.score >= 1000 ? `${(r.score / 1000).toFixed(1)}K` : r.score.toFixed(0)}
                     </td>
                   </tr>
@@ -254,8 +337,14 @@ function AnalysisContent() {
           <div className="sui-da__card">
             <div className="sui-da__card-title">Allocation Recommendation</div>
             <div className="sui-da__bar">
-              <div className="sui-da__bar--long" style={{ width: `${a.recommendation.longPct}%` }} />
-              <div className="sui-da__bar--short" style={{ width: `${a.recommendation.shortPct}%` }} />
+              <div
+                className="sui-da__bar--long"
+                style={{ width: `${a.recommendation.longPct}%` }}
+              />
+              <div
+                className="sui-da__bar--short"
+                style={{ width: `${a.recommendation.shortPct}%` }}
+              />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
               <span style={{ color: '#22c55e' }}>Long {a.recommendation.longPct}%</span>
@@ -274,7 +363,10 @@ function AnalysisContent() {
               </div>
               <div className="sui-da__stat">
                 <span className="sui-da__stat-label">Spread</span>
-                <span className="sui-da__stat-value" style={{ color: ob.spreadPct < 0.1 ? '#22c55e' : '#eab308' }}>
+                <span
+                  className="sui-da__stat-value"
+                  style={{ color: ob.spreadPct < 0.1 ? '#22c55e' : '#eab308' }}
+                >
                   {ob.spreadPct.toFixed(3)}%
                 </span>
               </div>
@@ -296,18 +388,34 @@ function AnalysisContent() {
           {/* Indicators */}
           <div className="sui-da__card">
             <div className="sui-da__card-title">Technical Indicators</div>
-            {([
-              ['EMA Trend (8/21)', a.indicators.ema_trend, -1, 1, 'Positive = uptrend'],
-              ['RSI (14)', a.indicators.rsi, 0, 100, '<30 oversold, >70 overbought'],
-              ['Orderbook Imbalance', a.indicators.ob_imbalance, -1, 1, 'Positive = buy pressure'],
-              ['Momentum (10)', a.indicators.momentum, -1, 1, 'Rate of price change'],
-              ['Volatility', a.indicators.volatility, 0, 1, '0 = flat, 1 = volatile'],
-              ['VWAP Deviation', a.indicators.vwap_deviation, -2, 2, 'Price vs volume avg'],
-            ] as [string, number, number, number, string][]).map(([label, value, min, max, desc]) => {
+            {(
+              [
+                ['EMA Trend (8/21)', a.indicators.ema_trend, -1, 1, 'Positive = uptrend'],
+                ['RSI (14)', a.indicators.rsi, 0, 100, '<30 oversold, >70 overbought'],
+                [
+                  'Orderbook Imbalance',
+                  a.indicators.ob_imbalance,
+                  -1,
+                  1,
+                  'Positive = buy pressure',
+                ],
+                ['Momentum (10)', a.indicators.momentum, -1, 1, 'Rate of price change'],
+                ['Volatility', a.indicators.volatility, 0, 1, '0 = flat, 1 = volatile'],
+                ['VWAP Deviation', a.indicators.vwap_deviation, -2, 2, 'Price vs volume avg'],
+              ] as [string, number, number, number, string][]
+            ).map(([label, value, min, max, desc]) => {
               const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100))
-              const color =
-                label.includes('RSI') ? (value > 70 ? '#ef4444' : value < 30 ? '#22c55e' : '#94a3b8')
-                : value > 0 ? '#22c55e' : value < 0 ? '#ef4444' : '#94a3b8'
+              const color = label.includes('RSI')
+                ? value > 70
+                  ? '#ef4444'
+                  : value < 30
+                    ? '#22c55e'
+                    : '#94a3b8'
+                : value > 0
+                  ? '#22c55e'
+                  : value < 0
+                    ? '#ef4444'
+                    : '#94a3b8'
               return (
                 <div key={label} className="sui-da__indicator">
                   <div className="sui-da__indicator-row">
@@ -329,7 +437,9 @@ function AnalysisContent() {
           {/* Price History (mini sparkline) */}
           {candles.length > 0 && (
             <div className="sui-da__card">
-              <div className="sui-da__card-title">Price History ({candles.length} candles, 5min)</div>
+              <div className="sui-da__card-title">
+                Price History ({candles.length} candles, 5min)
+              </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 1, height: 40 }}>
                 {(() => {
                   const prices = candles.map((c) => c.close)
@@ -354,9 +464,27 @@ function AnalysisContent() {
                   })
                 })()}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#475569', marginTop: 4 }}>
-                <span>{new Date(candles[0].ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                <span>{new Date(candles[candles.length - 1].ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 9,
+                  color: '#475569',
+                  marginTop: 4,
+                }}
+              >
+                <span>
+                  {new Date(candles[0].ts).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+                <span>
+                  {new Date(candles[candles.length - 1].ts).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
               </div>
             </div>
           )}
@@ -366,13 +494,31 @@ function AnalysisContent() {
             <div className="sui-da__card">
               <div className="sui-da__card-title">Detected Walls (3× avg size)</div>
               {walls.bidWalls.map((w, i) => (
-                <div key={`b${i}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '2px 0', color: '#22c55e' }}>
+                <div
+                  key={`b${i}`}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: 11,
+                    padding: '2px 0',
+                    color: '#22c55e',
+                  }}
+                >
                   <span>BID {w.price.toFixed(6)}</span>
                   <span style={{ fontFamily: "'Fira Code', monospace" }}>{w.size.toFixed(1)}</span>
                 </div>
               ))}
               {walls.askWalls.map((w, i) => (
-                <div key={`a${i}`} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '2px 0', color: '#ef4444' }}>
+                <div
+                  key={`a${i}`}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: 11,
+                    padding: '2px 0',
+                    color: '#ef4444',
+                  }}
+                >
                   <span>ASK {w.price.toFixed(6)}</span>
                   <span style={{ fontFamily: "'Fira Code', monospace" }}>{w.size.toFixed(1)}</span>
                 </div>
@@ -381,7 +527,8 @@ function AnalysisContent() {
           )}
 
           <div className="sui-da__footer">
-            Auto-refresh {autoRefresh ? 'every 10s' : 'paused'} · 5-min candles + live orderbook · {network}
+            Auto-refresh {autoRefresh ? 'every 10s' : 'paused'} · 5-min candles + live orderbook ·{' '}
+            {network}
           </div>
         </>
       ) : (

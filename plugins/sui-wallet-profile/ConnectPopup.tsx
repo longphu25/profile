@@ -26,7 +26,7 @@ export function ConnectPopup({ wallets, onConnect, onClose, connecting }: Connec
       <div className="swp__popup" onClick={(e) => e.stopPropagation()}>
         <div className="swp__popup-header">
           <h4 className="swp__popup-title">Connect Wallet</h4>
-          <button className="swp__popup-close" onClick={onClose}>
+          <button type="button" className="swp__popup-close" onClick={onClose}>
             ✕
           </button>
         </div>
@@ -39,6 +39,7 @@ export function ConnectPopup({ wallets, onConnect, onClose, connecting }: Connec
           <div className="swp__popup-list">
             {wallets.map((w) => (
               <button
+                type="button"
                 key={w.name}
                 className="swp__wallet-btn"
                 onClick={() => handleConnect(w)}

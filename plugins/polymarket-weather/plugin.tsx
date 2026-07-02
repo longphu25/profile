@@ -363,6 +363,7 @@ function PolymarketWeatherComponent() {
       <div className="pm-tags">
         {TAG_TREE.map((t) => (
           <button
+            type="button"
             key={t.id}
             className={'pm-tag-btn' + (parentTag === t.id ? ' pm-tag-btn--active' : '')}
             onClick={() => handleParentTag(t.id)}
@@ -380,6 +381,7 @@ function PolymarketWeatherComponent() {
           </span>
           {children.map((c) => (
             <button
+              type="button"
               key={c.id}
               className={'pm-subtag-btn' + (childTag === c.id ? ' pm-subtag-btn--active' : '')}
               onClick={() => handleChildTag(c.id)}
@@ -432,7 +434,7 @@ function PolymarketWeatherComponent() {
       {error && (
         <div className="pm-error">
           <p>{error}</p>
-          <button className="pm-retry" onClick={() => fetchPage(page)}>
+          <button type="button" className="pm-retry" onClick={() => fetchPage(page)}>
             Retry
           </button>
         </div>
@@ -462,10 +464,16 @@ function PolymarketWeatherComponent() {
 
           {/* Pagination */}
           <div className="pm-pagination">
-            <button className="pm-page-btn" disabled={page === 0} onClick={() => setPage(0)}>
+            <button
+              type="button"
+              className="pm-page-btn"
+              disabled={page === 0}
+              onClick={() => setPage(0)}
+            >
               ⟨⟨
             </button>
             <button
+              type="button"
               className="pm-page-btn"
               disabled={page === 0}
               onClick={() => setPage((p) => p - 1)}
@@ -474,6 +482,7 @@ function PolymarketWeatherComponent() {
             </button>
             <span className="pm-page-num">Page {page + 1}</span>
             <button
+              type="button"
               className="pm-page-btn"
               disabled={!hasMore}
               onClick={() => setPage((p) => p + 1)}

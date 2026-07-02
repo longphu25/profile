@@ -242,6 +242,7 @@ export function QuickPredictPanel(props: QuickPredictPanelProps) {
                 Start a quick round for your club
               </p>
               <button
+                type="button"
                 className="bg-primary text-on-primary px-lg py-sm rounded font-label text-label-md cursor-pointer hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
                 disabled={!oracleSnapshot.isHealthy}
                 onClick={handleStart}
@@ -310,6 +311,7 @@ export function QuickPredictPanel(props: QuickPredictPanelProps) {
           <ParticipantList participants={round.participants} result={round.result} />
           {showClaim && (
             <button
+              type="button"
               className="bg-success/20 text-success px-lg py-sm rounded font-label text-label-md cursor-pointer mt-sm disabled:opacity-40"
               disabled={claiming}
               onClick={handleClaim}
@@ -324,6 +326,7 @@ export function QuickPredictPanel(props: QuickPredictPanelProps) {
             )}
           {error && <p className="text-error font-data text-data-sm">{error}</p>}
           <button
+            type="button"
             className="btn-primary px-lg py-sm rounded font-label text-label-md cursor-pointer mt-md"
             onClick={handleNextRound}
           >
@@ -391,6 +394,7 @@ export function QuickPredictPanel(props: QuickPredictPanelProps) {
         {round.status === 'live' && (
           <div className="flex gap-md justify-center mt-sm">
             <button
+              type="button"
               className="flex-1 py-md rounded font-label text-label-lg cursor-pointer transition-all bg-success/20 text-success hover:bg-success/30 hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
               disabled={!canJoin || loading}
               onClick={() => handleJoin('UP')}
@@ -398,6 +402,7 @@ export function QuickPredictPanel(props: QuickPredictPanelProps) {
               ▲ UP
             </button>
             <button
+              type="button"
               className="flex-1 py-md rounded font-label text-label-lg cursor-pointer transition-all bg-error/20 text-error hover:bg-error/30 hover:scale-[1.02] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
               disabled={!canJoin || loading}
               onClick={() => handleJoin('DOWN')}

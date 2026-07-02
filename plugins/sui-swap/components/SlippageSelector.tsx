@@ -17,6 +17,7 @@ export const SlippageSelector: FC<SlippageSelectorProps> = ({
     <div className="sui-swap__slippage-options">
       {options.map((s) => (
         <button
+          type="button"
           key={s}
           className={`sui-swap__slippage-btn ${value === s ? 'sui-swap__slippage-btn--active' : ''}`}
           onClick={() => onChange(s)}

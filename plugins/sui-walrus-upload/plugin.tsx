@@ -325,6 +325,7 @@ function WalrusUploadContent() {
           </div>
           {!uploading && (
             <button
+              type="button"
               className="sui-wup__file-remove"
               onClick={() => {
                 setFile(null)
@@ -386,6 +387,7 @@ function WalrusUploadContent() {
       {/* Upload button */}
       {file && !uploading && !result && (
         <button
+          type="button"
           className="sui-wup__action"
           disabled={mode === 'direct' && !isConnected}
           onClick={handleUpload}
@@ -410,7 +412,11 @@ function WalrusUploadContent() {
             <span className="sui-wup__result-label">Blob ID</span>
             <span className="sui-wup__result-val">
               {result.blobId.slice(0, 24)}...
-              <button className="sui-wup__copy" onClick={() => copy(result.blobId, 'blob')}>
+              <button
+                type="button"
+                className="sui-wup__copy"
+                onClick={() => copy(result.blobId, 'blob')}
+              >
                 {copied === 'blob' ? '✓' : '⎘'}
               </button>
             </span>
@@ -426,12 +432,17 @@ function WalrusUploadContent() {
               >
                 Open in browser ↗
               </a>
-              <button className="sui-wup__copy" onClick={() => copy(result.url, 'url')}>
+              <button
+                type="button"
+                className="sui-wup__copy"
+                onClick={() => copy(result.url, 'url')}
+              >
                 {copied === 'url' ? '✓' : '⎘'}
               </button>
             </span>
           </div>
           <button
+            type="button"
             className="sui-wup__action"
             style={{ marginTop: 10 }}
             onClick={() => {

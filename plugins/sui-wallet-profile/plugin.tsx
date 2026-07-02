@@ -460,7 +460,7 @@ function WalletProfileContent({
 
         <NetworkSelector current={network as Network} onChange={handleNetworkChange} />
 
-        <button className="swp__connect-btn" onClick={() => setShowPopup(true)}>
+        <button type="button" className="swp__connect-btn" onClick={() => setShowPopup(true)}>
           Connect Wallet
         </button>
 

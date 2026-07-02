@@ -321,6 +321,7 @@ function MarketsPanel() {
       <div className="pm-tags">
         {TAG_TREE.map((t) => (
           <button
+            type="button"
             key={t.id}
             className={'pm-tag-btn' + (parentTag === t.id ? ' pm-tag-btn--active' : '')}
             onClick={() => handleParentTag(t.id)}
@@ -336,6 +337,7 @@ function MarketsPanel() {
           </span>
           {children.map((c) => (
             <button
+              type="button"
               key={c.id}
               className={'pm-subtag-btn' + (childTag === c.id ? ' pm-subtag-btn--active' : '')}
               onClick={() => handleChildTag(c.id)}
@@ -385,7 +387,7 @@ function MarketsPanel() {
       {error && (
         <div className="pm-error">
           <p>{error}</p>
-          <button className="pm-retry" onClick={() => fetchPage(page)}>
+          <button type="button" className="pm-retry" onClick={() => fetchPage(page)}>
             Retry
           </button>
         </div>
@@ -407,10 +409,16 @@ function MarketsPanel() {
             </div>
           )}
           <div className="pm-pagination">
-            <button className="pm-page-btn" disabled={page === 0} onClick={() => setPage(0)}>
+            <button
+              type="button"
+              className="pm-page-btn"
+              disabled={page === 0}
+              onClick={() => setPage(0)}
+            >
               ⟨⟨
             </button>
             <button
+              type="button"
               className="pm-page-btn"
               disabled={page === 0}
               onClick={() => setPage((p) => p - 1)}
@@ -419,6 +427,7 @@ function MarketsPanel() {
             </button>
             <span className="pm-page-num">Page {page + 1}</span>
             <button
+              type="button"
               className="pm-page-btn"
               disabled={!hasMore}
               onClick={() => setPage((p) => p + 1)}
@@ -596,6 +605,7 @@ function PolymarketTradingComponent() {
       {/* Tabs */}
       <div className="pmt-tabs">
         <button
+          type="button"
           className={`pmt-tab ${tab === 'markets' ? 'pmt-tab--active' : ''}`}
           onClick={() => {
             setTab('markets')
@@ -605,6 +615,7 @@ function PolymarketTradingComponent() {
           Markets
         </button>
         <button
+          type="button"
           className={`pmt-tab ${tab === 'sign-order' ? 'pmt-tab--active' : ''}`}
           onClick={() => {
             setTab('sign-order')
@@ -614,6 +625,7 @@ function PolymarketTradingComponent() {
           Sign Order
         </button>
         <button
+          type="button"
           className={`pmt-tab ${tab === 'auth' ? 'pmt-tab--active' : ''}`}
           onClick={() => {
             setTab('auth')
@@ -623,6 +635,7 @@ function PolymarketTradingComponent() {
           Auth
         </button>
         <button
+          type="button"
           className={`pmt-tab ${tab === 'tools' ? 'pmt-tab--active' : ''}`}
           onClick={() => {
             setTab('tools')
@@ -656,12 +669,14 @@ function PolymarketTradingComponent() {
                 <label className="pmt-label">Side</label>
                 <div className="pmt-side-toggle">
                   <button
+                    type="button"
                     className={`pmt-side-btn ${side === 'BUY' ? 'pmt-side-btn--buy' : ''}`}
                     onClick={() => setSide('BUY')}
                   >
                     Buy
                   </button>
                   <button
+                    type="button"
                     className={`pmt-side-btn ${side === 'SELL' ? 'pmt-side-btn--sell' : ''}`}
                     onClick={() => setSide('SELL')}
                   >
@@ -708,6 +723,7 @@ function PolymarketTradingComponent() {
               <div className="pmt-trade-col">
                 <label className="pmt-label">Neg Risk</label>
                 <button
+                  type="button"
                   className={`pmt-toggle ${negRisk ? 'pmt-toggle--on' : ''}`}
                   onClick={() => setNegRisk(!negRisk)}
                 >
@@ -723,6 +739,7 @@ function PolymarketTradingComponent() {
               </div>
             </div>
             <button
+              type="button"
               className={`pmt-btn pmt-btn--lg ${side === 'BUY' ? 'pmt-btn--buy' : 'pmt-btn--sell'}`}
               onClick={handleSignOrder}
               disabled={wasmStatus !== 'ready' || !hasKey}
@@ -742,6 +759,7 @@ function PolymarketTradingComponent() {
               Sign auth message → copy curl → run in terminal to get credentials.
             </p>
             <button
+              type="button"
               className="pmt-btn pmt-btn--derive"
               onClick={handleSignL1}
               disabled={wasmStatus !== 'ready' || !hasKey}
@@ -811,6 +829,7 @@ function PolymarketTradingComponent() {
                 </>
               )}
               <button
+                type="button"
                 className="pmt-btn pmt-btn--primary"
                 onClick={handleSignL2}
                 disabled={wasmStatus !== 'ready'}
@@ -831,6 +850,7 @@ function PolymarketTradingComponent() {
               <h4>derive_address</h4>
               <p>ETH address from key</p>
               <button
+                type="button"
                 className="pmt-btn pmt-btn--sm"
                 disabled={!hasKey}
                 onClick={async () => {
@@ -846,6 +866,7 @@ function PolymarketTradingComponent() {
               <h4>keccak256</h4>
               <p>Hash hex/text</p>
               <button
+                type="button"
                 className="pmt-btn pmt-btn--sm"
                 onClick={async () => {
                   const i = prompt('Input:')
@@ -865,6 +886,7 @@ function PolymarketTradingComponent() {
               <h4>hmac_sha256</h4>
               <p>HMAC with b64 secret</p>
               <button
+                type="button"
                 className="pmt-btn pmt-btn--sm"
                 onClick={async () => {
                   const s = prompt('Secret (b64):')
@@ -891,6 +913,7 @@ function PolymarketTradingComponent() {
           <div className="pmt-output__header">
             <span className="pmt-output__title">{output.summary}</span>
             <button
+              type="button"
               className="pmt-btn pmt-btn--sm"
               onClick={() => copy(JSON.stringify(output.data, null, 2), 'json')}
             >
@@ -902,7 +925,11 @@ function PolymarketTradingComponent() {
             <>
               <div className="pmt-output__curl-header">
                 <span>curl</span>
-                <button className="pmt-btn pmt-btn--sm" onClick={() => copy(output.curl!, 'curl')}>
+                <button
+                  type="button"
+                  className="pmt-btn pmt-btn--sm"
+                  onClick={() => copy(output.curl!, 'curl')}
+                >
                   {copied === 'curl' ? '✓' : 'Copy'}
                 </button>
               </div>

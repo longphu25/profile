@@ -182,7 +182,12 @@ function PortfolioContent() {
           onChange={(e) => setAddress(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
         />
-        <button className="sui-portfolio__btn" onClick={handleSubmit} disabled={loading}>
+        <button
+          type="button"
+          className="sui-portfolio__btn"
+          onClick={handleSubmit}
+          disabled={loading}
+        >
           {loading ? 'Loading...' : 'Load'}
         </button>
       </div>
@@ -190,7 +195,7 @@ function PortfolioContent() {
       {error && (
         <div className="sui-portfolio__error">
           {error}
-          <button className="sui-portfolio__retry" onClick={handleSubmit}>
+          <button type="button" className="sui-portfolio__retry" onClick={handleSubmit}>
             Retry
           </button>
         </div>

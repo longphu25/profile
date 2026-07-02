@@ -285,6 +285,7 @@ export function PolymarketDashboard() {
 
               return (
                 <button
+                  type="button"
                   key={meta.id}
                   onClick={() => handleLoad(meta)}
                   disabled={isLoading}
@@ -395,6 +396,7 @@ export function PolymarketDashboard() {
                     <span style={{ color: '#444', marginLeft: 6 }}>{loadTimeMs}ms</span>
                   </div>
                   <button
+                    type="button"
                     onClick={() => handleUnload(meta.id)}
                     style={{
                       background: 'none',

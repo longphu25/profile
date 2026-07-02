@@ -150,6 +150,7 @@ function PriceFeedContent() {
       <div className="sui-price__header">
         <h3 className="sui-price__title">Price Feed</h3>
         <button
+          type="button"
           className="sui-price__refresh"
           onClick={() => {
             fetchPrices()
@@ -164,7 +165,7 @@ function PriceFeedContent() {
       {error && (
         <div className="sui-price__error">
           {error}
-          <button className="sui-price__retry" onClick={fetchPrices}>
+          <button type="button" className="sui-price__retry" onClick={fetchPrices}>
             Retry
           </button>
         </div>
@@ -207,6 +208,7 @@ function PriceFeedContent() {
             <div className="sui-price__intervals">
               {INTERVALS.map((iv) => (
                 <button
+                  type="button"
                   key={iv}
                   className={`sui-price__interval ${interval === iv ? 'sui-price__interval--active' : ''}`}
                   onClick={() => setInterval_(iv)}

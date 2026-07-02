@@ -586,6 +586,7 @@ export function SuiWasmDashboard() {
                 <div key={group.id}>
                   {/* Group header — collapsible */}
                   <button
+                    type="button"
                     onClick={() => toggleGroup(group.id)}
                     className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-[#666] transition-colors hover:bg-[#18181c] hover:text-[#aaa]"
                   >
@@ -618,6 +619,7 @@ export function SuiWasmDashboard() {
 
                         return (
                           <button
+                            type="button"
                             key={meta.id}
                             onClick={() => handleLoad(meta)}
                             disabled={isLoading}
@@ -687,6 +689,7 @@ export function SuiWasmDashboard() {
                     <span className="ml-1.5 text-[#444]">{loadTimeMs}ms</span>
                   </div>
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleUnload(meta.id)

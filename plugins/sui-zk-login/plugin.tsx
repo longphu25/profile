@@ -306,7 +306,12 @@ function ZkLoginContent() {
           <p className="sui-zk__card-desc">
             Creates a temporary Ed25519 keypair, randomness, and nonce for the ZK proof.
           </p>
-          <button className="sui-zk__btn" onClick={generateEphemeral} disabled={loading}>
+          <button
+            type="button"
+            className="sui-zk__btn"
+            onClick={generateEphemeral}
+            disabled={loading}
+          >
             {loading ? 'Generating…' : 'Generate Keypair'}
           </button>
         </div>
@@ -337,7 +342,12 @@ function ZkLoginContent() {
             value={oauthClientId}
             onChange={(e) => setOauthClientId(e.target.value)}
           />
-          <button className="sui-zk__btn" onClick={startOauth} disabled={!oauthClientId || loading}>
+          <button
+            type="button"
+            className="sui-zk__btn"
+            onClick={startOauth}
+            disabled={!oauthClientId || loading}
+          >
             Login with Google
           </button>
           <p className="sui-zk__hint">Or paste JWT token directly:</p>
@@ -373,7 +383,7 @@ function ZkLoginContent() {
             Sends JWT + ephemeral data to Mysten Labs prover service. This generates a
             zero-knowledge proof that you own the OAuth identity without revealing the JWT.
           </p>
-          <button className="sui-zk__btn" onClick={generateProof} disabled={loading}>
+          <button type="button" className="sui-zk__btn" onClick={generateProof} disabled={loading}>
             {loading ? 'Generating ZK Proof…' : 'Generate Proof & Derive Wallet'}
           </button>
         </div>
@@ -404,7 +414,7 @@ function ZkLoginContent() {
             </div>
           </div>
 
-          <button className="sui-zk__btn sui-zk__btn--share" onClick={shareWallet}>
+          <button type="button" className="sui-zk__btn sui-zk__btn--share" onClick={shareWallet}>
             Share to Dashboard
           </button>
 
@@ -425,6 +435,7 @@ function ZkLoginContent() {
               onChange={(e) => setAmount(e.target.value)}
             />
             <button
+              type="button"
               className="sui-zk__btn"
               onClick={sendTx}
               disabled={loading || !recipient || !amount}
@@ -438,6 +449,7 @@ function ZkLoginContent() {
       {/* Reset */}
       {step !== 'init' && (
         <button
+          type="button"
           className="sui-zk__btn-reset"
           onClick={() => {
             setStep('init')

@@ -304,13 +304,17 @@ function SolanaCreateWalletContent() {
 
       {/* Actions */}
       <div className="sol-cw__actions">
-        <button className="sol-cw__btn sol-cw__btn--primary" onClick={handleGenerateMnemonic}>
+        <button
+          type="button"
+          className="sol-cw__btn sol-cw__btn--primary"
+          onClick={handleGenerateMnemonic}
+        >
           Generate (Mnemonic)
         </button>
-        <button className="sol-cw__btn" onClick={handleGenerateRandom}>
+        <button type="button" className="sol-cw__btn" onClick={handleGenerateRandom}>
           Generate (Random)
         </button>
-        <button className="sol-cw__btn" onClick={() => setImportMode(!importMode)}>
+        <button type="button" className="sol-cw__btn" onClick={() => setImportMode(!importMode)}>
           {importMode ? 'Cancel' : 'Import'}
         </button>
       </div>
@@ -326,6 +330,7 @@ function SolanaCreateWalletContent() {
             onChange={(e) => setImportText(e.target.value)}
           />
           <button
+            type="button"
             className="sol-cw__btn sol-cw__btn--primary"
             onClick={handleImport}
             style={{ marginTop: 8 }}
@@ -347,6 +352,7 @@ function SolanaCreateWalletContent() {
             <div className="sol-cw__field-label">
               Address
               <button
+                type="button"
                 className="sol-cw__copy-btn"
                 onClick={() => handleCopy(lastCreated.address, 'addr')}
               >
@@ -360,6 +366,7 @@ function SolanaCreateWalletContent() {
             <div className="sol-cw__field-label">
               Public Key
               <button
+                type="button"
                 className="sol-cw__copy-btn"
                 onClick={() => handleCopy(lastCreated.publicKey, 'pub')}
               >
@@ -374,6 +381,7 @@ function SolanaCreateWalletContent() {
               <div className="sol-cw__field-label">
                 Mnemonic (save this!)
                 <button
+                  type="button"
                   className="sol-cw__copy-btn"
                   onClick={() => handleCopy(lastCreated.mnemonic!, 'mne')}
                 >
@@ -399,15 +407,21 @@ function SolanaCreateWalletContent() {
                 </span>
                 <div className="sol-cw__stored-actions">
                   <button
+                    type="button"
                     className="sol-cw__small-btn"
                     onClick={() => handleCopy(w.address, w.address)}
                   >
                     {copied === w.address ? '...' : 'Copy'}
                   </button>
-                  <button className="sol-cw__small-btn" onClick={() => handleExport(w)}>
+                  <button
+                    type="button"
+                    className="sol-cw__small-btn"
+                    onClick={() => handleExport(w)}
+                  >
                     Export
                   </button>
                   <button
+                    type="button"
                     className="sol-cw__small-btn sol-cw__small-btn--del"
                     onClick={() => handleDelete(w.address)}
                   >

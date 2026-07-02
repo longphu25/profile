@@ -20,6 +20,7 @@ export function ModalLayer() {
         <div className="flex justify-between items-center p-md border-b border-outline-variant bg-surface-container-high">
           <h2 className="font-headline text-headline-md text-on-surface">{modalTitle(modal)}</h2>
           <button
+            type="button"
             className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
             onClick={() => setModal(null)}
           >

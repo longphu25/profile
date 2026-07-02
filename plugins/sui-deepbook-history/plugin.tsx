@@ -139,7 +139,12 @@ function HistoryContent() {
       <div className="sui-history__header">
         <div className="sui-history__title-row">
           <h3 className="sui-history__title">Trade History</h3>
-          <button className="sui-history__refresh" onClick={fetchTrades} disabled={loading}>
+          <button
+            type="button"
+            className="sui-history__refresh"
+            onClick={fetchTrades}
+            disabled={loading}
+          >
             {loading ? '⏳' : '↻'}
           </button>
         </div>
@@ -167,7 +172,7 @@ function HistoryContent() {
           onChange={(e) => setManagerId(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && fetchTrades()}
         />
-        <button className="sui-history__btn" onClick={fetchTrades} disabled={loading}>
+        <button type="button" className="sui-history__btn" onClick={fetchTrades} disabled={loading}>
           Search
         </button>
       </div>
@@ -175,7 +180,7 @@ function HistoryContent() {
       {error && (
         <div className="sui-history__error">
           {error}
-          <button className="sui-history__retry" onClick={fetchTrades}>
+          <button type="button" className="sui-history__retry" onClick={fetchTrades}>
             Retry
           </button>
         </div>

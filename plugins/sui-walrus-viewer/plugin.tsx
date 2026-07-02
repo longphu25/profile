@@ -247,6 +247,7 @@ function ViewerContent() {
           onKeyDown={(e) => e.key === 'Enter' && fetchBlob()}
         />
         <button
+          type="button"
           className="sui-wvw__btn"
           onClick={() => fetchBlob()}
           disabled={loading || !blobId.trim()}
@@ -289,7 +290,7 @@ function ViewerContent() {
           </div>
 
           <div className="sui-wvw__download">
-            <button className="sui-wvw__dl-btn" onClick={handleDownload}>
+            <button type="button" className="sui-wvw__dl-btn" onClick={handleDownload}>
               ⬇ Download
             </button>
             <a

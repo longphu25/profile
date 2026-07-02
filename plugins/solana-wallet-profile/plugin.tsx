@@ -206,6 +206,7 @@ function SolanaWalletProfileContent() {
         <div className="sol-wp__network-select">
           {SOLANA_NETWORKS.map((net) => (
             <button
+              type="button"
               key={net}
               className={`sol-wp__network-btn ${net === network ? 'sol-wp__network-btn--active' : ''}`}
               onClick={() => handleNetworkChange(net)}
@@ -217,6 +218,7 @@ function SolanaWalletProfileContent() {
 
         {/* Connect buttons */}
         <button
+          type="button"
           className="sol-wp__connect-btn"
           onClick={handleConnectPhantom}
           disabled={connecting}
@@ -228,6 +230,7 @@ function SolanaWalletProfileContent() {
         {storedWallets.length > 0 && (
           <div className="sol-wp__stored">
             <button
+              type="button"
               className="sol-wp__stored-toggle"
               onClick={() => setShowStoredPicker(!showStoredPicker)}
             >
@@ -238,6 +241,7 @@ function SolanaWalletProfileContent() {
               <div className="sol-wp__stored-list">
                 {storedWallets.map((w) => (
                   <button
+                    type="button"
                     key={w.address}
                     className="sol-wp__stored-item"
                     onClick={() => handleSelectStored(w)}
@@ -272,7 +276,7 @@ function SolanaWalletProfileContent() {
       <div className="sol-wp__profile-card">
         <div className="sol-wp__address-row">
           <span className="sol-wp__address">{shortenAddress(address, 6)}</span>
-          <button className="sol-wp__copy-btn" onClick={handleCopy}>
+          <button type="button" className="sol-wp__copy-btn" onClick={handleCopy}>
             {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
@@ -283,6 +287,7 @@ function SolanaWalletProfileContent() {
       <div className="sol-wp__network-select">
         {SOLANA_NETWORKS.map((net) => (
           <button
+            type="button"
             key={net}
             className={`sol-wp__network-btn ${net === network ? 'sol-wp__network-btn--active' : ''}`}
             onClick={() => handleNetworkChange(net)}
@@ -315,6 +320,7 @@ function SolanaWalletProfileContent() {
       {storedWallets.length > 1 && (
         <div className="sol-wp__switch">
           <button
+            type="button"
             className="sol-wp__switch-btn"
             onClick={() => setShowStoredPicker(!showStoredPicker)}
           >
@@ -326,6 +332,7 @@ function SolanaWalletProfileContent() {
                 .filter((w) => w.address !== address)
                 .map((w) => (
                   <button
+                    type="button"
                     key={w.address}
                     className="sol-wp__stored-item"
                     onClick={() => handleSelectStored(w)}
@@ -349,7 +356,7 @@ function SolanaWalletProfileContent() {
       </a>
 
       {/* Disconnect */}
-      <button className="sol-wp__disconnect-btn" onClick={handleDisconnect}>
+      <button type="button" className="sol-wp__disconnect-btn" onClick={handleDisconnect}>
         Disconnect
       </button>
 

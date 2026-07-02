@@ -148,23 +148,31 @@ function WalletDataView({
   network: string
   slotLabel: string
 }) {
+  const validAddress = address && isValidSuiAddress(address) ? address : null
+  const [prevValidAddress, setPrevValidAddress] = useState(validAddress)
   const [balances, setBalances] = useState<Balance[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!address || !isValidSuiAddress(address)) {
-      setBalances([])
-      setTransactions([])
-      return
+  if (validAddress !== prevValidAddress) {
+    setPrevValidAddress(validAddress)
+    setBalances([])
+    setTransactions([])
+    if (!validAddress) {
+      setLoading(false)
+      setError(null)
     }
+  }
+
+  useEffect(() => {
+    if (!validAddress) return
 
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    fetchWalletData(address, network)
+    fetchWalletData(validAddress, network)
       .then(({ balances: b, transactions: t }) => {
         if (cancelled) return
         setBalances(b)
@@ -187,9 +195,9 @@ function WalletDataView({
     return () => {
       cancelled = true
     }
-  }, [address, network, slotLabel])
+  }, [validAddress, network, slotLabel])
 
-  if (!address || !isValidSuiAddress(address)) {
+  if (!validAddress) {
     return <div className="dual-wallet__muted">Enter a valid Sui address (0x...)</div>
   }
 
@@ -332,11 +340,19 @@ function DualWalletContent() {
           </select>
 
           {connection.isConnected ? (
-            <button className="dual-wallet__disconnect-btn" onClick={handleDisconnect}>
+            <button
+              type="button"
+              className="dual-wallet__disconnect-btn"
+              onClick={handleDisconnect}
+            >
               Disconnect {shortenAddress(connection.account?.address || '')}
             </button>
           ) : !showWallets ? (
-            <button className="dual-wallet__connect-btn" onClick={() => setShowWallets(true)}>
+            <button
+              type="button"
+              className="dual-wallet__connect-btn"
+              onClick={() => setShowWallets(true)}
+            >
               Connect Wallet
             </button>
           ) : (
@@ -346,6 +362,7 @@ function DualWalletContent() {
               ) : (
                 wallets.map((w) => (
                   <button
+                    type="button"
                     key={w.name}
                     className="dual-wallet__wallet-btn"
                     onClick={() => handleConnect(w)}
@@ -355,7 +372,11 @@ function DualWalletContent() {
                   </button>
                 ))
               )}
-              <button className="dual-wallet__cancel-btn" onClick={() => setShowWallets(false)}>
+              <button
+                type="button"
+                className="dual-wallet__cancel-btn"
+                onClick={() => setShowWallets(false)}
+              >
                 Cancel
               </button>
             </div>
@@ -411,6 +432,7 @@ function DualWalletContent() {
             {connectedAccounts.length > 1 && (
               <div className="dual-wallet__mode-toggle">
                 <button
+                  type="button"
                   className={`dual-wallet__mode-btn ${slotBMode === 'account' ? 'dual-wallet__mode-btn--active' : ''}`}
                   onClick={() => {
                     setSlotBMode('account')
@@ -423,6 +445,7 @@ function DualWalletContent() {
                   Account
                 </button>
                 <button
+                  type="button"
                   className={`dual-wallet__mode-btn ${slotBMode === 'manual' ? 'dual-wallet__mode-btn--active' : ''}`}
                   onClick={() => {
                     setSlotBMode('manual')

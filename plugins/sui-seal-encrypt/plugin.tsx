@@ -133,12 +133,14 @@ function SealEncryptContent() {
       {/* Mode toggle */}
       <div className="sui-se__tabs">
         <button
+          type="button"
           className={`sui-se__tab ${mode === 'text' ? 'sui-se__tab--active' : ''}`}
           onClick={() => setMode('text')}
         >
           Text
         </button>
         <button
+          type="button"
           className={`sui-se__tab ${mode === 'file' ? 'sui-se__tab--active' : ''}`}
           onClick={() => setMode('file')}
         >
@@ -201,7 +203,7 @@ function SealEncryptContent() {
         />
       </div>
 
-      <button className="sui-se__btn" onClick={handleEncrypt} disabled={encrypting}>
+      <button type="button" className="sui-se__btn" onClick={handleEncrypt} disabled={encrypting}>
         {encrypting ? 'Encrypting…' : 'Encrypt'}
       </button>
 
@@ -216,13 +218,21 @@ function SealEncryptContent() {
           </div>
           <div className="sui-se__meta-row">
             <span className="sui-se__meta-label">Encrypted Data</span>
-            <button className="sui-se__copy" onClick={() => copy(result.encryptedHex, 'enc')}>
+            <button
+              type="button"
+              className="sui-se__copy"
+              onClick={() => copy(result.encryptedHex, 'enc')}
+            >
               {copied === 'enc' ? 'Copied!' : shortenHex(result.encryptedHex, 10)}
             </button>
           </div>
           <div className="sui-se__meta-row">
             <span className="sui-se__meta-label">Backup Key</span>
-            <button className="sui-se__copy" onClick={() => copy(result.backupKeyHex, 'key')}>
+            <button
+              type="button"
+              className="sui-se__copy"
+              onClick={() => copy(result.backupKeyHex, 'key')}
+            >
               {copied === 'key' ? 'Copied!' : shortenHex(result.backupKeyHex, 10)}
             </button>
           </div>
@@ -236,7 +246,11 @@ function SealEncryptContent() {
             <div key={i} className="sui-se__history-row">
               <span className="sui-se__history-id">{shortenHex(h.id)}</span>
               <span className="sui-se__history-size">{formatBytes(h.size)}</span>
-              <button className="sui-se__copy" onClick={() => copy(h.encryptedHex, `h${i}`)}>
+              <button
+                type="button"
+                className="sui-se__copy"
+                onClick={() => copy(h.encryptedHex, `h${i}`)}
+              >
                 {copied === `h${i}` ? 'Copied!' : 'Copy'}
               </button>
             </div>

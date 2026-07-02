@@ -27,7 +27,11 @@ export function PublisherList({ network, selected, onSelect }: PublisherListProp
       <div className="sui-wup__pub-header">
         <span className="sui-wup__pub-title">Publisher ({publishers.length})</span>
         {publishers.length > 3 && (
-          <button className="sui-wup__pub-toggle" onClick={() => setExpanded(!expanded)}>
+          <button
+            type="button"
+            className="sui-wup__pub-toggle"
+            onClick={() => setExpanded(!expanded)}
+          >
             {expanded ? 'Show less' : `Show all ${publishers.length}`}
           </button>
         )}
@@ -35,6 +39,7 @@ export function PublisherList({ network, selected, onSelect }: PublisherListProp
       <div className="sui-wup__pub-list">
         {displayList.map((p) => (
           <button
+            type="button"
             key={p.url}
             className={`sui-wup__pub-item ${selected === p.url ? 'sui-wup__pub-item--active' : ''}`}
             onClick={() => onSelect(p.url)}

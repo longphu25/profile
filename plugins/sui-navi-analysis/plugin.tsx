@@ -271,6 +271,7 @@ function AnalysisContent() {
         </div>
         <div className="na2__header-right">
           <button
+            type="button"
             className="na2__pause"
             onClick={() => setPaused(!paused)}
             title={paused ? 'Resume' : 'Pause'}
@@ -288,6 +289,7 @@ function AnalysisContent() {
         {(['opportunities', 'pools', 'deltas', ...(walletAddr ? ['wallet'] : [])] as Tab[]).map(
           (t) => (
             <button
+              type="button"
               key={t}
               className={`na2__tab ${tab === t ? 'na2__tab--active' : ''}`}
               onClick={() => setTab(t)}

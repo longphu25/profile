@@ -54,6 +54,7 @@ export function Marketplace({ installedIds, onAdd, onRemove }: MarketplaceProps)
         {/* Category filters */}
         <div className="mt-3 flex flex-wrap gap-2">
           <button
+            type="button"
             onClick={() => setActiveCategory('all')}
             className={`cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               activeCategory === 'all'
@@ -68,6 +69,7 @@ export function Marketplace({ installedIds, onAdd, onRemove }: MarketplaceProps)
             const count = PLUGIN_REGISTRY.filter((p) => p.category === key).length
             return (
               <button
+                type="button"
                 key={key}
                 onClick={() => setActiveCategory(key)}
                 className={`cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors ${
@@ -126,6 +128,7 @@ export function Marketplace({ installedIds, onAdd, onRemove }: MarketplaceProps)
                   {isInstalled ? (
                     <>
                       <button
+                        type="button"
                         disabled
                         className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-green-900/30 py-1.5 text-xs font-medium text-green-400"
                       >
@@ -134,6 +137,7 @@ export function Marketplace({ installedIds, onAdd, onRemove }: MarketplaceProps)
                       </button>
                       {onRemove && (
                         <button
+                          type="button"
                           onClick={() => onRemove(plugin.id)}
                           className="cursor-pointer rounded-lg border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:border-red-800 hover:text-red-400"
                         >
@@ -143,6 +147,7 @@ export function Marketplace({ installedIds, onAdd, onRemove }: MarketplaceProps)
                     </>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => onAdd(plugin)}
                       className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg bg-blue-600 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
                     >
@@ -151,6 +156,7 @@ export function Marketplace({ installedIds, onAdd, onRemove }: MarketplaceProps)
                     </button>
                   )}
                   <button
+                    type="button"
                     className="cursor-pointer rounded-lg border border-zinc-700 p-1.5 text-zinc-500 transition-colors hover:border-zinc-500 hover:text-zinc-300"
                     title="Preview plugin"
                   >

@@ -21,6 +21,7 @@ export const RouteCard: FC<RouteCardProps> = ({ quote, toToken, isSelected, isBe
 
   return (
     <button
+      type="button"
       className={`sui-swap__route-card ${isSelected ? 'sui-swap__route-card--selected' : ''}`}
       onClick={() => onSelect(quote.dex)}
       style={{ borderColor: isSelected ? quote.fee.token : undefined }}

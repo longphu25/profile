@@ -361,6 +361,7 @@ function WalrusEarnContent() {
                 }}
               />
               <button
+                type="button"
                 className="sui-earn__max-btn"
                 onClick={() => setStakeAmount(String(walBalance))}
               >
@@ -375,6 +376,7 @@ function WalrusEarnContent() {
 
           {!isConnected && sharedHost ? (
             <button
+              type="button"
               className="sui-earn__action sui-earn__action--connect"
               onClick={() => sharedHost!.requestConnect()}
             >
@@ -382,6 +384,7 @@ function WalrusEarnContent() {
             </button>
           ) : (
             <button
+              type="button"
               className="sui-earn__action"
               disabled={staking || Number(stakeAmount) <= 0 || Number(stakeAmount) > walBalance}
               onClick={handleStake}

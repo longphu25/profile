@@ -227,6 +227,7 @@ function SuiLinkContent() {
 
         {!showWallets ? (
           <button
+            type="button"
             className="sui-link__connect-btn"
             onClick={() => setShowWallets(true)}
             disabled={connection.isConnecting}
@@ -240,6 +241,7 @@ function SuiLinkContent() {
             ) : (
               wallets.map((wallet) => (
                 <button
+                  type="button"
                   key={wallet.name}
                   className="sui-link__wallet-btn"
                   onClick={() => handleConnect(wallet)}
@@ -251,7 +253,11 @@ function SuiLinkContent() {
                 </button>
               ))
             )}
-            <button className="sui-link__cancel-btn" onClick={() => setShowWallets(false)}>
+            <button
+              type="button"
+              className="sui-link__cancel-btn"
+              onClick={() => setShowWallets(false)}
+            >
               Cancel
             </button>
           </div>
@@ -278,7 +284,7 @@ function SuiLinkContent() {
               </option>
             ))}
           </select>
-          <button className="sui-link__disconnect-btn" onClick={handleDisconnect}>
+          <button type="button" className="sui-link__disconnect-btn" onClick={handleDisconnect}>
             Disconnect
           </button>
         </div>

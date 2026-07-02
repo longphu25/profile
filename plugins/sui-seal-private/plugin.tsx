@@ -170,6 +170,7 @@ function SealPrivateContent() {
           rows={3}
         />
         <button
+          type="button"
           className="sui-sp__btn"
           onClick={handleEncrypt}
           disabled={!walletAddr || !plaintext.trim()}
@@ -180,7 +181,7 @@ function SealPrivateContent() {
         {ciphertext && (
           <div className="sui-sp__output">
             <pre className="sui-sp__pre">{ciphertext}</pre>
-            <button className="sui-sp__copy" onClick={() => copy(ciphertext)}>
+            <button type="button" className="sui-sp__copy" onClick={() => copy(ciphertext)}>
               {copied ? 'Copied!' : 'Copy'}
             </button>
           </div>
@@ -201,6 +202,7 @@ function SealPrivateContent() {
           rows={4}
         />
         <button
+          type="button"
           className="sui-sp__btn"
           onClick={handleDecrypt}
           disabled={!walletAddr || !decryptInput.trim()}

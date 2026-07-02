@@ -251,6 +251,7 @@ function SolanaFaucetContent() {
       <div className="sol-faucet__network-row">
         {(['devnet', 'testnet'] as FaucetNetwork[]).map((net) => (
           <button
+            type="button"
             key={net}
             className={`sol-faucet__net-btn ${net === network ? 'sol-faucet__net-btn--active' : ''}`}
             onClick={() => setNetwork(net)}
@@ -258,7 +259,7 @@ function SolanaFaucetContent() {
             {net}
           </button>
         ))}
-        <button className="sol-faucet__net-btn" disabled>
+        <button type="button" className="sol-faucet__net-btn" disabled>
           mainnet-beta
         </button>
       </div>
@@ -278,6 +279,7 @@ function SolanaFaucetContent() {
         {storedWallets.length > 0 && (
           <div className="sol-faucet__stored">
             <button
+              type="button"
               className="sol-faucet__stored-toggle"
               onClick={() => setShowPicker(!showPicker)}
             >
@@ -287,6 +289,7 @@ function SolanaFaucetContent() {
               <div className="sol-faucet__stored-list">
                 {storedWallets.map((w) => (
                   <button
+                    type="button"
                     key={w.address}
                     className={`sol-faucet__stored-item ${address === w.address ? 'sol-faucet__stored-item--active' : ''}`}
                     onClick={() => {
@@ -305,6 +308,7 @@ function SolanaFaucetContent() {
         <div className="sol-faucet__row">
           {AMOUNTS.map((a) => (
             <button
+              type="button"
               key={a}
               className={`sol-faucet__amount-btn ${a === amount ? 'sol-faucet__amount-btn--active' : ''}`}
               onClick={() => setAmount(a)}
@@ -315,6 +319,7 @@ function SolanaFaucetContent() {
         </div>
 
         <button
+          type="button"
           className="sol-faucet__submit"
           onClick={handleAirdrop}
           disabled={status?.type === 'loading'}
@@ -393,6 +398,7 @@ function SolanaFaucetContent() {
           <div className="sol-faucet__row">
             {INTERVAL_OPTIONS.map((opt) => (
               <button
+                type="button"
                 key={opt.ms}
                 className={`sol-faucet__amount-btn ${opt.ms === cronInterval ? 'sol-faucet__amount-btn--active' : ''}`}
                 onClick={() => setCronInterval(opt.ms)}
@@ -410,6 +416,7 @@ function SolanaFaucetContent() {
           <div className="sol-faucet__row">
             {AMOUNTS.map((a) => (
               <button
+                type="button"
                 key={a}
                 className={`sol-faucet__amount-btn ${a === cronAmount ? 'sol-faucet__amount-btn--active' : ''}`}
                 onClick={() => setCronAmount(a)}
@@ -423,6 +430,7 @@ function SolanaFaucetContent() {
 
         {/* Start/Stop */}
         <button
+          type="button"
           className={`sol-faucet__submit ${cronEnabled ? 'sol-faucet__submit--stop' : ''}`}
           onClick={toggleCron}
         >
@@ -434,7 +442,11 @@ function SolanaFaucetContent() {
           <div className="sol-faucet__cron-logs">
             <div className="sol-faucet__cron-logs-header">
               <span>Recent ({cronLogs.length})</span>
-              <button className="sol-faucet__cron-clear" onClick={() => setCronLogs([])}>
+              <button
+                type="button"
+                className="sol-faucet__cron-clear"
+                onClick={() => setCronLogs([])}
+              >
                 Clear
               </button>
             </div>

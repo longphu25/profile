@@ -198,7 +198,12 @@ function ZkMerkleContent() {
             />
           </div>
         </div>
-        <button className="sui-zm__btn" onClick={buildTree} disabled={loading || !addresses.trim()}>
+        <button
+          type="button"
+          className="sui-zm__btn"
+          onClick={buildTree}
+          disabled={loading || !addresses.trim()}
+        >
           {loading ? 'Building…' : 'Build Merkle Tree (WASM)'}
         </button>
       </div>
@@ -232,7 +237,7 @@ function ZkMerkleContent() {
                 <code>sui::groth16::bn254()</code>
               </div>
             </div>
-            <button className="sui-zm__btn sui-zm__btn--dl" onClick={downloadAll}>
+            <button type="button" className="sui-zm__btn sui-zm__btn--dl" onClick={downloadAll}>
               Download Full Tree JSON
             </button>
           </div>
@@ -256,10 +261,15 @@ function ZkMerkleContent() {
                     <span>commit: {id.identity_commitment.slice(0, 8)}…</span>
                   </div>
                   <div className="sui-zm__identity-actions">
-                    <button className="sui-zm__btn-sm" onClick={() => downloadIdentity(i)}>
+                    <button
+                      type="button"
+                      className="sui-zm__btn-sm"
+                      onClick={() => downloadIdentity(i)}
+                    >
                       Download
                     </button>
                     <button
+                      type="button"
                       className="sui-zm__btn-sm sui-zm__btn-sm--verify"
                       onClick={() => verifyIdentity(i)}
                     >

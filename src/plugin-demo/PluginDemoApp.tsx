@@ -93,6 +93,7 @@ export function PluginDemoApp() {
                 </div>
                 {isLoaded ? (
                   <button
+                    type="button"
                     onClick={() => handleUnload(name)}
                     className="rounded bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700"
                   >
@@ -100,6 +101,7 @@ export function PluginDemoApp() {
                   </button>
                 ) : (
                   <button
+                    type="button"
                     onClick={() => handleLoad(src, name)}
                     disabled={isLoading}
                     className="rounded bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
