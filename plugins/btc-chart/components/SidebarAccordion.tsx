@@ -16,6 +16,10 @@ interface Props {
   summary?: ReactNode
   /** Optional badge in header */
   badge?: ReactNode
+  /** Flat row style for Intel drawer (no nested card chrome) */
+  flat?: boolean
+  /** Skip motion height animation (Intel drawer perf) */
+  lightweight?: boolean
   /** Hide when intel search does not match title or keywords */
   filterQuery?: string
   /** Extra terms for intel filter (OI, whale, etc.) */
@@ -34,6 +38,8 @@ export function SidebarAccordion({
   badge,
   filterQuery,
   filterKeywords,
+  flat = false,
+  lightweight = false,
   expandOnFilter = true,
   onToggle,
 }: Props) {
@@ -54,7 +60,13 @@ export function SidebarAccordion({
   }
 
   return (
-    <div className={cn('btc-chart__accordion sb-accordion', open && 'is-open')}>
+    <div
+      className={cn(
+        'btc-chart__accordion sb-accordion',
+        flat && 'btc-chart__accordion--flat',
+        open && 'is-open',
+      )}
+    >
       <button
         type="button"
         className="btc-chart__accordion-hdr"
@@ -75,21 +87,27 @@ export function SidebarAccordion({
         <span className="btc-chart__accordion-rule" aria-hidden />
       </button>
 
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            className="btc-chart__accordion-body"
-            variants={accordionBody}
-            initial="collapsed"
-            animate="expanded"
-            exit="collapsed"
-            transition={transitionSpring}
-            style={{ overflow: 'hidden' }}
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {lightweight ? (
+        open ? (
+          <div className="btc-chart__accordion-body">{children}</div>
+        ) : null
+      ) : (
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.div
+              className="btc-chart__accordion-body"
+              variants={accordionBody}
+              initial="collapsed"
+              animate="expanded"
+              exit="collapsed"
+              transition={transitionSpring}
+              style={{ overflow: 'hidden' }}
+            >
+              {children}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </div>
   )
 }
