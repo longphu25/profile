@@ -42,6 +42,12 @@ jobs:
         env:
           VITE_TURSO_DB_URL: ${{ secrets.VITE_TURSO_DB_URL }}
           VITE_TURSO_DB_TOKEN: ${{ secrets.VITE_TURSO_DB_TOKEN }}
+      - name: Verify btc-chart plugin static assets
+        run: |
+          test -f dist/plugins/btc-chart/style.css
+          ! grep -q "@import 'tailwindcss'" dist/plugins/btc-chart/style.css
+          test -f dist/plugins/btc-chart/pkg/btc_chart_wasm.js
+          test -f dist/plugins/btc-chart/pkg/btc_chart_wasm_bg.wasm
       - name: Copy 404 fallback for SPA routing
         run: cp dist/index.html dist/404.html
       - name: Setup Pages
