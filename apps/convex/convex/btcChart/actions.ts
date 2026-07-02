@@ -1,8 +1,7 @@
 import { v } from 'convex/values'
 import { internal } from '../_generated/api'
 import { internalAction } from '../_generated/server'
-import type { SymbolRoutingContext } from '../../shared/btc-chart/lib/types'
-import { DEFAULT_CRON_SYMBOLS } from '../../shared/btc-chart/lib/symbols'
+import { DEFAULT_CRON_SYMBOLS, type SymbolRoutingContext } from '@profile/market-core'
 import { getMarketSnapshotOrchestrator } from './orchestrator'
 import { snapshotToDoc } from './mappers'
 

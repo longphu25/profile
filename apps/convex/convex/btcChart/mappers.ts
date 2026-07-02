@@ -1,4 +1,4 @@
-import type { MarketSnapshot } from '../../shared/btc-chart/lib/types'
+import type { MarketSnapshot } from '@profile/market-core'
 
 export interface MarketSnapshotDoc {
   symbol: string

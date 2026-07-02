@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
@@ -12,5 +12,5 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["shared/**/*.ts", "convex/**/*.ts"]
+  "include": ["convex/**/*.ts"]
 }

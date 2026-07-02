@@ -1,19 +1,19 @@
 {
-  "name": "@profile/functions",
+  "name": "@profile/convex",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "convex dev",
     "deploy": "convex deploy",
     "codegen": "convex codegen",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "bun test ../tests/unit/functions-btc-chart-market.test.ts"
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@profile/market-core": "workspace:*",
     "convex": "^1.42.1"
   },
   "devDependencies": {
-    "@types/bun": "latest",
     "@types/node": "^26.1.0",
     "typescript": "^5.9.3"
   }

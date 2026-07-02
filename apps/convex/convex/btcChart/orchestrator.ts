@@ -1,5 +1,4 @@
-import { createDefaultMarketAdapters } from '../../shared/btc-chart/adapters/factory'
-import { MarketSnapshotOrchestrator } from '../../shared/btc-chart/lib/orchestrator'
+import { createDefaultMarketAdapters, MarketSnapshotOrchestrator } from '@profile/market-core'
 
 /** Singleton orchestrator wired with default venue adapters (composition root). */
 let instance: MarketSnapshotOrchestrator | null = null
