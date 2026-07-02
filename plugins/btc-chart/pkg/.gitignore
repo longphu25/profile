@@ -1,0 +1,8 @@
+# Ignore wasm-pack scratch output; commit release artifacts for CI/Pages deploy.
+*
+!.gitignore
+!btc_chart_wasm.js
+!btc_chart_wasm_bg.wasm
+!btc_chart_wasm.d.ts
+!btc_chart_wasm_bg.wasm.d.ts
+!package.json

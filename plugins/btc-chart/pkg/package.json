@@ -1,0 +1,16 @@
+{
+  "name": "btc-chart-wasm",
+  "type": "module",
+  "description": "WASM compute kernel for btc-chart SMC (Smart Money Concepts) overlay",
+  "version": "0.1.0",
+  "files": [
+    "btc_chart_wasm_bg.wasm",
+    "btc_chart_wasm.js",
+    "btc_chart_wasm.d.ts"
+  ],
+  "main": "btc_chart_wasm.js",
+  "types": "btc_chart_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

@@ -4,6 +4,7 @@ import { defineConfig, type Plugin as VitePlugin } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
+import { compile, optimize } from '@tailwindcss/node'
 
 function readPluginCss(pluginsDir: string, name: string): string | null {
   const stylePath = resolve(pluginsDir, name, 'style.css')
@@ -14,6 +15,37 @@ function readPluginCss(pluginsDir: string, name: string): string | null {
     css += `\n${readFileSync(stitchPath, 'utf8')}`
   }
   return css
+}
+
+/** True when CSS must be compiled (Tailwind @import), not served as raw source. */
+function needsTailwindCompile(css: string): boolean {
+  return css.includes("@import 'tailwindcss'") || css.includes('@import "tailwindcss"')
+}
+
+/**
+ * Compile plugin CSS for Shadow DOM <link> delivery.
+ * Raw @import 'tailwindcss' resolves to /plugins/<name>/tailwindcss in the browser (404 on Pages).
+ */
+async function compilePluginCss(css: string, baseDir: string): Promise<string> {
+  if (!needsTailwindCompile(css)) return css
+  const result = await compile(css, {
+    base: baseDir,
+    onDependency: () => {},
+  })
+  const built = result.build([])
+  return optimize(built, { minify: true }).code
+}
+
+function copyPluginPkg(pluginsDir: string, name: string, distRoot: string): void {
+  const pkgDir = resolve(pluginsDir, name, 'pkg')
+  if (!existsSync(pkgDir)) return
+  const destPkg = resolve(distRoot, 'plugins', name, 'pkg')
+  mkdirSync(destPkg, { recursive: true })
+  for (const f of readdirSync(pkgDir)) {
+    if (f.endsWith('.js') || f.endsWith('.wasm') || f.endsWith('.d.ts')) {
+      copyFileSync(resolve(pkgDir, f), resolve(destPkg, f))
+    }
+  }
 }
 
 /** Serve + copy plugin CSS (style.css + optional stitch-theme.css) for Shadow DOM */
@@ -31,34 +63,32 @@ function copyPluginAssets(): VitePlugin {
         if (!match) return next()
         // Vite CSS module imports (?import) need the JS shim, not raw CSS.
         if (query.includes('import') || query.includes('inline')) return next()
-        const css = readPluginCss(pluginsDir, match[1])
-        if (!css) return next()
-        res.setHeader('Content-Type', 'text/css; charset=utf-8')
-        res.end(css)
+        const rawCss = readPluginCss(pluginsDir, match[1])
+        if (!rawCss) return next()
+        const pluginDir = resolve(pluginsDir, match[1])
+        compilePluginCss(rawCss, pluginDir)
+          .then((css) => {
+            res.setHeader('Content-Type', 'text/css; charset=utf-8')
+            res.end(css)
+          })
+          .catch(next)
       })
     },
-    closeBundle() {
+    async closeBundle() {
+      const distRoot = resolve(__dirname, 'dist')
       for (const name of readdirSync(pluginsDir)) {
-        const css = readPluginCss(pluginsDir, name)
-        if (!css) continue
-        try {
-          const dest = resolve(__dirname, 'dist/plugins', name)
-          mkdirSync(dest, { recursive: true })
-          writeFileSync(resolve(dest, 'style.css'), css)
-        } catch {
-          // skip
-        }
-        // Copy WASM pkg if exists
-        const pkgDir = resolve(pluginsDir, name, 'pkg')
-        if (existsSync(pkgDir)) {
-          const destPkg = resolve(__dirname, 'dist/plugins', name, 'pkg')
-          mkdirSync(destPkg, { recursive: true })
-          for (const f of readdirSync(pkgDir)) {
-            if (f.endsWith('.js') || f.endsWith('.wasm') || f.endsWith('.d.ts')) {
-              copyFileSync(resolve(pkgDir, f), resolve(destPkg, f))
-            }
+        const rawCss = readPluginCss(pluginsDir, name)
+        if (rawCss) {
+          try {
+            const dest = resolve(distRoot, 'plugins', name)
+            mkdirSync(dest, { recursive: true })
+            const css = await compilePluginCss(rawCss, resolve(pluginsDir, name))
+            writeFileSync(resolve(dest, 'style.css'), css)
+          } catch {
+            // skip
           }
         }
+        copyPluginPkg(pluginsDir, name, distRoot)
       }
     },
   }
