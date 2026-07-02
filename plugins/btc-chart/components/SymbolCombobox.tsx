@@ -10,6 +10,12 @@ export interface SymbolComboboxProps {
   onSelect: (sym: string) => void
 }
 
+/** Shadow DOM retargets `event.target` to the host; use composedPath instead. */
+function isInsidePicker(root: HTMLElement | null, event: Event): boolean {
+  if (!root) return false
+  return event.composedPath().includes(root)
+}
+
 export function SymbolCombobox({ symbol, symbols, onSelect }: SymbolComboboxProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -28,10 +34,16 @@ export function SymbolCombobox({ symbol, symbols, onSelect }: SymbolComboboxProp
     )
   }, [query, symbols])
 
+  const pickSymbol = (sym: string) => {
+    onSelect(sym)
+    setOpen(false)
+    setQuery('')
+  }
+
   useEffect(() => {
     if (!open) return
     const onPointer = (e: PointerEvent) => {
-      if (rootRef.current?.contains(e.target as Node)) return
+      if (isInsidePicker(rootRef.current, e)) return
       setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
@@ -84,14 +96,11 @@ export function SymbolCombobox({ symbol, symbols, onSelect }: SymbolComboboxProp
                     type="button"
                     role="option"
                     aria-selected={symbol === s.symbol}
-                    className={cn(
-                      'btc-chart__symbol-option',
-                      symbol === s.symbol && 'is-active',
-                    )}
-                    onClick={() => {
-                      onSelect(s.symbol)
-                      setOpen(false)
-                      setQuery('')
+                    className={cn('btc-chart__symbol-option', symbol === s.symbol && 'is-active')}
+                    onPointerDown={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      pickSymbol(s.symbol)
                     }}
                   >
                     {s.base}/{s.quote}
