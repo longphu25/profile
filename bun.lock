@@ -17,6 +17,7 @@
         "@mysten/slush-wallet": "^1.1.0",
         "@mysten/sui": "^2.18.0",
         "@mysten/walrus": "^1.2.0",
+        "@mysten/walrus-wasm": "^0.3.0",
         "@mysten/zksend": "^1.2.0",
         "@noble/curves": "^2.2.0",
         "@noble/hashes": "^2.2.0",
