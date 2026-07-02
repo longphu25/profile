@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -196,22 +197,29 @@ export function PredictClubProvider({
   // Subscribe to oracle stream
   const oracleSnapshot = useSyncExternalStore(subscribeOracle, getSnapshot)
 
-  useEffect(() => {
-    const address = suiContext.isConnected ? suiContext.address : null
-    let cancelled = false
+  const fairValuePreview = useMemo(
+    () => computeFairValuePreview(club.activeRound, oracleSnapshot.oracleState),
+    [club.activeRound, oracleSnapshot.oracleState],
+  )
 
-    // fairValue is a cheap local compute — refresh it every oracle tick so the
-    // preview stays live without any network call.
-    setPricingSnapshot((current) => ({
-      ...current,
-      fairValue: computeFairValuePreview(club.activeRound, oracleSnapshot.oracleState),
-    }))
+  const pricingForContext = useMemo(
+    () => ({ ...pricingSnapshot, fairValue: fairValuePreview }),
+    [pricingSnapshot, fairValuePreview],
+  )
 
-    // The contract quote + manager/vault snapshots need ~10 RPC calls. Throttle
-    // them: fetch immediately when user-controlled inputs change, otherwise at
-    // most once per PRICING_RPC_THROTTLE_MS even as the oracle ticks. This
-    // prevents flooding the fullnode (429 Too Many Requests).
-    const inputKey = [
+  const pricingInputKey = useMemo(
+    () =>
+      [
+        club.activeRound.direction,
+        club.activeRound.strike,
+        club.activeRound.lowerStrike,
+        club.activeRound.upperStrike,
+        club.activeRound.expiryMinutes,
+        club.activeRound.suggestedDusdc,
+        predictManagerId,
+        suiContext.isConnected ? suiContext.address : null,
+      ].join('|'),
+    [
       club.activeRound.direction,
       club.activeRound.strike,
       club.activeRound.lowerStrike,
@@ -219,8 +227,25 @@ export function PredictClubProvider({
       club.activeRound.expiryMinutes,
       club.activeRound.suggestedDusdc,
       predictManagerId,
-      address,
-    ].join('|')
+      suiContext.address,
+      suiContext.isConnected,
+    ],
+  )
+
+  const oracleStateRef = useRef(oracleSnapshot.oracleState)
+  useLayoutEffect(() => {
+    oracleStateRef.current = oracleSnapshot.oracleState
+  }, [oracleSnapshot.oracleState])
+
+  useEffect(() => {
+    const address = suiContext.isConnected ? suiContext.address : null
+    let cancelled = false
+
+    // The contract quote + manager/vault snapshots need ~10 RPC calls. Throttle
+    // them: fetch immediately when user-controlled inputs change, otherwise at
+    // most once per PRICING_RPC_THROTTLE_MS even as the oracle ticks. This
+    // prevents flooding the fullnode (429 Too Many Requests).
+    const inputKey = pricingInputKey
 
     const now = Date.now()
     const inputChanged = pricingFetchRef.current.inputKey !== inputKey
@@ -232,12 +257,10 @@ export function PredictClubProvider({
     }
     pricingFetchRef.current = { inputKey, lastFetchMs: now }
 
-    setPricingSnapshot((current) => ({ ...current, loading: true }))
-
     fetchPredictPricingSnapshot({
       walletAddress: address,
       managerId: predictManagerId,
-      oracle: oracleSnapshot.oracleState,
+      oracle: oracleStateRef.current,
       round: club.activeRound,
     })
       .then((snapshot) => {
@@ -248,7 +271,7 @@ export function PredictClubProvider({
       .catch(() => {
         if (!cancelled) {
           setPricingSnapshot((current) => ({
-            fairValue: computeFairValuePreview(club.activeRound, oracleSnapshot.oracleState),
+            fairValue: computeFairValuePreview(club.activeRound, oracleStateRef.current),
             quote: { ...EMPTY_CONTRACT_QUOTE, reason: 'Contract quote unavailable' },
             manager: current.manager,
             managerReason: current.manager
@@ -267,17 +290,44 @@ export function PredictClubProvider({
     return () => {
       cancelled = true
     }
+  }, [pricingInputKey, club.activeRound])
+
+  useEffect(() => {
+    const address = suiContext.isConnected ? suiContext.address : null
+    if (!address) return
+
+    const now = Date.now()
+    if (now - pricingFetchRef.current.lastFetchMs < PRICING_RPC_THROTTLE_MS) return
+    if (pricingFetchRef.current.inputKey !== pricingInputKey) return
+
+    let cancelled = false
+    pricingFetchRef.current = { inputKey: pricingInputKey, lastFetchMs: now }
+
+    fetchPredictPricingSnapshot({
+      walletAddress: address,
+      managerId: predictManagerId,
+      oracle: oracleStateRef.current,
+      round: club.activeRound,
+    })
+      .then((snapshot) => {
+        if (!cancelled) {
+          setPricingSnapshot((current) => preserveLastGoodPricingSnapshot(current, snapshot))
+        }
+      })
+      .catch(() => {
+        /* background oracle refresh is best-effort */
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [
-    club.activeRound.direction,
-    club.activeRound.expiryMinutes,
-    club.activeRound.lowerStrike,
-    club.activeRound.strike,
-    club.activeRound.suggestedDusdc,
-    club.activeRound.upperStrike,
     oracleSnapshot.oracleState,
+    pricingInputKey,
     predictManagerId,
-    suiContext.address,
+    club.activeRound,
     suiContext.isConnected,
+    suiContext.address,
   ])
 
   // Wallet balances — fetch on connect, poll every 30s
@@ -934,7 +984,7 @@ export function PredictClubProvider({
     consensus,
     toastMessage,
     oracleSnapshot,
-    pricingSnapshot,
+    pricingSnapshot: pricingForContext,
     currentMember,
     predictManagerId,
     predictManagerLoading,

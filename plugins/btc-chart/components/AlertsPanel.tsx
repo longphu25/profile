@@ -1,6 +1,6 @@
 // BTC Chart — Alerts panel: create/list/toggle/remove price & indicator alerts.
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { type AlertRule, type AlertKind, describeRule } from '../alerts'
 import { formatPriceShort } from '../lib'
 import { Card } from '@/components/ui/card'
@@ -26,16 +26,29 @@ export function AlertsPanel({
   currentPrice,
   currentRsi,
 }: AlertsPanelProps) {
-  const [kind, setKind] = useState<AlertKind>('price-cross-up')
-  const [val, setVal] = useState('')
+  const defaultThreshold = (nextKind: AlertKind, price: number | null): string => {
+    if (nextKind === 'rsi-overbought') return '70'
+    if (nextKind === 'rsi-oversold') return '30'
+    if (nextKind === 'nwe-upper' || nextKind === 'nwe-lower') return '0'
+    if (price != null) return String(Math.round(price))
+    return ''
+  }
 
-  // Suggested default value when switching kind.
-  useEffect(() => {
-    if (kind === 'rsi-overbought') setVal('70')
-    else if (kind === 'rsi-oversold') setVal('30')
-    else if (kind === 'nwe-upper' || kind === 'nwe-lower') setVal('0')
-    else if (currentPrice != null) setVal(String(Math.round(currentPrice)))
-  }, [kind, currentPrice])
+  const [kind, setKind] = useState<AlertKind>('price-cross-up')
+  const [val, setVal] = useState(() => defaultThreshold('price-cross-up', currentPrice))
+  const [prevKind, setPrevKind] = useState(kind)
+  const [prevPrice, setPrevPrice] = useState(currentPrice)
+
+  if (kind !== prevKind) {
+    setPrevKind(kind)
+    setVal(defaultThreshold(kind, currentPrice))
+  } else if (
+    (kind === 'price-cross-up' || kind === 'price-cross-down') &&
+    currentPrice !== prevPrice
+  ) {
+    setPrevPrice(currentPrice)
+    if (currentPrice != null) setVal(String(Math.round(currentPrice)))
+  }
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,7 +65,11 @@ export function AlertsPanel({
         <select
           className="input text-xs w-full bg-[var(--surface-3)] border border-[var(--border)] rounded px-2 py-1"
           value={kind}
-          onChange={(e) => setKind(e.target.value as AlertKind)}
+          onChange={(e) => {
+            const nextKind = e.target.value as AlertKind
+            setKind(nextKind)
+            setVal(defaultThreshold(nextKind, currentPrice))
+          }}
         >
           <option value="price-cross-up">Price ↑ crosses</option>
           <option value="price-cross-down">Price ↓ crosses</option>

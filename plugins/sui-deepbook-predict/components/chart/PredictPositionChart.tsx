@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import {
   ColorType,
   CrosshairMode,
@@ -81,7 +81,14 @@ export function PredictPositionChart({
   const seriesRef = useRef<ISeriesApi<'Area'> | null>(null)
   const [height, setHeight] = useState(280)
   const [drag, setDrag] = useState<DragRange | null>(null)
-  const [plotVersion, setPlotVersion] = useState(0)
+  const [overlayModel, setOverlayModel] = useState<{
+    lines: Array<{ key: string; label: string; className: string; y: number }>
+    positions: Array<
+      | { id: string; kind: 'binary'; y: number; label: string }
+      | { id: string; kind: 'range'; top: number; height: number; label: string }
+    >
+    draft: { top: number; height: number; label: string } | null
+  }>({ lines: [], positions: [], draft: null })
 
   const spot = spotRaw / PRICE_SCALE
   const seriesData = useMemo(() => {
@@ -144,7 +151,6 @@ export function PredictPositionChart({
       const nextHeight = width < 560 ? 240 : 280
       setHeight(nextHeight)
       chart.applyOptions({ width, height: nextHeight })
-      setPlotVersion((value) => value + 1)
     }
 
     resize()
@@ -159,14 +165,117 @@ export function PredictPositionChart({
     }
   }, [])
 
+  const selectedLines = useMemo(
+    () =>
+      [
+        selectedStrike
+          ? {
+              key: 'selected',
+              label: `Selected $${selectedStrike.toLocaleString()}`,
+              price: selectedStrike,
+              className: 'predict-chart__line--selected',
+            }
+          : null,
+        selectedLower
+          ? {
+              key: 'lower',
+              label: `Lower $${selectedLower.toLocaleString()}`,
+              price: selectedLower,
+              className: 'predict-chart__line--range',
+            }
+          : null,
+        selectedUpper
+          ? {
+              key: 'upper',
+              label: `Upper $${selectedUpper.toLocaleString()}`,
+              price: selectedUpper,
+              className: 'predict-chart__line--range',
+            }
+          : null,
+        spot
+          ? {
+              key: 'spot',
+              label: `Spot $${spot.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+              price: spot,
+              className: 'predict-chart__line--spot',
+            }
+          : null,
+      ].filter(Boolean) as { key: string; label: string; price: number; className: string }[],
+    [selectedStrike, selectedLower, selectedUpper, spot],
+  )
+
+  const recomputeOverlay = useCallback(() => {
+    const series = seriesRef.current
+    if (!series) return
+
+    const priceToCoordinate = (price: number | null | undefined) => {
+      if (!price) return null
+      const coordinate = series.priceToCoordinate(price)
+      return coordinate == null ? null : coordinate
+    }
+
+    const lines = selectedLines.flatMap((line) => {
+      const y = priceToCoordinate(line.price)
+      return y == null ? [] : [{ ...line, y }]
+    })
+
+    const positions: Array<
+      | { id: string; kind: 'binary'; y: number; label: string }
+      | { id: string; kind: 'range'; top: number; height: number; label: string }
+    > = []
+    for (const overlay of overlays) {
+      if (overlay.kind === 'binary') {
+        const y = priceToCoordinate(overlay.strike ? overlay.strike / STRIKE_SCALE : null)
+        if (y == null) continue
+        positions.push({
+          id: overlay.id,
+          kind: 'binary',
+          y,
+          label: `${overlay.isUp ? 'UP' : 'DOWN'} ${formatStrike(overlay.strike || 0)} · ${overlay.quantity}`,
+        })
+        continue
+      }
+
+      const top = priceToCoordinate(overlay.upperStrike ? overlay.upperStrike / STRIKE_SCALE : null)
+      const bottom = priceToCoordinate(
+        overlay.lowerStrike ? overlay.lowerStrike / STRIKE_SCALE : null,
+      )
+      if (top == null || bottom == null) continue
+      positions.push({
+        id: overlay.id,
+        kind: 'range',
+        top,
+        height: Math.max(2, bottom - top),
+        label: `${formatStrike(overlay.lowerStrike || 0)}-${formatStrike(overlay.upperStrike || 0)} · ${overlay.quantity}`,
+      })
+    }
+
+    let draft: { top: number; height: number; label: string } | null = null
+    if (drag) {
+      const dragLower = Math.min(drag.start, drag.end)
+      const dragUpper = Math.max(drag.start, drag.end)
+      const dragTop = priceToCoordinate(dragUpper)
+      const dragBottom = priceToCoordinate(dragLower)
+      if (dragTop != null && dragBottom != null) {
+        draft = {
+          top: dragTop,
+          height: Math.max(2, dragBottom - dragTop),
+          label: `$${dragLower.toLocaleString()}-$${dragUpper.toLocaleString()}`,
+        }
+      }
+    }
+
+    setOverlayModel({ lines, positions, draft })
+  }, [drag, overlays, selectedLines])
+
   useEffect(() => {
     const series = seriesRef.current
     const chart = chartRef.current
     if (!series || !chart || seriesData.length === 0) return
     series.setData(seriesData)
     chart.timeScale().fitContent()
-    setPlotVersion((value) => value + 1)
-  }, [seriesData])
+    recomputeOverlay()
+  }, [seriesData, recomputeOverlay])
 
   useEffect(() => {
     const chart = chartRef.current
@@ -192,26 +301,22 @@ export function PredictPositionChart({
     return () => chart.unsubscribeClick(handleClick)
   }, [mode, onBinarySelect, spot])
 
-  // Re-render overlays when the user pans/zooms so Y positions stay correct.
   useEffect(() => {
     const chart = chartRef.current
     if (!chart) return
-    const bump = () => setPlotVersion((v) => v + 1)
-    chart.timeScale().subscribeVisibleLogicalRangeChange(bump)
+    chart.timeScale().subscribeVisibleLogicalRangeChange(recomputeOverlay)
     return () => {
       try {
-        chart.timeScale().unsubscribeVisibleLogicalRangeChange(bump)
+        chart.timeScale().unsubscribeVisibleLogicalRangeChange(recomputeOverlay)
       } catch {
         /* chart already removed */
       }
     }
-  }, [seriesData]) // re-subscribe after data changes (chart is ready)
+  }, [recomputeOverlay])
 
-  const priceToY = (price: number | null | undefined) => {
-    if (!price || !seriesRef.current) return null
-    const coordinate = seriesRef.current.priceToCoordinate(price)
-    return coordinate == null ? null : coordinate
-  }
+  useEffect(() => {
+    recomputeOverlay()
+  }, [recomputeOverlay])
 
   const yToPrice = (clientY: number) => {
     const rect = containerRef.current?.getBoundingClientRect()
@@ -249,46 +354,6 @@ export function PredictPositionChart({
     setDrag(null)
   }
 
-  const selectedLines = [
-    selectedStrike
-      ? {
-          key: 'selected',
-          label: `Selected $${selectedStrike.toLocaleString()}`,
-          price: selectedStrike,
-          className: 'predict-chart__line--selected',
-        }
-      : null,
-    selectedLower
-      ? {
-          key: 'lower',
-          label: `Lower $${selectedLower.toLocaleString()}`,
-          price: selectedLower,
-          className: 'predict-chart__line--range',
-        }
-      : null,
-    selectedUpper
-      ? {
-          key: 'upper',
-          label: `Upper $${selectedUpper.toLocaleString()}`,
-          price: selectedUpper,
-          className: 'predict-chart__line--range',
-        }
-      : null,
-    spot
-      ? {
-          key: 'spot',
-          label: `Spot $${spot.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-          price: spot,
-          className: 'predict-chart__line--spot',
-        }
-      : null,
-  ].filter(Boolean) as { key: string; label: string; price: number; className: string }[]
-
-  const dragLower = drag ? Math.min(drag.start, drag.end) : null
-  const dragUpper = drag ? Math.max(drag.start, drag.end) : null
-  const dragTop = priceToY(dragUpper)
-  const dragBottom = priceToY(dragLower)
-
   return (
     <div className="predict-chart">
       <div className="predict-chart__header">
@@ -311,62 +376,41 @@ export function PredictPositionChart({
         onPointerUp={handlePointerUp}
       >
         <div ref={containerRef} className="predict-chart__canvas" />
-        <div className="predict-chart__overlay" data-version={plotVersion}>
-          {selectedLines.map((line) => {
-            const y = priceToY(line.price)
-            if (y == null) return null
-            return (
+        <div className="predict-chart__overlay">
+          {overlayModel.lines.map((line) => (
+            <div
+              key={line.key}
+              className={`predict-chart__line ${line.className}`}
+              style={{ top: line.y }}
+            >
+              <span>{line.label}</span>
+            </div>
+          ))}
+          {overlayModel.positions.map((overlay) =>
+            overlay.kind === 'binary' ? (
               <div
-                key={line.key}
-                className={`predict-chart__line ${line.className}`}
-                style={{ top: y }}
+                key={overlay.id}
+                className="predict-chart__line predict-chart__line--position"
+                style={{ top: overlay.y }}
               >
-                <span>{line.label}</span>
+                <span>{overlay.label}</span>
               </div>
-            )
-          })}
-          {overlays.map((overlay) => {
-            if (overlay.kind === 'binary') {
-              const y = priceToY(overlay.strike ? overlay.strike / STRIKE_SCALE : null)
-              if (y == null) return null
-              return (
-                <div
-                  key={overlay.id}
-                  className="predict-chart__line predict-chart__line--position"
-                  style={{ top: y }}
-                >
-                  <span>
-                    {overlay.isUp ? 'UP' : 'DOWN'} {formatStrike(overlay.strike || 0)} ·{' '}
-                    {overlay.quantity}
-                  </span>
-                </div>
-              )
-            }
-
-            const top = priceToY(overlay.upperStrike ? overlay.upperStrike / STRIKE_SCALE : null)
-            const bottom = priceToY(overlay.lowerStrike ? overlay.lowerStrike / STRIKE_SCALE : null)
-            if (top == null || bottom == null) return null
-            return (
+            ) : (
               <div
                 key={overlay.id}
                 className="predict-chart__range-overlay"
-                style={{ top, height: Math.max(2, bottom - top) }}
+                style={{ top: overlay.top, height: overlay.height }}
               >
-                <span>
-                  {formatStrike(overlay.lowerStrike || 0)}-{formatStrike(overlay.upperStrike || 0)}{' '}
-                  · {overlay.quantity}
-                </span>
+                <span>{overlay.label}</span>
               </div>
-            )
-          })}
-          {dragTop != null && dragBottom != null && (
+            ),
+          )}
+          {overlayModel.draft && (
             <div
               className="predict-chart__range-overlay predict-chart__range-overlay--draft"
-              style={{ top: dragTop, height: Math.max(2, dragBottom - dragTop) }}
+              style={{ top: overlayModel.draft.top, height: overlayModel.draft.height }}
             >
-              <span>
-                ${dragLower?.toLocaleString()}-${dragUpper?.toLocaleString()}
-              </span>
+              <span>{overlayModel.draft.label}</span>
             </div>
           )}
         </div>

@@ -285,7 +285,14 @@ function FundToJoinBody() {
         </div>
         <div className="grid grid-cols-2 gap-sm">
           {routeCards.map((item) => (
-            <RouteCard key={item.title} {...item} />
+            <RouteCard
+              key={item.title}
+              icon={item.icon}
+              title={item.title}
+              note={item.note}
+              status={item.status}
+              active={item.active}
+            />
           ))}
         </div>
       </div>

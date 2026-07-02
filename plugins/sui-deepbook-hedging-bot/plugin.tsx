@@ -8,7 +8,7 @@
 import type { Plugin, HostAPI } from '../../src/plugins/types'
 import { isSuiHostAPI } from '../../src/sui-dashboard/sui-types'
 import type { SuiHostAPI } from '../../src/sui-dashboard/sui-types'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { Transaction } from '@mysten/sui/transactions'
@@ -23,10 +23,21 @@ import {
   testnetPackageIds,
   OrderType,
 } from '@mysten/deepbook-v3'
-import { executeMarginCycle as _executeMarginCycle, cleanupMarginPositions as _cleanupMarginPositions } from './strategies'
+import {
+  executeMarginCycle as _executeMarginCycle,
+  cleanupMarginPositions as _cleanupMarginPositions,
+} from './strategies'
 import { pushLog, testLogEndpoint, detectLogServiceType } from './services'
 import { Sidebar } from './components'
-import type { BotStage, BotConfig, LogEntry, CycleRecord, OBLevel, PoolMarketData, WalletBalance } from './types'
+import type {
+  BotStage,
+  BotConfig,
+  LogEntry,
+  CycleRecord,
+  OBLevel,
+  PoolMarketData,
+  WalletBalance,
+} from './types'
 import { INDEXER, RPC, DEFAULT_CONFIG } from './types'
 import { formatUsd, formatOBPrice, shortAddr, randRange, keypairFromSecret } from './utils'
 import './style.css'
@@ -36,6 +47,116 @@ import './style.css'
 // ── Shared host ────────────────────────────────────────────────────────────────
 
 let sharedHost: SuiHostAPI | null = null
+
+type BalanceManagerCardProps = {
+  label: string
+  role: string
+  bmId: string
+  hasKey: boolean
+  color: string
+  network: string
+  running: boolean
+  mgrBals: Record<string, Record<string, number>>
+  mgrBalsLoading: boolean
+  onWithdraw: () => void
+  onReset: () => void
+}
+
+/** One on-chain balance manager row in the Accounts tab. */
+function BalanceManagerCard({
+  label,
+  role,
+  bmId,
+  hasKey,
+  color,
+  network,
+  running,
+  mgrBals,
+  mgrBalsLoading,
+  onWithdraw,
+  onReset,
+}: BalanceManagerCardProps) {
+  const entries = Object.entries(mgrBals[bmId] ?? {}).filter(([, v]) => (v as number) > 0)
+  return (
+    <div
+      className="sui-hb__card"
+      style={{
+        background: '#020617',
+        marginBottom: 8,
+        padding: 10,
+        borderLeft: `3px solid ${color}`,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 4,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#f8fafc' }}>Manager {label}</div>
+          <div style={{ fontSize: 9, color: '#64748b' }}>{role}</div>
+          {!hasKey && <div style={{ fontSize: 9, color: '#ef4444' }}>⚠ Import key to withdraw</div>}
+        </div>
+        <a
+          href={`https://suiscan.xyz/${network}/object/${bmId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ fontSize: 9, color: '#4da2ff', textDecoration: 'none' }}
+        >
+          {bmId.slice(0, 10)}...{bmId.slice(-4)}
+        </a>
+      </div>
+      {entries.length > 0 ? (
+        <div style={{ marginBottom: 8 }}>
+          {entries.map(([coinType, amount]) => {
+            const sym = coinType.split('::').pop() ?? coinType
+            return (
+              <div
+                key={coinType}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '3px 0',
+                  borderBottom: '1px solid #0f172a',
+                  fontSize: 11,
+                }}
+              >
+                <span style={{ color: '#94a3b8' }}>{sym}</span>
+                <span style={{ color: '#f8fafc', fontFamily: "'Fira Code', monospace" }}>
+                  {(amount as number).toFixed(4)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div style={{ fontSize: 10, color: '#475569', marginBottom: 8 }}>
+          {mgrBalsLoading ? 'Loading...' : 'Empty — no funds deposited'}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button
+          className="sui-hb__btn sui-hb__btn--red sui-hb__btn--sm"
+          style={{ flex: 1, fontSize: 10 }}
+          disabled={running || !hasKey}
+          onClick={onWithdraw}
+        >
+          Withdraw All
+        </button>
+        <button
+          className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
+          style={{ flex: 1, fontSize: 10 }}
+          onClick={onReset}
+        >
+          Reset
+        </button>
+      </div>
+    </div>
+  )
+}
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
@@ -89,7 +210,7 @@ function HedgingBotContent() {
     const initial = sharedHost.getSharedData('deepbook:selectedPool') as string | undefined
     if (initial) setConfig((c) => ({ ...c, pool: initial }))
     return sharedHost.onSharedDataChange('deepbook:selectedPool', (v) => {
-      if (typeof v === 'string') setConfig((c) => c.pool === v ? c : { ...c, pool: v })
+      if (typeof v === 'string') setConfig((c) => (c.pool === v ? c : { ...c, pool: v }))
     })
   }, [])
 
@@ -114,31 +235,75 @@ function HedgingBotContent() {
 
   // Balance Manager IDs (on-chain, persisted in localStorage)
   const [bmIdA, setBmIdA] = useState<string | null>(() => {
-    try { return localStorage.getItem('hb_bmA') } catch { return null }
+    try {
+      return localStorage.getItem('hb_bmA')
+    } catch {
+      return null
+    }
   })
   const [bmIdB, setBmIdB] = useState<string | null>(() => {
-    try { return localStorage.getItem('hb_bmB') } catch { return null }
+    try {
+      return localStorage.getItem('hb_bmB')
+    } catch {
+      return null
+    }
   })
   const [mgrBals, setMgrBals] = useState<Record<string, Record<string, number>>>({})
   const [mgrBalsLoading, setMgrBalsLoading] = useState(false)
   // All MarginManagers per wallet address
-  const [allMMs, setAllMMs] = useState<Record<string, { id: string; pool: string; base: number; quote: number; baseDebt: number; quoteDebt: number }[]>>({})
+  const [allMMs, setAllMMs] = useState<
+    Record<
+      string,
+      {
+        id: string
+        pool: string
+        base: number
+        quote: number
+        baseDebt: number
+        quoteDebt: number
+      }[]
+    >
+  >({})
 
   // Margin Manager IDs (for margin strategy)
   const [mmIdA, _setMmIdA] = useState<string | null>(() => {
-    try { return localStorage.getItem('hb_mmA') } catch { return null }
+    try {
+      return localStorage.getItem('hb_mmA')
+    } catch {
+      return null
+    }
   })
   const [mmIdB, _setMmIdB] = useState<string | null>(() => {
-    try { return localStorage.getItem('hb_mmB') } catch { return null }
+    try {
+      return localStorage.getItem('hb_mmB')
+    } catch {
+      return null
+    }
   })
   const mmIdARef = useRef(mmIdA)
   const mmIdBRef = useRef(mmIdB)
-  const setMmIdA = (id: string) => { mmIdARef.current = id; _setMmIdA(id) }
-  const setMmIdB = (id: string) => { mmIdBRef.current = id; _setMmIdB(id) }
+  const setMmIdA = (id: string) => {
+    mmIdARef.current = id
+    _setMmIdA(id)
+  }
+  const setMmIdB = (id: string) => {
+    mmIdBRef.current = id
+    _setMmIdB(id)
+  }
+  useEffect(() => {
+    mmIdARef.current = mmIdA
+  }, [mmIdA])
+  useEffect(() => {
+    mmIdBRef.current = mmIdB
+  }, [mmIdB])
 
   // On-chain tx history per account
-  const [txHistory, setTxHistory] = useState<Record<string, { digest: string; ts: string; status: string }[]>>({})
-  const [pendingOrders, setPendingOrders] = useState<Record<string, { orderId: string; side: string; price: number; qty: number; filled: number }[]>>({})
+  const [txHistory, setTxHistory] = useState<
+    Record<string, { digest: string; ts: string; status: string }[]>
+  >({})
+  const [pendingOrders, setPendingOrders] = useState<
+    Record<string, { orderId: string; side: string; price: number; qty: number; filled: number }[]>
+  >({})
 
   const [markets, setMarkets] = useState<PoolMarketData[]>([])
   const [marketsLoading, setMarketsLoading] = useState(false)
@@ -160,15 +325,27 @@ function HedgingBotContent() {
 
   // Webhook for remote log tracking
   const [webhookUrl, setWebhookUrl] = useState(() => {
-    try { return localStorage.getItem('hb_webhook') ?? '' } catch { return '' }
+    try {
+      return localStorage.getItem('hb_webhook') ?? ''
+    } catch {
+      return ''
+    }
   })
   const [webhookApiKey, setWebhookApiKey] = useState(() => {
-    try { return localStorage.getItem('hb_webhook_key') ?? '' } catch { return '' }
+    try {
+      return localStorage.getItem('hb_webhook_key') ?? ''
+    } catch {
+      return ''
+    }
   })
   const webhookRef = useRef(webhookUrl)
   const webhookKeyRef = useRef(webhookApiKey)
-  useEffect(() => { webhookRef.current = webhookUrl }, [webhookUrl])
-  useEffect(() => { webhookKeyRef.current = webhookApiKey }, [webhookApiKey])
+  useEffect(() => {
+    webhookRef.current = webhookUrl
+  }, [webhookUrl])
+  useEffect(() => {
+    webhookKeyRef.current = webhookApiKey
+  }, [webhookApiKey])
 
   // Sync network from host
   useEffect(() => {
@@ -193,11 +370,24 @@ function HedgingBotContent() {
     setAddrB(kp ? kp.getPublicKey().toSuiAddress() : null)
   }, [keyB])
 
-  const addLog = useCallback((level: LogEntry['level'], msg: string) => {
-    setLogs((prev) => [...prev.slice(-200), { ts: Date.now(), level, msg }])
-    const url = webhookRef.current
-    if (url) pushLog({ url, type: detectLogServiceType(url), apiKey: webhookKeyRef.current || undefined, labels: { job: 'hedging-bot', pool: config.pool } }, level, msg)
-  }, [config.pool])
+  const addLog = useCallback(
+    (level: LogEntry['level'], msg: string) => {
+      setLogs((prev) => [...prev.slice(-200), { ts: Date.now(), level, msg }])
+      const url = webhookRef.current
+      if (url)
+        pushLog(
+          {
+            url,
+            type: detectLogServiceType(url),
+            apiKey: webhookKeyRef.current || undefined,
+            labels: { job: 'hedging-bot', pool: config.pool },
+          },
+          level,
+          msg,
+        )
+    },
+    [config.pool],
+  )
 
   // Handle keystore file import (sui.keystore JSON format)
   // Fetch all coin balances for an address via JSON-RPC
@@ -498,60 +688,99 @@ function HedgingBotContent() {
     try {
       const client = new SuiGrpcClient({ network: net, baseUrl: RPC[net] })
       const dbClient = new DeepBookClient({
-        client, address: '0x0', network: net,
+        client,
+        address: '0x0',
+        network: net,
         coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
         pools: net === 'mainnet' ? mainnetPools : testnetPools,
         packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
       })
       const result = await dbClient.checkManagerBalancesWithAddress(ids, coinKeys)
       setMgrBals(result)
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
     setMgrBalsLoading(false)
   }, [bmIdA, bmIdB, network, config.pool])
 
   /** Fetch ALL MarginManagers for a wallet — use known IDs from localStorage + verify on-chain */
-  const fetchAllMMs = useCallback(async (addr: string) => {
-    const net = network as 'mainnet' | 'testnet'
-    const mms: { id: string; pool: string; base: number; quote: number; baseDebt: number; quoteDebt: number }[] = []
-    // Collect all known MM IDs for this address
-    const knownIds = new Set<string>()
-    const isAddrA = addr === keypairARef.current?.getPublicKey().toSuiAddress()
-    if (isAddrA && mmIdA) knownIds.add(mmIdA)
-    if (!isAddrA && mmIdB) knownIds.add(mmIdB)
-    // Also check all localStorage keys for historical MMs
-    try {
-      for (const key of ['hb_mmA', 'hb_mmB']) {
-        const v = localStorage.getItem(key)
-        if (v) knownIds.add(v)
-      }
-    } catch {}
-
-    for (const id of knownIds) {
+  const fetchAllMMs = useCallback(
+    async (addr: string) => {
+      const net = network as 'mainnet' | 'testnet'
+      const mms: {
+        id: string
+        pool: string
+        base: number
+        quote: number
+        baseDebt: number
+        quoteDebt: number
+      }[] = []
+      // Collect all known MM IDs for this address
+      const knownIds = new Set<string>()
+      const isAddrA = addr === keypairARef.current?.getPublicKey().toSuiAddress()
+      if (isAddrA && mmIdA) knownIds.add(mmIdA)
+      if (!isAddrA && mmIdB) knownIds.add(mmIdB)
+      // Also check all localStorage keys for historical MMs
       try {
-        const res = await fetch(RPC[net], {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'sui_getObject', params: [id, { showType: true, showContent: true }] }),
-        })
-        const d = await res.json() as { result?: { data?: { type?: string; content?: { fields?: Record<string, any> } } } }
-        if (!d.result?.data?.type?.includes('MarginManager')) continue
-        const fields = d.result.data.content?.fields ?? {}
-        const owner = (fields.owner ?? '') as string
-        if (!owner.replace(/^0x0*/, '0x').startsWith(addr.replace(/^0x0*/, '0x').slice(0, 20))) continue
-        const mm: typeof mms[0] = { id, pool: ((fields.deepbook_pool ?? '') as string).slice(0, 10) + '…', base: 0, quote: 0, baseDebt: 0, quoteDebt: 0 }
+        for (const key of ['hb_mmA', 'hb_mmB']) {
+          const v = localStorage.getItem(key)
+          if (v) knownIds.add(v)
+        }
+      } catch {}
+
+      for (const id of knownIds) {
         try {
-          const client = new SuiGrpcClient({ network: net, baseUrl: RPC[net] })
-          const stateDb = new DeepBookClient({ client, address: '0x0', network: net, marginManagers: { q: { address: id, poolKey: config.pool } } })
-          const state = await stateDb.getMarginManagerState('q')
-          mm.base = parseFloat(state.baseAsset) || 0
-          mm.quote = parseFloat(state.quoteAsset) || 0
-          mm.baseDebt = parseFloat(state.baseDebt) || 0
-          mm.quoteDebt = parseFloat(state.quoteDebt) || 0
-        } catch { /* state query may fail for MMs on different pools */ }
-        mms.push(mm)
-      } catch { /* skip invalid */ }
-    }
-    setAllMMs(prev => ({ ...prev, [addr]: mms }))
-  }, [network, config.pool])
+          const res = await fetch(RPC[net], {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'sui_getObject',
+              params: [id, { showType: true, showContent: true }],
+            }),
+          })
+          const d = (await res.json()) as {
+            result?: { data?: { type?: string; content?: { fields?: Record<string, any> } } }
+          }
+          if (!d.result?.data?.type?.includes('MarginManager')) continue
+          const fields = d.result.data.content?.fields ?? {}
+          const owner = (fields.owner ?? '') as string
+          if (!owner.replace(/^0x0*/, '0x').startsWith(addr.replace(/^0x0*/, '0x').slice(0, 20)))
+            continue
+          const mm: (typeof mms)[0] = {
+            id,
+            pool: ((fields.deepbook_pool ?? '') as string).slice(0, 10) + '…',
+            base: 0,
+            quote: 0,
+            baseDebt: 0,
+            quoteDebt: 0,
+          }
+          try {
+            const client = new SuiGrpcClient({ network: net, baseUrl: RPC[net] })
+            const stateDb = new DeepBookClient({
+              client,
+              address: '0x0',
+              network: net,
+              marginManagers: { q: { address: id, poolKey: config.pool } },
+            })
+            const state = await stateDb.getMarginManagerState('q')
+            mm.base = parseFloat(state.baseAsset) || 0
+            mm.quote = parseFloat(state.quoteAsset) || 0
+            mm.baseDebt = parseFloat(state.baseDebt) || 0
+            mm.quoteDebt = parseFloat(state.quoteDebt) || 0
+          } catch {
+            /* state query may fail for MMs on different pools */
+          }
+          mms.push(mm)
+        } catch {
+          /* skip invalid */
+        }
+      }
+      setAllMMs((prev) => ({ ...prev, [addr]: mms }))
+    },
+    [network, config.pool],
+  )
 
   /** Refresh all MM data for both wallets */
   const fetchMmBals = useCallback(async () => {
@@ -560,52 +789,105 @@ function HedgingBotContent() {
   }, [addrA, addrB, fetchAllMMs])
 
   // Fetch on-chain tx history for an address
-  const fetchTxHistory = useCallback(async (addr: string) => {
-    try {
-      const res = await fetch(RPC[network], {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0', id: 1, method: 'suix_queryTransactionBlocks',
-          params: [{ filter: { FromAddress: addr }, options: { showEffects: true } }, null, 10, true],
-        }),
-      })
-      const d = await res.json() as { result?: { data: { digest: string; timestampMs?: string; effects?: { status?: { status: string } } }[] } }
-      const txs = (d.result?.data ?? []).map((t) => ({
-        digest: t.digest,
-        ts: t.timestampMs ? new Date(Number(t.timestampMs)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '?',
-        status: t.effects?.status?.status ?? '?',
-      }))
-      setTxHistory((prev) => ({ ...prev, [addr]: txs }))
-    } catch { /* silent */ }
-  }, [network])
+  const fetchTxHistory = useCallback(
+    async (addr: string) => {
+      try {
+        const res = await fetch(RPC[network], {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'suix_queryTransactionBlocks',
+            params: [
+              { filter: { FromAddress: addr }, options: { showEffects: true } },
+              null,
+              10,
+              true,
+            ],
+          }),
+        })
+        const d = (await res.json()) as {
+          result?: {
+            data: {
+              digest: string
+              timestampMs?: string
+              effects?: { status?: { status: string } }
+            }[]
+          }
+        }
+        const txs = (d.result?.data ?? []).map((t) => ({
+          digest: t.digest,
+          ts: t.timestampMs
+            ? new Date(Number(t.timestampMs)).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : '?',
+          status: t.effects?.status?.status ?? '?',
+        }))
+        setTxHistory((prev) => ({ ...prev, [addr]: txs }))
+      } catch {
+        /* silent */
+      }
+    },
+    [network],
+  )
 
   // Fetch pending orders from DeepBook indexer (needs Balance Manager ID)
-  const fetchPendingOrders = useCallback(async (bmId: string | null, addr: string) => {
-    if (!bmId) {
-      setPendingOrders((prev) => ({ ...prev, [addr]: [] }))
-      return
-    }
-    try {
-      // Try current pool first, then common pools
-      const poolsToCheck = [config.pool, 'SUI_USDC', 'DEEP_SUI', 'WAL_SUI']
-      const allOrders: { orderId: string; side: string; price: number; qty: number; filled: number; pool: string }[] = []
-      for (const p of [...new Set(poolsToCheck)]) {
-        try {
-          const res = await fetch(`${INDEXER[network]}/orders/${p}/${bmId}`)
-          if (!res.ok) continue
-          const data: { order_id: string; type: string; price: number; original_quantity: number; filled_quantity: number; current_status: string }[] = await res.json()
-          const open = data.filter((o) => o.current_status === 'open' || o.current_status === 'partially_filled')
-          allOrders.push(...open.map((o) => ({
-            orderId: o.order_id, side: o.type, price: o.price,
-            qty: o.original_quantity, filled: o.filled_quantity, pool: p,
-          })))
-        } catch { /* skip pool */ }
+  const fetchPendingOrders = useCallback(
+    async (bmId: string | null, addr: string) => {
+      if (!bmId) {
+        setPendingOrders((prev) => ({ ...prev, [addr]: [] }))
+        return
       }
-      setPendingOrders((prev) => ({ ...prev, [addr]: allOrders }))
-    } catch {
-      setPendingOrders((prev) => ({ ...prev, [addr]: [] }))
-    }
-  }, [network, config.pool])
+      try {
+        // Try current pool first, then common pools
+        const poolsToCheck = [config.pool, 'SUI_USDC', 'DEEP_SUI', 'WAL_SUI']
+        const allOrders: {
+          orderId: string
+          side: string
+          price: number
+          qty: number
+          filled: number
+          pool: string
+        }[] = []
+        for (const p of [...new Set(poolsToCheck)]) {
+          try {
+            const res = await fetch(`${INDEXER[network]}/orders/${p}/${bmId}`)
+            if (!res.ok) continue
+            const data: {
+              order_id: string
+              type: string
+              price: number
+              original_quantity: number
+              filled_quantity: number
+              current_status: string
+            }[] = await res.json()
+            const open = data.filter(
+              (o) => o.current_status === 'open' || o.current_status === 'partially_filled',
+            )
+            allOrders.push(
+              ...open.map((o) => ({
+                orderId: o.order_id,
+                side: o.type,
+                price: o.price,
+                qty: o.original_quantity,
+                filled: o.filled_quantity,
+                pool: p,
+              })),
+            )
+          } catch {
+            /* skip pool */
+          }
+        }
+        setPendingOrders((prev) => ({ ...prev, [addr]: allOrders }))
+      } catch {
+        setPendingOrders((prev) => ({ ...prev, [addr]: [] }))
+      }
+    },
+    [network, config.pool],
+  )
 
   // ── Bot cycle logic ──────────────────────────────────────────────────────────
 
@@ -657,13 +939,20 @@ function HedgingBotContent() {
       const maxBaseB = (bBaseBal - bGas) * 0.8
       // Convert to USD for comparison
       const maxUsdA = quote === 'SUI' ? maxQuoteA * suiUsd : maxQuoteA
-      const maxUsdB = base === 'SUI' ? maxBaseB * suiUsd : maxBaseB * openPrice * (quote === 'SUI' ? suiUsd : 1)
+      const maxUsdB =
+        base === 'SUI' ? maxBaseB * suiUsd : maxBaseB * openPrice * (quote === 'SUI' ? suiUsd : 1)
       // Use min of both wallets and notional
       const effectiveUsd = Math.min(config.notionalUsd, maxUsdA, maxUsdB) * 0.9
-      if (effectiveUsd <= 0.5) throw new Error(`Not enough funds. A: $${maxUsdA.toFixed(2)} ${quote}, B: $${maxUsdB.toFixed(2)} ${base}`)
+      if (effectiveUsd <= 0.5)
+        throw new Error(
+          `Not enough funds. A: $${maxUsdA.toFixed(2)} ${quote}, B: $${maxUsdB.toFixed(2)} ${base}`,
+        )
       quotePerLeg = quote === 'SUI' ? effectiveUsd / suiUsd : effectiveUsd
       const qty = quotePerLeg / openPrice
-      addLog('info', `Mid price: ${formatOBPrice(openPrice)} — Effective: ${formatUsd(effectiveUsd)} — Qty: ${qty.toFixed(2)}`)
+      addLog(
+        'info',
+        `Mid price: ${formatOBPrice(openPrice)} — Effective: ${formatUsd(effectiveUsd)} — Qty: ${qty.toFixed(2)}`,
+      )
 
       if (!(poolKey in sdkPools)) throw new Error(`Pool ${poolKey} not in SDK`)
 
@@ -672,19 +961,32 @@ function HedgingBotContent() {
       let shortPct = 50
       try {
         const shared = sharedHost?.getSharedData('deepbook:analysis') as
-          { pool: string; signal: string; confidence: number; recommendation: { longPct: number; shortPct: number }; ts: number } | undefined
+          | {
+              pool: string
+              signal: string
+              confidence: number
+              recommendation: { longPct: number; shortPct: number }
+              ts: number
+            }
+          | undefined
         // Use shared data if fresh (<30s) and same pool
         if (shared && shared.pool === poolKey && Date.now() - shared.ts < 30000) {
           longPct = shared.recommendation.longPct
           shortPct = shared.recommendation.shortPct
-          addLog('info', `Trend (shared): ${shared.signal.replace('_', ' ').toUpperCase()} (${shared.confidence}%) → Long ${longPct}% / Short ${shortPct}%`)
+          addLog(
+            'info',
+            `Trend (shared): ${shared.signal.replace('_', ' ').toUpperCase()} (${shared.confidence}%) → Long ${longPct}% / Short ${shortPct}%`,
+          )
         } else {
           // Fallback: run analysis directly
           const { runAnalysis } = await import('../sui-deepbook-analysis/analysis')
           const trend = await runAnalysis(poolKey, net)
           longPct = trend.recommendation.longPct
           shortPct = trend.recommendation.shortPct
-          addLog('info', `Trend (direct): ${trend.signal.replace('_', ' ').toUpperCase()} (${trend.confidence}%) → Long ${longPct}% / Short ${shortPct}%`)
+          addLog(
+            'info',
+            `Trend (direct): ${trend.signal.replace('_', ' ').toUpperCase()} (${trend.confidence}%) → Long ${longPct}% / Short ${shortPct}%`,
+          )
         }
       } catch {
         addLog('warn', 'Trend analysis unavailable — using 50/50')
@@ -699,12 +1001,17 @@ function HedgingBotContent() {
       let qtyShort = quoteShort / openPrice
       qtyShort = Math.min(qtyShort, maxBaseB)
 
-      addLog('info', `A: BUY ${qtyLong.toFixed(2)} (${longPct}%) | B: SELL ${qtyShort.toFixed(2)} (${shortPct}%)`)
+      addLog(
+        'info',
+        `A: BUY ${qtyLong.toFixed(2)} (${longPct}%) | B: SELL ${qtyShort.toFixed(2)} (${shortPct}%)`,
+      )
 
       // Account A: BUY base (long)
       const makeDb = (addr: string) =>
         new DeepBookClient({
-          client, address: addr, network: net,
+          client,
+          address: addr,
+          network: net,
           coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
           pools: sdkPools,
           packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
@@ -781,7 +1088,9 @@ function HedgingBotContent() {
 
       const makeDb2 = (addr: string) =>
         new DeepBookClient({
-          client, address: addr, network: net,
+          client,
+          address: addr,
+          network: net,
           coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
           pools: sdkPools,
           packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
@@ -797,7 +1106,8 @@ function HedgingBotContent() {
       const bQuoteBal = parseFloat(bCoinsClose.find((c) => c.symbol === quote)?.balance ?? '0')
       const bGasClose = quote === 'SUI' ? 0.5 : 0
       const closeQuote = (bQuoteBal - bGasClose) * 0.9
-      if (closeQuote <= 0) throw new Error(`Not enough ${quote} in B. Have: ${bQuoteBal.toFixed(4)}`)
+      if (closeQuote <= 0)
+        throw new Error(`Not enough ${quote} in B. Have: ${bQuoteBal.toFixed(4)}`)
       const txB = new Transaction()
       buildSwapBuy(makeDb2(bAddr), poolKey, closeQuote, bAddr, txB)
       addLog('info', `Closing B (BUY ${closeQuote.toFixed(4)} ${quote})...`)
@@ -808,14 +1118,19 @@ function HedgingBotContent() {
       const priceDiff = closePrice - openPrice
       const pctChange = openPrice > 0 ? priceDiff / openPrice : 0
       // A (long) gains when price up, B (short) gains when price down
-      const pnlLong = pctChange * quoteLong  // A profit
+      const pnlLong = pctChange * quoteLong // A profit
       const pnlShort = -pctChange * quoteShort // B profit (inverse)
       const pnl = pnlLong + pnlShort
       const suiUsdClose = ticker['SUI_USDC']?.last_price ?? 1
       const pnlUsd = poolKey.split('_')[1] === 'SUI' ? pnl * suiUsdClose : pnl
       setTotalPnl((p) => p + pnlUsd)
-      setTotalVolume((v) => v + (quoteLong + quoteShort) * (poolKey.split('_')[1] === 'SUI' ? suiUsdClose : 1))
-      setHistory((h) => [{ num, openPrice, closePrice, pnl: pnlUsd, duration: holdSec }, ...h.slice(0, 49)])
+      setTotalVolume(
+        (v) => v + (quoteLong + quoteShort) * (poolKey.split('_')[1] === 'SUI' ? suiUsdClose : 1),
+      )
+      setHistory((h) => [
+        { num, openPrice, closePrice, pnl: pnlUsd, duration: holdSec },
+        ...h.slice(0, 49),
+      ])
       addLog(pnl >= 0 ? 'success' : 'warn', `Cycle #${num} done — PnL: ${formatUsd(pnl)}`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -857,10 +1172,15 @@ function HedgingBotContent() {
       signatures: [sig.signature],
       include: { effects: true },
     })
-    const inner = (res as Record<string, unknown>).Transaction ?? (res as Record<string, unknown>).FailedTransaction ?? res
+    const inner =
+      (res as Record<string, unknown>).Transaction ??
+      (res as Record<string, unknown>).FailedTransaction ??
+      res
     const data = inner as Record<string, unknown>
     if ((res as Record<string, unknown>).$kind === 'FailedTransaction') {
-      throw new Error(`Transaction failed: ${JSON.stringify((data.status as Record<string, unknown>)?.error ?? 'unknown')}`)
+      throw new Error(
+        `Transaction failed: ${JSON.stringify((data.status as Record<string, unknown>)?.error ?? 'unknown')}`,
+      )
     }
     // Wait for object versions to propagate
     await new Promise((r) => setTimeout(r, 1500))
@@ -901,215 +1221,290 @@ function HedgingBotContent() {
   }
 
   /** Create or find existing Balance Manager for an account */
-  const ensureBalanceManager = useCallback(async (
-    kp: Ed25519Keypair, net: string, existingId: string | null,
-  ): Promise<string> => {
-    if (existingId) return existingId
-    const addr = kp.getPublicKey().toSuiAddress()
-    const n = net as 'mainnet' | 'testnet'
-    const pkgId = n === 'mainnet' ? mainnetPackageIds.DEEPBOOK_PACKAGE_ID : testnetPackageIds.DEEPBOOK_PACKAGE_ID
-    const bmType = `${pkgId}::balance_manager::BalanceManager`
+  const ensureBalanceManager = useCallback(
+    async (kp: Ed25519Keypair, net: string, existingId: string | null): Promise<string> => {
+      if (existingId) return existingId
+      const addr = kp.getPublicKey().toSuiAddress()
+      const n = net as 'mainnet' | 'testnet'
+      const pkgId =
+        n === 'mainnet'
+          ? mainnetPackageIds.DEEPBOOK_PACKAGE_ID
+          : testnetPackageIds.DEEPBOOK_PACKAGE_ID
+      const bmType = `${pkgId}::balance_manager::BalanceManager`
 
-    // Search for existing BalanceManager via JSON-RPC getOwnedObjects
-    const findBM = async (): Promise<string | null> => {
-      const res = await fetch(RPC[n], {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0', id: 1, method: 'suix_getOwnedObjects',
-          params: [addr, { filter: { StructType: bmType }, options: { showType: true } }, null, 1],
-        }),
-      })
-      const d: { result: { data: { data: { objectId: string } }[] } } = await res.json()
-      return d.result?.data?.[0]?.data?.objectId ?? null
-    }
-
-    const existing = await findBM()
-    if (existing) {
-      addLog('info', `Found Balance Manager: ${existing.slice(0, 12)}...`)
-      return existing
-    }
-
-    // Create new
-    addLog('info', `Creating Balance Manager for ${addr.slice(0, 8)}...`)
-    const client = new SuiGrpcClient({ network: n, baseUrl: RPC[n] })
-    const dbClient = new DeepBookClient({
-      client, address: addr, network: n,
-      coins: n === 'mainnet' ? mainnetCoins : testnetCoins,
-      pools: n === 'mainnet' ? mainnetPools : testnetPools,
-      packageIds: n === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
-    })
-    const tx = new Transaction()
-    tx.add(dbClient.balanceManager.createAndShareBalanceManager())
-    const result = await signAndExec(kp, tx, net) as Record<string, unknown>
-    const digest = result?.digest as string
-    addLog('info', `Tx digest: ${digest?.slice(0, 16)}...`)
-
-    // Query tx via JSON-RPC to get objectChanges
-    if (digest) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        await new Promise((r) => setTimeout(r, 2000 + attempt * 1000))
-        const txRes = await fetch(RPC[n], {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+      // Search for existing BalanceManager via JSON-RPC getOwnedObjects
+      const findBM = async (): Promise<string | null> => {
+        const res = await fetch(RPC[n], {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            jsonrpc: '2.0', id: 1, method: 'sui_getTransactionBlock',
-            params: [digest, { showObjectChanges: true }],
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'suix_getOwnedObjects',
+            params: [
+              addr,
+              { filter: { StructType: bmType }, options: { showType: true } },
+              null,
+              1,
+            ],
           }),
         })
-        const txData = await txRes.json() as { result?: { objectChanges?: { type: string; objectId: string; objectType?: string }[] } }
-        const changes = txData.result?.objectChanges ?? []
-        addLog('info', `Object changes: ${changes.length} — types: ${changes.map((c) => c.type).join(',')}`)
-        const bmChange = changes.find((o) =>
-          o.type === 'created' && o.objectType?.includes('BalanceManager')
-        )
-        if (bmChange) {
-          addLog('success', `Balance Manager: ${bmChange.objectId.slice(0, 12)}...`)
-          return bmChange.objectId
-        }
-        const anyCreated = changes.find((o) => o.type === 'created' && !o.objectType?.includes('::coin::'))
-        if (anyCreated) {
-          addLog('success', `Balance Manager: ${anyCreated.objectId.slice(0, 12)}...`)
-          return anyCreated.objectId
+        const d: { result: { data: { data: { objectId: string } }[] } } = await res.json()
+        return d.result?.data?.[0]?.data?.objectId ?? null
+      }
+
+      const existing = await findBM()
+      if (existing) {
+        addLog('info', `Found Balance Manager: ${existing.slice(0, 12)}...`)
+        return existing
+      }
+
+      // Create new
+      addLog('info', `Creating Balance Manager for ${addr.slice(0, 8)}...`)
+      const client = new SuiGrpcClient({ network: n, baseUrl: RPC[n] })
+      const dbClient = new DeepBookClient({
+        client,
+        address: addr,
+        network: n,
+        coins: n === 'mainnet' ? mainnetCoins : testnetCoins,
+        pools: n === 'mainnet' ? mainnetPools : testnetPools,
+        packageIds: n === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
+      })
+      const tx = new Transaction()
+      tx.add(dbClient.balanceManager.createAndShareBalanceManager())
+      const result = (await signAndExec(kp, tx, net)) as Record<string, unknown>
+      const digest = result?.digest as string
+      addLog('info', `Tx digest: ${digest?.slice(0, 16)}...`)
+
+      // Query tx via JSON-RPC to get objectChanges
+      if (digest) {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          await new Promise((r) => setTimeout(r, 2000 + attempt * 1000))
+          const txRes = await fetch(RPC[n], {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'sui_getTransactionBlock',
+              params: [digest, { showObjectChanges: true }],
+            }),
+          })
+          const txData = (await txRes.json()) as {
+            result?: { objectChanges?: { type: string; objectId: string; objectType?: string }[] }
+          }
+          const changes = txData.result?.objectChanges ?? []
+          addLog(
+            'info',
+            `Object changes: ${changes.length} — types: ${changes.map((c) => c.type).join(',')}`,
+          )
+          const bmChange = changes.find(
+            (o) => o.type === 'created' && o.objectType?.includes('BalanceManager'),
+          )
+          if (bmChange) {
+            addLog('success', `Balance Manager: ${bmChange.objectId.slice(0, 12)}...`)
+            return bmChange.objectId
+          }
+          const anyCreated = changes.find(
+            (o) => o.type === 'created' && !o.objectType?.includes('::coin::'),
+          )
+          if (anyCreated) {
+            addLog('success', `Balance Manager: ${anyCreated.objectId.slice(0, 12)}...`)
+            return anyCreated.objectId
+          }
         }
       }
-    }
 
-    // Fallback: retry getBalanceManagerIds (BM may have been created in a previous tx)
-    addLog('info', 'Fallback: querying registry...')
-    for (let i = 0; i < 3; i++) {
-      await new Promise((r) => setTimeout(r, 2000))
-      try {
-        const ids = await dbClient.getBalanceManagerIds(addr)
-        if (ids.length > 0) {
-          addLog('success', `Balance Manager found: ${ids[0].slice(0, 12)}...`)
-          return ids[0]
+      // Fallback: retry getBalanceManagerIds (BM may have been created in a previous tx)
+      addLog('info', 'Fallback: querying registry...')
+      for (let i = 0; i < 3; i++) {
+        await new Promise((r) => setTimeout(r, 2000))
+        try {
+          const ids = await dbClient.getBalanceManagerIds(addr)
+          if (ids.length > 0) {
+            addLog('success', `Balance Manager found: ${ids[0].slice(0, 12)}...`)
+            return ids[0]
+          }
+        } catch {
+          /* retry */
         }
-      } catch { /* retry */ }
-    }
+      }
 
-    throw new Error('Could not find Balance Manager ID — tx: ' + (digest ?? 'unknown'))
-  }, [addLog, signAndExec])
+      throw new Error('Could not find Balance Manager ID — tx: ' + (digest ?? 'unknown'))
+    },
+    [addLog, signAndExec],
+  )
 
   /** Ensure Margin Manager exists for an account, create if needed */
-  const ensureMarginManager = useCallback(async (
-    kp: Ed25519Keypair, net: string, poolKey: string, existingId: string | null,
-  ): Promise<string> => {
-    const n = net as 'mainnet' | 'testnet'
-    const addr = kp.getPublicKey().toSuiAddress()
-    const client = new SuiGrpcClient({ network: n, baseUrl: RPC[n] })
-    const sdkCoins = n === 'mainnet' ? mainnetCoins : testnetCoins
-    const sdkPools = n === 'mainnet' ? mainnetPools : testnetPools
-    const sdkPkgIds = n === 'mainnet' ? mainnetPackageIds : testnetPackageIds
+  const ensureMarginManager = useCallback(
+    async (
+      kp: Ed25519Keypair,
+      net: string,
+      poolKey: string,
+      existingId: string | null,
+    ): Promise<string> => {
+      const n = net as 'mainnet' | 'testnet'
+      const addr = kp.getPublicKey().toSuiAddress()
+      const client = new SuiGrpcClient({ network: n, baseUrl: RPC[n] })
+      const sdkCoins = n === 'mainnet' ? mainnetCoins : testnetCoins
+      const sdkPools = n === 'mainnet' ? mainnetPools : testnetPools
+      const sdkPkgIds = n === 'mainnet' ? mainnetPackageIds : testnetPackageIds
 
-    // Verify existing MM if provided
-    if (existingId) {
+      // Verify existing MM if provided
+      if (existingId) {
+        try {
+          const res = await fetch(RPC[n], {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'sui_getObject',
+              params: [existingId, { showContent: true, showType: true }],
+            }),
+          })
+          const d = (await res.json()) as {
+            result?: { data?: { type?: string; content?: { fields?: { owner?: string } } } }
+          }
+          const objType = d.result?.data?.type ?? ''
+          const owner = d.result?.data?.content?.fields?.owner
+          if (
+            d.result?.data &&
+            objType.includes('MarginManager') &&
+            owner &&
+            owner.replace(/^0x0*/, '0x') === addr.replace(/^0x0*/, '0x')
+          ) {
+            addLog('info', `Margin Manager verified: ${existingId.slice(0, 12)}…`)
+            return existingId
+          }
+          addLog('warn', `Stale MM ${existingId.slice(0, 12)}… — searching for valid one`)
+        } catch {
+          /* fall through to search */
+        }
+      }
+
+      // Search registry for existing MMs
+      const dbSearch = new DeepBookClient({
+        client,
+        address: addr,
+        network: n,
+        coins: sdkCoins,
+        pools: sdkPools,
+        packageIds: sdkPkgIds,
+      })
       try {
-        const res = await fetch(RPC[n], {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0', id: 1, method: 'sui_getObject',
-            params: [existingId, { showContent: true, showType: true }],
-          }),
-        })
-        const d = await res.json() as { result?: { data?: { type?: string; content?: { fields?: { owner?: string } } } } }
-        const objType = d.result?.data?.type ?? ''
-        const owner = d.result?.data?.content?.fields?.owner
-        if (d.result?.data && objType.includes('MarginManager') && owner && owner.replace(/^0x0*/, '0x') === addr.replace(/^0x0*/, '0x')) {
-          addLog('info', `Margin Manager verified: ${existingId.slice(0, 12)}…`)
-          return existingId
-        }
-        addLog('warn', `Stale MM ${existingId.slice(0, 12)}… — searching for valid one`)
-      } catch { /* fall through to search */ }
-    }
-
-    // Search registry for existing MMs
-    const dbSearch = new DeepBookClient({
-      client, address: addr, network: n,
-      coins: sdkCoins, pools: sdkPools, packageIds: sdkPkgIds,
-    })
-    try {
-      const ids = await dbSearch.getBalanceManagerIds(addr)
-      // Check each to find one that's a MarginManager for our pool
-      if (ids.length > 0) {
-        for (const id of ids) {
-          try {
-            const res = await fetch(RPC[n], {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                jsonrpc: '2.0', id: 1, method: 'sui_getObject',
-                params: [id, { showContent: true, showType: true }],
-              }),
-            })
-            const d = await res.json() as { result?: { data?: { type?: string; content?: { fields?: { owner?: string; deepbook_pool?: string } } } } }
-            if (d.result?.data?.type?.includes('MarginManager')) {
-              const fields = d.result.data.content?.fields
-              const owner = fields?.owner
-              if (owner && owner.replace(/^0x0*/, '0x') === addr.replace(/^0x0*/, '0x')) {
-                addLog('info', `Found existing Margin Manager: ${id.slice(0, 12)}…`)
-                return id
+        const ids = await dbSearch.getBalanceManagerIds(addr)
+        // Check each to find one that's a MarginManager for our pool
+        if (ids.length > 0) {
+          for (const id of ids) {
+            try {
+              const res = await fetch(RPC[n], {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  jsonrpc: '2.0',
+                  id: 1,
+                  method: 'sui_getObject',
+                  params: [id, { showContent: true, showType: true }],
+                }),
+              })
+              const d = (await res.json()) as {
+                result?: {
+                  data?: {
+                    type?: string
+                    content?: { fields?: { owner?: string; deepbook_pool?: string } }
+                  }
+                }
               }
+              if (d.result?.data?.type?.includes('MarginManager')) {
+                const fields = d.result.data.content?.fields
+                const owner = fields?.owner
+                if (owner && owner.replace(/^0x0*/, '0x') === addr.replace(/^0x0*/, '0x')) {
+                  addLog('info', `Found existing Margin Manager: ${id.slice(0, 12)}…`)
+                  return id
+                }
+              }
+            } catch {
+              /* skip */
             }
-          } catch { /* skip */ }
+          }
+        }
+      } catch {
+        /* no registry results */
+      }
+
+      // Create new Margin Manager
+      addLog('info', `Creating Margin Manager for ${addr.slice(0, 8)}…`)
+      const dbCreate = new DeepBookClient({
+        client,
+        address: addr,
+        network: n,
+        coins: sdkCoins,
+        pools: sdkPools,
+        packageIds: sdkPkgIds,
+      })
+      const tx = new Transaction()
+      const { manager, initializer } =
+        dbCreate.marginManager.newMarginManagerWithInitializer(poolKey)(tx)
+      dbCreate.marginManager.shareMarginManager(poolKey, manager, initializer)(tx)
+      const result = (await signAndExec(kp, tx, net)) as Record<string, unknown>
+      const digest = result?.digest as string
+      addLog('info', `MM create tx: ${digest?.slice(0, 16)}…`)
+
+      // Parse objectChanges to find the new MarginManager ID
+      if (digest) {
+        for (let attempt = 0; attempt < 4; attempt++) {
+          await new Promise((r) => setTimeout(r, 2000 + attempt * 1000))
+          const txRes = await fetch(RPC[n], {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'sui_getTransactionBlock',
+              params: [digest, { showObjectChanges: true }],
+            }),
+          })
+          const txData = (await txRes.json()) as {
+            result?: { objectChanges?: { type: string; objectId: string; objectType?: string }[] }
+          }
+          const changes = txData.result?.objectChanges ?? []
+          const mmChange = changes.find(
+            (o) => o.type === 'created' && o.objectType?.includes('MarginManager'),
+          )
+          if (mmChange) {
+            addLog('success', `Margin Manager created: ${mmChange.objectId.slice(0, 12)}…`)
+            return mmChange.objectId
+          }
         }
       }
-    } catch { /* no registry results */ }
 
-    // Create new Margin Manager
-    addLog('info', `Creating Margin Manager for ${addr.slice(0, 8)}…`)
-    const dbCreate = new DeepBookClient({
-      client, address: addr, network: n,
-      coins: sdkCoins, pools: sdkPools, packageIds: sdkPkgIds,
-    })
-    const tx = new Transaction()
-    const { manager, initializer } = dbCreate.marginManager.newMarginManagerWithInitializer(poolKey)(tx)
-    dbCreate.marginManager.shareMarginManager(poolKey, manager, initializer)(tx)
-    const result = await signAndExec(kp, tx, net) as Record<string, unknown>
-    const digest = result?.digest as string
-    addLog('info', `MM create tx: ${digest?.slice(0, 16)}…`)
-
-    // Parse objectChanges to find the new MarginManager ID
-    if (digest) {
-      for (let attempt = 0; attempt < 4; attempt++) {
-        await new Promise((r) => setTimeout(r, 2000 + attempt * 1000))
-        const txRes = await fetch(RPC[n], {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0', id: 1, method: 'sui_getTransactionBlock',
-            params: [digest, { showObjectChanges: true }],
-          }),
-        })
-        const txData = await txRes.json() as { result?: { objectChanges?: { type: string; objectId: string; objectType?: string }[] } }
-        const changes = txData.result?.objectChanges ?? []
-        const mmChange = changes.find((o) =>
-          o.type === 'created' && o.objectType?.includes('MarginManager')
-        )
-        if (mmChange) {
-          addLog('success', `Margin Manager created: ${mmChange.objectId.slice(0, 12)}…`)
-          return mmChange.objectId
-        }
-      }
-    }
-
-    throw new Error('Could not find Margin Manager ID — tx: ' + (digest ?? 'unknown'))
-  }, [addLog, signAndExec])
+      throw new Error('Could not find Margin Manager ID — tx: ' + (digest ?? 'unknown'))
+    },
+    [addLog, signAndExec],
+  )
 
   /** Deposit tokens into Balance Manager */
-  const depositToManager = useCallback(async (
-    kp: Ed25519Keypair, net: string, bmId: string, coinKey: string, amount: number,
-  ) => {
-    const addr = kp.getPublicKey().toSuiAddress()
-    const n = net as 'mainnet' | 'testnet'
-    const client = new SuiGrpcClient({ network: n, baseUrl: RPC[n] })
-    const dbClient = new DeepBookClient({
-      client, address: addr, network: n,
-      coins: n === 'mainnet' ? mainnetCoins : testnetCoins,
-      pools: n === 'mainnet' ? mainnetPools : testnetPools,
-      packageIds: n === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
-      balanceManagers: { main: { address: bmId } },
-    })
-    const tx = new Transaction()
-    tx.add(dbClient.balanceManager.depositIntoManager('main', coinKey, amount))
-    await signAndExec(kp, tx, net)
-  }, [signAndExec])
+  const depositToManager = useCallback(
+    async (kp: Ed25519Keypair, net: string, bmId: string, coinKey: string, amount: number) => {
+      const addr = kp.getPublicKey().toSuiAddress()
+      const n = net as 'mainnet' | 'testnet'
+      const client = new SuiGrpcClient({ network: n, baseUrl: RPC[n] })
+      const dbClient = new DeepBookClient({
+        client,
+        address: addr,
+        network: n,
+        coins: n === 'mainnet' ? mainnetCoins : testnetCoins,
+        pools: n === 'mainnet' ? mainnetPools : testnetPools,
+        packageIds: n === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
+        balanceManagers: { main: { address: bmId } },
+      })
+      const tx = new Transaction()
+      tx.add(dbClient.balanceManager.depositIntoManager('main', coinKey, amount))
+      await signAndExec(kp, tx, net)
+    },
+    [signAndExec],
+  )
 
   /** Execute maker cycle: POST_ONLY limit orders on both sides */
   const executeMakerCycle = useCallback(async () => {
@@ -1151,7 +1546,12 @@ function HedgingBotContent() {
 
       // Fetch pool constraints
       const poolsRes = await fetch(`${indexer}/get_pools`)
-      const poolsMeta: { pool_name: string; lot_size: number; min_size: number; base_asset_decimals: number }[] = await poolsRes.json()
+      const poolsMeta: {
+        pool_name: string
+        lot_size: number
+        min_size: number
+        base_asset_decimals: number
+      }[] = await poolsRes.json()
       const poolMeta = poolsMeta.find((p) => p.pool_name === poolKey)
       const baseDec = poolMeta?.base_asset_decimals ?? 6
       const lotSize = (poolMeta?.lot_size ?? 1000000) / 10 ** baseDec
@@ -1159,13 +1559,16 @@ function HedgingBotContent() {
 
       if (!(poolKey in sdkPools)) throw new Error(`Pool ${poolKey} not in SDK`)
 
-      const makeDb = (addr: string, bm: string) => new DeepBookClient({
-        client, address: addr, network: net,
-        coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
-        pools: sdkPools,
-        packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
-        balanceManagers: { main: { address: bm } },
-      })
+      const makeDb = (addr: string, bm: string) =>
+        new DeepBookClient({
+          client,
+          address: addr,
+          network: net,
+          coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
+          pools: sdkPools,
+          packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
+          balanceManagers: { main: { address: bm } },
+        })
 
       // Check both manager balances to determine qty
       const [base] = poolKey.split('_')
@@ -1175,24 +1578,26 @@ function HedgingBotContent() {
         dbA.checkManagerBalanceWithAddress(bmIdA, quote),
         dbB.checkManagerBalanceWithAddress(bmIdB, base),
       ])
-      addLog('info', `Mgr A: ${mgrBalA.balance.toFixed(4)} ${quote} | Mgr B: ${mgrBalB.balance.toFixed(4)} ${base}`)
+      addLog(
+        'info',
+        `Mgr A: ${mgrBalA.balance.toFixed(4)} ${quote} | Mgr B: ${mgrBalB.balance.toFixed(4)} ${base}`,
+      )
 
       // Auto top-up managers if balance too low for min order
       const minQuoteNeeded = minSize * askPrice * 1.1
       const minBaseNeeded = minSize * 1.1
 
       // First: withdraw settled balances back to manager (after order fills, tokens may be in settled state)
-      for (const [kp, bm, addr] of [
-        [kpA, bmIdA, aAddr] as const,
-        [kpB, bmIdB, bAddr] as const,
-      ]) {
+      for (const [kp, bm, addr] of [[kpA, bmIdA, aAddr] as const, [kpB, bmIdB, bAddr] as const]) {
         try {
           const db = makeDb(addr, bm)
           // settleBalanceManager moves settled funds back to available
           const txSettle = new Transaction()
           txSettle.add(db.deepBook.cancelAllOrders(poolKey, 'main'))
           await signAndExec(kp, txSettle, net)
-        } catch { /* no open orders */ }
+        } catch {
+          /* no open orders */
+        }
       }
 
       // Re-check balances after settle
@@ -1200,7 +1605,10 @@ function HedgingBotContent() {
         dbA.checkManagerBalanceWithAddress(bmIdA, quote),
         dbB.checkManagerBalanceWithAddress(bmIdB, base),
       ])
-      addLog('info', `After settle — A: ${mgrBalA2.balance.toFixed(4)} ${quote} | B: ${mgrBalB2.balance.toFixed(4)} ${base}`)
+      addLog(
+        'info',
+        `After settle — A: ${mgrBalA2.balance.toFixed(4)} ${quote} | B: ${mgrBalB2.balance.toFixed(4)} ${base}`,
+      )
 
       // Top-up from wallet if still low
       if (mgrBalA2.balance < minQuoteNeeded) {
@@ -1225,7 +1633,9 @@ function HedgingBotContent() {
             addLog('info', `Swapping ${withdrawAmt.toFixed(4)} ${base} → ${quote}...`)
             const txS = new Transaction()
             const plainDbA = new DeepBookClient({
-              client, address: aAddr, network: net,
+              client,
+              address: aAddr,
+              network: net,
               coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
               pools: sdkPools,
               packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
@@ -1234,8 +1644,10 @@ function HedgingBotContent() {
             await signAndExec(kpA, txS, net)
             // Re-deposit quote
             const freshCoins = await fetchAllCoins(aAddr)
-            const freshQuote = parseFloat(freshCoins.find((c) => c.symbol === quote)?.balance ?? '0')
-            if ((freshQuote - 0.5) > 0.001) {
+            const freshQuote = parseFloat(
+              freshCoins.find((c) => c.symbol === quote)?.balance ?? '0',
+            )
+            if (freshQuote - 0.5 > 0.001) {
               const dep = (freshQuote - 0.5) * 0.8
               addLog('info', `Re-depositing ${dep.toFixed(4)} ${quote} into A manager...`)
               await depositToManager(kpA, net, bmIdA, quote, dep)
@@ -1247,7 +1659,10 @@ function HedgingBotContent() {
       if (mgrBalB2.balance < minBaseNeeded) {
         const walletCoins = await fetchAllCoins(bAddr)
         const walletBase = parseFloat(walletCoins.find((c) => c.symbol === base)?.balance ?? '0')
-        addLog('info', `B wallet ${base}: ${walletBase.toFixed(4)}, need min: ${minBaseNeeded.toFixed(4)}`)
+        addLog(
+          'info',
+          `B wallet ${base}: ${walletBase.toFixed(4)}, need min: ${minBaseNeeded.toFixed(4)}`,
+        )
 
         if (walletBase * 0.8 > 0.001) {
           const topUp = Math.min(walletBase * 0.8, minBaseNeeded * 5)
@@ -1257,14 +1672,18 @@ function HedgingBotContent() {
         } else {
           // Wallet B has no base — check wallet quote (SUI) to swap → base → deposit
           addLog('info', `B has no ${base}. Checking wallet ${quote}...`)
-          const walletQuoteB = parseFloat(walletCoins.find((c) => c.symbol === quote)?.balance ?? '0')
+          const walletQuoteB = parseFloat(
+            walletCoins.find((c) => c.symbol === quote)?.balance ?? '0',
+          )
 
           if (walletQuoteB > 0.5) {
             const swapAmt = (walletQuoteB - 0.3) * 0.8
             addLog('info', `Swapping ${swapAmt.toFixed(4)} ${quote} → ${base} from wallet...`)
             // Use plain client WITHOUT balance manager to avoid object version conflict
             const plainDb = new DeepBookClient({
-              client, address: bAddr, network: net,
+              client,
+              address: bAddr,
+              network: net,
               coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
               pools: sdkPools,
               packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
@@ -1288,14 +1707,19 @@ function HedgingBotContent() {
             const mgrQuoteB = await dbB.checkManagerBalanceWithAddress(bmIdB, quote)
             if (mgrQuoteB.balance > 0.01) {
               const withdrawAmt = mgrQuoteB.balance * 0.9
-              addLog('info', `Withdrawing ${withdrawAmt.toFixed(4)} ${quote} from B manager → swap...`)
+              addLog(
+                'info',
+                `Withdrawing ${withdrawAmt.toFixed(4)} ${quote} from B manager → swap...`,
+              )
               const txW = new Transaction()
               txW.add(dbB.balanceManager.withdrawFromManager('main', quote, withdrawAmt, bAddr))
               await signAndExec(kpB, txW, net)
               const swapAmt = withdrawAmt * 0.9
               const txS = new Transaction()
               const plainDbB2 = new DeepBookClient({
-                client, address: bAddr, network: net,
+                client,
+                address: bAddr,
+                network: net,
                 coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
                 pools: sdkPools,
                 packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
@@ -1303,7 +1727,9 @@ function HedgingBotContent() {
               buildSwapBuy(plainDbB2, poolKey, swapAmt, bAddr, txS)
               await signAndExec(kpB, txS, net)
               const freshCoins2 = await fetchAllCoins(bAddr)
-              const freshBase2 = parseFloat(freshCoins2.find((c) => c.symbol === base)?.balance ?? '0')
+              const freshBase2 = parseFloat(
+                freshCoins2.find((c) => c.symbol === base)?.balance ?? '0',
+              )
               if (freshBase2 > 0.001) {
                 const dep = freshBase2 * 0.8
                 await depositToManager(kpB, net, bmIdB, base, dep)
@@ -1322,29 +1748,46 @@ function HedgingBotContent() {
       const maxQtyFromB = mgrBalB2.balance * 0.9
       const rawQty = Math.min(maxQtyFromA, maxQtyFromB)
       qty = Math.floor(rawQty / lotSize) * lotSize
-      if (qty < minSize) throw new Error(`Qty ${qty} < min ${minSize}. A: ${mgrBalA.balance.toFixed(4)} ${quote}, B: ${mgrBalB.balance.toFixed(4)} ${base}`)
+      if (qty < minSize)
+        throw new Error(
+          `Qty ${qty} < min ${minSize}. A: ${mgrBalA.balance.toFixed(4)} ${quote}, B: ${mgrBalB.balance.toFixed(4)} ${base}`,
+        )
       addLog('info', `Bid: ${formatOBPrice(bidPrice)} Ask: ${formatOBPrice(askPrice)} Qty: ${qty}`)
 
       const oid = Date.now().toString()
 
       // A: BUY limit at best bid (maker, fee=0)
       const txA = new Transaction()
-      txA.add(makeDb(aAddr, bmIdA).deepBook.placeLimitOrder({
-        poolKey, balanceManagerKey: 'main', clientOrderId: oid,
-        price: bidPrice, quantity: qty, isBid: true,
-        orderType: OrderType.POST_ONLY, payWithDeep: false,
-      }))
+      txA.add(
+        makeDb(aAddr, bmIdA).deepBook.placeLimitOrder({
+          poolKey,
+          balanceManagerKey: 'main',
+          clientOrderId: oid,
+          price: bidPrice,
+          quantity: qty,
+          isBid: true,
+          orderType: OrderType.POST_ONLY,
+          payWithDeep: false,
+        }),
+      )
       addLog('info', 'A: BUY limit (POST_ONLY)...')
       await signAndExec(kpA, txA, net)
       addLog('success', `A: BUY at ${formatOBPrice(bidPrice)}`)
 
       // B: SELL limit at best ask (maker, fee=0)
       const txB = new Transaction()
-      txB.add(makeDb(bAddr, bmIdB).deepBook.placeLimitOrder({
-        poolKey, balanceManagerKey: 'main', clientOrderId: oid,
-        price: askPrice, quantity: qty, isBid: false,
-        orderType: OrderType.POST_ONLY, payWithDeep: false,
-      }))
+      txB.add(
+        makeDb(bAddr, bmIdB).deepBook.placeLimitOrder({
+          poolKey,
+          balanceManagerKey: 'main',
+          clientOrderId: oid,
+          price: askPrice,
+          quantity: qty,
+          isBid: false,
+          orderType: OrderType.POST_ONLY,
+          payWithDeep: false,
+        }),
+      )
       addLog('info', 'B: SELL limit (POST_ONLY)...')
       await signAndExec(kpB, txB, net)
       addLog('success', `B: SELL at ${formatOBPrice(askPrice)}`)
@@ -1368,20 +1811,26 @@ function HedgingBotContent() {
     setHoldEnd(Date.now() + holdSec * 1000)
     addLog('info', `Holding ${holdSec}s (waiting for fills)...`)
     await new Promise((r) => setTimeout(r, holdSec * 1000))
-    if (stageRef.current !== 'holding') { addLog('warn', 'Interrupted'); return }
+    if (stageRef.current !== 'holding') {
+      addLog('warn', 'Interrupted')
+      return
+    }
 
     // CLOSE — cancel remaining + settle
     stageRef.current = 'closing'
     setStage('closing')
     addLog('info', `Maker #${num} — Cancelling + settling...`)
     try {
-      const makeDb = (addr: string, bm: string) => new DeepBookClient({
-        client, address: addr, network: net,
-        coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
-        pools: sdkPools,
-        packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
-        balanceManagers: { main: { address: bm } },
-      })
+      const makeDb = (addr: string, bm: string) =>
+        new DeepBookClient({
+          client,
+          address: addr,
+          network: net,
+          coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
+          pools: sdkPools,
+          packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
+          balanceManagers: { main: { address: bm } },
+        })
       const txCA = new Transaction()
       txCA.add(makeDb(aAddr, bmIdA).deepBook.cancelAllOrders(poolKey, 'main'))
       await signAndExec(kpA, txCA, net)
@@ -1392,7 +1841,10 @@ function HedgingBotContent() {
       const spread = askPrice - bidPrice
       const pnl = spread * qty
       setTotalPnl((p) => p + pnl)
-      setHistory((h) => [{ num, openPrice: bidPrice, closePrice: askPrice, pnl, duration: holdSec }, ...h.slice(0, 49)])
+      setHistory((h) => [
+        { num, openPrice: bidPrice, closePrice: askPrice, pnl, duration: holdSec },
+        ...h.slice(0, 49),
+      ])
       addLog('success', `Maker #${num} done — Spread: ${formatUsd(pnl)}`)
     } catch (err) {
       addLog('error', `Maker close failed: ${err instanceof Error ? err.message : err}`)
@@ -1404,7 +1856,11 @@ function HedgingBotContent() {
     setHoldStart(null)
     setOrderPrices({ bid: null, ask: null })
     if (config.maxCycles && num >= config.maxCycles) {
-      addLog('info', `Max cycles reached`); stageRef.current = 'idle'; setStage('idle'); setRunning(false); return
+      addLog('info', `Max cycles reached`)
+      stageRef.current = 'idle'
+      setStage('idle')
+      setRunning(false)
+      return
     }
     stageRef.current = 'idle'
     setStage('idle')
@@ -1452,12 +1908,16 @@ function HedgingBotContent() {
       if (swapQuote <= 0) throw new Error(`Not enough ${quote}. Have: ${walletQuote.toFixed(4)}`)
 
       const qty = swapQuote / price
-      addLog('info', `Vol #${num} — BUY ${qty.toFixed(1)} ${base} (${swapQuote.toFixed(4)} ${quote})`)
+      addLog(
+        'info',
+        `Vol #${num} — BUY ${qty.toFixed(1)} ${base} (${swapQuote.toFixed(4)} ${quote})`,
+      )
 
       // Step 1: BUY base with quote
       const plainDb = new DeepBookClient({
         client: new SuiGrpcClient({ network: net, baseUrl: RPC[net] }),
-        address: aAddr, network: net,
+        address: aAddr,
+        network: net,
         coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
         pools: sdkPools,
         packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
@@ -1498,8 +1958,14 @@ function HedgingBotContent() {
       // PnL is near zero (spread cost only)
       const pnl = -volumeUsd * 0.001 // ~0.1% spread cost estimate
       setTotalPnl((p) => p + pnl)
-      setHistory((h) => [{ num, openPrice: price, closePrice, pnl, duration: holdSec }, ...h.slice(0, 49)])
-      addLog('success', `Vol #${num} done — Vol: ${formatUsd(volumeUsd)} — Cost: ${formatUsd(Math.abs(pnl))}`)
+      setHistory((h) => [
+        { num, openPrice: price, closePrice, pnl, duration: holdSec },
+        ...h.slice(0, 49),
+      ])
+      addLog(
+        'success',
+        `Vol #${num} done — Vol: ${formatUsd(volumeUsd)} — Cost: ${formatUsd(Math.abs(pnl))}`,
+      )
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       addLog('error', `Vol #${num} failed: ${msg}`)
@@ -1531,11 +1997,22 @@ function HedgingBotContent() {
     const curMmIdB = mmIdBRef.current
     if (!kpA || !kpB || !curMmIdA || !curMmIdB) return
     const net = network as 'mainnet' | 'testnet'
-    await _cleanupMarginPositions(kpA, kpB, curMmIdA, curMmIdB, net, config.pool, addLog, signAndExec)
+    await _cleanupMarginPositions(
+      kpA,
+      kpB,
+      curMmIdA,
+      curMmIdB,
+      net,
+      config.pool,
+      addLog,
+      signAndExec,
+    )
     setOrderPrices({ bid: null, ask: null })
     fetchMmBals()
-    if (keypairARef.current) fetchBalance(keypairARef.current.getPublicKey().toSuiAddress()).then(setBalA)
-    if (keypairBRef.current) fetchBalance(keypairBRef.current.getPublicKey().toSuiAddress()).then(setBalB)
+    if (keypairARef.current)
+      fetchBalance(keypairARef.current.getPublicKey().toSuiAddress()).then(setBalA)
+    if (keypairBRef.current)
+      fetchBalance(keypairBRef.current.getPublicKey().toSuiAddress()).then(setBalB)
   }, [network, config.pool, signAndExec, addLog, fetchMmBals, fetchBalance])
 
   /** Margin cycle — delegates to strategies/margin.ts */
@@ -1546,10 +2023,26 @@ function HedgingBotContent() {
     const curMmIdB = mmIdBRef.current
     if (!kpA || !kpB || !curMmIdA || !curMmIdB) return
     await _executeMarginCycle({
-      kpA, kpB, mmIdA: curMmIdA, mmIdB: curMmIdB, cleanupMargin,
-      network: network as 'mainnet' | 'testnet', config, addLog, signAndExec: signAndExec as any,
-      setStage, setCurrentPrice, setOrderPrices, setTotalVolume, setTotalPnl, setHistory,
-      setHoldStart, setHoldEnd, stageRef, cycleRef, setCycleNum,
+      kpA,
+      kpB,
+      mmIdA: curMmIdA,
+      mmIdB: curMmIdB,
+      cleanupMargin,
+      network: network as 'mainnet' | 'testnet',
+      config,
+      addLog,
+      signAndExec: signAndExec as any,
+      setStage,
+      setCurrentPrice,
+      setOrderPrices,
+      setTotalVolume,
+      setTotalPnl,
+      setHistory,
+      setHoldStart,
+      setHoldEnd,
+      stageRef,
+      cycleRef,
+      setCycleNum,
     })
     if (config.maxCycles && cycleRef.current >= config.maxCycles) setRunning(false)
   }, [network, config, addLog, signAndExec, cleanupMargin])
@@ -1688,14 +2181,18 @@ function HedgingBotContent() {
 
     // 6. Swap: A needs quote token (e.g. USDC for SUI_USDC)
     if (quote !== 'SUI' && !aHasEnoughQuote && poolKey in sdkPools) {
-      const aSui = parseFloat((await fetchAllCoins(aAddr)).find((c) => c.symbol === 'SUI')?.balance ?? '0')
+      const aSui = parseFloat(
+        (await fetchAllCoins(aAddr)).find((c) => c.symbol === 'SUI')?.balance ?? '0',
+      )
       const swapSui = (aSui - gasReserve) * 0.9
       if (swapSui > 0.1) {
         // Need to swap SUI → quote. Find SUI_QUOTE pool or QUOTE_SUI pool
         const suiQuotePool = `SUI_${quote}` in sdkPools ? `SUI_${quote}` : null
         const quotesuiPool = `${quote}_SUI` in sdkPools ? `${quote}_SUI` : null
         const plainDb = new DeepBookClient({
-          client, address: aAddr, network: net,
+          client,
+          address: aAddr,
+          network: net,
           coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
           pools: sdkPools,
           packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
@@ -1740,7 +2237,10 @@ function HedgingBotContent() {
     setError(null)
     setRunning(true)
     setTab('dashboard')
-    addLog('info', `Bot starting — ${config.strategy.toUpperCase()} — Pool: ${config.pool}, Notional: ${formatUsd(config.notionalUsd)}`)
+    addLog(
+      'info',
+      `Bot starting — ${config.strategy.toUpperCase()} — Pool: ${config.pool}, Notional: ${formatUsd(config.notionalUsd)}`,
+    )
 
     // Volume strategy: skip auto-balance and BM setup — just use Account A
     if (config.strategy === 'volume') {
@@ -1760,10 +2260,14 @@ function HedgingBotContent() {
         const net = network as 'mainnet' | 'testnet'
         const idA = await ensureMarginManager(keypairARef.current, net, config.pool, mmIdA)
         setMmIdA(idA)
-        try { localStorage.setItem('hb_mmA', idA) } catch {}
+        try {
+          localStorage.setItem('hb_mmA', idA)
+        } catch {}
         const idB = await ensureMarginManager(keypairBRef.current!, net, config.pool, mmIdB)
         setMmIdB(idB)
-        try { localStorage.setItem('hb_mmB', idB) } catch {}
+        try {
+          localStorage.setItem('hb_mmB', idB)
+        } catch {}
         addLog('success', `Margin Managers ready — A: ${idA.slice(0, 10)}… B: ${idB.slice(0, 10)}…`)
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
@@ -1802,10 +2306,14 @@ function HedgingBotContent() {
         const net = network
         const idA = await ensureBalanceManager(keypairARef.current, net, bmIdA)
         setBmIdA(idA)
-        try { localStorage.setItem('hb_bmA', idA) } catch {}
+        try {
+          localStorage.setItem('hb_bmA', idA)
+        } catch {}
         const idB = await ensureBalanceManager(keypairBRef.current!, net, bmIdB)
         setBmIdB(idB)
-        try { localStorage.setItem('hb_bmB', idB) } catch {}
+        try {
+          localStorage.setItem('hb_bmB', idB)
+        } catch {}
 
         const [base, quote] = config.pool.split('_')
         const aCoins = await fetchAllCoins(keypairARef.current.getPublicKey().toSuiAddress())
@@ -1841,7 +2349,23 @@ function HedgingBotContent() {
     intervalRef.current = setInterval(() => {
       if (stageRef.current === 'idle') cycleFn()
     }, config.intervalMs)
-  }, [config, executeCycle, executeMakerCycle, executeMarginCycle, executeVolumeCycle, addLog, autoBalance, network, ensureBalanceManager, ensureMarginManager, depositToManager, bmIdA, bmIdB, mmIdA, mmIdB])
+  }, [
+    config,
+    executeCycle,
+    executeMakerCycle,
+    executeMarginCycle,
+    executeVolumeCycle,
+    addLog,
+    autoBalance,
+    network,
+    ensureBalanceManager,
+    ensureMarginManager,
+    depositToManager,
+    bmIdA,
+    bmIdB,
+    mmIdA,
+    mmIdB,
+  ])
 
   const stop = useCallback(async () => {
     if (intervalRef.current) {
@@ -1889,10 +2413,31 @@ function HedgingBotContent() {
     if (tab === 'accounts' && (bmIdA || bmIdB)) fetchMgrBals()
     if (tab === 'accounts' && (mmIdA || mmIdB)) fetchMmBals()
     if (tab === 'accounts') {
-      if (addrA) { fetchTxHistory(addrA); fetchPendingOrders(bmIdA, addrA); fetchAllMMs(addrA) }
-      if (addrB) { fetchTxHistory(addrB); fetchPendingOrders(bmIdB, addrB); fetchAllMMs(addrB) }
+      if (addrA) {
+        fetchTxHistory(addrA)
+        fetchPendingOrders(bmIdA, addrA)
+        fetchAllMMs(addrA)
+      }
+      if (addrB) {
+        fetchTxHistory(addrB)
+        fetchPendingOrders(bmIdB, addrB)
+        fetchAllMMs(addrB)
+      }
     }
-  }, [tab, bmIdA, bmIdB, mmIdA, mmIdB, fetchMgrBals, fetchMmBals, addrA, addrB, fetchTxHistory, fetchPendingOrders, fetchAllMMs])
+  }, [
+    tab,
+    bmIdA,
+    bmIdB,
+    mmIdA,
+    mmIdB,
+    fetchMgrBals,
+    fetchMmBals,
+    addrA,
+    addrB,
+    fetchTxHistory,
+    fetchPendingOrders,
+    fetchAllMMs,
+  ])
 
   // Orderbook polling
   useEffect(() => {
@@ -1934,7 +2479,743 @@ function HedgingBotContent() {
     return () => clearInterval(id)
   }, [stage])
 
-  const keysReady = config.strategy === 'volume' ? !!addrA : (!!addrA && !!addrB)
+  const keysReady = config.strategy === 'volume' ? !!addrA : !!addrA && !!addrB
+
+  const handleForceCloseMargins = useCallback(async () => {
+    addLog('warn', 'Force closing all margin positions...')
+    await cleanupMargin()
+    addLog('success', 'All margin positions closed')
+  }, [addLog, cleanupMargin])
+
+  const handleSwapAllToSui = useCallback(async () => {
+    const net = network as 'mainnet' | 'testnet'
+    const sdkPools = net === 'mainnet' ? mainnetPools : testnetPools
+    const swapToSui = async (kp: Ed25519Keypair | null, addr: string | null) => {
+      if (!kp || !addr) return
+      const coins = await fetchAllCoins(addr)
+      for (const c of coins) {
+        if (c.symbol === 'SUI' || parseFloat(c.balance) < 0.001) continue
+        const amt = parseFloat(c.balance)
+        const route1 = `${c.symbol}_SUI`
+        const route2 = `SUI_${c.symbol}`
+        const plainDb = new DeepBookClient({
+          client: new SuiGrpcClient({ network: net, baseUrl: RPC[net] }),
+          address: addr,
+          network: net,
+          coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
+          pools: sdkPools,
+          packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
+        })
+        try {
+          const tx = new Transaction()
+          if (route1 in sdkPools) {
+            addLog('info', `${c.symbol} → SUI: sell ${amt.toFixed(4)} via ${route1}`)
+            buildSwapSell(plainDb, route1, amt, addr, tx)
+          } else if (route2 in sdkPools) {
+            addLog(
+              'info',
+              `${c.symbol} → SUI: buy SUI via ${route2} with ${amt.toFixed(4)} ${c.symbol}`,
+            )
+            buildSwapBuy(plainDb, route2, amt, addr, tx)
+          } else {
+            const toUsdc = `${c.symbol}_USDC`
+            if (toUsdc in sdkPools) {
+              addLog('info', `${c.symbol} → USDC → SUI (2-hop)`)
+              buildSwapSell(plainDb, toUsdc, amt, addr, tx)
+            } else {
+              addLog('warn', `No route for ${c.symbol} → SUI`)
+              continue
+            }
+          }
+          await signAndExec(kp, tx, net)
+          addLog('success', `Swapped ${c.symbol} → SUI`)
+        } catch (err) {
+          addLog('warn', `Skip ${c.symbol}: ${err instanceof Error ? err.message : err}`)
+        }
+      }
+      const freshCoins = await fetchAllCoins(addr)
+      const usdc = freshCoins.find((c) => c.symbol === 'USDC' && parseFloat(c.balance) > 0.01)
+      if (usdc && 'SUI_USDC' in sdkPools) {
+        const usdcAmt = parseFloat(usdc.balance)
+        try {
+          addLog('info', `USDC → SUI: buy ${usdcAmt.toFixed(4)} USDC worth of SUI`)
+          const plainDb2 = new DeepBookClient({
+            client: new SuiGrpcClient({ network: net, baseUrl: RPC[net] }),
+            address: addr,
+            network: net,
+            coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
+            pools: sdkPools,
+            packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
+          })
+          const tx2 = new Transaction()
+          buildSwapBuy(plainDb2, 'SUI_USDC', usdcAmt, addr, tx2)
+          await signAndExec(kp, tx2, net)
+          addLog('success', 'Swapped USDC → SUI')
+        } catch (err) {
+          addLog('warn', `USDC→SUI: ${err instanceof Error ? err.message : err}`)
+        }
+      }
+    }
+    addLog('info', 'Swapping all tokens → SUI...')
+    await swapToSui(keypairARef.current, addrA)
+    await swapToSui(keypairBRef.current, addrB)
+    addLog('success', 'Done — all tokens → SUI')
+    if (addrA) fetchBalance(addrA).then(setBalA)
+    if (addrB) fetchBalance(addrB).then(setBalB)
+  }, [network, addrA, addrB, addLog, signAndExec, fetchAllCoins, fetchBalance])
+
+  const handleWithdrawAllFromManager = useCallback(
+    async (label: string, bmId: string, addr: string, isAccountA: boolean) => {
+      const kp = isAccountA ? keypairARef.current : keypairBRef.current
+      if (!kp || !bmId) return
+      const [base, quote] = config.pool.split('_')
+      const net = network as 'mainnet' | 'testnet'
+      const client = new SuiGrpcClient({ network: net, baseUrl: RPC[net] })
+      const dbClient = new DeepBookClient({
+        client,
+        address: addr,
+        network: net,
+        coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
+        pools: net === 'mainnet' ? mainnetPools : testnetPools,
+        packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
+        balanceManagers: { main: { address: bmId } },
+      })
+      try {
+        addLog('info', `Cancelling orders + withdrawing ${label}...`)
+        const txC = new Transaction()
+        txC.add(dbClient.deepBook.cancelAllOrders(config.pool, 'main'))
+        await signAndExec(kp, txC, net)
+        for (const coinKey of [base, quote, 'DEEP']) {
+          try {
+            const txW = new Transaction()
+            txW.add(dbClient.balanceManager.withdrawAllFromManager('main', coinKey, addr))
+            await signAndExec(kp, txW, net)
+            addLog('success', `Withdrew ${coinKey} from ${label}`)
+          } catch {
+            /* skip */
+          }
+        }
+        addLog('success', `Manager ${label} emptied`)
+        fetchBalance(addr).then(isAccountA ? setBalA : setBalB)
+        fetchMgrBals()
+      } catch (err) {
+        addLog('error', `Withdraw failed: ${err instanceof Error ? err.message : err}`)
+      }
+    },
+    [network, config.pool, addLog, signAndExec, fetchBalance, fetchMgrBals],
+  )
+
+  const handleResetManagerCache = useCallback(
+    (label: string, setBm: (id: string | null) => void, lsKey: string) => {
+      setBm(null)
+      try {
+        localStorage.removeItem(lsKey)
+      } catch {
+        /* ignore */
+      }
+      addLog('info', `Cleared ${label} cache`)
+      fetchMgrBals()
+    },
+    [addLog, fetchMgrBals],
+  )
+
+  const withdrawManagerA = useCallback(() => {
+    if (!bmIdA || !addrA) return
+    void handleWithdrawAllFromManager('A (Long)', bmIdA, addrA, true)
+  }, [bmIdA, addrA, handleWithdrawAllFromManager])
+
+  const withdrawManagerB = useCallback(() => {
+    if (!bmIdB || !addrB) return
+    void handleWithdrawAllFromManager('B (Short)', bmIdB, addrB, false)
+  }, [bmIdB, addrB, handleWithdrawAllFromManager])
+
+  const resetManagerA = useCallback(() => {
+    handleResetManagerCache('A (Long)', setBmIdA, 'hb_bmA')
+  }, [handleResetManagerCache])
+
+  const resetManagerB = useCallback(() => {
+    handleResetManagerCache('B (Short)', setBmIdB, 'hb_bmB')
+  }, [handleResetManagerCache])
+
+  const accountsTabPanel = useMemo(() => {
+    const suiUsd = currentPrice && config.pool === 'SUI_USDC' ? currentPrice : null
+    const estimateUsd = (coins: { symbol: string; balance: string }[]) => {
+      let total = 0
+      for (const c of coins) {
+        const amt = parseFloat(c.balance)
+        if (c.symbol === 'SUI') total += amt * (suiUsd ?? 0.95)
+        else if (c.symbol === 'USDC' || c.symbol === 'USDT') total += amt
+        else if (c.symbol === 'DEEP') total += amt * 0.029
+        else if (c.symbol === 'WAL') total += amt * 0.07
+        else if (c.symbol === 'NS') total += amt * 0.018
+      }
+      return total
+    }
+    const usdA = estimateUsd(balA.coins)
+    const usdB = estimateUsd(balB.coins)
+    const totalUsd = usdA + usdB
+    const [base, quote] = config.pool.split('_')
+
+    return (
+      <>
+        {/* Total summary */}
+        <div className="sui-hb__card" style={{ marginBottom: 12 }}>
+          <div className="sui-hb__card-title">Portfolio Summary</div>
+          <div
+            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}
+          >
+            <div className="sui-hb__stat">
+              <span className="sui-hb__stat-label">Total Value</span>
+              <span className="sui-hb__stat-value" style={{ color: '#22c55e' }}>
+                {formatUsd(totalUsd)}
+              </span>
+            </div>
+            <div className="sui-hb__stat">
+              <span className="sui-hb__stat-label">Account A</span>
+              <span className="sui-hb__stat-value">{formatUsd(usdA)}</span>
+            </div>
+            <div className="sui-hb__stat">
+              <span className="sui-hb__stat-label">Account B</span>
+              <span className="sui-hb__stat-value">{formatUsd(usdB)}</span>
+            </div>
+          </div>
+          {/* Balance bar */}
+          <div
+            style={{
+              display: 'flex',
+              height: 6,
+              borderRadius: 3,
+              overflow: 'hidden',
+              background: '#1e293b',
+            }}
+          >
+            <div
+              style={{
+                width: `${totalUsd > 0 ? (usdA / totalUsd) * 100 : 50}%`,
+                background: '#4da2ff',
+              }}
+            />
+            <div
+              style={{
+                width: `${totalUsd > 0 ? (usdB / totalUsd) * 100 : 50}%`,
+                background: '#a78bfa',
+              }}
+            />
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: 9,
+              color: '#64748b',
+              marginTop: 4,
+            }}
+          >
+            <span>A: {totalUsd > 0 ? ((usdA / totalUsd) * 100).toFixed(1) : '50'}%</span>
+            <span>B: {totalUsd > 0 ? ((usdB / totalUsd) * 100).toFixed(1) : '50'}%</span>
+          </div>
+          {Math.abs(usdA - usdB) > 1 && (
+            <div style={{ fontSize: 10, color: '#eab308', marginTop: 6 }}>
+              ⚠ Imbalance: ${Math.abs(usdA - usdB).toFixed(2)} — auto-balance will fix on next Start
+            </div>
+          )}
+        </div>
+
+        {/* Per-account cards */}
+        {[
+          {
+            label: 'A (Long)',
+            role: `Buys ${base} with ${quote}`,
+            addr: addrA,
+            bal: balA,
+            usd: usdA,
+            color: '#4da2ff',
+            bmId: bmIdA,
+            mmId: mmIdA,
+            allMm: allMMs[addrA ?? ''] ?? [],
+          },
+          {
+            label: 'B (Short)',
+            role: `Sells ${base} for ${quote}`,
+            addr: addrB,
+            bal: balB,
+            usd: usdB,
+            color: '#a78bfa',
+            bmId: bmIdB,
+            mmId: mmIdB,
+            allMm: allMMs[addrB ?? ''] ?? [],
+          },
+        ]
+          .filter((acct) => !!acct.addr)
+          .map((acct) => (
+            <div
+              key={acct.label}
+              className="sui-hb__card"
+              style={{ marginBottom: 12, borderLeft: `3px solid ${acct.color}` }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 6,
+                }}
+              >
+                <div>
+                  <div className="sui-hb__card-title" style={{ margin: 0 }}>
+                    {acct.label}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#64748b' }}>{acct.role}</div>
+                </div>
+                <span
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: acct.color,
+                    fontFamily: "'Fira Code', monospace",
+                  }}
+                >
+                  {formatUsd(acct.usd)}
+                </span>
+              </div>
+
+              {/* Address */}
+              <div
+                style={{
+                  fontSize: 10,
+                  fontFamily: "'Fira Code', monospace",
+                  color: '#94a3b8',
+                  wordBreak: 'break-all',
+                  marginBottom: 6,
+                  background: '#020617',
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                }}
+              >
+                {acct.addr}
+              </div>
+
+              {/* Balance Manager */}
+              {acct.bmId && (
+                <div style={{ fontSize: 9, color: '#475569', marginBottom: 6 }}>
+                  Balance Manager:{' '}
+                  <span style={{ fontFamily: "'Fira Code', monospace" }}>
+                    {acct.bmId.slice(0, 16)}...
+                  </span>
+                </div>
+              )}
+
+              {/* Margin Managers — all owned by this wallet */}
+              {acct.allMm.length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 9, color: '#22c55e', fontWeight: 600, marginBottom: 4 }}>
+                    Margin Managers ({acct.allMm.length})
+                  </div>
+                  {acct.allMm.map((mm) => {
+                    const isActive = mm.id === acct.mmId
+                    const hasAssets = mm.base > 0 || mm.quote > 0
+                    const hasDebt = mm.baseDebt > 0 || mm.quoteDebt > 0
+                    return (
+                      <div
+                        key={mm.id}
+                        style={{
+                          background: isActive ? '#0a1628' : '#020617',
+                          borderRadius: 4,
+                          padding: '4px 8px',
+                          marginBottom: 4,
+                          fontSize: 10,
+                          borderLeft: isActive ? '2px solid #22c55e' : '2px solid #1e293b',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontFamily: "'Fira Code', monospace",
+                              color: isActive ? '#22c55e' : '#64748b',
+                            }}
+                          >
+                            {mm.id.slice(0, 14)}…
+                            {isActive && (
+                              <span style={{ color: '#22c55e', fontSize: 8, marginLeft: 4 }}>
+                                ACTIVE
+                              </span>
+                            )}
+                          </span>
+                          <button
+                            style={{
+                              fontSize: 8,
+                              background: 'none',
+                              border: '1px solid #334155',
+                              color: '#64748b',
+                              borderRadius: 3,
+                              padding: '1px 4px',
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => navigator.clipboard.writeText(mm.id)}
+                          >
+                            copy
+                          </button>
+                        </div>
+                        {(hasAssets || hasDebt) && (
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1fr',
+                              gap: 2,
+                              marginTop: 3,
+                              fontSize: 9,
+                            }}
+                          >
+                            {mm.base > 0 && (
+                              <div>
+                                <span style={{ color: '#64748b' }}>{base}:</span>{' '}
+                                <span
+                                  style={{ color: '#f8fafc', fontFamily: "'Fira Code', monospace" }}
+                                >
+                                  {mm.base.toFixed(4)}
+                                </span>
+                              </div>
+                            )}
+                            {mm.quote > 0 && (
+                              <div>
+                                <span style={{ color: '#64748b' }}>{quote}:</span>{' '}
+                                <span
+                                  style={{ color: '#f8fafc', fontFamily: "'Fira Code', monospace" }}
+                                >
+                                  {mm.quote.toFixed(4)}
+                                </span>
+                              </div>
+                            )}
+                            {mm.baseDebt > 0 && (
+                              <div>
+                                <span style={{ color: '#ef4444' }}>{base} debt:</span>{' '}
+                                <span
+                                  style={{ color: '#ef4444', fontFamily: "'Fira Code', monospace" }}
+                                >
+                                  {mm.baseDebt.toFixed(4)}
+                                </span>
+                              </div>
+                            )}
+                            {mm.quoteDebt > 0 && (
+                              <div>
+                                <span style={{ color: '#ef4444' }}>{quote} debt:</span>{' '}
+                                <span
+                                  style={{ color: '#ef4444', fontFamily: "'Fira Code', monospace" }}
+                                >
+                                  {mm.quoteDebt.toFixed(4)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {!hasAssets && !hasDebt && (
+                          <div style={{ fontSize: 8, color: '#475569', marginTop: 2 }}>empty</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {acct.mmId && !acct.allMm.length && (
+                <div style={{ fontSize: 9, color: '#22c55e', marginBottom: 6 }}>
+                  Margin Manager:{' '}
+                  <span style={{ fontFamily: "'Fira Code', monospace" }}>
+                    {acct.mmId.slice(0, 16)}...
+                  </span>
+                </div>
+              )}
+              {acct.mmId && !acct.allMm.length && (
+                <div style={{ fontSize: 9, color: '#64748b' }}>Loading MMs…</div>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                <a
+                  href={`https://suiscan.xyz/${network}/account/${acct.addr}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
+                  style={{ textDecoration: 'none', textAlign: 'center', flex: 1 }}
+                >
+                  Suiscan
+                </a>
+                <button
+                  className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
+                  style={{ flex: 1 }}
+                  onClick={() => navigator.clipboard.writeText(acct.addr!)}
+                >
+                  Copy
+                </button>
+              </div>
+
+              {/* Coin balances */}
+              {acct.bal.loading ? (
+                <div style={{ fontSize: 11, color: '#64748b' }}>Loading…</div>
+              ) : acct.bal.coins.length > 0 ? (
+                <div>
+                  {acct.bal.coins.map((c, j) => {
+                    const amt = parseFloat(c.balance)
+                    let coinUsd = 0
+                    if (c.symbol === 'SUI') coinUsd = amt * (suiUsd ?? 0.95)
+                    else if (c.symbol === 'USDC' || c.symbol === 'USDT') coinUsd = amt
+                    else if (c.symbol === 'DEEP') coinUsd = amt * 0.029
+                    else if (c.symbol === 'WAL') coinUsd = amt * 0.07
+                    const isPoolToken = c.symbol === base || c.symbol === quote
+                    return (
+                      <div
+                        key={j}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '4px 0',
+                          borderBottom: '1px solid #1e293b',
+                          fontSize: 12,
+                          background: isPoolToken ? 'rgba(34,197,94,0.04)' : undefined,
+                        }}
+                      >
+                        <span style={{ color: isPoolToken ? '#22c55e' : '#94a3b8' }}>
+                          {isPoolToken ? '● ' : ''}
+                          {c.symbol}
+                        </span>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ color: '#f8fafc', fontFamily: "'Fira Code', monospace" }}>
+                            {c.balance}
+                          </span>
+                          {coinUsd > 0.01 && (
+                            <span style={{ color: '#64748b', fontSize: 10, marginLeft: 6 }}>
+                              ≈{formatUsd(coinUsd)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div style={{ fontSize: 11, color: '#475569' }}>No tokens</div>
+              )}
+
+              {/* Pending Orders */}
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>
+                  Open Orders{' '}
+                  {(pendingOrders[acct.addr!] ?? []).length > 0
+                    ? `(${(pendingOrders[acct.addr!] ?? []).length})`
+                    : ''}
+                </div>
+                {(pendingOrders[acct.addr!] ?? []).length > 0 ? (
+                  (pendingOrders[acct.addr!] ?? []).map((o) => (
+                    <div
+                      key={o.orderId}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: 10,
+                        padding: '2px 0',
+                        borderBottom: '1px solid #0f172a',
+                      }}
+                    >
+                      <span
+                        style={{ color: o.side === 'buy' ? '#22c55e' : '#ef4444', fontWeight: 600 }}
+                      >
+                        {o.side.toUpperCase()}
+                      </span>
+                      <span style={{ color: '#94a3b8', fontFamily: "'Fira Code', monospace" }}>
+                        {o.price.toFixed(6)}
+                      </span>
+                      <span style={{ color: '#64748b' }}>
+                        {o.filled}/{o.qty}
+                      </span>
+                      {'pool' in o && (
+                        <span style={{ color: '#475569', fontSize: 9 }}>
+                          {(o as { pool: string }).pool}
+                        </span>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ fontSize: 9, color: '#475569' }}>
+                    {config.strategy === 'maker'
+                      ? 'No open orders'
+                      : 'Market swaps — no pending orders'}
+                    {!bmIdA && !bmIdB && config.strategy !== 'maker' ? ' (no Balance Manager)' : ''}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Transactions */}
+              {(txHistory[acct.addr!] ?? []).length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>
+                    Recent Transactions
+                  </div>
+                  {(txHistory[acct.addr!] ?? []).slice(0, 8).map((t) => (
+                    <div
+                      key={t.digest}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: 10,
+                        padding: '2px 0',
+                        borderBottom: '1px solid #0f172a',
+                      }}
+                    >
+                      <a
+                        href={`https://suiscan.xyz/${network}/tx/${t.digest}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: '#4da2ff',
+                          textDecoration: 'none',
+                          fontFamily: "'Fira Code', monospace",
+                        }}
+                      >
+                        {t.digest.slice(0, 12)}...
+                      </a>
+                      <span style={{ color: '#64748b' }}>{t.ts}</span>
+                      <span style={{ color: t.status === 'success' ? '#22c55e' : '#ef4444' }}>
+                        {t.status === 'success' ? '✓' : '✗'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+          <button
+            className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
+            style={{ flex: 1 }}
+            onClick={() => {
+              if (addrA) {
+                setBalA((b) => ({ ...b, loading: true }))
+                fetchBalance(addrA).then(setBalA)
+              }
+              if (addrB) {
+                setBalB((b) => ({ ...b, loading: true }))
+                fetchBalance(addrB).then(setBalB)
+              }
+            }}
+          >
+            Refresh
+          </button>
+          {(mmIdA || mmIdB) && (
+            <button
+              className="sui-hb__btn sui-hb__btn--sm"
+              style={{ flex: 1, background: '#dc2626', color: '#fff' }}
+              disabled={running}
+              onClick={handleForceCloseMargins}
+            >
+              Force Close Margins
+            </button>
+          )}
+          <button
+            className="sui-hb__btn sui-hb__btn--yellow sui-hb__btn--sm"
+            style={{ flex: 1 }}
+            disabled={running}
+            onClick={handleSwapAllToSui}
+          >
+            Swap All → SUI
+          </button>
+        </div>
+
+        {/* Balance Manager Controls */}
+        {(bmIdA || bmIdB) && (
+          <div className="sui-hb__card" style={{ marginTop: 12 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 8,
+              }}
+            >
+              <div className="sui-hb__card-title" style={{ margin: 0 }}>
+                Balance Managers (On-Chain)
+              </div>
+              <button
+                className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
+                onClick={fetchMgrBals}
+                disabled={mgrBalsLoading}
+              >
+                {mgrBalsLoading ? '...' : 'Refresh'}
+              </button>
+            </div>
+            <div style={{ fontSize: 10, color: '#475569', marginBottom: 10 }}>
+              Funds locked in managers until withdrawn. Bot crash → Withdraw All to recover.
+            </div>
+            {bmIdA && addrA ? (
+              <BalanceManagerCard
+                label="A (Long)"
+                role={`Holds ${quote} to buy ${base}`}
+                bmId={bmIdA}
+                hasKey={!!addrA}
+                color="#4da2ff"
+                network={network}
+                running={running}
+                mgrBals={mgrBals}
+                mgrBalsLoading={mgrBalsLoading}
+                onWithdraw={withdrawManagerA}
+                onReset={resetManagerA}
+              />
+            ) : null}
+            {bmIdB && addrB ? (
+              <BalanceManagerCard
+                label="B (Short)"
+                role={`Holds ${base} to sell`}
+                bmId={bmIdB}
+                hasKey={!!addrB}
+                color="#a78bfa"
+                network={network}
+                running={running}
+                mgrBals={mgrBals}
+                mgrBalsLoading={mgrBalsLoading}
+                onWithdraw={withdrawManagerB}
+                onReset={resetManagerB}
+              />
+            ) : null}
+          </div>
+        )}
+      </>
+    )
+  }, [
+    currentPrice,
+    config,
+    balA,
+    balB,
+    addrA,
+    addrB,
+    bmIdA,
+    bmIdB,
+    mmIdA,
+    mmIdB,
+    allMMs,
+    pendingOrders,
+    txHistory,
+    network,
+    running,
+    mgrBals,
+    mgrBalsLoading,
+    handleForceCloseMargins,
+    handleSwapAllToSui,
+    fetchMgrBals,
+    fetchBalance,
+    setBalA,
+    setBalB,
+    withdrawManagerA,
+    withdrawManagerB,
+    resetManagerA,
+    resetManagerB,
+  ])
 
   return (
     <div className="sui-hb">
@@ -1961,7 +3242,16 @@ function HedgingBotContent() {
       {/* 2-column layout: orderbook left, content right */}
       <div className="sui-hb__layout">
         {/* ── LEFT: Mini Orderbook + Funding + Points ── */}
-        <Sidebar config={config} obBids={obBids} obAsks={obAsks} orderPrices={orderPrices} addrA={addrA} addrB={addrB} balA={balA} balB={balB} />
+        <Sidebar
+          config={config}
+          obBids={obBids}
+          obAsks={obAsks}
+          orderPrices={orderPrices}
+          addrA={addrA}
+          addrB={addrB}
+          balA={balA}
+          balB={balB}
+        />
 
         {/* ── RIGHT: Bot Content ── */}
         <div className="sui-hb__main">
@@ -2212,11 +3502,20 @@ function HedgingBotContent() {
                     <select
                       className="sui-hb__select"
                       value={config.strategy}
-                      onChange={(e) => setConfig((c) => ({ ...c, strategy: e.target.value as BotConfig['strategy'] }))}
+                      onChange={(e) =>
+                        setConfig((c) => ({
+                          ...c,
+                          strategy: e.target.value as BotConfig['strategy'],
+                        }))
+                      }
                       disabled={running}
                     >
-                      <option value="margin">Margin (2 wallets, borrow+POST_ONLY, max points)</option>
-                      <option value="directional">Directional (2 wallets, trend-follow, +PnL)</option>
+                      <option value="margin">
+                        Margin (2 wallets, borrow+POST_ONLY, max points)
+                      </option>
+                      <option value="directional">
+                        Directional (2 wallets, trend-follow, +PnL)
+                      </option>
                       <option value="volume">Volume Farm (1 wallet, buy+sell, points)</option>
                       <option value="maker">Maker (2 wallets, POST_ONLY, +spread)</option>
                       <option value="taker">Taker (2 wallets, market swap, neutral)</option>
@@ -2325,7 +3624,9 @@ function HedgingBotContent() {
                   value={webhookUrl}
                   onChange={(e) => {
                     setWebhookUrl(e.target.value)
-                    try { localStorage.setItem('hb_webhook', e.target.value) } catch {}
+                    try {
+                      localStorage.setItem('hb_webhook', e.target.value)
+                    } catch {}
                   }}
                   style={{ width: '100%', marginBottom: 6 }}
                 />
@@ -2337,30 +3638,56 @@ function HedgingBotContent() {
                     value={webhookApiKey}
                     onChange={(e) => {
                       setWebhookApiKey(e.target.value)
-                      try { localStorage.setItem('hb_webhook_key', e.target.value) } catch {}
+                      try {
+                        localStorage.setItem('hb_webhook_key', e.target.value)
+                      } catch {}
                     }}
                     style={{ width: '100%', marginBottom: 6 }}
                   />
                 )}
                 {webhookUrl && (
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <span style={{ fontSize: 9, color: '#22c55e', background: '#0a1628', padding: '2px 6px', borderRadius: 3 }}>
+                    <span
+                      style={{
+                        fontSize: 9,
+                        color: '#22c55e',
+                        background: '#0a1628',
+                        padding: '2px 6px',
+                        borderRadius: 3,
+                      }}
+                    >
                       {detectLogServiceType(webhookUrl).toUpperCase()}
                     </span>
                     <button
                       className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                       onClick={async () => {
-                        const ok = await testLogEndpoint({ url: webhookUrl, type: detectLogServiceType(webhookUrl), apiKey: webhookApiKey || undefined, labels: { job: 'hedging-bot', pool: config.pool } })
-                        addLog(ok ? 'success' : 'error', ok ? 'Log endpoint test sent!' : 'Log endpoint test failed')
+                        const ok = await testLogEndpoint({
+                          url: webhookUrl,
+                          type: detectLogServiceType(webhookUrl),
+                          apiKey: webhookApiKey || undefined,
+                          labels: { job: 'hedging-bot', pool: config.pool },
+                        })
+                        addLog(
+                          ok ? 'success' : 'error',
+                          ok ? 'Log endpoint test sent!' : 'Log endpoint test failed',
+                        )
                       }}
-                    >Test</button>
+                    >
+                      Test
+                    </button>
                     <button
                       className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                       onClick={() => {
-                        setWebhookUrl(''); setWebhookApiKey('')
-                        try { localStorage.removeItem('hb_webhook'); localStorage.removeItem('hb_webhook_key') } catch {}
+                        setWebhookUrl('')
+                        setWebhookApiKey('')
+                        try {
+                          localStorage.removeItem('hb_webhook')
+                          localStorage.removeItem('hb_webhook_key')
+                        } catch {}
                       }}
-                    >Clear</button>
+                    >
+                      Clear
+                    </button>
                   </div>
                 )}
               </div>
@@ -2547,138 +3874,142 @@ function HedgingBotContent() {
               )}
 
               {/* History */}
-            <div className="sui-hb__card">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 8,
-                }}
-              >
-                <div className="sui-hb__card-title" style={{ margin: 0 }}>
-                  Cycle History ({history.length})
-                </div>
-                {history.length > 0 && (
-                  <button
-                    className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
-                    onClick={() => {
-                      const csv =
-                        'Cycle,OpenPrice,ClosePrice,PnL,Duration\n' +
-                        history
-                          .map(
-                            (c) =>
-                              `${c.num},${c.openPrice},${c.closePrice},${c.pnl.toFixed(6)},${c.duration}`,
-                          )
-                          .join('\n')
-                      const blob = new Blob([csv], { type: 'text/csv' })
-                      const a = document.createElement('a')
-                      a.href = URL.createObjectURL(blob)
-                      a.download = `hedging-history-${Date.now()}.csv`
-                      a.click()
-                    }}
-                  >
-                    Export CSV
-                  </button>
-                )}
-              </div>
-              {history.length === 0 ? (
-                <div className="sui-hb__empty">No completed cycles yet</div>
-              ) : (
-                <div className="sui-hb__history" style={{ maxHeight: 400 }}>
-                  <div className="sui-hb__history-row sui-hb__history-hdr">
-                    <span>#</span>
-                    <span>Prices</span>
-                    <span>PnL</span>
-                    <span>Hold</span>
+              <div className="sui-hb__card">
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 8,
+                  }}
+                >
+                  <div className="sui-hb__card-title" style={{ margin: 0 }}>
+                    Cycle History ({history.length})
                   </div>
-                  {history.map((c) => (
-                    <div key={c.num} className="sui-hb__history-row">
-                      <span style={{ color: '#94a3b8' }}>{c.num}</span>
-                      <span style={{ fontSize: 10 }}>
-                        {formatOBPrice(c.openPrice)} → {formatOBPrice(c.closePrice)}
-                      </span>
-                      <span style={{ color: c.pnl >= 0 ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
-                        {c.pnl >= 0 ? '+' : ''}
-                        {formatUsd(c.pnl)}
-                      </span>
-                      <span style={{ color: '#64748b' }}>{c.duration}s</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-              {/* Logs */}
-            <div className="sui-hb__card">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 8,
-                }}
-              >
-                <div className="sui-hb__card-title" style={{ margin: 0 }}>
-                  Runtime Logs ({logs.length})
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {logs.length > 0 && (
+                  {history.length > 0 && (
                     <button
                       className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
                       onClick={() => {
-                        const text = logs
-                          .map((l) => {
-                            const t = new Date(l.ts).toISOString()
-                            return `[${t}] [${l.level.toUpperCase()}] ${l.msg}`
-                          })
-                          .join('\n')
-                        const blob = new Blob([text], { type: 'text/plain' })
+                        const csv =
+                          'Cycle,OpenPrice,ClosePrice,PnL,Duration\n' +
+                          history
+                            .map(
+                              (c) =>
+                                `${c.num},${c.openPrice},${c.closePrice},${c.pnl.toFixed(6)},${c.duration}`,
+                            )
+                            .join('\n')
+                        const blob = new Blob([csv], { type: 'text/csv' })
                         const a = document.createElement('a')
                         a.href = URL.createObjectURL(blob)
-                        a.download = `hedging-logs-${Date.now()}.log`
+                        a.download = `hedging-history-${Date.now()}.csv`
                         a.click()
                       }}
                     >
-                      Export
+                      Export CSV
                     </button>
                   )}
-                  <button
-                    className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
-                    onClick={() => setLogs([])}
-                  >
-                    Clear
-                  </button>
                 </div>
-              </div>
-              <div className="sui-hb__logs" style={{ maxHeight: 500 }}>
-                {logs.length === 0 ? (
-                  <div className="sui-hb__empty">No logs yet</div>
+                {history.length === 0 ? (
+                  <div className="sui-hb__empty">No completed cycles yet</div>
                 ) : (
-                  [...logs].reverse().map((l, i) => (
-                    <div key={i} className={`sui-hb__log-row sui-hb__log-row--${l.level}`}>
-                      <span className="sui-hb__log-level">
-                        {l.level === 'success'
-                          ? '✓'
-                          : l.level === 'error'
-                            ? '✗'
-                            : l.level === 'warn'
-                              ? '!'
-                              : '·'}
-                      </span>
-                      <span className="sui-hb__log-time">
-                        {new Date(l.ts).toLocaleTimeString(undefined, {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })}
-                      </span>
-                      <span className={`sui-hb__log-msg sui-hb__log-msg--${l.level}`}>{l.msg}</span>
+                  <div className="sui-hb__history" style={{ maxHeight: 400 }}>
+                    <div className="sui-hb__history-row sui-hb__history-hdr">
+                      <span>#</span>
+                      <span>Prices</span>
+                      <span>PnL</span>
+                      <span>Hold</span>
                     </div>
-                  ))
+                    {history.map((c) => (
+                      <div key={c.num} className="sui-hb__history-row">
+                        <span style={{ color: '#94a3b8' }}>{c.num}</span>
+                        <span style={{ fontSize: 10 }}>
+                          {formatOBPrice(c.openPrice)} → {formatOBPrice(c.closePrice)}
+                        </span>
+                        <span
+                          style={{ color: c.pnl >= 0 ? '#22c55e' : '#ef4444', fontWeight: 600 }}
+                        >
+                          {c.pnl >= 0 ? '+' : ''}
+                          {formatUsd(c.pnl)}
+                        </span>
+                        <span style={{ color: '#64748b' }}>{c.duration}s</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
+
+              {/* Logs */}
+              <div className="sui-hb__card">
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 8,
+                  }}
+                >
+                  <div className="sui-hb__card-title" style={{ margin: 0 }}>
+                    Runtime Logs ({logs.length})
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {logs.length > 0 && (
+                      <button
+                        className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
+                        onClick={() => {
+                          const text = logs
+                            .map((l) => {
+                              const t = new Date(l.ts).toISOString()
+                              return `[${t}] [${l.level.toUpperCase()}] ${l.msg}`
+                            })
+                            .join('\n')
+                          const blob = new Blob([text], { type: 'text/plain' })
+                          const a = document.createElement('a')
+                          a.href = URL.createObjectURL(blob)
+                          a.download = `hedging-logs-${Date.now()}.log`
+                          a.click()
+                        }}
+                      >
+                        Export
+                      </button>
+                    )}
+                    <button
+                      className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
+                      onClick={() => setLogs([])}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                <div className="sui-hb__logs" style={{ maxHeight: 500 }}>
+                  {logs.length === 0 ? (
+                    <div className="sui-hb__empty">No logs yet</div>
+                  ) : (
+                    [...logs].reverse().map((l, i) => (
+                      <div key={i} className={`sui-hb__log-row sui-hb__log-row--${l.level}`}>
+                        <span className="sui-hb__log-level">
+                          {l.level === 'success'
+                            ? '✓'
+                            : l.level === 'error'
+                              ? '✗'
+                              : l.level === 'warn'
+                                ? '!'
+                                : '·'}
+                        </span>
+                        <span className="sui-hb__log-time">
+                          {new Date(l.ts).toLocaleTimeString(undefined, {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
+                        </span>
+                        <span className={`sui-hb__log-msg sui-hb__log-msg--${l.level}`}>
+                          {l.msg}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </>
           )}
 
@@ -2687,474 +4018,9 @@ function HedgingBotContent() {
             <>
               {!addrA && !addrB ? (
                 <div className="sui-hb__empty">Import keys in Setup tab first</div>
-              ) : (() => {
-                const suiUsd = currentPrice && config.pool === 'SUI_USDC' ? currentPrice : null
-                const estimateUsd = (coins: { symbol: string; balance: string }[]) => {
-                  let total = 0
-                  for (const c of coins) {
-                    const amt = parseFloat(c.balance)
-                    if (c.symbol === 'SUI') total += amt * (suiUsd ?? 0.95)
-                    else if (c.symbol === 'USDC' || c.symbol === 'USDT') total += amt
-                    else if (c.symbol === 'DEEP') total += amt * 0.029
-                    else if (c.symbol === 'WAL') total += amt * 0.07
-                    else if (c.symbol === 'NS') total += amt * 0.018
-                  }
-                  return total
-                }
-                const usdA = estimateUsd(balA.coins)
-                const usdB = estimateUsd(balB.coins)
-                const totalUsd = usdA + usdB
-                const [base, quote] = config.pool.split('_')
-
-                return (
-                  <>
-                    {/* Total summary */}
-                    <div className="sui-hb__card" style={{ marginBottom: 12 }}>
-                      <div className="sui-hb__card-title">Portfolio Summary</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
-                        <div className="sui-hb__stat">
-                          <span className="sui-hb__stat-label">Total Value</span>
-                          <span className="sui-hb__stat-value" style={{ color: '#22c55e' }}>{formatUsd(totalUsd)}</span>
-                        </div>
-                        <div className="sui-hb__stat">
-                          <span className="sui-hb__stat-label">Account A</span>
-                          <span className="sui-hb__stat-value">{formatUsd(usdA)}</span>
-                        </div>
-                        <div className="sui-hb__stat">
-                          <span className="sui-hb__stat-label">Account B</span>
-                          <span className="sui-hb__stat-value">{formatUsd(usdB)}</span>
-                        </div>
-                      </div>
-                      {/* Balance bar */}
-                      <div style={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', background: '#1e293b' }}>
-                        <div style={{ width: `${totalUsd > 0 ? (usdA / totalUsd) * 100 : 50}%`, background: '#4da2ff' }} />
-                        <div style={{ width: `${totalUsd > 0 ? (usdB / totalUsd) * 100 : 50}%`, background: '#a78bfa' }} />
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#64748b', marginTop: 4 }}>
-                        <span>A: {totalUsd > 0 ? ((usdA / totalUsd) * 100).toFixed(1) : '50'}%</span>
-                        <span>B: {totalUsd > 0 ? ((usdB / totalUsd) * 100).toFixed(1) : '50'}%</span>
-                      </div>
-                      {Math.abs(usdA - usdB) > 1 && (
-                        <div style={{ fontSize: 10, color: '#eab308', marginTop: 6 }}>
-                          ⚠ Imbalance: ${Math.abs(usdA - usdB).toFixed(2)} — auto-balance will fix on next Start
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Per-account cards */}
-                    {[
-                      { label: 'A (Long)', role: `Buys ${base} with ${quote}`, addr: addrA, bal: balA, usd: usdA, color: '#4da2ff', bmId: bmIdA, mmId: mmIdA, allMm: allMMs[addrA ?? ''] ?? [] },
-                      { label: 'B (Short)', role: `Sells ${base} for ${quote}`, addr: addrB, bal: balB, usd: usdB, color: '#a78bfa', bmId: bmIdB, mmId: mmIdB, allMm: allMMs[addrB ?? ''] ?? [] },
-                    ].map((acct) => acct.addr && (
-                      <div key={acct.label} className="sui-hb__card" style={{ marginBottom: 12, borderLeft: `3px solid ${acct.color}` }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <div>
-                            <div className="sui-hb__card-title" style={{ margin: 0 }}>{acct.label}</div>
-                            <div style={{ fontSize: 10, color: '#64748b' }}>{acct.role}</div>
-                          </div>
-                          <span style={{ fontSize: 16, fontWeight: 700, color: acct.color, fontFamily: "'Fira Code', monospace" }}>
-                            {formatUsd(acct.usd)}
-                          </span>
-                        </div>
-
-                        {/* Address */}
-                        <div style={{ fontSize: 10, fontFamily: "'Fira Code', monospace", color: '#94a3b8', wordBreak: 'break-all', marginBottom: 6, background: '#020617', padding: '4px 8px', borderRadius: 4 }}>
-                          {acct.addr}
-                        </div>
-
-                        {/* Balance Manager */}
-                        {acct.bmId && (
-                          <div style={{ fontSize: 9, color: '#475569', marginBottom: 6 }}>
-                            Balance Manager: <span style={{ fontFamily: "'Fira Code', monospace" }}>{acct.bmId.slice(0, 16)}...</span>
-                          </div>
-                        )}
-
-                        {/* Margin Managers — all owned by this wallet */}
-                        {acct.allMm.length > 0 && (
-                          <div style={{ marginBottom: 8 }}>
-                            <div style={{ fontSize: 9, color: '#22c55e', fontWeight: 600, marginBottom: 4 }}>
-                              Margin Managers ({acct.allMm.length})
-                            </div>
-                            {acct.allMm.map((mm) => {
-                              const isActive = mm.id === acct.mmId
-                              const hasAssets = mm.base > 0 || mm.quote > 0
-                              const hasDebt = mm.baseDebt > 0 || mm.quoteDebt > 0
-                              return (
-                                <div key={mm.id} style={{
-                                  background: isActive ? '#0a1628' : '#020617',
-                                  borderRadius: 4, padding: '4px 8px', marginBottom: 4, fontSize: 10,
-                                  borderLeft: isActive ? '2px solid #22c55e' : '2px solid #1e293b',
-                                }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontFamily: "'Fira Code', monospace", color: isActive ? '#22c55e' : '#64748b' }}>
-                                      {mm.id.slice(0, 14)}…
-                                      {isActive && <span style={{ color: '#22c55e', fontSize: 8, marginLeft: 4 }}>ACTIVE</span>}
-                                    </span>
-                                    <button
-                                      style={{ fontSize: 8, background: 'none', border: '1px solid #334155', color: '#64748b', borderRadius: 3, padding: '1px 4px', cursor: 'pointer' }}
-                                      onClick={() => navigator.clipboard.writeText(mm.id)}
-                                    >copy</button>
-                                  </div>
-                                  {(hasAssets || hasDebt) && (
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, marginTop: 3, fontSize: 9 }}>
-                                      {mm.base > 0 && <div><span style={{ color: '#64748b' }}>{base}:</span> <span style={{ color: '#f8fafc', fontFamily: "'Fira Code', monospace" }}>{mm.base.toFixed(4)}</span></div>}
-                                      {mm.quote > 0 && <div><span style={{ color: '#64748b' }}>{quote}:</span> <span style={{ color: '#f8fafc', fontFamily: "'Fira Code', monospace" }}>{mm.quote.toFixed(4)}</span></div>}
-                                      {mm.baseDebt > 0 && <div><span style={{ color: '#ef4444' }}>{base} debt:</span> <span style={{ color: '#ef4444', fontFamily: "'Fira Code', monospace" }}>{mm.baseDebt.toFixed(4)}</span></div>}
-                                      {mm.quoteDebt > 0 && <div><span style={{ color: '#ef4444' }}>{quote} debt:</span> <span style={{ color: '#ef4444', fontFamily: "'Fira Code', monospace" }}>{mm.quoteDebt.toFixed(4)}</span></div>}
-                                    </div>
-                                  )}
-                                  {!hasAssets && !hasDebt && <div style={{ fontSize: 8, color: '#475569', marginTop: 2 }}>empty</div>}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                        {acct.mmId && !acct.allMm.length && (
-                          <div style={{ fontSize: 9, color: '#22c55e', marginBottom: 6 }}>
-                            Margin Manager: <span style={{ fontFamily: "'Fira Code', monospace" }}>{acct.mmId.slice(0, 16)}...</span>
-                          </div>
-                        )}
-                        {acct.mmId && !acct.allMm.length && <div style={{ fontSize: 9, color: '#64748b' }}>Loading MMs…</div>}
-
-                        {/* Actions */}
-                        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                          <a
-                            href={`https://suiscan.xyz/${network}/account/${acct.addr}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
-                            style={{ textDecoration: 'none', textAlign: 'center', flex: 1 }}
-                          >
-                            Suiscan
-                          </a>
-                          <button
-                            className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
-                            style={{ flex: 1 }}
-                            onClick={() => navigator.clipboard.writeText(acct.addr!)}
-                          >
-                            Copy
-                          </button>
-                        </div>
-
-                        {/* Coin balances */}
-                        {acct.bal.loading ? (
-                          <div style={{ fontSize: 11, color: '#64748b' }}>Loading…</div>
-                        ) : acct.bal.coins.length > 0 ? (
-                          <div>
-                            {acct.bal.coins.map((c, j) => {
-                              const amt = parseFloat(c.balance)
-                              let coinUsd = 0
-                              if (c.symbol === 'SUI') coinUsd = amt * (suiUsd ?? 0.95)
-                              else if (c.symbol === 'USDC' || c.symbol === 'USDT') coinUsd = amt
-                              else if (c.symbol === 'DEEP') coinUsd = amt * 0.029
-                              else if (c.symbol === 'WAL') coinUsd = amt * 0.07
-                              const isPoolToken = c.symbol === base || c.symbol === quote
-                              return (
-                                <div key={j} style={{
-                                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                  padding: '4px 0', borderBottom: '1px solid #1e293b', fontSize: 12,
-                                  background: isPoolToken ? 'rgba(34,197,94,0.04)' : undefined,
-                                }}>
-                                  <span style={{ color: isPoolToken ? '#22c55e' : '#94a3b8' }}>
-                                    {isPoolToken ? '● ' : ''}{c.symbol}
-                                  </span>
-                                  <div style={{ textAlign: 'right' }}>
-                                    <span style={{ color: '#f8fafc', fontFamily: "'Fira Code', monospace" }}>{c.balance}</span>
-                                    {coinUsd > 0.01 && (
-                                      <span style={{ color: '#64748b', fontSize: 10, marginLeft: 6 }}>≈{formatUsd(coinUsd)}</span>
-                                    )}
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: 11, color: '#475569' }}>No tokens</div>
-                        )}
-
-                        {/* Pending Orders */}
-                        {(() => {
-                          const orders = pendingOrders[acct.addr!] ?? []
-                          return (
-                            <div style={{ marginTop: 8 }}>
-                              <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>
-                                Open Orders {orders.length > 0 ? `(${orders.length})` : ''}
-                              </div>
-                              {orders.length > 0 ? orders.map((o) => (
-                                <div key={o.orderId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, padding: '2px 0', borderBottom: '1px solid #0f172a' }}>
-                                  <span style={{ color: o.side === 'buy' ? '#22c55e' : '#ef4444', fontWeight: 600 }}>{o.side.toUpperCase()}</span>
-                                  <span style={{ color: '#94a3b8', fontFamily: "'Fira Code', monospace" }}>{o.price.toFixed(6)}</span>
-                                  <span style={{ color: '#64748b' }}>{o.filled}/{o.qty}</span>
-                                  {'pool' in o && <span style={{ color: '#475569', fontSize: 9 }}>{(o as { pool: string }).pool}</span>}
-                                </div>
-                              )) : (
-                                <div style={{ fontSize: 9, color: '#475569' }}>
-                                  {config.strategy === 'maker' ? 'No open orders' : 'Market swaps — no pending orders'}
-                                  {!bmIdA && !bmIdB && config.strategy !== 'maker' ? ' (no Balance Manager)' : ''}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })()}
-
-                        {/* Recent Transactions */}
-                        {(txHistory[acct.addr!] ?? []).length > 0 && (
-                          <div style={{ marginTop: 8 }}>
-                            <div style={{ fontSize: 10, color: '#64748b', fontWeight: 600, marginBottom: 4 }}>Recent Transactions</div>
-                            {(txHistory[acct.addr!] ?? []).slice(0, 8).map((t) => (
-                              <div key={t.digest} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, padding: '2px 0', borderBottom: '1px solid #0f172a' }}>
-                                <a
-                                  href={`https://suiscan.xyz/${network}/tx/${t.digest}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{ color: '#4da2ff', textDecoration: 'none', fontFamily: "'Fira Code', monospace" }}
-                                >
-                                  {t.digest.slice(0, 12)}...
-                                </a>
-                                <span style={{ color: '#64748b' }}>{t.ts}</span>
-                                <span style={{ color: t.status === 'success' ? '#22c55e' : '#ef4444' }}>
-                                  {t.status === 'success' ? '✓' : '✗'}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
-                    {/* Actions */}
-                    <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                      <button
-                        className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
-                        style={{ flex: 1 }}
-                        onClick={() => {
-                          if (addrA) { setBalA((b) => ({ ...b, loading: true })); fetchBalance(addrA).then(setBalA) }
-                          if (addrB) { setBalB((b) => ({ ...b, loading: true })); fetchBalance(addrB).then(setBalB) }
-                        }}
-                      >
-                        Refresh
-                      </button>
-                      {(mmIdA || mmIdB) && (
-                        <button
-                          className="sui-hb__btn sui-hb__btn--sm"
-                          style={{ flex: 1, background: '#dc2626', color: '#fff' }}
-                          disabled={running}
-                          onClick={async () => {
-                            addLog('warn', 'Force closing all margin positions...')
-                            await cleanupMargin()
-                            addLog('success', 'All margin positions closed')
-                          }}
-                        >
-                          Force Close Margins
-                        </button>
-                      )}
-                      <button
-                        className="sui-hb__btn sui-hb__btn--yellow sui-hb__btn--sm"
-                        style={{ flex: 1 }}
-                        disabled={running}
-                        onClick={async () => {
-                          const net = network as 'mainnet' | 'testnet'
-                          const sdkPools = net === 'mainnet' ? mainnetPools : testnetPools
-                          const swapToSui = async (kp: Ed25519Keypair | null, addr: string | null) => {
-                            if (!kp || !addr) return
-                            const coins = await fetchAllCoins(addr)
-                            for (const c of coins) {
-                              if (c.symbol === 'SUI' || parseFloat(c.balance) < 0.001) continue
-                              const amt = parseFloat(c.balance) // swap 100%
-                              // Try routes: TOKEN_SUI (sell base), SUI_TOKEN (buy back = sell quote)
-                              const route1 = `${c.symbol}_SUI`
-                              const route2 = `SUI_${c.symbol}`
-                              const plainDb = new DeepBookClient({
-                                client: new SuiGrpcClient({ network: net, baseUrl: RPC[net] }),
-                                address: addr, network: net,
-                                coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
-                                pools: sdkPools,
-                                packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
-                              })
-                              try {
-                                const tx = new Transaction()
-                                if (route1 in sdkPools) {
-                                  addLog('info', `${c.symbol} → SUI: sell ${amt.toFixed(4)} via ${route1}`)
-                                  buildSwapSell(plainDb, route1, amt, addr, tx)
-                                } else if (route2 in sdkPools) {
-                                  addLog('info', `${c.symbol} → SUI: buy SUI via ${route2} with ${amt.toFixed(4)} ${c.symbol}`)
-                                  buildSwapBuy(plainDb, route2, amt, addr, tx)
-                                } else {
-                                  // Try via USDC: TOKEN→USDC→SUI
-                                  const toUsdc = `${c.symbol}_USDC`
-                                  if (toUsdc in sdkPools) {
-                                    addLog('info', `${c.symbol} → USDC → SUI (2-hop)`)
-                                    buildSwapSell(plainDb, toUsdc, amt, addr, tx)
-                                    // Will need a second tx for USDC→SUI
-                                  } else {
-                                    addLog('warn', `No route for ${c.symbol} → SUI`)
-                                    continue
-                                  }
-                                }
-                                await signAndExec(kp, tx, net)
-                                addLog('success', `Swapped ${c.symbol} → SUI`)
-                              } catch (err) {
-                                addLog('warn', `Skip ${c.symbol}: ${err instanceof Error ? err.message : err}`)
-                              }
-                            }
-                            // Second pass: swap any USDC to SUI
-                            const freshCoins = await fetchAllCoins(addr)
-                            const usdc = freshCoins.find((c) => c.symbol === 'USDC' && parseFloat(c.balance) > 0.01)
-                            if (usdc && 'SUI_USDC' in sdkPools) {
-                              const usdcAmt = parseFloat(usdc.balance) // swap 100%
-                              try {
-                                addLog('info', `USDC → SUI: buy ${usdcAmt.toFixed(4)} USDC worth of SUI`)
-                                const plainDb2 = new DeepBookClient({
-                                  client: new SuiGrpcClient({ network: net, baseUrl: RPC[net] }),
-                                  address: addr, network: net,
-                                  coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
-                                  pools: sdkPools,
-                                  packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
-                                })
-                                const tx2 = new Transaction()
-                                buildSwapBuy(plainDb2, 'SUI_USDC', usdcAmt, addr, tx2)
-                                await signAndExec(kp, tx2, net)
-                                addLog('success', 'Swapped USDC → SUI')
-                              } catch (err) {
-                                addLog('warn', `USDC→SUI: ${err instanceof Error ? err.message : err}`)
-                              }
-                            }
-                          }
-                          addLog('info', 'Swapping all tokens → SUI...')
-                          await swapToSui(keypairARef.current, addrA)
-                          await swapToSui(keypairBRef.current, addrB)
-                          addLog('success', 'Done — all tokens → SUI')
-                          if (addrA) fetchBalance(addrA).then(setBalA)
-                          if (addrB) fetchBalance(addrB).then(setBalB)
-                        }}
-                      >
-                        Swap All → SUI
-                      </button>
-                    </div>
-
-                    {/* Balance Manager Controls */}
-                    {(bmIdA || bmIdB) && (
-                      <div className="sui-hb__card" style={{ marginTop: 12 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                          <div className="sui-hb__card-title" style={{ margin: 0 }}>Balance Managers (On-Chain)</div>
-                          <button
-                            className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
-                            onClick={fetchMgrBals}
-                            disabled={mgrBalsLoading}
-                          >
-                            {mgrBalsLoading ? '...' : 'Refresh'}
-                          </button>
-                        </div>
-                        <div style={{ fontSize: 10, color: '#475569', marginBottom: 10 }}>
-                          Funds locked in managers until withdrawn. Bot crash → Withdraw All to recover.
-                        </div>
-                        {[
-                          { label: 'A (Long)', role: `Holds ${quote} to buy ${base}`, bmId: bmIdA, kpRef: keypairARef, addr: addrA, setBm: setBmIdA, lsKey: 'hb_bmA', color: '#4da2ff' },
-                          { label: 'B (Short)', role: `Holds ${base} to sell`, bmId: bmIdB, kpRef: keypairBRef, addr: addrB, setBm: setBmIdB, lsKey: 'hb_bmB', color: '#a78bfa' },
-                        ].map((m) => m.bmId && m.addr && (
-                          <div key={m.label} className="sui-hb__card" style={{ background: '#020617', marginBottom: 8, padding: 10, borderLeft: `3px solid ${m.color}` }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                              <div>
-                                <div style={{ fontSize: 12, fontWeight: 600, color: '#f8fafc' }}>Manager {m.label}</div>
-                                <div style={{ fontSize: 9, color: '#64748b' }}>{m.role}</div>
-                                {!m.kpRef.current && (
-                                  <div style={{ fontSize: 9, color: '#ef4444' }}>⚠ Import key to withdraw</div>
-                                )}
-                              </div>
-                              <a
-                                href={`https://suiscan.xyz/${network}/object/${m.bmId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{ fontSize: 9, color: '#4da2ff', textDecoration: 'none' }}
-                              >
-                                {m.bmId.slice(0, 10)}...{m.bmId.slice(-4)}
-                              </a>
-                            </div>
-
-                            {/* Manager balances */}
-                            {(() => {
-                              const bals = mgrBals[m.bmId] ?? {}
-                              const entries = Object.entries(bals).filter(([, v]) => v > 0)
-                              return entries.length > 0 ? (
-                                <div style={{ marginBottom: 8 }}>
-                                  {entries.map(([coinType, amount]) => {
-                                    const sym = coinType.split('::').pop() ?? coinType
-                                    return (
-                                      <div key={coinType} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid #0f172a', fontSize: 11 }}>
-                                        <span style={{ color: '#94a3b8' }}>{sym}</span>
-                                        <span style={{ color: '#f8fafc', fontFamily: "'Fira Code', monospace" }}>{amount.toFixed(4)}</span>
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              ) : (
-                                <div style={{ fontSize: 10, color: '#475569', marginBottom: 8 }}>
-                                  {mgrBalsLoading ? 'Loading...' : 'Empty — no funds deposited'}
-                                </div>
-                              )
-                            })()}
-
-                            {/* Actions */}
-                            <div style={{ display: 'flex', gap: 4 }}>
-                              <button
-                                className="sui-hb__btn sui-hb__btn--red sui-hb__btn--sm"
-                                style={{ flex: 1, fontSize: 10 }}
-                                disabled={running || !m.kpRef.current}
-                                onClick={async () => {
-                                  const kp = m.kpRef.current
-                                  if (!kp || !m.bmId) return
-                                  const net = network as 'mainnet' | 'testnet'
-                                  const client = new SuiGrpcClient({ network: net, baseUrl: RPC[net] })
-                                  const dbClient = new DeepBookClient({
-                                    client, address: m.addr!, network: net,
-                                    coins: net === 'mainnet' ? mainnetCoins : testnetCoins,
-                                    pools: net === 'mainnet' ? mainnetPools : testnetPools,
-                                    packageIds: net === 'mainnet' ? mainnetPackageIds : testnetPackageIds,
-                                    balanceManagers: { main: { address: m.bmId } },
-                                  })
-                                  try {
-                                    addLog('info', `Cancelling orders + withdrawing ${m.label}...`)
-                                    const txC = new Transaction()
-                                    txC.add(dbClient.deepBook.cancelAllOrders(config.pool, 'main'))
-                                    await signAndExec(kp, txC, net)
-                                    for (const coinKey of [base, quote, 'DEEP']) {
-                                      try {
-                                        const txW = new Transaction()
-                                        txW.add(dbClient.balanceManager.withdrawAllFromManager('main', coinKey, m.addr!))
-                                        await signAndExec(kp, txW, net)
-                                        addLog('success', `Withdrew ${coinKey} from ${m.label}`)
-                                      } catch { /* skip */ }
-                                    }
-                                    addLog('success', `Manager ${m.label} emptied`)
-                                    fetchBalance(m.addr!).then(m.label.startsWith('A') ? setBalA : setBalB)
-                                    fetchMgrBals()
-                                  } catch (err) {
-                                    addLog('error', `Withdraw failed: ${err instanceof Error ? err.message : err}`)
-                                  }
-                                }}
-                              >
-                                Withdraw All
-                              </button>
-                              <button
-                                className="sui-hb__btn sui-hb__btn--ghost sui-hb__btn--sm"
-                                style={{ flex: 1, fontSize: 10 }}
-                                onClick={() => {
-                                  m.setBm(null)
-                                  try { localStorage.removeItem(m.lsKey) } catch {}
-                                  addLog('info', `Cleared ${m.label} cache`)
-                                  fetchMgrBals()
-                                }}
-                              >
-                                Reset
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )
-              })()}
+              ) : (
+                accountsTabPanel
+              )}
             </>
           )}
         </div>

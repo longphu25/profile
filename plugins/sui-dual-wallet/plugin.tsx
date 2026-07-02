@@ -259,18 +259,21 @@ function DualWalletContent() {
   const [slotBAddress, setSlotBAddress] = useState('')
   const [slotBMode, setSlotBMode] = useState<'account' | 'manual'>('manual')
 
-  // Sync connected account → slot A
-  useEffect(() => {
-    if (connection.isConnected && connection.account) {
-      setSlotAAddress(connection.account.address)
+  const connectedAddress =
+    connection.isConnected && connection.account ? connection.account.address : null
+  const [prevConnectedAddress, setPrevConnectedAddress] = useState<string | null | undefined>(
+    undefined,
+  )
+
+  if (connectedAddress !== prevConnectedAddress) {
+    setPrevConnectedAddress(connectedAddress)
+    if (connectedAddress) {
+      setSlotAAddress(connectedAddress)
     } else {
       setSlotAAddress('')
       setConnectedAccounts([])
     }
-  }, [
-    connection.isConnected,
-    connection.status === 'connected' ? connection.account?.address : null,
-  ])
+  }
 
   const handleConnect = async (wallet: UiWallet) => {
     try {

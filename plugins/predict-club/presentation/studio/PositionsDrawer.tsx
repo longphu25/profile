@@ -200,10 +200,7 @@ export function PositionsDrawer({
     let active = true
     for (const position of settled) {
       const key = positionKey(position)
-      if (claimResults[key]?.ok) continue
-      setPreflight((prev) =>
-        prev[key]?.loading ? prev : { ...prev, [key]: { loading: true, ok: false } },
-      )
+      if (claimResults[key]?.ok || preflight[key] !== undefined) continue
       simulateClaim(position).then((verdict) => {
         if (!active) return
         setPreflight((prev) => ({
@@ -228,10 +225,7 @@ export function PositionsDrawer({
     let active = true
     for (const position of live) {
       const key = positionKey(position)
-      if (unwindResults[key]?.ok) continue
-      setUnwindPreflight((prev) =>
-        prev[key]?.loading ? prev : { ...prev, [key]: { loading: true, ok: false } },
-      )
+      if (unwindResults[key]?.ok || unwindPreflight[key] !== undefined) continue
       simulateRedeem(position).then((verdict) => {
         if (!active) return
         setUnwindPreflight((prev) => ({

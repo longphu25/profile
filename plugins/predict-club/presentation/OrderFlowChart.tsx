@@ -32,6 +32,7 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
   const binanceDataRef = useRef<Map<number, number>>(new Map())
   // Binance reference overlay is OFF by default — opt-in toggle only.
   const [showBinanceRef, setShowBinanceRef] = useState(false)
+  const [chartReady, setChartReady] = useState(false)
 
   // Convert prices to chart data — dedup by time, sort ascending
   const { spotData, fwdData, basisData } = useMemo(() => {
@@ -86,6 +87,7 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
       clearTimeout(timer)
       chartRef.current?.remove()
       chartRef.current = null
+      setChartReady(false)
     }
   }, [])
 
@@ -131,6 +133,7 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
       height,
     })
     chartRef.current = chart
+    setChartReady(true)
 
     // Spot line
     const spotSeries = chart.addSeries(LineSeries, {
@@ -333,7 +336,7 @@ export function OrderFlowChart({ prices }: { prices: OraclePrice[] }) {
       {/* Chart — position relative wrapper so chart fills remaining space */}
       <div style={{ position: 'relative', flex: 1, minHeight: '200px' }}>
         <div ref={containerRef} style={{ position: 'absolute', inset: 0 }}>
-          {prices.length < 2 && !chartRef.current && (
+          {prices.length < 2 && !chartReady && (
             <div className="flex items-center justify-center h-full bg-[#07100d]">
               <span className="font-data text-[12px] text-[#83958d] opacity-60 flex flex-col items-center gap-2">
                 <span className="material-symbols-outlined text-3xl">candlestick_chart</span>

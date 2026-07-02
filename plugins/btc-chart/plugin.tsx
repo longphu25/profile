@@ -5,7 +5,16 @@
 // in the host HTML page. The plugin reads window.LightweightCharts at mount time.
 
 import type { Plugin, HostAPI } from '../../src/plugins/types'
-import { useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+  lazy,
+  Suspense,
+} from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 // Styles injected via Shadow DOM <link> (see BtcChartPage styleUrls), not JS imports.
 import {
@@ -279,21 +288,16 @@ function BtcChartView() {
     )
   }, [allSymbols, symbol])
 
-  // Also keep a ref so effects always see the latest value without stale closures
   const symbolInfoRef = useRef(symbolInfo)
-  symbolInfoRef.current = symbolInfo
-  const [vis, setVis] = useState<VisFlags>(visRef.current)
+  const [vis, setVis] = useState<VisFlags>(() => ({ ...cfgInit.vis }))
   const [toolsOpen, setToolsOpen] = useState(false)
   const [oscOpen, setOscOpen] = useState<boolean>(cfgInit.oscOpen)
   const [oscView, setOscView] = useState<OscView>(cfgInit.oscView)
   const [oscHeight, setOscHeight] = useState<number>(cfgInit.oscHeight)
   const [spikeMult, setSpikeMult] = useState<number>(cfgInit.spikeMult)
   const spikeMultRef = useRef<number>(cfgInit.spikeMult)
-  spikeMultRef.current = spikeMult
   const oscViewRef = useRef<OscView>(cfgInit.oscView)
-  oscViewRef.current = oscView
   const oscOpenRef = useRef<boolean>(cfgInit.oscOpen)
-  oscOpenRef.current = oscOpen
 
   // NWE (LuxAlgo) config - reactive + ref for renderData
   const [nweCfg, setNweCfg] = useState<NadarayaConfig>(
@@ -306,9 +310,8 @@ function BtcChartView() {
       },
   )
   const nweCfgRef = useRef<NadarayaConfig>(nweCfg)
-  nweCfgRef.current = nweCfg
 
-  const [alerts, setAlerts] = useState<AlertRule[]>(alertsRef.current)
+  const [alerts, setAlerts] = useState<AlertRule[]>(() => [...cfgInit.alerts])
   const [sound, setSound] = useState(cfgInit.sound)
   const [notifAllowed, setNotifAllowed] = useState(cfgInit.notifications)
   const [firedToast, setFiredToast] = useState<string | null>(null)
@@ -354,7 +357,9 @@ function BtcChartView() {
     () => (loadConfig().signalConfig as SignalConfig) ?? { ...DEFAULT_SIGNAL_CONFIG },
   )
   const signalConfigRef = useRef<SignalConfig>(signalConfig)
-  signalConfigRef.current = signalConfig
+  const [panelCandles, setPanelCandles] = useState<Candle[]>([])
+  const [lastCandleClose, setLastCandleClose] = useState<number | null>(null)
+  const panelCandleKeyRef = useRef('')
   const [boucherEnabled, setBoucherEnabled] = useState(true)
   const [lienEnabled, setLienEnabled] = useState(true)
   const [luxNweResult, setLuxNweResult] = useState<{
@@ -455,7 +460,7 @@ function BtcChartView() {
 
   // Compute suggested SL/TP for each open position (ATR + NWE bands).
   const posSuggestions = useMemo(() => {
-    const candles = candlesRef.current
+    const candles = panelCandles
     if (!candles.length || !positions.length) return {}
     const nweData = calcMHBand(candles)
     const result: Record<string, { sl: number; tp1: number; tp2: number }> = {}
@@ -465,7 +470,16 @@ function BtcChartView() {
     return result
     // Re-compute when positions change or sidebar updates (new candle tick).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positions, sidebar.rsiNow])
+  }, [positions, panelCandles, sidebar.rsiNow])
+
+  useLayoutEffect(() => {
+    symbolInfoRef.current = symbolInfo
+    spikeMultRef.current = spikeMult
+    oscViewRef.current = oscView
+    oscOpenRef.current = oscOpen
+    nweCfgRef.current = nweCfg
+    signalConfigRef.current = signalConfig
+  }, [symbolInfo, spikeMult, oscView, oscOpen, nweCfg, signalConfig])
 
   // Keep refs in sync with state for use inside imperative callbacks.
   useEffect(() => {
@@ -545,6 +559,13 @@ function BtcChartView() {
   const renderData = useCallback((data: Candle[]) => {
     const refs = chartRefs.current
     if (!data.length || !refs) return
+
+    const panelKey = `${data.length}:${data[data.length - 1]?.time ?? 0}`
+    if (panelKey !== panelCandleKeyRef.current) {
+      panelCandleKeyRef.current = panelKey
+      setPanelCandles(data)
+      setLastCandleClose(data[data.length - 1]?.close ?? null)
+    }
 
     // Initial render (after a fetch/symbol switch) should not fire alerts for
     // pre-existing candles; it only seeds the dedup state.
@@ -2535,7 +2556,7 @@ function BtcChartView() {
               <FundingNwePanelLazy
                 funding={funding}
                 nwe={luxNweResult}
-                candles={candlesRef.current}
+                candles={panelCandles}
                 symbol={symbol}
               />
             </Suspense>
@@ -2671,7 +2692,7 @@ function BtcChartView() {
                 onRemove={removeAlert}
                 onToggle={toggleAlert}
                 onReset={resetAlert}
-                currentPrice={candlesRef.current[candlesRef.current.length - 1]?.close ?? null}
+                currentPrice={lastCandleClose}
                 currentRsi={sidebar.rsiNow}
               />
             </SidebarAccordion>
