@@ -95,18 +95,30 @@ export const SYMBOLS = [
 
 /**
  * Load coin list: Turso (remote, toggleable) → fallback to hardcoded SYMBOLS.
- * Custom symbols from localStorage are always appended.
+ * Custom symbols from localStorage are always appended. Deduplicates by
+ * symbol (first occurrence wins) since the remote table can be misconfigured.
  */
 export async function loadSymbols(): Promise<SymbolEntry[]> {
   try {
     const remote = await fetchCoinsFromTurso()
     if (remote && remote.length > 0) {
-      return [...remote, ...loadCustomSymbols()]
+      return dedupeBySymbol([...remote, ...loadCustomSymbols()])
     }
   } catch (err) {
     console.warn('[symbols] Turso fetch failed, using hardcoded list:', err)
   }
-  return [...SYMBOLS, ...loadCustomSymbols()]
+  return dedupeBySymbol([...SYMBOLS, ...loadCustomSymbols()])
+}
+
+function dedupeBySymbol(list: SymbolEntry[]): SymbolEntry[] {
+  const seen = new Set<string>()
+  const result: SymbolEntry[] = []
+  for (const entry of list) {
+    if (seen.has(entry.symbol)) continue
+    seen.add(entry.symbol)
+    result.push(entry)
+  }
+  return result
 }
 
 export function loadCustomSymbols(): SymbolEntry[] {

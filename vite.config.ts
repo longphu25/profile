@@ -77,10 +77,6 @@ export default defineConfig({
     ],
   },
   server: {
-    headers: {
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Cross-Origin-Opener-Policy': 'same-origin',
-    },
     proxy: {
       '/api/sui-testnet': {
         target: 'https://fullnode.testnet.sui.io',
