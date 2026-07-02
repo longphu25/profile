@@ -568,7 +568,7 @@ function BtcChartView() {
     // Memo + smaller window (default 250) when repaint to keep perf good.
     let luxNwe: any
     const currentNweCfg = nweCfgRef.current
-    const nweKey = `${data.length}:${data[data.length - 1]?.time ?? 0}:${currentNweCfg.repaint}:${currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW}`
+    const nweKey = `${data.length}:${data[data.length - 1]?.time ?? 0}:${currentNweCfg.repaint}:${currentNweCfg.bandwidth}:${currentNweCfg.multiplier}:${currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW}`
     if (nweKey === nweCacheKeyRef.current && nweCacheRef.current) {
       luxNwe = nweCacheRef.current
     } else {

@@ -95,7 +95,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
     scalping: false,
     reversal: false,
     whale: false,
-    luxNwe: false,
+    luxNwe: true,
     ict: true,
     liquidity: true,
   },
@@ -108,7 +108,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
   oscView: 'rsi',
   oscHeight: 170,
   spikeMult: 2.5,
-  luxNwe: { bandwidth: 8, multiplier: 3, repaint: false, maxBarsBack: 250 },
+  luxNwe: { bandwidth: 8, multiplier: 3, repaint: true, maxBarsBack: 500 },
 }
 
 /** Read full config from localStorage, with safe fallback. */

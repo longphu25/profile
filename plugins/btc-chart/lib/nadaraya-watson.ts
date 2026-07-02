@@ -25,8 +25,8 @@ export interface NadarayaWatsonConfig {
 const DEFAULT_CONFIG: NadarayaWatsonConfig = {
   bandwidth: 8,
   multiplier: 3,
-  repaint: false,
-  maxBarsBack: 250,
+  repaint: true,
+  maxBarsBack: 500,
 }
 
 /**
@@ -35,6 +35,33 @@ const DEFAULT_CONFIG: NadarayaWatsonConfig = {
  */
 function gauss(x: number, h: number): number {
   return Math.exp(-(Math.pow(x, 2) / (h * h * 2)))
+}
+
+/** LuxAlgo contrarian crosses: buy on recovery above lower, sell on rejection below upper. */
+function detectBandCrossSignals(
+  src: number[],
+  upper: (number | null)[],
+  lower: (number | null)[],
+  start = 1,
+): Array<{ index: number; type: 'buy' | 'sell'; price: number }> {
+  const signals: Array<{ index: number; type: 'buy' | 'sell'; price: number }> = []
+  for (let i = start; i < src.length; i++) {
+    const prevUpper = upper[i - 1]
+    const currUpper = upper[i]
+    const prevLower = lower[i - 1]
+    const currLower = lower[i]
+    if (prevUpper == null || currUpper == null || prevLower == null || currLower == null) continue
+
+    const prevSrc = src[i - 1]
+    const currSrc = src[i]
+
+    if (prevSrc < prevLower && currSrc > currLower) {
+      signals.push({ index: i, type: 'buy', price: currSrc })
+    } else if (prevSrc > prevUpper && currSrc < currUpper) {
+      signals.push({ index: i, type: 'sell', price: currSrc })
+    }
+  }
+  return signals
 }
 
 /**
@@ -46,7 +73,7 @@ function gauss(x: number, h: number): number {
  *
  * Non-repainting mode: Only computes endpoint (current bar)
  * - Historical values stay fixed
- * - Signals only appear on current bar
+ * - Signals remain fixed once confirmed
  */
 export function calcNadarayaWatson(
   data: Candle[],
@@ -59,117 +86,75 @@ export function calcNadarayaWatson(
   const mid = new Array<number | null>(n).fill(null)
   const upper = new Array<number | null>(n).fill(null)
   const lower = new Array<number | null>(n).fill(null)
-  const signals: Array<{ index: number; type: 'buy' | 'sell'; price: number }> = []
+
+  if (n === 0) {
+    return { mid, upper, lower, signals: [] }
+  }
 
   if (cfg.repaint) {
-    // Repainting mode: compute all points on last bar
     const maxBars = Math.min(cfg.maxBarsBack, n)
     const nwe: number[] = []
 
-    // Compute NWE for all bars in window
     for (let i = 0; i < maxBars; i++) {
       let sum = 0
       let sumw = 0
-      // Weighted mean using Gaussian kernel
       for (let j = 0; j < maxBars; j++) {
         const w = gauss(i - j, cfg.bandwidth)
         sum += src[n - maxBars + j] * w
         sumw += w
       }
-      const y = sum / sumw
-      nwe.push(y)
+      nwe.push(sum / sumw)
     }
 
-    // Compute SAE (Smoothed Absolute Error)
     let saeSum = 0
     for (let i = 0; i < maxBars; i++) {
       saeSum += Math.abs(src[n - maxBars + i] - nwe[i])
     }
     const sae = (saeSum / maxBars) * cfg.multiplier
 
-    // Fill arrays from end
     for (let i = 0; i < maxBars; i++) {
       const idx = n - maxBars + i
       mid[idx] = nwe[i]
       upper[idx] = nwe[i] + sae
       lower[idx] = nwe[i] - sae
-
-      // Detect crossovers (compare with previous bar)
-      if (i > 0) {
-        const prevSrc = src[idx - 1]
-        const currSrc = src[idx]
-        const prevUpper = nwe[i - 1] + sae
-        const currUpper = nwe[i] + sae
-        const prevLower = nwe[i - 1] - sae
-        const currLower = nwe[i] - sae
-
-        // Crossover upper: price crosses above upper band → sell signal
-        if (prevSrc < prevUpper && currSrc > currUpper) {
-          signals.push({ index: idx, type: 'sell', price: currSrc })
-        }
-        // Crossunder lower: price crosses below lower band → buy signal
-        else if (prevSrc > prevLower && currSrc < currLower) {
-          signals.push({ index: idx, type: 'buy', price: currSrc })
-        }
-      }
-    }
-  } else {
-    // Non-repainting mode: compute endpoint only
-    // Pre-compute Gaussian coefficients
-    const coefs: number[] = []
-    let den = 0
-    for (let i = 0; i < cfg.maxBarsBack; i++) {
-      const w = gauss(i, cfg.bandwidth)
-      coefs.push(w)
-      den += w
     }
 
-    // Compute MAE using SMA
-    const maeValues: number[] = []
-    for (let i = 0; i < n; i++) {
-      let out = 0
-      const barsToUse = Math.min(cfg.maxBarsBack, i + 1)
-      for (let j = 0; j < barsToUse; j++) {
-        out += src[i - j] * coefs[j]
-      }
-      out /= den
-
-      mid[i] = out
-      maeValues.push(Math.abs(src[i] - out))
-    }
-
-    // Compute MAE as SMA of absolute errors
-    const maePeriod = Math.min(499, n)
-    let maeSum = 0
-    for (let i = 0; i < maePeriod; i++) {
-      maeSum += maeValues[i]
-    }
-    const mae = (maeSum / maePeriod) * cfg.multiplier
-
-    // Fill upper/lower
-    for (let i = 0; i < n; i++) {
-      if (mid[i] !== null) {
-        upper[i] = (mid[i] as number) + mae
-        lower[i] = (mid[i] as number) - mae
-      }
-    }
-
-    // Detect signals only on last bar
-    if (n >= 2) {
-      const prevSrc = src[n - 2]
-      const currSrc = src[n - 1]
-      const prevUpper = upper[n - 2] as number
-      const currUpper = upper[n - 1] as number
-      const prevLower = lower[n - 2] as number
-      const currLower = lower[n - 1] as number
-
-      if (prevSrc < prevUpper && currSrc > currUpper) {
-        signals.push({ index: n - 1, type: 'sell', price: currSrc })
-      } else if (prevSrc > prevLower && currSrc < currLower) {
-        signals.push({ index: n - 1, type: 'buy', price: currSrc })
-      }
-    }
+    const windowStart = n - maxBars
+    const signals = detectBandCrossSignals(src, upper, lower, Math.max(1, windowStart))
+    return { mid, upper, lower, signals }
   }
 
+  const coefs: number[] = []
+  for (let i = 0; i < cfg.maxBarsBack; i++) {
+    coefs.push(gauss(i, cfg.bandwidth))
+  }
+
+  const maeValues: number[] = []
+  for (let i = 0; i < n; i++) {
+    const barsToUse = Math.min(cfg.maxBarsBack, i + 1)
+    let num = 0
+    let den = 0
+    for (let j = 0; j < barsToUse; j++) {
+      const w = coefs[j]
+      num += src[i - j] * w
+      den += w
+    }
+    const out = num / den
+    mid[i] = out
+    maeValues.push(Math.abs(src[i] - out))
+  }
+
+  for (let i = 0; i < n; i++) {
+    const period = Math.min(499, i + 1)
+    let errSum = 0
+    for (let k = i - period + 1; k <= i; k++) {
+      errSum += maeValues[k]
+    }
+    const mae = (errSum / period) * cfg.multiplier
+    upper[i] = (mid[i] as number) + mae
+    lower[i] = (mid[i] as number) - mae
+  }
+
+  const signals = detectBandCrossSignals(src, upper, lower)
   return { mid, upper, lower, signals }
 }

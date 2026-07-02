@@ -19,7 +19,7 @@ export const CHART = {
 export const LIMIT = 300
 
 /** Default window size for heavy NWE computation (repaint mode benefits most from not using full history). */
-export const NWE_DEFAULT_WINDOW = 250
+export const NWE_DEFAULT_WINDOW = 500
 
 export const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'] as const
 export type Interval = (typeof INTERVALS)[number]

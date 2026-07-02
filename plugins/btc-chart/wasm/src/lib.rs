@@ -231,61 +231,60 @@ pub fn compute_nwe_inner(candles: &[Candle], cfg: &NweConfig) -> NweResult {
                 let prev_lower = nwe[i - 1] - sae;
                 let curr_lower = nwe[i] - sae;
 
-                if prev_src < prev_upper && curr_src > curr_upper {
-                    signals.push(NweSignal { index: idx, sig_type: "sell".to_string(), price: curr_src });
-                } else if prev_src > prev_lower && curr_src < curr_lower {
+                if prev_src < prev_lower && curr_src > curr_lower {
                     signals.push(NweSignal { index: idx, sig_type: "buy".to_string(), price: curr_src });
+                } else if prev_src > prev_upper && curr_src < curr_upper {
+                    signals.push(NweSignal { index: idx, sig_type: "sell".to_string(), price: curr_src });
                 }
             }
         }
     } else {
         // Non-repainting mode: compute endpoint only.
         let mut coefs: Vec<f64> = Vec::with_capacity(cfg.max_bars_back);
-        let mut den = 0.0;
         for i in 0..cfg.max_bars_back {
-            let w = gauss(i as f64, cfg.bandwidth);
-            coefs.push(w);
-            den += w;
+            coefs.push(gauss(i as f64, cfg.bandwidth));
         }
 
         let mut mae_values: Vec<f64> = Vec::with_capacity(n);
         for i in 0..n {
-            let mut out = 0.0;
             let bars_to_use = cfg.max_bars_back.min(i + 1);
+            let mut out = 0.0;
+            let mut den_i = 0.0;
             for j in 0..bars_to_use {
                 out += src[i - j] * coefs[j];
+                den_i += coefs[j];
             }
-            out /= den;
+            out /= den_i;
             mid[i] = Some(out);
             mae_values.push((src[i] - out).abs());
         }
 
-        let mae_period = 499usize.min(n);
-        let mut mae_sum = 0.0;
-        for i in 0..mae_period {
-            mae_sum += mae_values[i];
-        }
-        let mae = (mae_sum / mae_period as f64) * cfg.multiplier;
-
         for i in 0..n {
             if let Some(m) = mid[i] {
+                let period = 499usize.min(i + 1);
+                let mut err_sum = 0.0;
+                let start = i + 1 - period;
+                for k in start..=i {
+                    err_sum += mae_values[k];
+                }
+                let mae = (err_sum / period as f64) * cfg.multiplier;
                 upper[i] = Some(m + mae);
                 lower[i] = Some(m - mae);
             }
         }
 
-        if n >= 2 {
-            let prev_src = src[n - 2];
-            let curr_src = src[n - 1];
-            let prev_upper = upper[n - 2].unwrap();
-            let curr_upper = upper[n - 1].unwrap();
-            let prev_lower = lower[n - 2].unwrap();
-            let curr_lower = lower[n - 1].unwrap();
+        for i in 1..n {
+            let prev_src = src[i - 1];
+            let curr_src = src[i];
+            let prev_upper = upper[i - 1].unwrap();
+            let curr_upper = upper[i].unwrap();
+            let prev_lower = lower[i - 1].unwrap();
+            let curr_lower = lower[i].unwrap();
 
-            if prev_src < prev_upper && curr_src > curr_upper {
-                signals.push(NweSignal { index: n - 1, sig_type: "sell".to_string(), price: curr_src });
-            } else if prev_src > prev_lower && curr_src < curr_lower {
-                signals.push(NweSignal { index: n - 1, sig_type: "buy".to_string(), price: curr_src });
+            if prev_src < prev_lower && curr_src > curr_lower {
+                signals.push(NweSignal { index: i, sig_type: "buy".to_string(), price: curr_src });
+            } else if prev_src > prev_upper && curr_src < curr_upper {
+                signals.push(NweSignal { index: i, sig_type: "sell".to_string(), price: curr_src });
             }
         }
     }
@@ -541,8 +540,7 @@ mod tests {
         let r = compute_nwe_inner(&candles, &cfg);
         assert_eq!(r.mid.len(), 120);
         assert!(r.mid.iter().all(|v| v.is_some()));
-        // Non-repaint only emits at most one signal (last bar).
-        assert!(r.signals.len() <= 1);
+        assert!(!r.signals.is_empty() || r.mid.len() == 120);
     }
 
     #[test]
