@@ -16,6 +16,7 @@ Technical and user documentation for the BTC Chart Pro plugin.
 | [nwe-strategies.md](./nwe-strategies.md) | NWE trading strategies |
 | [USER-GUIDE.md](./USER-GUIDE.md) | End-user guide (interface, features, mobile) |
 | [RESEARCH-2026-07.md](./RESEARCH-2026-07.md) | July 2026 research: SMC, deploy, mobile, OI, Convex vs Worker |
+| [multi-exchange-data.md](./multi-exchange-data.md) | 4-venue data catalog, aggregates beyond OI, phased plan |
 
 Also: ICT Sessions (`lib/ict-sessions.ts`) and ICT Liquidity Hacks
 (`lib/liquidity.ts`) — documented inline in `TECHNICAL.md`.

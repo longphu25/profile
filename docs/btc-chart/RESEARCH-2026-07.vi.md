@@ -341,9 +341,15 @@ flowchart TB
 
 ## 12. Backlog tương lai
 
+Chi tiết catalog 4 sàn, aggregate ngoài OI, lộ trình và schema `MarketSnapshot`:
+[multi-exchange-data.vi.md](./multi-exchange-data.vi.md).
+
 | Hạng mục | Ưu tiên |
 |----------|---------|
 | Deploy proxy OKX / worker thống nhất | Cao |
+| Funding 4/4 + spread | Trung bình |
+| Mark median + spread guard | Trung bình |
+| Panel L/S consensus | Trung bình |
 | OKX/MEXC vào breakdown OI | Trung bình |
 | OI vote Trade Setup | Trung bình |
 | Tab bar / drawer mobile | Thấp |

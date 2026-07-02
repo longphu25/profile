@@ -527,10 +527,17 @@ first-class signal (confluence, alerts, multi-venue trend).
 
 ## 12. Future backlog
 
+See [multi-exchange-data.md](./multi-exchange-data.md) for the full 4-venue data catalog,
+cross-venue aggregates (funding, L/S, mark spread, whale, liquidations), phased plan, and
+`MarketSnapshot` schema.
+
 | Item | Priority | Notes |
 |------|----------|-------|
 | Deploy OKX proxy worker or unified `exchange-proxy` | High | Unblocks MEXC/OKX on longphu.com |
 | Add OKX/MEXC to OI breakdown | Medium | Via backend aggregator |
+| Funding 4/4 + spread + next funding time | Medium | Extend existing `fetchFunding` |
+| Long/short consensus panel | Medium | Binance, Bybit, OKX |
+| Mark median + cross-spread guard | Medium | Alt / MEXC-mapped symbols |
 | OI votes in Trade Setup | Medium | e.g. OI rising + price rising |
 | Mobile tab bar / drawer | Low | From audit |
 | Toolbar 44px touch targets | Low | WCAG |
