@@ -1786,8 +1786,7 @@
   border: none;
   padding: 0;
   margin: 0;
-  background: rgba(7, 16, 17, 0.38);
-  backdrop-filter: blur(3px);
+  background: rgba(7, 16, 17, 0.42);
   cursor: pointer;
 }
 .btc-chart__intel-drawer {
@@ -1803,6 +1802,8 @@
   border-left: 1px solid var(--border-strong);
   box-shadow: -10px 0 36px rgba(0, 0, 0, 0.42);
   overflow: hidden;
+  contain: layout style paint;
+  will-change: transform;
 }
 .btc-chart__intel-drawer-head {
   display: flex;
@@ -1868,6 +1869,9 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+.btc-chart__intel-panel-list--pending {
+  min-height: 48px;
 }
 .btc-chart__intel-drawer .btc-chart__accordion--flat {
   border: none;
