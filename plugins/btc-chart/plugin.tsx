@@ -66,9 +66,7 @@ import { RailSection } from './components/sidebar'
 // (FundingNwe / Sessions / Liquidity / OI / Technicals are lazy-loaded below)
 
 // Lazy loaded heavier panels (code split + initial perf)
-const SignalConfigPanelLazy = lazy(() =>
-  import('./components/SignalConfigPanel').then((m) => ({ default: m.SignalConfigPanel })),
-)
+
 const VolumeProfilePanel = lazy(() =>
   import('./components/IndicatorReadouts').then((m) => ({ default: m.VolumeProfilePanel })),
 )
@@ -2487,7 +2485,12 @@ function BtcChartView() {
         <div className={`btc-chart__sidebar${sidebarMobileOpen ? ' is-mobile-open' : ''}`}>
           <RailSection label="Signals">
             <Suspense fallback={<div className="sb-empty">Loading signal…</div>}>
-              <SignalPanelLazy ml={sidebar.ml} setup={sidebar.tradeSetup} />
+              <SignalPanelLazy
+                ml={sidebar.ml}
+                setup={sidebar.tradeSetup}
+                signalConfig={signalConfig}
+                onSignalConfigChange={updateSignalConfig}
+              />
             </Suspense>
             <Suspense fallback={<div className="sb-empty">Loading setup…</div>}>
               <TradeSetupPanelLazy setup={sidebar.tradeSetup} />
@@ -2539,17 +2542,6 @@ function BtcChartView() {
             panels={{
               trade: (
                 <>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    title="Signal Config"
-                    onToggle={() => {}}
-                  >
-                    <Suspense
-                      fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-                    >
-                      <SignalConfigPanelLazy config={signalConfig} onChange={updateSignalConfig} />
-                    </Suspense>
-                  </SidebarAccordion>
                   <SidebarAccordion filterQuery={intelSearch} title="Positions">
                     <PositionsPanel
                       positions={positions}

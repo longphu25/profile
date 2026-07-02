@@ -20,7 +20,7 @@ export { NweSettingsSection, type NweSettingsSectionProps } from './NweSettingsS
 export { TradeSetupPanel } from './TradeSetupPanel'
 export { ScalpingPanel } from './ScalpingPanel'
 export { ReversalPanel } from './ReversalPanel'
-export { SignalConfigPanel } from './SignalConfigPanel'
+export { SignalConfigPanel, SignalConfigBody } from './SignalConfigPanel'
 export { OIPanel } from './OIPanel'
 export { SidebarAccordion } from './SidebarAccordion'
 export { WhalePanel } from './WhalePanel'

@@ -38,6 +38,7 @@ export function SideHero({
   hint,
   color,
   pct,
+  actions,
 }: {
   kicker: string
   title: string
@@ -45,12 +46,16 @@ export function SideHero({
   hint?: string
   color?: string
   pct?: number
+  actions?: ReactNode
 }) {
   return (
     <div className="sb-hero">
       <div className="sb-hero__top">
         <span className="sb-hero__kicker">{kicker}</span>
-        {pct != null && <span className="sb-hero__pct">{pct}%</span>}
+        <div className="sb-hero__meta">
+          {pct != null && <span className="sb-hero__pct">{pct}%</span>}
+          {actions && <div className="sb-hero__actions">{actions}</div>}
+        </div>
       </div>
       <div className="sb-hero__title" style={color ? { color } : undefined}>
         {title}

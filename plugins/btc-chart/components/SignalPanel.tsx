@@ -1,18 +1,34 @@
 // BTC Chart — ML signal gauge and its feature-weight breakdown.
 
-import React from 'react'
-import { detectSignalConflict, FEATURE_LABEL, type MLResult, type TradeSetup } from '../lib'
+import React, { useState } from 'react'
+import { Settings } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import {
+  detectSignalConflict,
+  FEATURE_LABEL,
+  ALL_FEATURES,
+  type MLResult,
+  type TradeSetup,
+  type SignalConfig,
+} from '../lib'
 import { SideBlock, SideHero, SideBody, StatGrid, StatCell } from './sidebar'
+import { SignalConfigBody } from './SignalConfigPanel'
 
 export const SignalPanel = React.memo(function SignalPanel({
   ml,
   setup,
+  signalConfig,
+  onSignalConfigChange,
 }: {
   ml: MLResult
   setup?: TradeSetup
+  signalConfig: SignalConfig
+  onSignalConfigChange: (cfg: SignalConfig) => void
 }) {
+  const [configOpen, setConfigOpen] = useState(false)
   const pct = Math.round(ml.score * 100)
   const conflict = setup ? detectSignalConflict(ml, setup) : null
+  const enabledCount = ALL_FEATURES.filter((k) => signalConfig[k]).length
 
   return (
     <SideBlock variant="signal">
@@ -22,7 +38,24 @@ export const SignalPanel = React.memo(function SignalPanel({
         pct={pct}
         color={ml.color}
         hint="Bias tổng hợp · không thay thế confluence entry"
+        actions={
+          <button
+            type="button"
+            className={cn('sb-hero__icon-btn', configOpen && 'is-on')}
+            onClick={() => setConfigOpen((o) => !o)}
+            aria-expanded={configOpen}
+            aria-label="Signal settings"
+            title={`Signal config (${enabledCount}/${ALL_FEATURES.length})`}
+          >
+            <Settings size={13} strokeWidth={2} aria-hidden />
+          </button>
+        }
       />
+      {configOpen && (
+        <div className="sb-signal-config">
+          <SignalConfigBody config={signalConfig} onChange={onSignalConfigChange} />
+        </div>
+      )}
       {conflict?.hasConflict && (
         <p className="sb-signal-conflict sb-signal-conflict--inline" role="status">
           {conflict.message}
