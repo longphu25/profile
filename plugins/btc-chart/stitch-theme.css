@@ -339,20 +339,277 @@
   border-top: 1px solid var(--border);
 }
 
+/* ── Header OHLCV grid ──────────────────────────────────────────── */
+.btc-chart--stitch .btc-chart__ohlcv-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px 10px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+}
+
+.btc-chart--stitch .btc-chart__ohlcv-cell {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.btc-chart--stitch .btc-chart__ohlcv-cell--vol {
+  grid-column: 1 / -1;
+}
+
+.btc-chart--stitch .btc-chart__ohlcv-key {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.btc-chart--stitch .btc-chart__ohlcv-val {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.btc-chart--stitch .btc-chart__brand-mark {
+  border-bottom: 2px solid var(--mint);
+}
+
+.btc-chart--stitch .btc-chart__live-dot {
+  animation: stitch-live-pulse 2s var(--stitch-ease) infinite;
+}
+
+@keyframes stitch-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.15);
+  }
+}
+
+/* ── Chart stage: legend dock + layer dots ──────────────────────── */
+.btc-chart--stitch .btc-chart__legend-dock {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 12;
+  max-width: min(240px, 42vw);
+  pointer-events: none;
+}
+
+.btc-chart--stitch .btc-chart__legend-dock .btc-chart__legend {
+  position: relative;
+  top: auto;
+  left: auto;
+  border-radius: 0;
+  backdrop-filter: none;
+}
+
+.btc-chart--stitch .btc-chart__layer-dots {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 12;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: flex-end;
+  max-width: 50%;
+}
+
+.btc-chart--stitch .btc-chart__layer-dot {
+  height: 22px;
+  padding: 0 6px;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  background: rgba(19, 19, 22, 0.88);
+}
+
+.btc-chart--stitch .btc-chart__layer-dot.is-on {
+  color: var(--mint);
+  border-color: var(--border-strong);
+  background: rgba(232, 184, 74, 0.08);
+}
+
+.btc-chart--stitch .btc-chart__layer-dot-mark {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.btc-chart--stitch .btc-chart__layer-dot.is-on .btc-chart__layer-dot-mark {
+  background: var(--mint);
+}
+
+/* ── Oscillator chips ─────────────────────────────────────────── */
+.btc-chart--stitch .btc-chart__osc-bar {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.btc-chart--stitch .btc-chart__osc-chips {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.btc-chart--stitch .btc-chart__osc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    border-color 0.18s var(--stitch-spring),
+    background 0.18s var(--stitch-spring);
+}
+
+.btc-chart--stitch .btc-chart__osc-chip.is-active {
+  border-color: var(--border-strong);
+  background: rgba(232, 184, 74, 0.06);
+  color: var(--text);
+}
+
+.btc-chart--stitch .btc-chart__osc-chip-val {
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.btc-chart--stitch .btc-chart__osc-chip-hint {
+  font-size: 8px;
+  color: var(--muted);
+}
+
+/* ── Intel rail ───────────────────────────────────────────────── */
+.btc-chart--stitch .btc-chart__intel-toolbar {
+  padding: 0 0 8px;
+}
+
+.btc-chart--stitch .btc-chart__intel-search {
+  position: relative;
+}
+
+.btc-chart--stitch .btc-chart__intel-search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.btc-chart--stitch .btc-chart__intel-tablist {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  overflow-x: auto;
+}
+
+.btc-chart--stitch .btc-chart__intel-stack {
+  padding-top: 4px;
+}
+
+/* ── Tools: chart column scope + presets ──────────────────────── */
+.btc-chart--stitch .btc-chart__col .btc-chart__tools-overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.btc-chart--stitch .btc-chart__tools-section--presets {
+  padding-bottom: 8px;
+}
+
+.btc-chart--stitch .btc-chart__tools-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.btc-chart--stitch .btc-chart__tools-preset:hover {
+  background: rgba(232, 184, 74, 0.08);
+  color: var(--mint);
+}
+
 /* ── Status + toast ─────────────────────────────────────────────── */
 .btc-chart--stitch .btc-chart__status {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 8px 12px;
   padding: 6px 12px;
   min-height: 28px;
   background: var(--surface);
   border-top: 1px solid var(--border-strong);
+  font-family: var(--font-mono);
   font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.btc-chart--stitch .btc-chart__status-seg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.btc-chart--stitch .btc-chart__status-seg--layers {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.btc-chart--stitch .btc-chart__status-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: middle;
+}
+
+.btc-chart--stitch .btc-chart__status-live .btc-chart__status-dot {
+  animation: stitch-live-pulse 2s var(--stitch-ease) infinite;
+}
+
+.btc-chart--stitch .btc-chart__status-muted {
+  color: var(--muted);
+}
+
+.btc-chart--stitch .btc-chart__status-item b {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.btc-chart--stitch .btc-chart__status-layer {
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: var(--mint);
 }
 
 .btc-chart--stitch .btc-chart__status-tag {
   margin-left: 0;
+  color: var(--muted);
 }
 
 .btc-chart--stitch .btc-chart__toast-stack {
@@ -543,8 +800,37 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .btc-chart--stitch .btc-chart__ohlcv {
+  .btc-chart--stitch .btc-chart__ohlcv-grid {
     display: none;
+  }
+
+  .btc-chart--stitch .btc-chart__sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 85;
+    max-height: min(50dvh, 420px);
+    transform: translateY(100%);
+    transition: transform 0.32s var(--stitch-spring);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+  }
+
+  .btc-chart--stitch .btc-chart__sidebar.is-mobile-open {
+    transform: translateY(0);
+  }
+
+  .btc-chart--stitch .btc-chart__status {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .btc-chart--stitch .btc-chart__status-seg--layers {
+    justify-content: flex-start;
+  }
+
+  .btc-chart--stitch .btc-chart__layer-dots {
+    max-width: 70%;
   }
 }
 

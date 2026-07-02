@@ -37,6 +37,13 @@ export function BtcChartPage() {
       <div className="btc-page btc-page--error">
         <div>Failed to load BtcChart plugin</div>
         <div className="btc-page__err">{error}</div>
+        <button
+          type="button"
+          className="btc-page__reload"
+          onClick={() => window.location.reload()}
+        >
+          Reload
+        </button>
       </div>
     )
   }

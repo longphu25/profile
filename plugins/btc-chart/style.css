@@ -93,9 +93,9 @@
 
   --ink: #080a0d;
   --bg: #080a0d;
-  --surface: #111418;
-  --surface-2: #181c22;
-  --surface-3: #1e2329;
+  --surface: #131316;
+  --surface-2: #1a1a1f;
+  --surface-3: #222228;
 
   --text: #f4f0e8;
   --text-2: #c8c2b6;
@@ -108,8 +108,8 @@
   --hi: #e8b84a;
   --neu: #6fbcf0;
 
-  --border: rgba(232, 184, 74, 0.12);
-  --border-strong: rgba(232, 184, 74, 0.28);
+  --border: rgba(244, 240, 232, 0.08);
+  --border-strong: rgba(232, 184, 74, 0.22);
 
   --font-display: 'Bricolage Grotesque', 'Satoshi', system-ui, sans-serif;
   --font-sans: var(--font-display);

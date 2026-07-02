@@ -8,7 +8,13 @@ import { cn } from '@/lib/utils'
 import type { NadarayaConfig, VisFlags } from '../storage'
 import { ALL_IND_KEYS, IND_GROUPS, IND_LABELS } from '../lib/indicator-groups'
 import { drawerPanel, drawerScrim, transitionDrawer } from '../lib/motion'
+import {
+  LAYER_PRESET_LABELS,
+  type LayerPresetId,
+} from '../lib/layer-presets'
 import { NweSettingsSection } from './NweSettingsSection'
+
+const PRESET_IDS: LayerPresetId[] = ['scalp', 'swing', 'analysis']
 
 export interface ChartToolbarPanelProps {
   open: boolean
@@ -24,6 +30,7 @@ export interface ChartToolbarPanelProps {
   onSnapshot: () => void
   onExport: () => void
   onImport: (file: File) => void
+  onApplyPreset?: (preset: LayerPresetId) => void
 }
 
 export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
@@ -40,6 +47,7 @@ export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
   onSnapshot,
   onExport,
   onImport,
+  onApplyPreset,
 }: ChartToolbarPanelProps) {
   const activeCount = ALL_IND_KEYS.filter((k) => vis[k]).length
 
@@ -109,6 +117,26 @@ export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
             </div>
 
             <div className="btc-chart__tools-body">
+              {onApplyPreset && (
+                <section className="btc-chart__tools-section btc-chart__tools-section--presets">
+                  <span className="btc-chart__tools-section-label">Presets</span>
+                  <div className="btc-chart__tools-preset-row">
+                    {PRESET_IDS.map((id) => (
+                      <Button
+                        key={id}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="btc-chart__tools-preset h-7 rounded-none px-2 font-mono text-[9px]"
+                        onClick={() => onApplyPreset(id)}
+                      >
+                        {LAYER_PRESET_LABELS[id]}
+                      </Button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               <section className="btc-chart__tools-section">
                 <div className="btc-chart__tools-section-head">
                   <span className="btc-chart__tools-section-label">Layers</span>

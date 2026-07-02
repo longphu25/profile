@@ -54,7 +54,12 @@ import { ChartHeader } from './components/ChartHeader'
 import { ChartToolbarPanel } from './components/ChartToolbarPanel'
 import { ChartToasts } from './components/ChartToasts'
 import { ChartLoadingOverlay } from './components/ChartLoadingOverlay'
+import { ChartStatusBar } from './components/ChartStatusBar'
+import { ChartLayerDots } from './components/ChartLayerDots'
+import { OscillatorPane } from './components/OscillatorPane'
+import { IntelRail, type IntelTab } from './components/IntelRail'
 import { ALL_IND_KEYS } from './lib/indicator-groups'
+import { applyLayerPreset, type LayerPresetId } from './lib/layer-presets'
 
 import { SidebarAccordion } from './components/SidebarAccordion'
 import { RailSection } from './components/sidebar'
@@ -293,6 +298,9 @@ function BtcChartView() {
   const symbolInfoRef = useRef(symbolInfo)
   const [vis, setVis] = useState<VisFlags>(() => ({ ...cfgInit.vis }))
   const [toolsOpen, setToolsOpen] = useState(false)
+  const [intelTab, setIntelTab] = useState<IntelTab>('trade')
+  const [intelSearch, setIntelSearch] = useState('')
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false)
   const [oscOpen, setOscOpen] = useState<boolean>(cfgInit.oscOpen)
   const [oscView, setOscView] = useState<OscView>(cfgInit.oscView)
   const [oscHeight, setOscHeight] = useState<number>(cfgInit.oscHeight)
@@ -2127,6 +2135,18 @@ function BtcChartView() {
     [renderData],
   )
 
+  const applyPreset = useCallback(
+    (preset: LayerPresetId) => {
+      setVis((prev) => {
+        const next = applyLayerPreset(prev, preset)
+        visRef.current = next
+        if (candlesRef.current.length) queueMicrotask(() => renderData(candlesRef.current))
+        return next
+      })
+    },
+    [renderData],
+  )
+
   const updateSignalConfig = useCallback(
     (cfg: SignalConfig) => {
       setSignalConfig(cfg)
@@ -2373,7 +2393,9 @@ function BtcChartView() {
           ohlcv={ohlcv}
           activeLayerCount={ALL_IND_KEYS.filter((k) => vis[k]).length}
           toolsOpen={toolsOpen}
+          sidebarOpen={sidebarMobileOpen}
           onToggleTools={() => setToolsOpen((o) => !o)}
+          onToggleSidebar={() => setSidebarMobileOpen((o) => !o)}
           onSelectSymbol={selectSymbol}
           onSelectInterval={selectInterval}
           onAddCustomSymbol={addCustomSymbol}
@@ -2382,24 +2404,32 @@ function BtcChartView() {
 
       {/* Body */}
       <div className="btc-chart__body">
-        <ChartToolbarPanel
-          open={toolsOpen}
-          vis={vis}
-          nweCfg={nweCfg}
-          onToggle={toggle}
-          onUpdateNweConfig={updateNweConfig}
-          onClose={() => setToolsOpen(false)}
-          soundEnabled={sound.enabled}
-          onToggleSound={toggleSound}
-          notifAllowed={notifAllowed}
-          onRequestNotif={requestNotif}
-          onSnapshot={snapshot}
-          onExport={exportNow}
-          onImport={importNow}
-        />
         <div className="btc-chart__col">
+          <ChartToolbarPanel
+            open={toolsOpen}
+            vis={vis}
+            nweCfg={nweCfg}
+            onToggle={toggle}
+            onUpdateNweConfig={updateNweConfig}
+            onClose={() => setToolsOpen(false)}
+            soundEnabled={sound.enabled}
+            onToggleSound={toggleSound}
+            notifAllowed={notifAllowed}
+            onRequestNotif={requestNotif}
+            onSnapshot={snapshot}
+            onExport={exportNow}
+            onImport={importNow}
+            onApplyPreset={applyPreset}
+          />
           <div className="btc-chart__chart-stage">
-            <div className="btc-chart__legend" ref={legendRef} />
+            <div className="btc-chart__legend-dock">
+              <div className="btc-chart__legend" ref={legendRef} />
+            </div>
+            <ChartLayerDots
+              vis={vis}
+              onToggle={toggle}
+              onOpenTools={() => setToolsOpen(true)}
+            />
             <canvas className="btc-chart__of-canvas" ref={ofCanvasRef} />
             <canvas className="btc-chart__ict-canvas" ref={ictCanvasRef} />
             <canvas className="btc-chart__liq-canvas" ref={liqCanvasRef} />
@@ -2408,119 +2438,27 @@ function BtcChartView() {
             <div className="btc-chart__main" ref={mainElRef} />
             <canvas className="btc-chart__vp-canvas" ref={vpCanvasRef} />
           </div>
-          {/* Oscillator pane — RSI / ADX / StochRSI / OBV, resizable + collapsible */}
-          <div
-            className={`btc-chart__osc-wrap${oscOpen ? ' is-open' : ''}`}
-            style={oscOpen ? { height: oscHeight } : undefined}
-          >
-            {oscOpen && (
-              <div
-                className="btc-chart__osc-resize"
-                onPointerDown={startOscResize}
-                title="Kéo để chỉnh chiều cao"
-                role="separator"
-                aria-orientation="horizontal"
-              />
-            )}
-            <div className="btc-chart__osc-bar">
-              <button
-                type="button"
-                className="btc-chart__osc-toggle"
-                onClick={toggleOscOpen}
-                aria-expanded={oscOpen}
-              >
-                <span className="btc-chart__osc-caret">{oscOpen ? '▾' : '▸'}</span>
-                Oscillators
-                <span className="btc-chart__osc-hint">
-                  RSI {sidebar.rsiNow != null ? sidebar.rsiNow.toFixed(1) : '—'}{' '}
-                  <b
-                    className={
-                      sidebar.rsiNow != null && sidebar.rsiNow > 70
-                        ? 'osc-ob'
-                        : sidebar.rsiNow != null && sidebar.rsiNow < 30
-                          ? 'osc-os'
-                          : ''
-                    }
-                  >
-                    {sidebar.rsiNow != null && sidebar.rsiNow > 70
-                      ? 'Quá mua'
-                      : sidebar.rsiNow != null && sidebar.rsiNow < 30
-                        ? 'Quá bán'
-                        : 'Trung tính'}
-                  </b>
-                  {' · '}ADX {sidebar.adxNow != null ? sidebar.adxNow.toFixed(1) : '—'}{' '}
-                  <b className={sidebar.adxNow != null && sidebar.adxNow >= 25 ? 'osc-strong' : ''}>
-                    {sidebar.adxNow != null && sidebar.adxNow >= 25 ? 'Xu hướng mạnh' : 'Sideway'}
-                  </b>
-                  {' · '}StochK {sidebar.stochKNow != null ? sidebar.stochKNow.toFixed(1) : '—'}{' '}
-                  <b
-                    className={
-                      sidebar.stochKNow != null && sidebar.stochKNow > 80
-                        ? 'osc-ob'
-                        : sidebar.stochKNow != null && sidebar.stochKNow < 20
-                          ? 'osc-os'
-                          : ''
-                    }
-                  >
-                    {sidebar.stochKNow != null && sidebar.stochKNow > 80
-                      ? 'Quá mua'
-                      : sidebar.stochKNow != null && sidebar.stochKNow < 20
-                        ? 'Quá bán'
-                        : 'Trung tính'}
-                  </b>
-                  {' · '}OBV{' '}
-                  {sidebar.obvNow != null ? (sidebar.obvNow / 1e6).toFixed(1) + 'M' : '—'}{' '}
-                  <b
-                    className={
-                      sidebar.obvNow != null && sidebar.obvNow > 0
-                        ? 'osc-strong'
-                        : sidebar.obvNow != null && sidebar.obvNow < 0
-                          ? 'osc-ob'
-                          : ''
-                    }
-                  >
-                    {sidebar.obvNow != null && sidebar.obvNow > 0
-                      ? 'Tích lũy'
-                      : sidebar.obvNow != null && sidebar.obvNow < 0
-                        ? 'Phân phối'
-                        : '—'}
-                  </b>
-                </span>
-                <span
-                  className="btc-chart__osc-info"
-                  title="RSI: >70 Quá mua, <30 Quá bán&#10;ADX: ≥25 Xu hướng mạnh, <25 Sideway&#10;StochK: >80 Quá mua, <20 Quá bán&#10;OBV: >0 Tích lũy (mua vào), <0 Phân phối (bán ra)"
-                >
-                  ⓘ
-                </span>
-              </button>
-              {oscOpen && (
-                <div className="btc-chart__osc-tabs">
-                  {(
-                    [
-                      { id: 'rsi', label: 'RSI' },
-                      { id: 'adx', label: 'ADX / DMI' },
-                      { id: 'stoch', label: 'Stoch RSI' },
-                      { id: 'obv', label: 'OBV' },
-                    ] as { id: OscView; label: string }[]
-                  ).map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      className={`btc-chart__osc-tab${oscView === t.id ? ' is-on' : ''}`}
-                      onClick={() => setOscView(t.id)}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="btc-chart__osc" ref={oscElRef} />
-          </div>
+          <OscillatorPane
+            open={oscOpen}
+            height={oscHeight}
+            view={oscView}
+            readouts={{
+              rsi: sidebar.rsiNow,
+              adx: sidebar.adxNow,
+              stochK: sidebar.stochKNow,
+              obv: sidebar.obvNow,
+            }}
+            oscElRef={oscElRef}
+            onToggleOpen={toggleOscOpen}
+            onViewChange={setOscView}
+            onResizeStart={startOscResize}
+          />
         </div>
 
         {/* Sidebar */}
-        <div className="btc-chart__sidebar">
+        <div
+          className={`btc-chart__sidebar${sidebarMobileOpen ? ' is-mobile-open' : ''}`}
+        >
           <RailSection label="Signals">
             <Suspense fallback={<div className="sb-empty">Loading signal…</div>}>
               <SignalPanelLazy ml={sidebar.ml} setup={sidebar.tradeSetup} />
@@ -2565,15 +2503,24 @@ function BtcChartView() {
             </Suspense>
           </RailSection>
 
-          <RailSection label="Tools">
-            <SidebarAccordion title="Signal Config" onToggle={() => {}}>
+          <IntelRail
+            tab={intelTab}
+            onTabChange={setIntelTab}
+            search={intelSearch}
+            onSearchChange={setIntelSearch}
+            mobileOpen={sidebarMobileOpen}
+            onMobileClose={() => setSidebarMobileOpen(false)}
+            panels={{
+              trade: (
+                <>
+            <SidebarAccordion filterQuery={intelSearch} title="Signal Config" onToggle={() => {}}>
               <Suspense
                 fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
               >
                 <SignalConfigPanelLazy config={signalConfig} onChange={updateSignalConfig} />
               </Suspense>
             </SidebarAccordion>
-            <SidebarAccordion title="Positions">
+            <SidebarAccordion filterQuery={intelSearch} title="Positions">
               <PositionsPanel
                 positions={positions}
                 showForm={showPosForm}
@@ -2586,7 +2533,11 @@ function BtcChartView() {
                 suggestions={posSuggestions}
               />
             </SidebarAccordion>
-            <SidebarAccordion title="Open Interest">
+                </>
+              ),
+              market: (
+                <>
+            <SidebarAccordion filterQuery={intelSearch} title="Open Interest">
               <Suspense
                 fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
               >
@@ -2600,6 +2551,7 @@ function BtcChartView() {
               </Suspense>
             </SidebarAccordion>
             <SidebarAccordion
+              filterQuery={intelSearch}
               title="Whale Tracker"
               onToggle={(open) => {
                 if (open && !vis.whale) toggle('whale')
@@ -2618,14 +2570,24 @@ function BtcChartView() {
                 />
               </Suspense>
             </SidebarAccordion>
-            <SidebarAccordion title="24h Stats">
+            <SidebarAccordion filterQuery={intelSearch} title="24h Stats">
               <Suspense
                 fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
               >
                 <StatsPanel stats={stats} />
               </Suspense>
             </SidebarAccordion>
+            <SidebarAccordion filterQuery={intelSearch} title="Fear & Greed">
+              <Suspense fallback={<div className="sb-empty">Loading…</div>}>
+                <FearGreedPanel fng={fng} />
+              </Suspense>
+            </SidebarAccordion>
+                </>
+              ),
+              flow: (
+                <>
             <SidebarAccordion
+              filterQuery={intelSearch}
               title="Order Flow"
               onToggle={(open) => {
                 if (open && !vis.of) toggle('of')
@@ -2638,6 +2600,7 @@ function BtcChartView() {
               </Suspense>
             </SidebarAccordion>
             <SidebarAccordion
+              filterQuery={intelSearch}
               title="Box Flip"
               onToggle={(open) => {
                 if (open && !vis.boxFlip) toggle('boxFlip')
@@ -2650,36 +2613,7 @@ function BtcChartView() {
               </Suspense>
             </SidebarAccordion>
             <SidebarAccordion
-              title="MH Band"
-              onToggle={(open) => {
-                if (open && !vis.nwe) toggle('nwe')
-              }}
-            >
-              <Suspense
-                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-              >
-                <MHBandPanelLazy sidebar={sidebar} />
-              </Suspense>
-            </SidebarAccordion>
-            <SidebarAccordion title="Alerts">
-              <AlertsPanel
-                alerts={alerts}
-                onAdd={addAlert}
-                onRemove={removeAlert}
-                onToggle={toggleAlert}
-                onReset={resetAlert}
-                currentPrice={lastCandleClose}
-                currentRsi={sidebar.rsiNow}
-              />
-            </SidebarAccordion>
-            <SidebarAccordion title="Technicals">
-              <Suspense
-                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-              >
-                <TechnicalsPanelLazy sidebar={sidebar} />
-              </Suspense>
-            </SidebarAccordion>
-            <SidebarAccordion
+              filterQuery={intelSearch}
               title="Volume Spike"
               onToggle={(open) => {
                 if (open && !vis.volSpike) toggle('volSpike')
@@ -2701,14 +2635,8 @@ function BtcChartView() {
                 />
               </Suspense>
             </SidebarAccordion>
-            <SidebarAccordion title="Feature Weights">
-              <Suspense
-                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-              >
-                <FeatureWeightsPanelLazy ml={sidebar.ml} />
-              </Suspense>
-            </SidebarAccordion>
             <SidebarAccordion
+              filterQuery={intelSearch}
               title="Volume Profile"
               onToggle={(open) => {
                 if (open && !vis.vp) toggle('vp')
@@ -2720,32 +2648,66 @@ function BtcChartView() {
                 <VolumeProfilePanel vp={sidebar.vp} vpHvn={sidebar.vpHvn} />
               </Suspense>
             </SidebarAccordion>
-            <SidebarAccordion title="Fear & Greed">
-              <Suspense fallback={<div className="sb-empty">Loading…</div>}>
-                <FearGreedPanel fng={fng} />
+                </>
+              ),
+              alerts: (
+                <>
+            <SidebarAccordion filterQuery={intelSearch} title="Alerts">
+              <AlertsPanel
+                alerts={alerts}
+                onAdd={addAlert}
+                onRemove={removeAlert}
+                onToggle={toggleAlert}
+                onReset={resetAlert}
+                currentPrice={lastCandleClose}
+                currentRsi={sidebar.rsiNow}
+              />
+            </SidebarAccordion>
+                </>
+              ),
+              ml: (
+                <>
+            <SidebarAccordion
+              filterQuery={intelSearch}
+              title="MH Band"
+              onToggle={(open) => {
+                if (open && !vis.nwe) toggle('nwe')
+              }}
+            >
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <MHBandPanelLazy sidebar={sidebar} />
               </Suspense>
             </SidebarAccordion>
-          </RailSection>
+            <SidebarAccordion filterQuery={intelSearch} title="Technicals">
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <TechnicalsPanelLazy sidebar={sidebar} />
+              </Suspense>
+            </SidebarAccordion>
+            <SidebarAccordion filterQuery={intelSearch} title="Feature Weights">
+              <Suspense
+                fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+              >
+                <FeatureWeightsPanelLazy ml={sidebar.ml} />
+              </Suspense>
+            </SidebarAccordion>
+                </>
+              ),
+            }}
+          />
         </div>
       </div>
-      {/* Status */}
-      <div className="btc-chart__status">
-        <span
-          className={
-            wsStatus.tone === 'live'
-              ? 'btc-chart__status-live'
-              : wsStatus.tone === 'err'
-                ? 'dn'
-                : ''
-          }
-        >
-          {wsStatus.text}
-        </span>
-        <span>{lastUpdate}</span>
-        <span>OF · {sidebar.ofLog.length}</span>
-        <span>Box · {sidebar.boxFlip.count}</span>
-        <span className="btc-chart__status-tag">NWE · VP · Order Flow · Box Flip</span>
-      </div>
+      <ChartStatusBar
+        wsText={wsStatus.text}
+        wsTone={wsStatus.tone}
+        lastUpdate={lastUpdate}
+        ofCount={sidebar.ofLog.length}
+        boxCount={sidebar.boxFlip.count}
+        vis={vis}
+      />
     </div>
   )
 }

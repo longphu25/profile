@@ -15,6 +15,8 @@ interface Props {
   summary?: ReactNode
   /** Optional badge in header */
   badge?: ReactNode
+  /** Hide when intel search does not match title */
+  filterQuery?: string
   /** Optional callback when accordion is toggled open/closed */
   onToggle?: (open: boolean) => void
 }
@@ -25,9 +27,13 @@ export function SidebarAccordion({
   children,
   summary,
   badge,
+  filterQuery,
   onToggle,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen)
+
+  const q = filterQuery?.trim().toLowerCase()
+  if (q && !title.toLowerCase().includes(q)) return null
 
   const toggle = () => {
     const next = !open

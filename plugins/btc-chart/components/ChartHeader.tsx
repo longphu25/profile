@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { stitchEase } from '../lib/motion'
+import { SymbolCombobox } from './SymbolCombobox'
 import {
   INTERVALS,
   type Interval,
@@ -23,7 +24,9 @@ export interface ChartHeaderProps {
   ohlcv: OhlcvState
   activeLayerCount?: number
   toolsOpen?: boolean
+  sidebarOpen?: boolean
   onToggleTools?: () => void
+  onToggleSidebar?: () => void
   onSelectSymbol: (sym: string) => void
   onSelectInterval: (iv: Interval) => void
   onAddCustomSymbol: (raw: string) => void
@@ -38,7 +41,9 @@ export function ChartHeader({
   ohlcv,
   activeLayerCount = 0,
   toolsOpen = false,
+  sidebarOpen = false,
   onToggleTools,
+  onToggleSidebar,
   onSelectSymbol,
   onSelectInterval,
   onAddCustomSymbol,
@@ -56,18 +61,7 @@ export function ChartHeader({
           <small>/{symbolInfo.quote}</small>
         </div>
 
-        <select
-          value={symbol}
-          onChange={(e) => onSelectSymbol(e.target.value)}
-          className="btc-chart__symbol-select"
-          aria-label="Select trading pair"
-        >
-          {symbols.map((s) => (
-            <option key={s.symbol} value={s.symbol}>
-              {s.base}/{s.quote}
-            </option>
-          ))}
-        </select>
+        <SymbolCombobox symbol={symbol} symbols={symbols} onSelect={onSelectSymbol} />
 
         <form
           onSubmit={(e) => {
@@ -103,26 +97,48 @@ export function ChartHeader({
           <span className={cn('btc-chart__price-chg', price.up ? 'up' : 'dn')}>{price.chg}</span>
         </div>
 
-        <div className="btc-chart__ohlcv">
-          <span>
-            O <span>{ohlcv.o}</span>
-          </span>
-          <span>
-            H <span>{ohlcv.h}</span>
-          </span>
-          <span>
-            L <span>{ohlcv.l}</span>
-          </span>
-          <span>
-            C <span>{ohlcv.c}</span>
-          </span>
-          <span>
-            V <span>{ohlcv.v}</span>
-          </span>
+        <div className="btc-chart__ohlcv-grid" aria-label="OHLCV">
+          <div className="btc-chart__ohlcv-cell">
+            <span className="btc-chart__ohlcv-key">O</span>
+            <span className="btc-chart__ohlcv-val">{ohlcv.o}</span>
+          </div>
+          <div className="btc-chart__ohlcv-cell">
+            <span className="btc-chart__ohlcv-key">H</span>
+            <span className="btc-chart__ohlcv-val">{ohlcv.h}</span>
+          </div>
+          <div className="btc-chart__ohlcv-cell">
+            <span className="btc-chart__ohlcv-key">L</span>
+            <span className="btc-chart__ohlcv-val">{ohlcv.l}</span>
+          </div>
+          <div className="btc-chart__ohlcv-cell">
+            <span className="btc-chart__ohlcv-key">C</span>
+            <span className="btc-chart__ohlcv-val">{ohlcv.c}</span>
+          </div>
+          <div className="btc-chart__ohlcv-cell btc-chart__ohlcv-cell--vol">
+            <span className="btc-chart__ohlcv-key">V</span>
+            <span className="btc-chart__ohlcv-val">{ohlcv.v}</span>
+          </div>
         </div>
       </div>
 
       <div className="btc-chart__header-controls">
+        {onToggleSidebar && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'btc-chart__sidebar-trigger h-8 rounded-none px-3 md:hidden',
+              sidebarOpen && 'is-on',
+            )}
+            onClick={onToggleSidebar}
+            aria-expanded={sidebarOpen}
+            aria-label="Toggle sidebar"
+          >
+            Intel
+          </Button>
+        )}
+
         {onToggleTools && (
           <Button
             type="button"
