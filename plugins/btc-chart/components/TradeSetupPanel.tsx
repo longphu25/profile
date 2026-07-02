@@ -3,7 +3,7 @@
 import { useState, memo } from 'react'
 import { detectSignalConflict, fmtP, type MLResult, type TradeSetup } from '../lib'
 import { ExplainModal } from './ExplainModal'
-import { SideBlock, SideHead, SideBody, SideNote, SideDivider, SideRow, SideBadge } from './sidebar'
+import { SideBlock, SideHead, SideNote, SideBadge } from './sidebar'
 
 interface Props {
   setup: TradeSetup
@@ -60,6 +60,76 @@ interface PlanRowProps {
   tone: 'sl' | 'entry' | 'tp'
 }
 
+interface SizingTopProps {
+  capital: number
+  leverage: number
+  onCapital: (v: number) => void
+  onLeverage: (v: number) => void
+  positionSize: number
+  lossAtSL: number
+  profitAtTP1: number
+  profitAtTP2: number
+}
+
+function SizingTop({
+  capital,
+  leverage,
+  onCapital,
+  onLeverage,
+  positionSize,
+  lossAtSL,
+  profitAtTP1,
+  profitAtTP2,
+}: SizingTopProps) {
+  return (
+    <div className="sb-trade-sizing-top">
+      <div className="sb-trade-pnl-hero" aria-live="polite">
+        <div className="sb-trade-pnl-hero__item sb-trade-pnl-hero__item--risk">
+          <span className="sb-trade-pnl-hero__label">Risk @ SL</span>
+          <span className="sb-trade-pnl-hero__value dn">-${lossAtSL.toFixed(1)}</span>
+        </div>
+        <div className="sb-trade-pnl-hero__item sb-trade-pnl-hero__item--tp1">
+          <span className="sb-trade-pnl-hero__label">PnL @ TP1</span>
+          <span className="sb-trade-pnl-hero__value up">+${profitAtTP1.toFixed(1)}</span>
+        </div>
+        <div className="sb-trade-pnl-hero__item sb-trade-pnl-hero__item--tp2">
+          <span className="sb-trade-pnl-hero__label">PnL @ TP2</span>
+          <span className="sb-trade-pnl-hero__value up">+${profitAtTP2.toFixed(1)}</span>
+        </div>
+      </div>
+
+      <div className="sb-trade-inputs">
+        <div className="sb-input-field">
+          <label htmlFor="sb-capital">Vốn (USD)</label>
+          <input
+            id="sb-capital"
+            type="number"
+            min={1}
+            step={1}
+            value={capital}
+            onChange={(e) => onCapital(Math.max(1, +e.target.value || 1))}
+          />
+        </div>
+        <div className="sb-input-field">
+          <label htmlFor="sb-lev">Leverage</label>
+          <input
+            id="sb-lev"
+            type="number"
+            min={1}
+            max={125}
+            value={leverage}
+            onChange={(e) => onLeverage(Math.max(1, Math.min(125, +e.target.value || 1)))}
+          />
+        </div>
+      </div>
+
+      <p className="sb-trade-sizing-top__meta">
+        Size ${positionSize.toFixed(0)} · {leverage}x
+      </p>
+    </div>
+  )
+}
+
 function PlanRow({ label, price, delta, hint, tone }: PlanRowProps) {
   return (
     <div className={`sb-trade-plan__row sb-trade-plan__row--${tone}`}>
@@ -84,7 +154,6 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup, ml }: Prop
   const [capital, setCapital] = useState(10)
   const [leverage, setLeverage] = useState(10)
   const [open, setOpen] = useState(false)
-  const [sizingOpen, setSizingOpen] = useState(false)
   const [explainOpen, setExplainOpen] = useState(false)
 
   const explainBtn = (
@@ -125,6 +194,7 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup, ml }: Prop
   const qty = positionSize / setup.entry
   const lossAtSL = qty * risk
   const profitAtTP1 = qty * Math.abs(setup.tp1 - setup.entry)
+  const profitAtTP2 = qty * Math.abs(setup.tp2 - setup.entry)
   const rrLabel = setup.rr > 0 ? setup.rr.toFixed(1) : '2.0'
   const spotOffset = fmtSpotOffset(setup.entry, setup.spotPrice)
 
@@ -165,6 +235,17 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup, ml }: Prop
       {explainOpen && <ExplainModal setup={setup} onClose={() => setExplainOpen(false)} />}
 
       {conflict?.hasConflict && <ConflictBanner message={conflict.message} />}
+
+      <SizingTop
+        capital={capital}
+        leverage={leverage}
+        onCapital={setCapital}
+        onLeverage={setLeverage}
+        positionSize={positionSize}
+        lossAtSL={lossAtSL}
+        profitAtTP1={profitAtTP1}
+        profitAtTP2={profitAtTP2}
+      />
 
       {!open && (
         <div className={`sb-trade-compact sb-trade-compact--${dirTone}`}>
@@ -233,60 +314,7 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup, ml }: Prop
             </div>
           )}
 
-          <button
-            type="button"
-            className="sb-trade-sizing-toggle"
-            onClick={() => setSizingOpen((o) => !o)}
-            aria-expanded={sizingOpen}
-          >
-            <span className="sb-trade-sizing-toggle__caret" aria-hidden>
-              {sizingOpen ? '−' : '+'}
-            </span>
-            <span>Position sizing</span>
-            <span className="sb-trade-sizing-toggle__summary">
-              ${positionSize.toFixed(0)} · {leverage}x
-            </span>
-          </button>
-
-          {sizingOpen && (
-            <SideBody className="sb-trade-sizing">
-              <div className="sb-trade-inputs">
-                <div className="sb-input-field">
-                  <label htmlFor="sb-capital">Vốn (USD)</label>
-                  <input
-                    id="sb-capital"
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={capital}
-                    onChange={(e) => setCapital(Math.max(1, +e.target.value || 1))}
-                  />
-                </div>
-                <div className="sb-input-field">
-                  <label htmlFor="sb-lev">Leverage</label>
-                  <input
-                    id="sb-lev"
-                    type="number"
-                    min={1}
-                    max={125}
-                    value={leverage}
-                    onChange={(e) => setLeverage(Math.max(1, Math.min(125, +e.target.value || 1)))}
-                  />
-                </div>
-              </div>
-
-              <div className="sb-trade-pnl">
-                <SideRow label="Size" value={`$${positionSize.toFixed(1)}`} />
-                <SideRow label="Qty" value={qty.toFixed(5)} />
-                <SideRow label="Risk @ SL" value={`-$${lossAtSL.toFixed(1)}`} tone="dn" />
-                <SideRow label="PnL @ TP1" value={`+$${profitAtTP1.toFixed(1)}`} tone="up" />
-              </div>
-
-              <SideDivider />
-
-              <SideNote>Tính toán tham khảo, không phải lời khuyên đầu tư</SideNote>
-            </SideBody>
-          )}
+          <SideNote>Tính toán tham khảo, không phải lời khuyên đầu tư</SideNote>
         </>
       )}
     </SideBlock>

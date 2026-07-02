@@ -2429,6 +2429,51 @@
   border-top: none;
   gap: 6px;
 }
+.sb-trade-sizing-top {
+  padding: 8px 12px 8px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sb-trade-pnl-hero {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.sb-trade-pnl-hero__item {
+  min-width: 0;
+  padding: 6px 7px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.sb-trade-pnl-hero__label {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sb-trade-pnl-hero__value {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.sb-trade-pnl-hero__value.up { color: var(--up); }
+.sb-trade-pnl-hero__value.dn { color: var(--dn); }
+.sb-trade-sizing-top__meta {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
 .sb-trade-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;
