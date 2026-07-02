@@ -2597,6 +2597,8 @@ function BtcChartView() {
                   oi={oiQuery.data?.totalUsd ?? null}
                   mcap={mcap}
                   breakdown={oiQuery.data?.breakdown}
+                  history={oiQuery.data?.history}
+                  deltaPct={oiQuery.data?.deltaPct}
                 />
               </Suspense>
             </SidebarAccordion>

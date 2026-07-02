@@ -4,6 +4,7 @@
 
 import { LIMIT, CHART, type Interval } from './constants'
 import { fmtP, fmtV } from './format'
+import { computeOiDeltaPct, type OiDeltaPct, type OiHistoryPoint } from './open-interest'
 import { BYBIT_INTERVAL, MEXC_INTERVAL, OKX_INTERVAL, SYMBOLS } from './symbols'
 import type { Candle, FngState, FundingState, StatsState } from './types'
 import type { SymbolEntry } from './symbols'
@@ -306,17 +307,45 @@ export async function fetchKlines(
 
 // ── Open Interest (Binance + Bybit aggregated) ─────────────────────
 
+export type { OiDeltaPct, OiHistoryPoint }
+
 export interface OIData {
   /** Total OI in USD across fetched exchanges. */
   totalUsd: number
   breakdown: { exchange: string; usd: number }[]
+  /** Hourly Binance OI in USD (oldest first), used for trend and sparkline. */
+  history: OiHistoryPoint[]
+  /** Percent change vs 1h / 4h / 24h ago (Binance USD history). */
+  deltaPct: OiDeltaPct
+}
+
+interface BinanceOiHistRow {
+  timestamp?: number
+  sumOpenInterestValue?: string
+}
+
+async function fetchBinanceOiHistory(symbol: string): Promise<OiHistoryPoint[]> {
+  const url = `https://fapi.binance.com/futures/data/openInterestHist?symbol=${symbol}&period=1h&limit=25`
+  const r = await fetch(url)
+  if (!r.ok) return []
+  const rows = (await r.json()) as BinanceOiHistRow[]
+  if (!Array.isArray(rows)) return []
+
+  return rows
+    .map((row) => ({
+      time: Number(row.timestamp) || 0,
+      totalUsd: parseFloat(row.sumOpenInterestValue ?? '0'),
+    }))
+    .filter((p) => p.time > 0 && p.totalUsd > 0)
+    .sort((a, b) => a.time - b.time)
 }
 
 export async function fetchOpenInterest(symbol: string, price: number): Promise<OIData> {
   const breakdown: { exchange: string; usd: number }[] = []
+  let history: OiHistoryPoint[] = []
 
   const requests = [
-    // Binance Futures
+    // Binance Futures snapshot
     fetch(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol}`)
       .then(async (r) => {
         if (!r.ok) return
@@ -325,7 +354,7 @@ export async function fetchOpenInterest(symbol: string, price: number): Promise<
         breakdown.push({ exchange: 'Binance', usd: qty * price })
       })
       .catch(() => {}),
-    // Bybit
+    // Bybit snapshot
     fetch(
       `https://api.bybit.com/v5/market/open-interest?category=linear&symbol=${symbol}&intervalTime=5min&limit=1`,
     )
@@ -339,11 +368,18 @@ export async function fetchOpenInterest(symbol: string, price: number): Promise<
         }
       })
       .catch(() => {}),
+    // Binance hourly history (USD) for delta and sparkline
+    fetchBinanceOiHistory(symbol)
+      .then((pts) => {
+        history = pts
+      })
+      .catch(() => {}),
   ]
 
   await Promise.allSettled(requests)
   const totalUsd = breakdown.reduce((s, b) => s + b.usd, 0)
-  return { totalUsd, breakdown }
+  const deltaPct = computeOiDeltaPct(history)
+  return { totalUsd, breakdown, history, deltaPct }
 }
 
 // ── Circulating Supply (CoinGecko, cached 24h in localStorage) ──────
