@@ -200,6 +200,10 @@ export interface KlineResult {
   candles: Candle[]
   /** True when a Binance symbol fell back to the spot endpoint. */
   usedSpot: boolean
+  /** Query identity — guards against stale React Query cache on pair switches. */
+  symbol: string
+  interval: Interval
+  exchange: SymbolEntry['exchange']
 }
 
 /** Fetch historical candles, normalized across Binance/Bybit/MEXC/OKX. */
@@ -235,7 +239,7 @@ export async function fetchKlines(
         volume: +d.vol[i],
       }))
       .sort((a, b) => a.time - b.time)
-    return { candles, usedSpot: false }
+    return { candles, usedSpot: false, symbol, interval, exchange: info.exchange }
   }
   if (info.exchange === 'bybit') {
     const cat = info.bybitCategory ?? 'linear'
@@ -252,7 +256,7 @@ export async function fetchKlines(
       close: +d[4],
       volume: +d[5],
     }))
-    return { candles, usedSpot: false }
+    return { candles, usedSpot: false, symbol, interval, exchange: info.exchange }
   }
   if (info.exchange === 'okx') {
     const instId = info.okxInstId ?? symbol
@@ -269,7 +273,7 @@ export async function fetchKlines(
       close: +d[4],
       volume: +d[5],
     }))
-    return { candles, usedSpot: false }
+    return { candles, usedSpot: false, symbol, interval, exchange: info.exchange }
   }
   // Binance: known futures symbols try the futures endpoint first; custom or
   // unknown symbols use spot directly (CORS-safe).
@@ -302,7 +306,7 @@ export async function fetchKlines(
     close: +d[4],
     volume: +d[5],
   }))
-  return { candles, usedSpot }
+  return { candles, usedSpot, symbol, interval, exchange: info.exchange }
 }
 
 // ── Open Interest (Binance + Bybit aggregated) ─────────────────────

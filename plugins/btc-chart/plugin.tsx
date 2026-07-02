@@ -181,6 +181,7 @@ import {
   type StatsState,
   type FundingState,
   type FngState,
+  applyDefaultViewport,
 } from './lib'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -254,9 +255,9 @@ function BtcChartView() {
   } | null>(null)
 
   const visRef = useRef<VisFlags>({ ...cfgInit.vis })
-  // Interval mirror so renderData (deps []) can read the current timeframe —
-  // ICT session logic only runs on intraday frames.
+  // Interval/symbol mirrors so renderData (deps []) can read the active pair.
   const intervalRef = useRef<Interval>(cfgInit.interval as Interval)
+  const symbolRef = useRef<SymbolId>((cfgInit.symbol as SymbolId) || 'BTCUSDT')
   const vpOptsRef = useRef({ hvnRatio: 0.8 })
   const alertsRef = useRef<AlertRule[]>([...cfgInit.alerts])
   const soundRef = useRef<AlertSound>(new AlertSound())
@@ -499,6 +500,35 @@ function BtcChartView() {
     intervalRef.current = interval
   }, [interval])
   useEffect(() => {
+    symbolRef.current = symbol
+  }, [symbol])
+
+  // Reset chart state when the user switches pair or timeframe (not on first mount).
+  const prevViewRef = useRef({ symbol, interval })
+  useEffect(() => {
+    const prev = prevViewRef.current
+    const changed = prev.symbol !== symbol || prev.interval !== interval
+    prevViewRef.current = { symbol, interval }
+    if (!changed) return
+
+    fitNextRef.current = true
+    candlesRef.current = []
+    panelCandleKeyRef.current = ''
+    smcCacheKeyRef.current = ''
+    smcCacheRef.current = null
+    nweCacheKeyRef.current = ''
+    nweCacheRef.current = null
+
+    const refs = chartRefs.current
+    if (refs?.candleSeries) {
+      refs.candleSeries.setData([])
+      refs.volSeries?.setData([])
+    }
+
+    const cfg = loadConfig()
+    saveConfig({ ...cfg, zoom: null, symbol, interval })
+  }, [symbol, interval])
+  useEffect(() => {
     htfRef.current = htfQuery.data?.candles ?? null
   }, [htfQuery.data])
   useEffect(() => {
@@ -561,10 +591,6 @@ function BtcChartView() {
   }, [])
 
   const fitNextRef = useRef(true)
-  // Tracks the interval/symbol the socket effect last ran for, so a timeframe
-  // switch can reset the view to the latest candle instead of reapplying the
-  // saved zoom range (which belongs to the previous dataset).
-  const lastViewKeyRef = useRef<string>('')
 
   const renderData = useCallback((data: Candle[]) => {
     const refs = chartRefs.current
@@ -912,7 +938,19 @@ function BtcChartView() {
     }
 
     if (fitNextRef.current) {
-      refs.mainChart.timeScale().fitContent()
+      const cfg = loadConfig()
+      const canRestoreZoom =
+        cfg.zoom != null && cfg.symbol === symbolRef.current && cfg.interval === intervalRef.current
+      const range = canRestoreZoom
+        ? cfg.zoom!
+        : applyDefaultViewport(refs.mainChart.timeScale(), data.length)
+      if (canRestoreZoom) {
+        refs.mainChart.timeScale().setVisibleLogicalRange(range)
+      }
+      const oscChart = oscRefs.current?.chart
+      if (oscChart) {
+        oscChart.timeScale().setVisibleLogicalRange(range)
+      }
       fitNextRef.current = false
     }
 
@@ -2052,6 +2090,8 @@ function BtcChartView() {
     }
 
     if (data) {
+      if (data.symbol !== symbol || data.interval !== interval) return
+
       candlesRef.current = data.candles
       // Adjust price precision based on price level
       if (chartRefs.current?.candleSeries && data.candles.length) {
@@ -2065,23 +2105,10 @@ function BtcChartView() {
         chartRefs.current.nweLowS.applyOptions({ priceFormat: pf })
         chartRefs.current.ma50S.applyOptions({ priceFormat: pf })
         chartRefs.current.ma200S.applyOptions({ priceFormat: pf })
+        chartRefs.current.mainChart.priceScale('right').applyOptions({ autoScale: true })
       }
       fitNextRef.current = true
       renderData(data.candles)
-      // On a symbol/interval switch, snap to the latest candle instead of
-      // restoring the saved zoom (that range maps to the old dataset and
-      // would leave the chart parked away from the right edge).
-      const viewKey = `${symbol}:${interval}`
-      const isViewSwitch = lastViewKeyRef.current !== '' && lastViewKeyRef.current !== viewKey
-      lastViewKeyRef.current = viewKey
-      if (isViewSwitch) {
-        chartRefs.current?.mainChart.timeScale().scrollToRealTime()
-      } else {
-        const savedZoom = loadConfig().zoom
-        if (savedZoom && chartRefs.current?.mainChart) {
-          chartRefs.current.mainChart.timeScale().setVisibleLogicalRange(savedZoom)
-        }
-      }
       connectWs(data.usedSpot)
       setLoading(false)
     } else if (err) {
