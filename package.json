@@ -1,7 +1,7 @@
 {
   "name": "profile",
   "private": true,
-  "version": "0.100.4",
+  "version": "0.101.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -22,6 +22,9 @@
     "codegraph:status": "codegraph status",
     "codegen": "sui-ts-codegen generate",
     "coins:turso": "bun scripts/turso-coins.mjs",
+    "functions:dev": "cd functions && bun run dev",
+    "functions:deploy": "cd functions && bun run deploy",
+    "functions:typecheck": "cd functions && bun run typecheck",
     "prepare": "husky",
     "doctor": "bunx react-doctor@latest"
   },
