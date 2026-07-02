@@ -6,6 +6,8 @@ import type { LienResult } from './lien-reversal'
 import type { NadarayaWatsonResult } from './nadaraya-watson'
 import type { ICTResult } from './ict-sessions'
 import type { LiquidityResult } from './liquidity'
+import type { SMCResult } from '../smc'
+import { collectSmcConfluenceVotes } from './smc-signals'
 
 export type { TradeSetup }
 
@@ -179,13 +181,14 @@ function collectShortEntryCandidates(
   return out
 }
 
-/** Extra signals from Boucher + Lien + Lux NWE + ICT + Liquidity for confluence. */
+/** Extra signals from Boucher + Lien + Lux NWE + ICT + Liquidity + SMC for confluence. */
 export interface TradeSetupExtra {
   boucher?: BoucherResult
   lien?: LienResult
   luxNwe?: NadarayaWatsonResult
   ict?: ICTResult
   liquidity?: LiquidityResult
+  smc?: SMCResult
 }
 
 /**
@@ -430,6 +433,14 @@ export function calcTradeSetup(
     if (liq.nextTarget) {
       reasons.push(`Draw → ${liq.nextTarget.label}`)
     }
+  }
+
+  // ── SMC: BOS/CHoCH, Order Block touch, CHoCH after sweep ──
+  if (extra?.smc) {
+    const smcVotes = collectSmcConfluenceVotes(data, extra.smc, extra.liquidity)
+    bull += smcVotes.bull
+    bear += smcVotes.bear
+    reasons.push(...smcVotes.reasons)
   }
 
   // Swing high/low for SL (last 20 bars)

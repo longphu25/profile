@@ -892,30 +892,25 @@ function BtcChartView() {
       }))
     }
 
-    // ── SMC overlay ──
-    // Compute when SMC is shown OR liquidity is on (liquidity reuses FVGs/BOS).
+    // ── SMC overlay + trade setup confluence (always computed, cached) ──
     let smcResult: SMCResult
-    if (visFlags.smc || visFlags.liquidity) {
-      const smcKey = `${data.length}:${data[data.length - 1]?.time ?? 0}`
-      if (smcKey === smcCacheKeyRef.current && smcCacheRef.current) {
-        smcResult = smcCacheRef.current
-      } else {
-        const t0 = performance.now()
-        smcResult = computeSMC(data, {
-          structure: true,
-          orderBlocks: true,
-          fvg: true,
-          swingLen: 10,
-          internalLen: 5,
-        })
-        const t1 = performance.now()
-        // eslint-disable-next-line no-console
-        console.log(`[perf] SMC compute: ${(t1 - t0).toFixed(2)}ms (n=${data.length})`)
-        smcCacheKeyRef.current = smcKey
-        smcCacheRef.current = smcResult
-      }
+    const smcKey = `${data.length}:${data[data.length - 1]?.time ?? 0}`
+    if (smcKey === smcCacheKeyRef.current && smcCacheRef.current) {
+      smcResult = smcCacheRef.current
     } else {
-      smcResult = { structures: [], orderBlocks: [], fvgs: [] }
+      const t0 = performance.now()
+      smcResult = computeSMC(data, {
+        structure: true,
+        orderBlocks: true,
+        fvg: true,
+        swingLen: 10,
+        internalLen: 5,
+      })
+      const t1 = performance.now()
+      // eslint-disable-next-line no-console
+      console.log(`[perf] SMC compute: ${(t1 - t0).toFixed(2)}ms (n=${data.length})`)
+      smcCacheKeyRef.current = smcKey
+      smcCacheRef.current = smcResult
     }
     smcDataRef.current = smcResult
     if (smcCanvasRef.current && mainElRef.current && refs.mainChart) {
@@ -1133,6 +1128,7 @@ function BtcChartView() {
         luxNwe,
         ict,
         liquidity: liq,
+        smc: smcResult,
       }),
     }))
 
