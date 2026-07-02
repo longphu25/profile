@@ -3,7 +3,6 @@
 import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { stitchEase } from '../lib/motion'
 import { SymbolCombobox } from './SymbolCombobox'
@@ -33,7 +32,7 @@ export interface ChartHeaderProps {
 }
 
 export function ChartHeader({
-  symbolInfo,
+  symbolInfo: _symbolInfo,
   symbol,
   symbols,
   interval,
@@ -56,11 +55,6 @@ export function ChartHeader({
           <span className="btc-chart__brand-label">Meridian</span>
         </div>
 
-        <div className="btc-chart__pair">
-          {symbolInfo.base}
-          <small>/{symbolInfo.quote}</small>
-        </div>
-
         <SymbolCombobox symbol={symbol} symbols={symbols} onSelect={onSelectSymbol} />
 
         <form
@@ -74,11 +68,12 @@ export function ChartHeader({
           }}
           className="btc-chart__custom-sym"
         >
-          <Input
+          <input
             name="coin"
-            placeholder="+coin"
-            className="btc-chart__custom-input h-7 w-[4.5rem] rounded-none border-[var(--border)] bg-[var(--surface-2)] px-2 font-mono text-[10px] shadow-none focus-visible:ring-[var(--mint)]"
+            placeholder="+"
+            className="btc-chart__custom-input"
             aria-label="Add custom coin"
+            title="Add custom coin"
           />
         </form>
       </div>

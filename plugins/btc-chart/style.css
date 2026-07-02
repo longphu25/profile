@@ -182,7 +182,7 @@
   background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  min-height: 44px;
+  min-height: 40px;
 }
 
 .btc-chart__brand {
@@ -329,7 +329,7 @@
   white-space: nowrap;
 }
 .btc-chart__price-cur {
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 700;
   font-family: var(--font-mono);
   letter-spacing: -0.02em;

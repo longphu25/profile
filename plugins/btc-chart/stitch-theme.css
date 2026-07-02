@@ -16,14 +16,15 @@
   --border-strong: rgba(232, 184, 74, 0.22);
 }
 
-/* ── Header: asymmetric 3-zone grid ─────────────────────────────── */
+/* ── Header: compact 3-zone grid ────────────────────────────────── */
 .btc-chart--stitch .btc-chart__header {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) auto;
-  align-items: stretch;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
+  align-items: center;
   gap: 0;
   padding: 0;
-  min-height: 48px;
+  min-height: 40px;
+  max-height: 40px;
   background: var(--surface);
   border-bottom: 1px solid var(--border-strong);
 }
@@ -31,8 +32,10 @@
 .btc-chart--stitch .btc-chart__header-left,
 .btc-chart--stitch .btc-chart__header-price,
 .btc-chart--stitch .btc-chart__header-controls {
-  padding: 8px 12px;
-  gap: 10px;
+  padding: 4px 10px;
+  gap: 6px;
+  min-height: 0;
+  flex-wrap: nowrap;
 }
 
 .btc-chart--stitch .btc-chart__header-left {
@@ -48,19 +51,52 @@
 
 .btc-chart--stitch .btc-chart__header-controls {
   justify-content: flex-end;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-content: center;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.btc-chart--stitch .btc-chart__pair {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  letter-spacing: -0.02em;
+.btc-chart--stitch .btc-chart__header-controls::-webkit-scrollbar {
+  display: none;
+}
+
+.btc-chart--stitch .btc-chart__header-price {
+  overflow: hidden;
+  min-width: 0;
+}
+
+.btc-chart--stitch .btc-chart__price {
+  gap: 6px;
 }
 
 .btc-chart--stitch .btc-chart__price-cur {
-  font-size: clamp(1.1rem, 2.4vw, 1.35rem);
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.btc-chart--stitch .btc-chart__price-chg {
+  font-size: 10px;
+  padding: 1px 4px;
+}
+
+.btc-chart--stitch .btc-chart__brand-mark {
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+}
+
+.btc-chart--stitch .btc-chart__brand-label {
+  display: none;
+}
+
+.btc-chart--stitch .btc-chart__custom-input {
+  width: 36px;
+  min-width: 36px;
+  padding: 2px 4px;
+  font-size: 10px;
+  text-align: center;
 }
 
 .btc-chart--stitch .btc-chart__ohlcv {
@@ -339,24 +375,134 @@
   border-top: 1px solid var(--border);
 }
 
-/* ── Header OHLCV grid ──────────────────────────────────────────── */
+/* ── Header OHLCV inline row ──────────────────────────────────── */
 .btc-chart--stitch .btc-chart__ohlcv-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 2px 10px;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 10px;
+  font-size: 9px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .btc-chart--stitch .btc-chart__ohlcv-cell {
-  display: flex;
+  display: inline-flex;
   align-items: baseline;
-  gap: 4px;
+  gap: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.btc-chart--stitch .btc-chart__ohlcv-cell--vol {
-  grid-column: 1 / -1;
+/* ── Symbol picker (Shadow DOM inline menu) ───────────────────── */
+.btc-chart--stitch .btc-chart__symbol-picker {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.btc-chart--stitch .btc-chart__symbol-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  min-width: 88px;
+  max-width: 120px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.18s var(--stitch-spring),
+    background 0.18s var(--stitch-spring);
+}
+
+.btc-chart--stitch .btc-chart__symbol-trigger:hover,
+.btc-chart--stitch .btc-chart__symbol-picker.is-open .btc-chart__symbol-trigger {
+  border-color: var(--border-strong);
+  background: var(--surface-3);
+}
+
+.btc-chart--stitch .btc-chart__symbol-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btc-chart--stitch .btc-chart__symbol-trigger-caret {
+  font-size: 8px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.btc-chart--stitch .btc-chart__symbol-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 120;
+  width: 200px;
+  max-height: 240px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.btc-chart--stitch .btc-chart__symbol-search {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  outline: none;
+}
+
+.btc-chart--stitch .btc-chart__symbol-search:focus {
+  border-bottom-color: var(--mint);
+}
+
+.btc-chart--stitch .btc-chart__symbol-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  max-height: 200px;
+}
+
+.btc-chart--stitch .btc-chart__symbol-option {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.btc-chart--stitch .btc-chart__symbol-option:hover,
+.btc-chart--stitch .btc-chart__symbol-option.is-active {
+  background: rgba(232, 184, 74, 0.1);
+  color: var(--mint);
+}
+
+.btc-chart--stitch .btc-chart__symbol-empty {
+  padding: 10px;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
 }
 
 .btc-chart--stitch .btc-chart__ohlcv-key {
@@ -370,7 +516,7 @@
   color: var(--text);
 }
 
-.btc-chart--stitch .btc-chart__brand-mark {
+.btc-chart--stitch .btc-chart__header-left .btc-chart__brand-mark {
   border-bottom: 2px solid var(--mint);
 }
 
@@ -760,20 +906,8 @@
     width: 240px;
   }
 
-  .btc-chart--stitch .btc-chart__header {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-  }
-
-  .btc-chart--stitch .btc-chart__header-controls {
-    grid-column: 1 / -1;
-    border-top: 1px solid var(--border);
-    border-right: none;
-    justify-content: space-between;
-  }
-
-  .btc-chart--stitch .btc-chart__header-price {
-    border-right: none;
+  .btc-chart--stitch .btc-chart__ohlcv-grid {
+    display: none;
   }
 }
 
@@ -791,17 +925,22 @@
   }
 
   .btc-chart--stitch .btc-chart__header {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 40px;
+    max-height: none;
   }
 
-  .btc-chart--stitch .btc-chart__header-left,
+  .btc-chart--stitch .btc-chart__header-left {
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+  }
+
   .btc-chart--stitch .btc-chart__header-price {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
+    display: none;
   }
 
-  .btc-chart--stitch .btc-chart__ohlcv-grid {
-    display: none;
+  .btc-chart--stitch .btc-chart__header-controls {
+    border-top: none;
   }
 
   .btc-chart--stitch .btc-chart__sidebar {

@@ -1,17 +1,6 @@
-// BTC Chart — searchable symbol picker (shadcn Command + Popover).
+// BTC Chart — inline symbol picker (Shadow DOM safe, no portal).
 
-import { useState } from 'react'
-import { Check, ChevronsUpDown } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import type { SymbolEntry } from '../lib'
 
@@ -23,62 +12,96 @@ export interface SymbolComboboxProps {
 
 export function SymbolCombobox({ symbol, symbols, onSelect }: SymbolComboboxProps) {
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const rootRef = useRef<HTMLDivElement>(null)
+
   const active = symbols.find((s) => s.symbol === symbol)
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return symbols
+    return symbols.filter(
+      (s) =>
+        s.symbol.toLowerCase().includes(q) ||
+        s.base.toLowerCase().includes(q) ||
+        `${s.base}/${s.quote}`.toLowerCase().includes(q),
+    )
+  }, [query, symbols])
+
+  useEffect(() => {
+    if (!open) return
+    const onPointer = (e: PointerEvent) => {
+      if (rootRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          aria-label="Select trading pair"
-          className="btc-chart__symbol-combo h-7 w-[7.5rem] justify-between rounded-none border-[var(--border)] bg-[var(--surface-2)] px-2 font-mono text-[10px] shadow-none hover:bg-[var(--surface-3)]"
-        >
-          <span className="truncate">
-            {active ? `${active.base}/${active.quote}` : symbol}
-          </span>
-          <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[220px] rounded-none border-[var(--border-strong)] bg-[var(--surface-2)] p-0"
-        align="start"
+    <div className={cn('btc-chart__symbol-picker', open && 'is-open')} ref={rootRef}>
+      <button
+        type="button"
+        className="btc-chart__symbol-trigger"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        aria-label="Select trading pair"
+        onClick={() => setOpen((o) => !o)}
       >
-        <Command className="rounded-none bg-transparent">
-          <CommandInput
-            placeholder="Search pair…"
-            className="h-8 font-mono text-[11px]"
+        <span className="btc-chart__symbol-trigger-label">
+          {active ? `${active.base}/${active.quote}` : symbol}
+        </span>
+        <span className="btc-chart__symbol-trigger-caret" aria-hidden>
+          ▾
+        </span>
+      </button>
+
+      {open && (
+        <div className="btc-chart__symbol-menu" role="listbox" aria-label="Trading pairs">
+          <input
+            type="search"
+            className="btc-chart__symbol-search"
+            placeholder="Search…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search trading pairs"
+            autoFocus
           />
-          <CommandList>
-            <CommandEmpty className="py-3 text-center text-[10px] text-[var(--muted)]">
-              No pair found.
-            </CommandEmpty>
-            <CommandGroup>
-              {symbols.map((s) => (
-                <CommandItem
-                  key={s.symbol}
-                  value={`${s.base} ${s.quote} ${s.symbol}`}
-                  className="font-mono text-[11px]"
-                  onSelect={() => {
-                    onSelect(s.symbol)
-                    setOpen(false)
-                  }}
-                >
-                  <Check
+          <ul className="btc-chart__symbol-list">
+            {filtered.length === 0 ? (
+              <li className="btc-chart__symbol-empty">No pair found</li>
+            ) : (
+              filtered.map((s) => (
+                <li key={s.symbol}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={symbol === s.symbol}
                     className={cn(
-                      'mr-2 h-3 w-3',
-                      symbol === s.symbol ? 'opacity-100' : 'opacity-0',
+                      'btc-chart__symbol-option',
+                      symbol === s.symbol && 'is-active',
                     )}
-                  />
-                  {s.base}/{s.quote}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                    onClick={() => {
+                      onSelect(s.symbol)
+                      setOpen(false)
+                      setQuery('')
+                    }}
+                  >
+                    {s.base}/{s.quote}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
   )
 }
