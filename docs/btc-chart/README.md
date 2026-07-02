@@ -15,6 +15,7 @@ Technical and user documentation for the BTC Chart Pro plugin.
 | [luxalgo-nwe.md](./luxalgo-nwe.md) | LuxAlgo Nadaraya-Watson envelope |
 | [nwe-strategies.md](./nwe-strategies.md) | NWE trading strategies |
 | [USER-GUIDE.md](./USER-GUIDE.md) | End-user guide (interface, features, mobile) |
+| [RESEARCH-2026-07.md](./RESEARCH-2026-07.md) | July 2026 research: SMC, deploy, mobile, OI, Convex vs Worker |
 
 Also: ICT Sessions (`lib/ict-sessions.ts`) and ICT Liquidity Hacks
 (`lib/liquidity.ts`) — documented inline in `TECHNICAL.md`.

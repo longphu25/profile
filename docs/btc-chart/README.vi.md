@@ -15,6 +15,7 @@ Tài liệu kỹ thuật và hướng dẫn sử dụng cho plugin BTC Chart Pro
 | [luxalgo-nwe.vi.md](./luxalgo-nwe.vi.md) | Envelope Nadaraya-Watson LuxAlgo |
 | [nwe-strategies.vi.md](./nwe-strategies.vi.md) | Các chiến lược giao dịch NWE |
 | [USER-GUIDE.vi.md](./USER-GUIDE.vi.md) | Hướng dẫn sử dụng (giao diện, tính năng, mobile) |
+| [RESEARCH-2026-07.vi.md](./RESEARCH-2026-07.vi.md) | Research 7/2026: SMC, deploy, mobile, OI, Convex vs Worker |
 
 Ngoài ra: ICT Sessions (`lib/ict-sessions.ts`) và ICT Liquidity Hacks
 (`lib/liquidity.ts`) — mô tả trong `TECHNICAL.vi.md`.
