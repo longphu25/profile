@@ -1,21 +1,12 @@
 // BTC Chart — Trade Setup panel: limit plan + position sizing.
 
 import { useState, memo } from 'react'
-import { detectSignalConflict, fmtP, type MLResult, type TradeSetup } from '../lib'
+import { fmtP, type TradeSetup } from '../lib'
 import { ExplainModal } from './ExplainModal'
 import { SideBlock, SideHead, SideNote, SideBadge } from './sidebar'
 
 interface Props {
   setup: TradeSetup
-  ml?: MLResult
-}
-
-function ConflictBanner({ message }: { message: string }) {
-  return (
-    <p className="sb-signal-conflict" role="status">
-      {message}
-    </p>
-  )
 }
 
 function countConfluenceGroups(reasons: string[]) {
@@ -35,7 +26,18 @@ function countConfluenceGroups(reasons: string[]) {
   const nweCount = reasons.filter(
     (r) => r.startsWith('NWE Cross') || r.startsWith('Price at Lux') || r.includes('Lux NWE mid'),
   ).length
-  return { mlCount, boucherCount, lienCount, nweCount }
+  const smcCount = reasons.filter((r) => r.startsWith('SMC ')).length
+  const ictCount = reasons.filter(
+    (r) =>
+      r.startsWith('Judas') ||
+      r.startsWith('VOL confirms') ||
+      r.startsWith('In ') ||
+      r.startsWith('Liquidity Sweep') ||
+      r.startsWith('Sweep in') ||
+      r.startsWith('Discount +') ||
+      r.startsWith('Premium +'),
+  ).length
+  return { mlCount, boucherCount, lienCount, nweCount, smcCount, ictCount }
 }
 
 function pctFromEntry(entry: number, price: number): string {
@@ -179,7 +181,7 @@ function PlanRow({ label, price, delta, hint, tone }: PlanRowProps) {
   )
 }
 
-export const TradeSetupPanel = memo(function TradeSetupPanel({ setup, ml }: Props) {
+export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
   const [capital, setCapital] = useState(10)
   const [leverage, setLeverage] = useState(10)
   const [open, setOpen] = useState(false)
@@ -227,9 +229,13 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup, ml }: Prop
   const rrLabel = setup.rr > 0 ? setup.rr.toFixed(1) : '2.0'
   const spotOffset = fmtSpotOffset(setup.entry, setup.spotPrice)
 
-  const { mlCount, boucherCount, lienCount, nweCount } = countConfluenceGroups(setup.reasons)
+  const { mlCount, boucherCount, lienCount, nweCount, smcCount, ictCount } = countConfluenceGroups(
+    setup.reasons,
+  )
   const chips = [
     mlCount > 0 && `ML ${mlCount}`,
+    smcCount > 0 && `SMC ${smcCount}`,
+    ictCount > 0 && `ICT ${ictCount}`,
     boucherCount > 0 && `Boucher ${boucherCount}`,
     lienCount > 0 && `Lien ${lienCount}`,
     nweCount > 0 && `NWE ${nweCount}`,
@@ -242,7 +248,6 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup, ml }: Prop
     .filter(Boolean)
     .join(' · ')
 
-  const conflict = ml ? detectSignalConflict(ml, setup) : null
   const quickSubtitle = `${fmtP(setup.entry)} · SL ${fmtP(setup.sl)}`
 
   return (
@@ -262,8 +267,6 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup, ml }: Prop
       />
 
       {explainOpen && <ExplainModal setup={setup} onClose={() => setExplainOpen(false)} />}
-
-      {conflict?.hasConflict && <ConflictBanner message={conflict.message} />}
 
       {!open && <QuickLevels dir={setup.dir} dirTone={dirTone} entry={setup.entry} sl={setup.sl} />}
 

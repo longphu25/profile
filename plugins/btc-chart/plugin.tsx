@@ -2524,7 +2524,7 @@ function BtcChartView() {
               <SignalPanelLazy ml={sidebar.ml} setup={sidebar.tradeSetup} />
             </Suspense>
             <Suspense fallback={<div className="sb-empty">Loading setup…</div>}>
-              <TradeSetupPanelLazy setup={sidebar.tradeSetup} ml={sidebar.ml} />
+              <TradeSetupPanelLazy setup={sidebar.tradeSetup} />
             </Suspense>
             <Suspense fallback={<div className="sb-empty">Loading funding…</div>}>
               <FundingNwePanelLazy
