@@ -21,7 +21,7 @@
     "codegraph:index": "codegraph init -i",
     "codegraph:status": "codegraph status",
     "codegen": "sui-ts-codegen generate",
-    "coins:turso": "node scripts/turso-coins.mjs",
+    "coins:turso": "bun scripts/turso-coins.mjs",
     "prepare": "husky",
     "doctor": "bunx react-doctor@latest"
   },

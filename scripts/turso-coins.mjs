@@ -15,13 +15,13 @@
  *   TURSO_ADMIN_TOKEN read-write token
  *
  * Usage:
- *   node scripts/turso-coins.mjs init
- *   node scripts/turso-coins.mjs seed
- *   node scripts/turso-coins.mjs list
- *   node scripts/turso-coins.mjs add SYMBOL=DOGEUSDT BASE=DOGE QUOTE=USDT EXCHANGE=binance GECKO_ID=dogecoin
- *   node scripts/turso-coins.mjs enable DOGEUSDT
- *   node scripts/turso-coins.mjs disable DOGEUSDT
- *   node scripts/turso-coins.mjs remove DOGEUSDT
+ *   bun scripts/turso-coins.mjs init
+ *   bun scripts/turso-coins.mjs seed
+ *   bun scripts/turso-coins.mjs list
+ *   bun scripts/turso-coins.mjs add SYMBOL=DOGEUSDT BASE=DOGE QUOTE=USDT EXCHANGE=binance GECKO_ID=dogecoin
+ *   bun scripts/turso-coins.mjs enable DOGEUSDT
+ *   bun scripts/turso-coins.mjs disable DOGEUSDT
+ *   bun scripts/turso-coins.mjs remove DOGEUSDT
  */
 
 const RAW_URL = process.env.TURSO_DB_URL
@@ -31,7 +31,7 @@ const args = process.argv.slice(2)
 const cmd = args[0]
 
 function usage() {
-  console.log(`Usage: node scripts/turso-coins.mjs <command> [args]
+  console.log(`Usage: bun scripts/turso-coins.mjs <command> [args]
 
 Commands:
   init                          Create the coins table if it doesn't exist
