@@ -5350,42 +5350,111 @@
   background: rgba(255, 122, 133, 0.1);
 }
 
-/* Open Interest panel: delta chips + sparkline */
-.oi-delta-row {
+/* Open Interest panel */
+.btc-chart__oi-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px 12px 14px;
+}
+.btc-chart__oi-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface) 100%);
+}
+.btc-chart__oi-hero-kicker {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.btc-chart__oi-hero-value {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--mint);
+  font-variant-numeric: tabular-nums;
+}
+.btc-chart__oi-hero-unit {
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.btc-chart__oi-trend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.btc-chart__oi-delta-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
-.oi-delta-chip {
+.btc-chart__oi-delta {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 4px 6px;
+  justify-content: center;
+  gap: 3px;
+  min-height: 44px;
+  padding: 6px 4px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
 }
-.oi-delta-chip__label {
+.btc-chart__oi-delta.is-up {
+  border-color: rgba(52, 216, 164, 0.35);
+  background: rgba(52, 216, 164, 0.08);
+}
+.btc-chart__oi-delta.is-dn {
+  border-color: rgba(255, 122, 133, 0.35);
+  background: rgba(255, 122, 133, 0.08);
+}
+.btc-chart__oi-delta-label {
   font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
-}
-.oi-delta-chip__value {
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
+}
+.btc-chart__oi-delta-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
-.oi-delta-chip__value.up { color: var(--up); }
-.oi-delta-chip__value.dn { color: var(--dn); }
-.oi-sparkline {
+.btc-chart__oi-delta.is-up .btc-chart__oi-delta-value {
+  color: var(--up);
+}
+.btc-chart__oi-delta.is-dn .btc-chart__oi-delta-value {
+  color: var(--dn);
+}
+.btc-chart__oi-chart {
+  height: 52px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.btc-chart__oi-sparkline {
   display: block;
   width: 100%;
-  height: 36px;
-  margin-top: 6px;
-  opacity: 0.9;
+  height: 100%;
+}
+.btc-chart__oi-chart-caption {
+  margin: 0;
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  line-height: 1.35;
 }

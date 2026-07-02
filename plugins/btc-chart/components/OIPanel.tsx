@@ -8,7 +8,7 @@ import {
   type OiDeltaPct,
   type OiHistoryPoint,
 } from '../lib'
-import { Card } from '@/components/ui/card'
+import { StatGrid, StatCell, SideNote } from './sidebar'
 
 interface Props {
   oi: number | null
@@ -18,17 +18,15 @@ interface Props {
   deltaPct?: OiDeltaPct
 }
 
-const SPARK_W = 200
-const SPARK_H = 36
+const SPARK_W = 240
+const SPARK_H = 48
 
 function OiDeltaChip({ label, value }: { label: string; value: number | null }) {
-  const cls = oiDeltaClass(value)
+  const tone = oiDeltaClass(value)
   return (
-    <div className="oi-delta-chip">
-      <span className="oi-delta-chip__label">{label}</span>
-      <span className={cls ? `oi-delta-chip__value ${cls}` : 'oi-delta-chip__value'}>
-        {formatOiDeltaPct(value)}
-      </span>
+    <div className={`btc-chart__oi-delta${tone ? ` is-${tone}` : ''}`}>
+      <span className="btc-chart__oi-delta-label">{label}</span>
+      <span className="btc-chart__oi-delta-value">{formatOiDeltaPct(value)}</span>
     </div>
   )
 }
@@ -46,7 +44,7 @@ function OiSparkline({ history }: { history: OiHistoryPoint[] }) {
   return (
     <svg
       viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
-      className="oi-sparkline"
+      className="btc-chart__oi-sparkline"
       preserveAspectRatio="none"
       aria-hidden
     >
@@ -54,11 +52,26 @@ function OiSparkline({ history }: { history: OiHistoryPoint[] }) {
         points={points}
         fill="none"
         stroke={stroke}
-        strokeWidth="1.5"
+        strokeWidth="2"
         vectorEffect="non-scaling-stroke"
       />
     </svg>
   )
+}
+
+function ratioNote(ratio: number): string {
+  if (ratio > 1.5) return 'Cực kỳ rủi ro, dễ bị squeeze mạnh'
+  if (ratio > 1) return 'Leverage cao, cẩn thận long/short squeeze'
+  if (ratio > 0.5) return 'Leverage vừa phải, biến động có thể tăng'
+  if (ratio > 0.2) return 'Bình thường, thị trường ổn định'
+  return 'OI thấp, ít quan tâm từ derivatives'
+}
+
+function ratioTone(ratio: number | null): 'up' | 'dn' | 'hi' | '' {
+  if (ratio == null) return ''
+  if (ratio > 1) return 'dn'
+  if (ratio > 0.5) return 'hi'
+  return 'up'
 }
 
 export function OIPanel({ oi, mcap, breakdown, history, deltaPct }: Props) {
@@ -66,69 +79,48 @@ export function OIPanel({ oi, mcap, breakdown, history, deltaPct }: Props) {
   const hist = history ?? []
   const delta = deltaPct ?? { h1: null, h4: null, h24: null }
   const hasTrend = hist.length >= 2
+  const oiDisplay = oi != null ? `$${fmtV(oi)}` : '—'
 
   return (
-    <Card className="p-3 text-xs">
-      <div className="font-medium mb-1">Open Interest</div>
-      <div className="flex justify-between">
-        <span className="text-[var(--muted)]">OI (USD)</span>
-        <span>{oi != null ? '$' + fmtV(oi) : '—'}</span>
+    <div className="btc-chart__oi-panel">
+      <div className="btc-chart__oi-hero">
+        <span className="btc-chart__oi-hero-kicker">Tổng Open Interest</span>
+        <span className="btc-chart__oi-hero-value">{oiDisplay}</span>
+        <span className="btc-chart__oi-hero-unit">USD · Binance + Bybit</span>
       </div>
+
       {breakdown && breakdown.length > 0 && (
-        <div className="text-[9px] text-[var(--muted)] mt-1">
+        <StatGrid cols={2}>
           {breakdown.map((b) => (
-            <span key={b.exchange} className="mr-2">
-              {b.exchange}: ${fmtV(b.usd)}
-            </span>
+            <StatCell key={b.exchange} label={b.exchange} value={`$${fmtV(b.usd)}`} />
           ))}
-        </div>
+        </StatGrid>
       )}
 
       {hasTrend && (
-        <>
-          <div className="oi-delta-row mt-2">
-            <OiDeltaChip label="1h" value={delta.h1} />
-            <OiDeltaChip label="4h" value={delta.h4} />
-            <OiDeltaChip label="24h" value={delta.h24} />
+        <div className="btc-chart__oi-trend">
+          <div className="btc-chart__oi-delta-row">
+            <OiDeltaChip label="1H" value={delta.h1} />
+            <OiDeltaChip label="4H" value={delta.h4} />
+            <OiDeltaChip label="24H" value={delta.h24} />
           </div>
-          <OiSparkline history={hist} />
-          <div className="text-[9px] text-[var(--muted)] mt-1">
-            Trend: Binance USD (1h) · Now: Binance+Bybit
+          <div className="btc-chart__oi-chart">
+            <OiSparkline history={hist} />
           </div>
-        </>
-      )}
-
-      <div className="flex justify-between mt-1">
-        <span className="text-[var(--muted)]">Market Cap</span>
-        <span>{mcap != null ? '$' + fmtV(mcap) : '—'}</span>
-      </div>
-      <div className="flex justify-between mt-1">
-        <span className="text-[var(--muted)]">OI / MCap</span>
-        <span
-          className={
-            ratio != null && ratio > 1
-              ? 'text-[var(--dn)]'
-              : ratio != null && ratio > 0.5
-                ? 'text-[var(--up)]'
-                : ''
-          }
-        >
-          {ratio != null ? ratio.toFixed(2) + 'x' : '—'}
-        </span>
-      </div>
-      {ratio != null && (
-        <div className="text-[9px] text-[var(--muted)] mt-1">
-          {ratio > 1.5
-            ? '⚠️ Cực kỳ rủi ro, dễ bị squeeze mạnh'
-            : ratio > 1
-              ? '⚠️ Leverage cao, cẩn thận long/short squeeze'
-              : ratio > 0.5
-                ? '⚡ Leverage vừa phải, biến động có thể tăng'
-                : ratio > 0.2
-                  ? '✅ Bình thường, thị trường ổn định'
-                  : '🧊 OI thấp, ít quan tâm từ derivatives'}
+          <p className="btc-chart__oi-chart-caption">Xu hướng OI Binance (1h) · hiện tại gộp sàn</p>
         </div>
       )}
-    </Card>
+
+      <StatGrid cols={2}>
+        <StatCell label="Market Cap" value={mcap != null ? `$${fmtV(mcap)}` : '—'} />
+        <StatCell
+          label="OI / MCap"
+          value={ratio != null ? `${ratio.toFixed(2)}x` : '—'}
+          tone={ratioTone(ratio)}
+        />
+      </StatGrid>
+
+      {ratio != null && <SideNote>{ratioNote(ratio)}</SideNote>}
+    </div>
   )
 }
