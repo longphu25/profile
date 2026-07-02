@@ -1530,6 +1530,199 @@
   font-family: var(--font-mono);
 }
 
+/* ── Intel rail: filter + tabs ── */
+.btc-chart__intel-filter {
+  padding: 0 0 8px;
+}
+.btc-chart__intel-filter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.btc-chart__intel-filter-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+}
+.btc-chart__intel-filter-clear {
+  border: none;
+  background: transparent;
+  color: var(--mint);
+  font-size: 9px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  padding: 2px 0;
+}
+.btc-chart__intel-filter-clear:hover {
+  text-decoration: underline;
+}
+.btc-chart__intel-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.btc-chart__intel-search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+.btc-chart__intel-search-input {
+  width: 100%;
+  height: 30px;
+  padding: 0 30px 0 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+.btc-chart__intel-search-input::placeholder {
+  color: var(--muted);
+}
+.btc-chart__intel-search-input:focus {
+  outline: none;
+  border-color: var(--mint);
+  box-shadow: 0 0 0 2px rgba(128, 255, 213, 0.15);
+}
+.btc-chart__intel-search-dismiss {
+  position: absolute;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.btc-chart__intel-search-dismiss:hover {
+  color: var(--text);
+  background: var(--surface-3);
+}
+.btc-chart__intel-filter-status {
+  margin: 6px 0 0;
+  font-size: 9px;
+  line-height: 1.4;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.btc-chart__intel-filter-status.is-empty {
+  color: var(--dn);
+}
+.btc-chart__intel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.btc-chart__intel-chip {
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 9px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.btc-chart__intel-chip:hover {
+  border-color: rgba(128, 255, 213, 0.45);
+  color: var(--text);
+}
+.btc-chart__intel-chip.is-on {
+  border-color: var(--mint);
+  background: rgba(128, 255, 213, 0.1);
+  color: var(--mint);
+}
+.btc-chart__intel-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  overflow-x: auto;
+}
+.btc-chart__intel-tab {
+  flex: 1 0 auto;
+  min-width: 0;
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.btc-chart__intel-tab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.02);
+}
+.btc-chart__intel-tab.is-active {
+  color: var(--mint);
+  border-bottom-color: var(--mint);
+  background: rgba(128, 255, 213, 0.06);
+}
+.btc-chart__intel-stack {
+  padding-top: 4px;
+}
+.btc-chart__intel-no-match {
+  padding: 14px 10px;
+  text-align: center;
+}
+.btc-chart__intel-no-match-title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.btc-chart__intel-no-match-hint {
+  margin: 0 0 10px;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.btc-chart__intel-no-match-btn {
+  min-height: 28px;
+  padding: 4px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--mint);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+.btc-chart__intel-no-match-btn:hover {
+  border-color: var(--mint);
+  background: rgba(128, 255, 213, 0.08);
+}
+
 /* Sidebar accordion — bracket-framed sections */
 .btc-chart__accordion {
   border: 1px solid var(--border);

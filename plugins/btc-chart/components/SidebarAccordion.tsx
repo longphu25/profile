@@ -1,9 +1,10 @@
 // BTC Chart — sidebar accordion with motion expand/collapse.
 
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import { accordionBody, transitionSpring } from '../lib/motion'
+import { intelPanelMatches } from '../lib/intel-panels'
 import { SideBadge } from './sidebar'
 
 interface Props {
@@ -15,8 +16,12 @@ interface Props {
   summary?: ReactNode
   /** Optional badge in header */
   badge?: ReactNode
-  /** Hide when intel search does not match title */
+  /** Hide when intel search does not match title or keywords */
   filterQuery?: string
+  /** Extra terms for intel filter (OI, whale, etc.) */
+  filterKeywords?: string[]
+  /** Open accordion when filter matches (easier to spot results) */
+  expandOnFilter?: boolean
   /** Optional callback when accordion is toggled open/closed */
   onToggle?: (open: boolean) => void
 }
@@ -28,12 +33,19 @@ export function SidebarAccordion({
   summary,
   badge,
   filterQuery,
+  filterKeywords,
+  expandOnFilter = true,
   onToggle,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen)
+  const visible = intelPanelMatches(title, filterKeywords, filterQuery ?? '')
 
-  const q = filterQuery?.trim().toLowerCase()
-  if (q && !title.toLowerCase().includes(q)) return null
+  useEffect(() => {
+    if (!expandOnFilter || !filterQuery?.trim() || !visible) return
+    setOpen(true)
+  }, [expandOnFilter, filterQuery, visible])
+
+  if (!visible) return null
 
   const toggle = () => {
     const next = !open

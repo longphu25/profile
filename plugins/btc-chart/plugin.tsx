@@ -59,6 +59,7 @@ import { ChartLayerDots } from './components/ChartLayerDots'
 import { OscillatorPane } from './components/OscillatorPane'
 import { IntelRail, type IntelTab } from './components/IntelRail'
 import { ALL_IND_KEYS } from './lib/indicator-groups'
+import { intelKeywordsFor } from './lib/intel-panels'
 import { applyLayerPreset, type LayerPresetId } from './lib/layer-presets'
 
 import { SidebarAccordion } from './components/SidebarAccordion'
@@ -2561,7 +2562,11 @@ function BtcChartView() {
               ),
               market: (
                 <>
-                  <SidebarAccordion filterQuery={intelSearch} title="Open Interest">
+                  <SidebarAccordion
+                    filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('market', 'Open Interest')}
+                    title="Open Interest"
+                  >
                     <Suspense
                       fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
                     >
@@ -2576,6 +2581,7 @@ function BtcChartView() {
                   </SidebarAccordion>
                   <SidebarAccordion
                     filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('market', 'Whale Tracker')}
                     title="Whale Tracker"
                     onToggle={(open) => {
                       if (open && !vis.whale) toggle('whale')
@@ -2596,14 +2602,22 @@ function BtcChartView() {
                       />
                     </Suspense>
                   </SidebarAccordion>
-                  <SidebarAccordion filterQuery={intelSearch} title="24h Stats">
+                  <SidebarAccordion
+                    filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('market', '24h Stats')}
+                    title="24h Stats"
+                  >
                     <Suspense
                       fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
                     >
                       <StatsPanel stats={stats} />
                     </Suspense>
                   </SidebarAccordion>
-                  <SidebarAccordion filterQuery={intelSearch} title="Fear & Greed">
+                  <SidebarAccordion
+                    filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('market', 'Fear & Greed')}
+                    title="Fear & Greed"
+                  >
                     <Suspense fallback={<div className="sb-empty">Loading…</div>}>
                       <FearGreedPanel fng={fng} />
                     </Suspense>
@@ -2614,6 +2628,7 @@ function BtcChartView() {
                 <>
                   <SidebarAccordion
                     filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('flow', 'Order Flow')}
                     title="Order Flow"
                     onToggle={(open) => {
                       if (open && !vis.of) toggle('of')
@@ -2627,6 +2642,7 @@ function BtcChartView() {
                   </SidebarAccordion>
                   <SidebarAccordion
                     filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('flow', 'Box Flip')}
                     title="Box Flip"
                     onToggle={(open) => {
                       if (open && !vis.boxFlip) toggle('boxFlip')
@@ -2640,6 +2656,7 @@ function BtcChartView() {
                   </SidebarAccordion>
                   <SidebarAccordion
                     filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('flow', 'Volume Spike')}
                     title="Volume Spike"
                     onToggle={(open) => {
                       if (open && !vis.volSpike) toggle('volSpike')
@@ -2663,6 +2680,7 @@ function BtcChartView() {
                   </SidebarAccordion>
                   <SidebarAccordion
                     filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('flow', 'Volume Profile')}
                     title="Volume Profile"
                     onToggle={(open) => {
                       if (open && !vis.vp) toggle('vp')
@@ -2678,7 +2696,11 @@ function BtcChartView() {
               ),
               alerts: (
                 <>
-                  <SidebarAccordion filterQuery={intelSearch} title="Alerts">
+                  <SidebarAccordion
+                    filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('alerts', 'Alerts')}
+                    title="Alerts"
+                  >
                     <AlertsPanel
                       alerts={alerts}
                       onAdd={addAlert}
@@ -2695,6 +2717,7 @@ function BtcChartView() {
                 <>
                   <SidebarAccordion
                     filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('ml', 'MH Band')}
                     title="MH Band"
                     onToggle={(open) => {
                       if (open && !vis.nwe) toggle('nwe')
@@ -2706,14 +2729,22 @@ function BtcChartView() {
                       <MHBandPanelLazy sidebar={sidebar} />
                     </Suspense>
                   </SidebarAccordion>
-                  <SidebarAccordion filterQuery={intelSearch} title="Technicals">
+                  <SidebarAccordion
+                    filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('ml', 'Technicals')}
+                    title="Technicals"
+                  >
                     <Suspense
                       fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
                     >
                       <TechnicalsPanelLazy sidebar={sidebar} />
                     </Suspense>
                   </SidebarAccordion>
-                  <SidebarAccordion filterQuery={intelSearch} title="Feature Weights">
+                  <SidebarAccordion
+                    filterQuery={intelSearch}
+                    filterKeywords={intelKeywordsFor('ml', 'Feature Weights')}
+                    title="Feature Weights"
+                  >
                     <Suspense
                       fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
                     >

@@ -644,33 +644,18 @@
 }
 
 /* ── Intel rail ───────────────────────────────────────────────── */
-.btc-chart--stitch .btc-chart__intel-toolbar {
-  padding: 0 0 8px;
-}
-
-.btc-chart--stitch .btc-chart__intel-search {
-  position: relative;
-}
-
-.btc-chart--stitch .btc-chart__intel-search-icon {
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 12px;
-  height: 12px;
-  color: var(--muted);
-  pointer-events: none;
-}
-
-.btc-chart--stitch .btc-chart__intel-tablist {
+.btc-chart--stitch .btc-chart__intel-filter {
   border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
   margin-bottom: 4px;
-  overflow-x: auto;
 }
 
-.btc-chart--stitch .btc-chart__intel-stack {
-  padding-top: 4px;
+.btc-chart--stitch .btc-chart__intel-search-input {
+  background: var(--surface);
+}
+
+.btc-chart--stitch .btc-chart__intel-tab.is-active {
+  border-bottom-color: var(--mint);
 }
 
 /* ── Tools: chart column scope + presets ──────────────────────── */

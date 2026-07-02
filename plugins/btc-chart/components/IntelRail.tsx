@@ -1,20 +1,18 @@
-// BTC Chart — Intel sidebar rail with search + grouped tabs.
+// BTC Chart — Intel sidebar rail with panel filter + grouped tabs.
 
-import type { ReactNode } from 'react'
-import { Search } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useMemo, type ReactNode } from 'react'
+import { Search, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import {
+  INTEL_TABS,
+  INTEL_PANEL_CATALOG,
+  intelVisiblePanelCount,
+  type IntelTab,
+} from '../lib/intel-panels'
 import { RailSection } from './sidebar'
 
-export type IntelTab = 'trade' | 'market' | 'flow' | 'alerts' | 'ml'
-
-export const INTEL_TABS: Array<{ id: IntelTab; label: string }> = [
-  { id: 'trade', label: 'Trade' },
-  { id: 'market', label: 'Market' },
-  { id: 'flow', label: 'Flow' },
-  { id: 'alerts', label: 'Alerts' },
-  { id: 'ml', label: 'ML' },
-]
+export type { IntelTab } from '../lib/intel-panels'
+export { INTEL_TABS, intelPanelMatches, intelKeywordsFor } from '../lib/intel-panels'
 
 export interface IntelRailProps {
   tab: IntelTab
@@ -35,9 +33,24 @@ export function IntelRail({
   mobileOpen = false,
   onMobileClose,
 }: IntelRailProps) {
+  const trimmed = search.trim()
+  const tabDef = INTEL_TABS.find((t) => t.id === tab) ?? INTEL_TABS[0]
+  const chips = INTEL_PANEL_CATALOG[tab]
+  const totalPanels = chips.length
+  const visiblePanels = intelVisiblePanelCount(tab, search)
+  const isFiltering = trimmed.length > 0
+  const noMatches = isFiltering && visiblePanels === 0
+
+  const statusLine = useMemo(() => {
+    if (noMatches) return 'Không có panel khớp'
+    if (isFiltering) return `${visiblePanels} panel khớp trong tab ${tabDef.label}`
+    if (totalPanels === 0) return tabDef.hint
+    return `${totalPanels} panel · ${tabDef.hint}`
+  }, [noMatches, isFiltering, visiblePanels, tabDef, totalPanels])
+
   return (
     <div
-      className={`btc-chart__intel${mobileOpen ? ' is-mobile-open' : ''}`}
+      className={cn('btc-chart__intel', mobileOpen && 'is-mobile-open')}
       role="region"
       aria-label="Intel panels"
     >
@@ -51,51 +64,114 @@ export function IntelRail({
       )}
 
       <RailSection label="Intel">
-        <div className="btc-chart__intel-toolbar">
+        <div className="btc-chart__intel-filter">
+          <div className="btc-chart__intel-filter-head">
+            <span className="btc-chart__intel-filter-label">Tìm panel</span>
+            {isFiltering && (
+              <button
+                type="button"
+                className="btc-chart__intel-filter-clear"
+                onClick={() => onSearchChange('')}
+              >
+                Xóa lọc
+              </button>
+            )}
+          </div>
+
           <div className="btc-chart__intel-search">
-            <Search className="btc-chart__intel-search-icon" aria-hidden />
-            <Input
+            <Search
+              className="btc-chart__intel-search-icon"
+              aria-hidden
+              size={12}
+              strokeWidth={2}
+            />
+            <input
               type="search"
+              className="btc-chart__intel-search-input"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Filter panels…"
-              aria-label="Filter intel panels"
-              className="h-7 rounded-none border-[var(--border)] bg-[var(--surface-2)] pl-7 font-mono text-[10px] shadow-none"
+              placeholder="VD: whale, OI, volume, alerts…"
+              aria-label="Tìm panel trong tab hiện tại"
             />
+            {isFiltering && (
+              <button
+                type="button"
+                className="btc-chart__intel-search-dismiss"
+                onClick={() => onSearchChange('')}
+                aria-label="Xóa từ khóa tìm kiếm"
+              >
+                <X size={12} strokeWidth={2} aria-hidden />
+              </button>
+            )}
           </div>
+
+          <p className={cn('btc-chart__intel-filter-status', noMatches && 'is-empty')}>
+            {statusLine}
+          </p>
+
+          {chips.length > 0 && (
+            <div className="btc-chart__intel-chips" role="group" aria-label="Lọc nhanh panel">
+              <button
+                type="button"
+                className={cn('btc-chart__intel-chip', !isFiltering && 'is-on')}
+                onClick={() => onSearchChange('')}
+              >
+                Tất cả
+              </button>
+              {chips.map((p) => {
+                const active = trimmed.toLowerCase() === p.title.toLowerCase()
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={cn('btc-chart__intel-chip', active && 'is-on')}
+                    onClick={() => onSearchChange(active ? '' : p.title)}
+                    title={p.title}
+                  >
+                    {p.chip}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
-        <Tabs
-          value={tab}
-          onValueChange={(v: string) => onTabChange(v as IntelTab)}
-          className="btc-chart__intel-tabs"
-        >
-          <TabsList className="btc-chart__intel-tablist h-auto w-full justify-start rounded-none bg-transparent p-0">
-            {INTEL_TABS.map((t) => (
-              <TabsTrigger
-                key={t.id}
-                value={t.id}
-                className="btc-chart__intel-tab rounded-none px-2 py-1.5 font-mono text-[9px] uppercase tracking-wider data-[state=active]:border-b-2 data-[state=active]:border-[var(--mint)] data-[state=active]:bg-[rgba(232,184,74,0.06)]"
-              >
-                {t.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
+        <div className="btc-chart__intel-tabs" role="tablist" aria-label="Intel categories">
           {INTEL_TABS.map((t) => (
-            <TabsContent key={t.id} value={t.id} className="btc-chart__intel-stack mt-0">
-              {panels[t.id]}
-            </TabsContent>
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              className={cn('btc-chart__intel-tab', tab === t.id && 'is-active')}
+              onClick={() => onTabChange(t.id)}
+            >
+              {t.label}
+            </button>
           ))}
-        </Tabs>
+        </div>
+
+        <div className="btc-chart__intel-stack" role="tabpanel" aria-label={tabDef.label}>
+          {noMatches ? (
+            <div className="btc-chart__intel-no-match">
+              <p className="btc-chart__intel-no-match-title">Không tìm thấy panel</p>
+              <p className="btc-chart__intel-no-match-hint">
+                Thử từ khóa khác hoặc chọn chip ở trên. Lọc chỉ áp dụng trong tab{' '}
+                <strong>{tabDef.label}</strong>.
+              </p>
+              <button
+                type="button"
+                className="btc-chart__intel-no-match-btn"
+                onClick={() => onSearchChange('')}
+              >
+                Hiện tất cả panel
+              </button>
+            </div>
+          ) : (
+            panels[tab]
+          )}
+        </div>
       </RailSection>
     </div>
   )
-}
-
-/** Returns true when panel should render for the current intel search query. */
-export function intelPanelVisible(title: string, query: string): boolean {
-  const q = query.trim().toLowerCase()
-  if (!q) return true
-  return title.toLowerCase().includes(q)
 }
