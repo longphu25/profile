@@ -1,14 +1,28 @@
-// BTC Chart — Trade Setup panel: limit plan + position sizing.
+// BTC Chart — Trade Setup panel: limit plan + position sizing + positions drawer.
 
-import { useState, memo } from 'react'
-import { fmtP, type TradeSetup } from '../lib'
+import { useState, memo, useCallback, type ReactNode } from 'react'
+import { Briefcase } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { fmtP, type TradeSetup, type Position, type PosForm } from '../lib'
 import { parseBoundedInt } from '../lib/numeric-field'
+import type { PositionPatch } from '../hooks/usePositions'
 import { ExplainModal } from './ExplainModal'
 import { NumericFieldInput } from './NumericFieldInput'
+import { PositionsBody, type PosSuggestion } from './PositionsPanel'
 import { SideBlock, SideHead, SideNote, SideBadge } from './sidebar'
 
-interface Props {
+export interface TradeSetupPanelProps {
   setup: TradeSetup
+  positions: Position[]
+  showPosForm: boolean
+  setShowPosForm: React.Dispatch<React.SetStateAction<boolean>>
+  posForm: PosForm
+  setPosForm: React.Dispatch<React.SetStateAction<PosForm>>
+  onAddPosition: () => void
+  onRemovePosition: (id: string) => void
+  onUpdatePosition: (id: string, patch: PositionPatch) => void
+  markPrice: number | null
+  posSuggestions?: Record<string, PosSuggestion>
 }
 
 function countConfluenceGroups(reasons: string[]) {
@@ -179,11 +193,89 @@ function PlanRow({ label, price, delta, hint, tone }: PlanRowProps) {
   )
 }
 
-export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
+function HeadIconGroup({
+  positionsOpen,
+  positionsCount,
+  onTogglePositions,
+  explainBtn,
+}: {
+  positionsOpen: boolean
+  positionsCount: number
+  onTogglePositions: () => void
+  explainBtn: ReactNode
+}) {
+  return (
+    <div className="sb-head__icon-group">
+      <button
+        type="button"
+        className={cn('sb-head__icon-btn', positionsOpen && 'is-on')}
+        onClick={(e) => {
+          e.stopPropagation()
+          onTogglePositions()
+        }}
+        aria-expanded={positionsOpen}
+        aria-label="Vị thế"
+        title={`Vị thế (${positionsCount})`}
+      >
+        <Briefcase size={13} strokeWidth={2} aria-hidden />
+        {positionsCount > 0 && <span className="sb-head__icon-badge">{positionsCount}</span>}
+      </button>
+      {explainBtn}
+    </div>
+  )
+}
+
+export const TradeSetupPanel = memo(function TradeSetupPanel({
+  setup,
+  positions,
+  showPosForm,
+  setShowPosForm,
+  posForm,
+  setPosForm,
+  onAddPosition,
+  onRemovePosition,
+  onUpdatePosition,
+  markPrice,
+  posSuggestions,
+}: TradeSetupPanelProps) {
   const [capital, setCapital] = useState(10)
   const [leverage, setLeverage] = useState(10)
   const [open, setOpen] = useState(false)
   const [explainOpen, setExplainOpen] = useState(false)
+  const [positionsOpen, setPositionsOpen] = useState(false)
+
+  const fillFromSetup = useCallback(() => {
+    if (!setup.dir) return
+    setPosForm((f) => ({
+      ...f,
+      side: setup.dir!,
+      entry: String(setup.entry),
+      sl: String(setup.sl),
+      margin: String(capital),
+      leverage: String(leverage),
+    }))
+    setShowPosForm(true)
+    setPositionsOpen(true)
+  }, [setup.dir, setup.entry, setup.sl, capital, leverage, setPosForm, setShowPosForm])
+
+  const positionsDrawer = positionsOpen ? (
+    <div className="sb-trade-positions">
+      <PositionsBody
+        positions={positions}
+        showForm={showPosForm}
+        setShowForm={setShowPosForm}
+        form={posForm}
+        setForm={setPosForm}
+        onAdd={onAddPosition}
+        onRemove={onRemovePosition}
+        onUpdate={onUpdatePosition}
+        markPrice={markPrice}
+        suggestions={posSuggestions}
+        setup={setup}
+        onFillFromSetup={setup.dir ? fillFromSetup : undefined}
+      />
+    </div>
+  ) : null
 
   const explainBtn = (
     <button
@@ -200,10 +292,20 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
     </button>
   )
 
+  const headActions = (
+    <HeadIconGroup
+      positionsOpen={positionsOpen}
+      positionsCount={positions.length}
+      onTogglePositions={() => setPositionsOpen((o) => !o)}
+      explainBtn={explainBtn}
+    />
+  )
+
   if (!setup.dir) {
     return (
       <SideBlock variant="trade">
-        <SideHead title="Trade Setup" subtitle="Chờ confluence" actions={explainBtn} />
+        <SideHead title="Trade Setup" subtitle="Chờ confluence" actions={headActions} />
+        {positionsDrawer}
         <div className="sb-trade-empty">
           <p className="sb-trade-empty__title">Chưa có setup</p>
           <p className="sb-trade-empty__hint">
@@ -261,8 +363,10 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
             <SideBadge tone={isLong ? 'up' : 'dn'}>{isLong ? 'LONG' : 'SHORT'}</SideBadge>
           ) : undefined
         }
-        actions={explainBtn}
+        actions={headActions}
       />
+
+      {positionsDrawer}
 
       {explainOpen && <ExplainModal setup={setup} onClose={() => setExplainOpen(false)} />}
 

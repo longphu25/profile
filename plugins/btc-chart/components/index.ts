@@ -1,7 +1,7 @@
 // BTC Chart — public API for UI components.
 
 export { AlertsPanel, type AlertsPanelProps } from './AlertsPanel'
-export { PositionsPanel, type PositionsPanelProps } from './PositionsPanel'
+export { PositionsPanel, PositionsBody, type PositionsPanelProps } from './PositionsPanel'
 export { SignalPanel, FeatureWeightsPanel } from './SignalPanel'
 export { StatsPanel, FearGreedPanel } from './MarketPanels'
 export { OrderFlowPanel, BoxFlipPanel, MHBandPanel, VolumeProfilePanel } from './IndicatorReadouts'
@@ -17,7 +17,7 @@ export { ChartToolbarPanel, type ChartToolbarPanelProps } from './ChartToolbarPa
 export { ChartToasts, type ChartToastsProps } from './ChartToasts'
 export { ChartLoadingOverlay, type ChartLoadingOverlayProps } from './ChartLoadingOverlay'
 export { NweSettingsSection, type NweSettingsSectionProps } from './NweSettingsSection'
-export { TradeSetupPanel } from './TradeSetupPanel'
+export { TradeSetupPanel, type TradeSetupPanelProps } from './TradeSetupPanel'
 export { ScalpingPanel } from './ScalpingPanel'
 export { ReversalPanel } from './ReversalPanel'
 export { SignalConfigPanel, SignalConfigBody } from './SignalConfigPanel'

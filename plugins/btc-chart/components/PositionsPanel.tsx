@@ -1,10 +1,16 @@
-// BTC Chart — Positions panel: add-form with capital/leverage, PnL display.
+// BTC Chart — Positions: manual tracking with add form and inline SL updates.
 
-import { useEffect } from 'react'
-import { type Position, type PosForm, calcLiquidation, calcPnl, fmtP } from '../lib'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card } from '@/components/ui/card'
+import { useEffect, useState } from 'react'
+import { cn } from '@/lib/utils'
+import {
+  type Position,
+  type PosForm,
+  type TradeSetup,
+  calcLiquidation,
+  calcPnl,
+  fmtP,
+} from '../lib'
+import type { PositionPatch } from '../hooks/usePositions'
 
 export interface PosSuggestion {
   sl: number
@@ -12,7 +18,7 @@ export interface PosSuggestion {
   tp2: number
 }
 
-export interface PositionsPanelProps {
+export interface PositionsBodyProps {
   positions: Position[]
   showForm: boolean
   setShowForm: React.Dispatch<React.SetStateAction<boolean>>
@@ -20,11 +26,126 @@ export interface PositionsPanelProps {
   setForm: React.Dispatch<React.SetStateAction<PosForm>>
   onAdd: () => void
   onRemove: (id: string) => void
+  onUpdate: (id: string, patch: PositionPatch) => void
   markPrice: number | null
   suggestions?: Record<string, PosSuggestion>
+  setup?: TradeSetup
+  onFillFromSetup?: () => void
 }
 
-export function PositionsPanel({
+function PositionCard({
+  position: p,
+  markPrice,
+  suggestion,
+  onRemove,
+  onUpdate,
+}: {
+  position: Position
+  markPrice: number | null
+  suggestion?: PosSuggestion
+  onRemove: (id: string) => void
+  onUpdate: (id: string, patch: PositionPatch) => void
+}) {
+  const [slDraft, setSlDraft] = useState(p.stopLoss != null ? String(p.stopLoss) : '')
+  const mark = markPrice ?? p.entryPrice
+  const { pnl, pct } = calcPnl(p, mark)
+  const liq = calcLiquidation(p)
+
+  useEffect(() => {
+    setSlDraft(p.stopLoss != null ? String(p.stopLoss) : '')
+  }, [p.stopLoss])
+
+  const saveSl = () => {
+    const trimmed = slDraft.trim()
+    onUpdate(p.id, { stopLoss: trimmed ? parseFloat(trimmed) : null })
+  }
+
+  const applySuggestedSl = () => {
+    if (!suggestion) return
+    setSlDraft(String(suggestion.sl))
+    onUpdate(p.id, { stopLoss: suggestion.sl })
+  }
+
+  return (
+    <article className={cn('btc-chart__pos-card', p.side === 'long' ? 'is-long' : 'is-short')}>
+      <div className="btc-chart__pos-card-head">
+        <span className="btc-chart__pos-side">{p.side === 'long' ? 'LONG' : 'SHORT'}</span>
+        <span className="btc-chart__pos-meta">
+          {p.type} · x{p.leverage}
+        </span>
+        <button
+          type="button"
+          className="btc-chart__pos-remove"
+          onClick={() => onRemove(p.id)}
+          aria-label="Xóa vị thế"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="btc-chart__pos-stats">
+        <div className="btc-chart__pos-stat">
+          <span className="btc-chart__pos-stat-key">Entry</span>
+          <span className="btc-chart__pos-stat-val">{fmtP(p.entryPrice)}</span>
+        </div>
+        <div className="btc-chart__pos-stat">
+          <span className="btc-chart__pos-stat-key">Mark</span>
+          <span className={cn('btc-chart__pos-stat-val', pnl >= 0 ? 'up' : 'dn')}>
+            {fmtP(mark)}
+          </span>
+        </div>
+        <div className="btc-chart__pos-stat">
+          <span className="btc-chart__pos-stat-key">Margin</span>
+          <span className="btc-chart__pos-stat-val">${p.margin.toFixed(2)}</span>
+        </div>
+        <div className="btc-chart__pos-stat">
+          <span className="btc-chart__pos-stat-key">PnL</span>
+          <span className={cn('btc-chart__pos-stat-val', pnl >= 0 ? 'up' : 'dn')}>
+            {pnl >= 0 ? '+' : ''}
+            {pnl.toFixed(2)} ({pct >= 0 ? '+' : ''}
+            {pct.toFixed(1)}%)
+          </span>
+        </div>
+        {liq != null && (
+          <div className="btc-chart__pos-stat btc-chart__pos-stat--wide">
+            <span className="btc-chart__pos-stat-key">Liq ~</span>
+            <span className="btc-chart__pos-stat-val warn">{fmtP(liq)}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="btc-chart__pos-sl-row">
+        <label className="btc-chart__pos-sl-label" htmlFor={`pos-sl-${p.id}`}>
+          Stop loss
+        </label>
+        <input
+          id={`pos-sl-${p.id}`}
+          type="number"
+          className="btc-chart__pos-input"
+          placeholder="Chưa đặt"
+          value={slDraft}
+          onChange={(e) => setSlDraft(e.target.value)}
+        />
+        <button type="button" className="btc-chart__pos-chip-btn" onClick={saveSl}>
+          Lưu
+        </button>
+        {suggestion && (
+          <button
+            type="button"
+            className="btc-chart__pos-chip-btn is-accent"
+            onClick={applySuggestedSl}
+            title={`Gợi ý SL ${fmtP(suggestion.sl)}`}
+          >
+            Gợi ý
+          </button>
+        )}
+      </div>
+    </article>
+  )
+}
+
+/** Embeddable positions manager (Trade Setup drawer). */
+export function PositionsBody({
   positions,
   showForm,
   setShowForm,
@@ -32,191 +153,183 @@ export function PositionsPanel({
   setForm,
   onAdd,
   onRemove,
+  onUpdate,
   markPrice,
   suggestions,
-}: PositionsPanelProps) {
-  // Auto-calculate size when margin/leverage/entry changes
+  setup,
+  onFillFromSetup,
+}: PositionsBodyProps) {
   useEffect(() => {
     const entry = parseFloat(form.entry)
     const margin = parseFloat(form.margin)
     const lev = parseFloat(form.leverage) || 10
     if (!entry || entry <= 0 || !margin || margin <= 0) return
-    const notional = margin * lev
-    const qty = notional / entry
+    const qty = (margin * lev) / entry
     setForm((f) => ({
       ...f,
       size: qty.toFixed(6),
     }))
   }, [form.margin, form.leverage, form.entry, setForm])
 
+  const canFillSetup = Boolean(setup?.dir && onFillFromSetup)
+
   return (
-    <Card className="overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-[var(--border)] text-sm">
-        <div className="font-medium">Positions</div>
-        <Button
+    <div className="btc-chart__pos-body">
+      <div className="btc-chart__pos-toolbar">
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-xs"
+          className={cn('btc-chart__pos-primary-btn', showForm && 'is-on')}
           onClick={() => setShowForm((v) => !v)}
         >
-          {showForm ? '×' : '+ Add'}
-        </Button>
+          {showForm ? 'Đóng form' : '+ Thêm vị thế'}
+        </button>
+        {canFillSetup && (
+          <button
+            type="button"
+            className="btc-chart__pos-chip-btn is-accent"
+            onClick={onFillFromSetup}
+          >
+            Lấy từ setup
+          </button>
+        )}
+        {markPrice != null && markPrice > 0 && (
+          <button
+            type="button"
+            className="btc-chart__pos-chip-btn"
+            onClick={() => {
+              setShowForm(true)
+              setForm((f) => ({ ...f, entry: String(markPrice) }))
+            }}
+          >
+            Giá hiện tại
+          </button>
+        )}
+        <span className="btc-chart__pos-count">{positions.length} vị thế</span>
       </div>
+
       {showForm && (
-        <div className="p-3 pt-2 border-b border-[var(--border)] space-y-2 text-xs">
-          <div className="flex gap-2">
-            <select
-              className="flex-1 bg-[var(--surface-3)] border border-[var(--border)] rounded px-1.5 py-0.5"
-              value={form.side}
-              onChange={(e) => setForm((f) => ({ ...f, side: e.target.value }))}
-            >
-              <option value="long">Long</option>
-              <option value="short">Short</option>
-            </select>
-            <select
-              className="flex-1 bg-[var(--surface-3)] border border-[var(--border)] rounded px-1.5 py-0.5"
-              value={form.type}
-              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-            >
-              <option value="isolated">Isolated</option>
-              <option value="cross">Cross</option>
-            </select>
+        <form
+          className="btc-chart__pos-form"
+          onSubmit={(e) => {
+            e.preventDefault()
+            onAdd()
+          }}
+        >
+          <div className="btc-chart__pos-form-row">
+            <label className="btc-chart__pos-field">
+              <span className="btc-chart__pos-field-label">Hướng</span>
+              <select
+                className="btc-chart__pos-select"
+                value={form.side}
+                onChange={(e) => setForm((f) => ({ ...f, side: e.target.value }))}
+              >
+                <option value="long">Long</option>
+                <option value="short">Short</option>
+              </select>
+            </label>
+            <label className="btc-chart__pos-field">
+              <span className="btc-chart__pos-field-label">Margin</span>
+              <select
+                className="btc-chart__pos-select"
+                value={form.type}
+                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+              >
+                <option value="isolated">Isolated</option>
+                <option value="cross">Cross</option>
+              </select>
+            </label>
           </div>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <div className="text-[9px] text-[var(--muted)] mb-0.5">Ký quỹ ($)</div>
-              <Input
+
+          <div className="btc-chart__pos-form-row">
+            <label className="btc-chart__pos-field">
+              <span className="btc-chart__pos-field-label">Ký quỹ ($)</span>
+              <input
                 type="number"
                 min={1}
+                className="btc-chart__pos-input"
                 placeholder="10"
                 value={form.margin}
                 onChange={(e) => setForm((f) => ({ ...f, margin: e.target.value }))}
-                className="h-7 text-xs"
               />
-            </div>
-            <div className="flex-1">
-              <div className="text-[9px] text-[var(--muted)] mb-0.5">Leverage</div>
-              <div className="flex">
-                <span className="text-[var(--muted)] px-1">x</span>
-                <Input
-                  type="number"
-                  min={1}
-                  max={125}
-                  value={form.leverage}
-                  onChange={(e) => setForm((f) => ({ ...f, leverage: e.target.value }))}
-                  className="h-7 text-xs flex-1"
-                />
-              </div>
-            </div>
+            </label>
+            <label className="btc-chart__pos-field">
+              <span className="btc-chart__pos-field-label">Leverage</span>
+              <input
+                type="number"
+                min={1}
+                max={125}
+                className="btc-chart__pos-input"
+                value={form.leverage}
+                onChange={(e) => setForm((f) => ({ ...f, leverage: e.target.value }))}
+              />
+            </label>
           </div>
-          <Input
-            className="font-mono text-xs h-7"
-            type="number"
-            placeholder="Giá mở (Entry)"
-            value={form.entry}
-            onChange={(e) => setForm((f) => ({ ...f, entry: e.target.value }))}
-          />
+
+          <label className="btc-chart__pos-field btc-chart__pos-field--wide">
+            <span className="btc-chart__pos-field-label">Entry</span>
+            <input
+              type="number"
+              className="btc-chart__pos-input"
+              placeholder="Giá mở"
+              value={form.entry}
+              onChange={(e) => setForm((f) => ({ ...f, entry: e.target.value }))}
+            />
+          </label>
+
           {form.entry &&
             parseFloat(form.entry) > 0 &&
             form.margin &&
             parseFloat(form.margin) > 0 && (
-              <div className="text-[10px] text-[var(--muted)] flex gap-3">
-                <span>
-                  Size: ${(parseFloat(form.margin) * (parseFloat(form.leverage) || 10)).toFixed(2)}
-                </span>
-                <span>Qty: {form.size}</span>
-              </div>
+              <p className="btc-chart__pos-form-hint">
+                Size ${(parseFloat(form.margin) * (parseFloat(form.leverage) || 10)).toFixed(2)} ·
+                Qty {form.size}
+              </p>
             )}
-          <Input
-            className="font-mono text-xs h-7"
-            type="number"
-            placeholder="Stop Loss (tuỳ chọn)"
-            value={form.sl}
-            onChange={(e) => setForm((f) => ({ ...f, sl: e.target.value }))}
-          />
-          <Button type="button" onClick={onAdd} size="sm" className="w-full text-xs h-7">
+
+          <label className="btc-chart__pos-field btc-chart__pos-field--wide">
+            <span className="btc-chart__pos-field-label">Stop loss (tuỳ chọn)</span>
+            <input
+              type="number"
+              className="btc-chart__pos-input"
+              placeholder="SL"
+              value={form.sl}
+              onChange={(e) => setForm((f) => ({ ...f, sl: e.target.value }))}
+            />
+          </label>
+
+          <button type="submit" className="btc-chart__pos-submit">
             Thêm vị thế
-          </Button>
+          </button>
+        </form>
+      )}
+
+      {positions.length === 0 && !showForm && (
+        <p className="btc-chart__pos-empty">
+          Chưa có vị thế. Bấm &quot;Thêm vị thế&quot; hoặc &quot;Lấy từ setup&quot;.
+        </p>
+      )}
+
+      {positions.length > 0 && (
+        <div className="btc-chart__pos-list">
+          {positions.map((p) => (
+            <PositionCard
+              key={p.id}
+              position={p}
+              markPrice={markPrice}
+              suggestion={suggestions?.[p.id]}
+              onRemove={onRemove}
+              onUpdate={onUpdate}
+            />
+          ))}
         </div>
       )}
-      {positions.length === 0 && !showForm && (
-        <div className="px-3 py-1 text-xs text-[var(--muted)]">Chưa có vị thế</div>
-      )}
-      {positions.map((p) => {
-        const mark = markPrice ?? p.entryPrice
-        const { pnl, pct } = calcPnl(p, mark)
-        const liq = calcLiquidation(p)
-        return (
-          <div key={p.id} className="px-3 py-2 border-t border-[var(--border)] text-xs space-y-0.5">
-            <div className="flex items-center justify-between">
-              <span
-                className={`${p.side === 'long' ? 'text-[var(--up)]' : 'text-[var(--dn)]'} font-medium`}
-              >
-                {p.side === 'long' ? '▲ LONG' : '▼ SHORT'}
-              </span>
-              <span className="text-[var(--muted)] text-[10px]">
-                {p.type} · x{p.leverage ?? '?'}
-              </span>
-              <button
-                type="button"
-                className="text-[var(--dn)] hover:opacity-70"
-                onClick={() => onRemove(p.id)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 pt-0.5">
-              <div className="flex justify-between">
-                <span className="text-[var(--muted)]">Entry</span>
-                <span className="font-mono">{fmtP(p.entryPrice)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--muted)]">Mark</span>
-                <span className={`font-mono ${pnl >= 0 ? 'text-[var(--up)]' : 'text-[var(--dn)]'}`}>
-                  {fmtP(mark)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--muted)]">Size</span>
-                <span className="font-mono">{p.size.toFixed(6)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[var(--muted)]">Margin</span>
-                <span className="font-mono">${p.margin.toFixed(2)}</span>
-              </div>
-              {p.stopLoss && (
-                <div className="flex justify-between">
-                  <span className="text-[var(--muted)]">Stop Loss</span>
-                  <span className="font-mono text-[var(--dn)]">{fmtP(p.stopLoss)}</span>
-                </div>
-              )}
-              {liq && (
-                <div className="flex justify-between">
-                  <span className="text-[var(--muted)]">Liq. ~</span>
-                  <span className="font-mono" style={{ color: 'var(--amber)' }}>
-                    {fmtP(liq)}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between col-span-2">
-                <span className="text-[var(--muted)]">PnL</span>
-                <span className={`font-mono ${pnl >= 0 ? 'text-[var(--up)]' : 'text-[var(--dn)]'}`}>
-                  {pnl >= 0 ? '+' : ''}
-                  {pnl.toFixed(2)} $ ({pct >= 0 ? '+' : ''}
-                  {pct.toFixed(2)}%)
-                </span>
-              </div>
-              {suggestions?.[p.id] && (
-                <div className="col-span-2 pt-1 text-[9px] opacity-80 border-t border-[var(--border)] mt-1">
-                  Gợi ý: SL {fmtP(suggestions[p.id].sl)} · TP1 {fmtP(suggestions[p.id].tp1)} · TP2{' '}
-                  {fmtP(suggestions[p.id].tp2)}
-                </div>
-              )}
-            </div>
-          </div>
-        )
-      })}
-    </Card>
+    </div>
   )
+}
+
+export interface PositionsPanelProps extends PositionsBodyProps {}
+
+/** @deprecated Prefer PositionsBody inside TradeSetupPanel. */
+export function PositionsPanel(props: PositionsPanelProps) {
+  return <PositionsBody {...props} />
 }

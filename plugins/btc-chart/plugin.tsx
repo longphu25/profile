@@ -46,7 +46,7 @@ import { buildBoxFlipSignals, type BoxFlipResult } from './box-flip'
 import { downloadChartSnapshot } from './snapshot'
 // Direct imports (avoid barrel for better bundle analyzability per best practices)
 import { AlertsPanel } from './components/AlertsPanel'
-import { PositionsPanel } from './components/PositionsPanel'
+
 import { StatsPanel, FearGreedPanel } from './components/MarketPanels'
 
 import { VolumeSpikePanel } from './components/VolumeSpikePanel'
@@ -465,6 +465,7 @@ function BtcChartView() {
     setForm: setPosForm,
     addPosition,
     removePosition,
+    updatePosition,
   } = usePositions(chartRefs, !loading, markPrice)
 
   // Compute suggested SL/TP for each open position (ATR + NWE bands).
@@ -2493,7 +2494,19 @@ function BtcChartView() {
               />
             </Suspense>
             <Suspense fallback={<div className="sb-empty">Loading setup…</div>}>
-              <TradeSetupPanelLazy setup={sidebar.tradeSetup} />
+              <TradeSetupPanelLazy
+                setup={sidebar.tradeSetup}
+                positions={positions}
+                showPosForm={showPosForm}
+                setShowPosForm={setShowPosForm}
+                posForm={posForm}
+                setPosForm={setPosForm}
+                onAddPosition={addPosition}
+                onRemovePosition={removePosition}
+                onUpdatePosition={updatePosition}
+                markPrice={markPrice}
+                posSuggestions={posSuggestions}
+              />
             </Suspense>
             <Suspense fallback={<div className="sb-empty">Loading funding…</div>}>
               <FundingNwePanelLazy
@@ -2541,21 +2554,10 @@ function BtcChartView() {
             onMobileClose={() => setSidebarMobileOpen(false)}
             panels={{
               trade: (
-                <>
-                  <SidebarAccordion filterQuery={intelSearch} title="Positions">
-                    <PositionsPanel
-                      positions={positions}
-                      showForm={showPosForm}
-                      setShowForm={setShowPosForm}
-                      form={posForm}
-                      setForm={setPosForm}
-                      onAdd={addPosition}
-                      onRemove={removePosition}
-                      markPrice={markPrice}
-                      suggestions={posSuggestions}
-                    />
-                  </SidebarAccordion>
-                </>
+                <p className="sb-empty sb-empty--hint">
+                  Vị thế quản lý tại icon <span className="sb-empty__mono">briefcase</span> trên
+                  block Trade Setup.
+                </p>
               ),
               market: (
                 <>

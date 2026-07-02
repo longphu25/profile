@@ -11,6 +11,10 @@ import {
   persistPositions,
 } from '../lib'
 
+export type PositionPatch = Partial<
+  Pick<Position, 'stopLoss' | 'entryPrice' | 'margin' | 'leverage' | 'side' | 'type'>
+>
+
 export interface UsePositions {
   positions: Position[]
   showForm: boolean
@@ -19,6 +23,7 @@ export interface UsePositions {
   setForm: React.Dispatch<React.SetStateAction<PosForm>>
   addPosition: () => void
   removePosition: (id: string) => void
+  updatePosition: (id: string, patch: PositionPatch) => void
 }
 
 /**
@@ -62,6 +67,29 @@ export function usePositions(
   }
 
   const removePosition = (id: string) => save(positions.filter((x) => x.id !== id))
+
+  const updatePosition = (id: string, patch: PositionPatch) => {
+    save(
+      positions.map((p) => {
+        if (p.id !== id) return p
+        const entryPrice = patch.entryPrice ?? p.entryPrice
+        const margin = patch.margin ?? p.margin
+        const leverage = patch.leverage ?? p.leverage
+        const size =
+          patch.entryPrice != null || patch.margin != null || patch.leverage != null
+            ? (margin * leverage) / entryPrice
+            : p.size
+        return {
+          ...p,
+          ...patch,
+          entryPrice,
+          margin,
+          leverage,
+          size,
+        }
+      }),
+    )
+  }
 
   // Draw entry + PnL price line on the chart whenever positions change.
   const posLinesRef = useRef<{ id: string; lines: any[] }[]>([])
@@ -110,5 +138,14 @@ export function usePositions(
     }
   }, [positions, chartRefs, chartReady, markPrice])
 
-  return { positions, showForm, setShowForm, form, setForm, addPosition, removePosition }
+  return {
+    positions,
+    showForm,
+    setShowForm,
+    form,
+    setForm,
+    addPosition,
+    removePosition,
+    updatePosition,
+  }
 }

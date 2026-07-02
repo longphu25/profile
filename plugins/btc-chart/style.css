@@ -1854,6 +1854,69 @@
   gap: 4px;
   flex-shrink: 0;
 }
+.sb-head__icon-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.sb-head__icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+.sb-head__icon-btn:hover,
+.sb-head__icon-btn.is-on {
+  border-color: rgba(128, 255, 213, 0.45);
+  background: rgba(128, 255, 213, 0.08);
+  color: var(--mint);
+}
+.sb-head__icon-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(128, 255, 213, 0.2);
+}
+.sb-head__icon-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--mint);
+  color: #0a0a0c;
+  font-size: 8px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 14px;
+  text-align: center;
+}
+.sb-trade-positions {
+  border-bottom: 1px solid var(--border);
+}
+.sb-empty--hint {
+  padding: 12px 14px;
+  font-size: 10px;
+  line-height: 1.45;
+  text-align: left;
+}
+.sb-empty__mono {
+  font-family: var(--font-mono);
+  color: var(--mint);
+}
 
 .sb-head--split {
   gap: 0;
@@ -4468,6 +4531,247 @@
   height: 12px;
   accent-color: var(--mint);
   cursor: pointer;
+}
+
+/* ── Positions (Trade Setup drawer) ── */
+.btc-chart__pos-body {
+  padding: 8px 10px 10px 14px;
+}
+.btc-chart__pos-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.btc-chart__pos-primary-btn {
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.btc-chart__pos-primary-btn:hover,
+.btc-chart__pos-primary-btn.is-on {
+  border-color: var(--mint);
+  background: rgba(128, 255, 213, 0.1);
+  color: var(--mint);
+}
+.btc-chart__pos-chip-btn {
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 9px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+.btc-chart__pos-chip-btn:hover {
+  border-color: rgba(128, 255, 213, 0.45);
+  color: var(--text);
+}
+.btc-chart__pos-chip-btn.is-accent {
+  border-color: rgba(128, 255, 213, 0.35);
+  color: var(--mint);
+}
+.btc-chart__pos-count {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.btc-chart__pos-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.btc-chart__pos-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.btc-chart__pos-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.btc-chart__pos-field--wide {
+  grid-column: 1 / -1;
+}
+.btc-chart__pos-field-label {
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+.btc-chart__pos-input,
+.btc-chart__pos-select {
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+.btc-chart__pos-input:focus,
+.btc-chart__pos-select:focus {
+  outline: none;
+  border-color: var(--mint);
+  box-shadow: 0 0 0 2px rgba(128, 255, 213, 0.15);
+}
+.btc-chart__pos-form-hint {
+  margin: 0;
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.btc-chart__pos-submit {
+  min-height: 30px;
+  border: 1px solid var(--mint);
+  border-radius: 4px;
+  background: rgba(128, 255, 213, 0.12);
+  color: var(--mint);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.btc-chart__pos-submit:hover {
+  background: rgba(128, 255, 213, 0.2);
+}
+.btc-chart__pos-empty {
+  margin: 0;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.btc-chart__pos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.btc-chart__pos-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  padding: 8px;
+}
+.btc-chart__pos-card.is-long {
+  border-left: 2px solid var(--up);
+}
+.btc-chart__pos-card.is-short {
+  border-left: 2px solid var(--dn);
+}
+.btc-chart__pos-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.btc-chart__pos-side {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+}
+.btc-chart__pos-card.is-long .btc-chart__pos-side {
+  color: var(--up);
+}
+.btc-chart__pos-card.is-short .btc-chart__pos-side {
+  color: var(--dn);
+}
+.btc-chart__pos-meta {
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.btc-chart__pos-remove {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--dn);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.btc-chart__pos-remove:hover {
+  background: rgba(255, 122, 133, 0.12);
+}
+.btc-chart__pos-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 8px;
+  margin-bottom: 6px;
+}
+.btc-chart__pos-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 9px;
+  font-family: var(--font-mono);
+}
+.btc-chart__pos-stat--wide {
+  grid-column: 1 / -1;
+}
+.btc-chart__pos-stat-key {
+  color: var(--muted);
+}
+.btc-chart__pos-stat-val {
+  color: var(--text);
+}
+.btc-chart__pos-stat-val.up {
+  color: var(--up);
+}
+.btc-chart__pos-stat-val.dn {
+  color: var(--dn);
+}
+.btc-chart__pos-stat-val.warn {
+  color: var(--amber);
+}
+.btc-chart__pos-sl-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.btc-chart__pos-sl-label {
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  flex: 0 0 auto;
+}
+.btc-chart__pos-sl-row .btc-chart__pos-input {
+  flex: 1 1 88px;
+  min-height: 26px;
 }
 
 /* ── Collapsible Panel Pattern ── */
