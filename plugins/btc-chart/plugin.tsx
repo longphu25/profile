@@ -57,7 +57,7 @@ import { ChartLoadingOverlay } from './components/ChartLoadingOverlay'
 import { ChartStatusBar } from './components/ChartStatusBar'
 import { ChartLayerDots } from './components/ChartLayerDots'
 import { OscillatorPane } from './components/OscillatorPane'
-import { IntelRail, type IntelTab } from './components/IntelRail'
+import { IntelDrawer, type IntelTab } from './components/IntelDrawer'
 import { ALL_IND_KEYS } from './lib/indicator-groups'
 import { intelKeywordsFor } from './lib/intel-panels'
 import { applyLayerPreset, type LayerPresetId } from './lib/layer-presets'
@@ -301,6 +301,7 @@ function BtcChartView() {
   const [intelTab, setIntelTab] = useState<IntelTab>('trade')
   const [intelSearch, setIntelSearch] = useState('')
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false)
+  const [intelOpen, setIntelOpen] = useState(false)
   const [oscOpen, setOscOpen] = useState<boolean>(cfgInit.oscOpen)
   const [oscView, setOscView] = useState<OscView>(cfgInit.oscView)
   const [oscHeight, setOscHeight] = useState<number>(cfgInit.oscHeight)
@@ -2426,8 +2427,22 @@ function BtcChartView() {
           activeLayerCount={ALL_IND_KEYS.filter((k) => vis[k]).length}
           toolsOpen={toolsOpen}
           sidebarOpen={sidebarMobileOpen}
+          intelOpen={intelOpen}
           onToggleTools={() => setToolsOpen((o) => !o)}
-          onToggleSidebar={() => setSidebarMobileOpen((o) => !o)}
+          onToggleSidebar={() =>
+            setSidebarMobileOpen((o) => {
+              const next = !o
+              if (next) setIntelOpen(false)
+              return next
+            })
+          }
+          onToggleIntel={() =>
+            setIntelOpen((o) => {
+              const next = !o
+              if (next) setSidebarMobileOpen(false)
+              return next
+            })
+          }
           onSelectSymbol={selectSymbol}
           onSelectInterval={selectInterval}
           onAddCustomSymbol={addCustomSymbol}
@@ -2545,218 +2560,229 @@ function BtcChartView() {
               />
             </Suspense>
           </RailSection>
-
-          <IntelRail
-            tab={intelTab}
-            onTabChange={setIntelTab}
-            search={intelSearch}
-            onSearchChange={setIntelSearch}
-            mobileOpen={sidebarMobileOpen}
-            onMobileClose={() => setSidebarMobileOpen(false)}
-            panels={{
-              trade: (
-                <p className="sb-empty sb-empty--hint">
-                  Vị thế quản lý tại icon <span className="sb-empty__mono">briefcase</span> trên
-                  block Trade Setup.
-                </p>
-              ),
-              market: (
-                <>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('market', 'Open Interest')}
-                    title="Open Interest"
-                  >
-                    <Suspense
-                      fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-                    >
-                      <OIPanelLazy
-                        oi={oiQuery.data?.totalUsd ?? null}
-                        mcap={mcap}
-                        breakdown={oiQuery.data?.breakdown}
-                        history={oiQuery.data?.history}
-                        deltaPct={oiQuery.data?.deltaPct}
-                      />
-                    </Suspense>
-                  </SidebarAccordion>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('market', 'Whale Tracker')}
-                    title="Whale Tracker"
-                    onToggle={(open) => {
-                      if (open && !vis.whale) toggle('whale')
-                    }}
-                  >
-                    <Suspense
-                      fallback={
-                        <div className="p-2 text-xs text-[var(--muted)]">Loading whale...</div>
-                      }
-                    >
-                      <WhalePanel
-                        whaleAlerts={whaleTracker.whaleAlerts}
-                        exchangeFlow={whaleTracker.exchangeFlow}
-                        whaleStats={whaleTracker.whaleStats}
-                        recentBuyVolume={whaleTracker.recentBuyVolume}
-                        recentSellVolume={whaleTracker.recentSellVolume}
-                        onClear={whaleTracker.clearAlerts}
-                      />
-                    </Suspense>
-                  </SidebarAccordion>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('market', '24h Stats')}
-                    title="24h Stats"
-                  >
-                    <Suspense
-                      fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-                    >
-                      <StatsPanel stats={stats} />
-                    </Suspense>
-                  </SidebarAccordion>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('market', 'Fear & Greed')}
-                    title="Fear & Greed"
-                  >
-                    <Suspense fallback={<div className="sb-empty">Loading…</div>}>
-                      <FearGreedPanel fng={fng} />
-                    </Suspense>
-                  </SidebarAccordion>
-                </>
-              ),
-              flow: (
-                <>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('flow', 'Order Flow')}
-                    title="Order Flow"
-                    onToggle={(open) => {
-                      if (open && !vis.of) toggle('of')
-                    }}
-                  >
-                    <Suspense
-                      fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-                    >
-                      <OrderFlowPanel ofLog={sidebar.ofLog} />
-                    </Suspense>
-                  </SidebarAccordion>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('flow', 'Box Flip')}
-                    title="Box Flip"
-                    onToggle={(open) => {
-                      if (open && !vis.boxFlip) toggle('boxFlip')
-                    }}
-                  >
-                    <Suspense
-                      fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-                    >
-                      <BoxFlipPanelLazy boxFlip={sidebar.boxFlip} />
-                    </Suspense>
-                  </SidebarAccordion>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('flow', 'Volume Spike')}
-                    title="Volume Spike"
-                    onToggle={(open) => {
-                      if (open && !vis.volSpike) toggle('volSpike')
-                    }}
-                  >
-                    <Suspense
-                      fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-                    >
-                      <VolumeSpikePanel
-                        enabled={vis.volSpike}
-                        onToggle={() => toggle('volSpike')}
-                        spikeMult={spikeMult}
-                        onChange={(val) => {
-                          setSpikeMult(val)
-                          spikeMultRef.current = val
-                          if (candlesRef.current.length)
-                            queueMicrotask(() => renderData(candlesRef.current))
-                        }}
-                      />
-                    </Suspense>
-                  </SidebarAccordion>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('flow', 'Volume Profile')}
-                    title="Volume Profile"
-                    onToggle={(open) => {
-                      if (open && !vis.vp) toggle('vp')
-                    }}
-                  >
-                    <Suspense
-                      fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-                    >
-                      <VolumeProfilePanel vp={sidebar.vp} vpHvn={sidebar.vpHvn} />
-                    </Suspense>
-                  </SidebarAccordion>
-                </>
-              ),
-              alerts: (
-                <>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('alerts', 'Alerts')}
-                    title="Alerts"
-                  >
-                    <AlertsPanel
-                      alerts={alerts}
-                      onAdd={addAlert}
-                      onRemove={removeAlert}
-                      onToggle={toggleAlert}
-                      onReset={resetAlert}
-                      currentPrice={lastCandleClose}
-                      currentRsi={sidebar.rsiNow}
-                    />
-                  </SidebarAccordion>
-                </>
-              ),
-              ml: (
-                <>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('ml', 'MH Band')}
-                    title="MH Band"
-                    onToggle={(open) => {
-                      if (open && !vis.nwe) toggle('nwe')
-                    }}
-                  >
-                    <Suspense
-                      fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-                    >
-                      <MHBandPanelLazy sidebar={sidebar} />
-                    </Suspense>
-                  </SidebarAccordion>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('ml', 'Technicals')}
-                    title="Technicals"
-                  >
-                    <Suspense
-                      fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-                    >
-                      <TechnicalsPanelLazy sidebar={sidebar} />
-                    </Suspense>
-                  </SidebarAccordion>
-                  <SidebarAccordion
-                    filterQuery={intelSearch}
-                    filterKeywords={intelKeywordsFor('ml', 'Feature Weights')}
-                    title="Feature Weights"
-                  >
-                    <Suspense
-                      fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
-                    >
-                      <FeatureWeightsPanelLazy ml={sidebar.ml} />
-                    </Suspense>
-                  </SidebarAccordion>
-                </>
-              ),
-            }}
-          />
         </div>
       </div>
+
+      <IntelDrawer
+        open={intelOpen}
+        onClose={() => setIntelOpen(false)}
+        tab={intelTab}
+        onTabChange={setIntelTab}
+        search={intelSearch}
+        onSearchChange={setIntelSearch}
+        panels={{
+          trade: (
+            <p className="sb-empty sb-empty--hint">
+              Vị thế quản lý tại icon <span className="sb-empty__mono">briefcase</span> trên block
+              Trade Setup.
+            </p>
+          ),
+          market: (
+            <>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('market', 'Open Interest')}
+                title="Open Interest"
+              >
+                <Suspense
+                  fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+                >
+                  <OIPanelLazy
+                    oi={oiQuery.data?.totalUsd ?? null}
+                    mcap={mcap}
+                    breakdown={oiQuery.data?.breakdown}
+                    history={oiQuery.data?.history}
+                    deltaPct={oiQuery.data?.deltaPct}
+                  />
+                </Suspense>
+              </SidebarAccordion>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('market', 'Whale Tracker')}
+                title="Whale Tracker"
+                onToggle={(open) => {
+                  if (open && !vis.whale) toggle('whale')
+                }}
+              >
+                <Suspense
+                  fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading whale...</div>}
+                >
+                  <WhalePanel
+                    whaleAlerts={whaleTracker.whaleAlerts}
+                    exchangeFlow={whaleTracker.exchangeFlow}
+                    whaleStats={whaleTracker.whaleStats}
+                    recentBuyVolume={whaleTracker.recentBuyVolume}
+                    recentSellVolume={whaleTracker.recentSellVolume}
+                    onClear={whaleTracker.clearAlerts}
+                  />
+                </Suspense>
+              </SidebarAccordion>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('market', '24h Stats')}
+                title="24h Stats"
+              >
+                <Suspense
+                  fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+                >
+                  <StatsPanel stats={stats} />
+                </Suspense>
+              </SidebarAccordion>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('market', 'Fear & Greed')}
+                title="Fear & Greed"
+              >
+                <Suspense fallback={<div className="sb-empty">Loading…</div>}>
+                  <FearGreedPanel fng={fng} />
+                </Suspense>
+              </SidebarAccordion>
+            </>
+          ),
+          flow: (
+            <>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('flow', 'Order Flow')}
+                title="Order Flow"
+                onToggle={(open) => {
+                  if (open && !vis.of) toggle('of')
+                }}
+              >
+                <Suspense
+                  fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+                >
+                  <OrderFlowPanel ofLog={sidebar.ofLog} />
+                </Suspense>
+              </SidebarAccordion>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('flow', 'Box Flip')}
+                title="Box Flip"
+                onToggle={(open) => {
+                  if (open && !vis.boxFlip) toggle('boxFlip')
+                }}
+              >
+                <Suspense
+                  fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+                >
+                  <BoxFlipPanelLazy boxFlip={sidebar.boxFlip} />
+                </Suspense>
+              </SidebarAccordion>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('flow', 'Volume Spike')}
+                title="Volume Spike"
+                onToggle={(open) => {
+                  if (open && !vis.volSpike) toggle('volSpike')
+                }}
+              >
+                <Suspense
+                  fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+                >
+                  <VolumeSpikePanel
+                    enabled={vis.volSpike}
+                    onToggle={() => toggle('volSpike')}
+                    spikeMult={spikeMult}
+                    onChange={(val) => {
+                      setSpikeMult(val)
+                      spikeMultRef.current = val
+                      if (candlesRef.current.length)
+                        queueMicrotask(() => renderData(candlesRef.current))
+                    }}
+                  />
+                </Suspense>
+              </SidebarAccordion>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('flow', 'Volume Profile')}
+                title="Volume Profile"
+                onToggle={(open) => {
+                  if (open && !vis.vp) toggle('vp')
+                }}
+              >
+                <Suspense
+                  fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+                >
+                  <VolumeProfilePanel vp={sidebar.vp} vpHvn={sidebar.vpHvn} />
+                </Suspense>
+              </SidebarAccordion>
+            </>
+          ),
+          alerts: (
+            <>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('alerts', 'Alerts')}
+                title="Alerts"
+              >
+                <AlertsPanel
+                  alerts={alerts}
+                  onAdd={addAlert}
+                  onRemove={removeAlert}
+                  onToggle={toggleAlert}
+                  onReset={resetAlert}
+                  currentPrice={lastCandleClose}
+                  currentRsi={sidebar.rsiNow}
+                />
+              </SidebarAccordion>
+            </>
+          ),
+          ml: (
+            <>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('ml', 'MH Band')}
+                title="MH Band"
+                onToggle={(open) => {
+                  if (open && !vis.nwe) toggle('nwe')
+                }}
+              >
+                <Suspense
+                  fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+                >
+                  <MHBandPanelLazy sidebar={sidebar} />
+                </Suspense>
+              </SidebarAccordion>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('ml', 'Technicals')}
+                title="Technicals"
+              >
+                <Suspense
+                  fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+                >
+                  <TechnicalsPanelLazy sidebar={sidebar} />
+                </Suspense>
+              </SidebarAccordion>
+              <SidebarAccordion
+                flat
+                filterQuery={intelSearch}
+                filterKeywords={intelKeywordsFor('ml', 'Feature Weights')}
+                title="Feature Weights"
+              >
+                <Suspense
+                  fallback={<div className="p-2 text-xs text-[var(--muted)]">Loading...</div>}
+                >
+                  <FeatureWeightsPanelLazy ml={sidebar.ml} />
+                </Suspense>
+              </SidebarAccordion>
+            </>
+          ),
+        }}
+      />
+
       <ChartStatusBar
         wsText={wsStatus.text}
         wsTone={wsStatus.tone}

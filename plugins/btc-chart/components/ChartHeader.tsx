@@ -24,8 +24,10 @@ export interface ChartHeaderProps {
   activeLayerCount?: number
   toolsOpen?: boolean
   sidebarOpen?: boolean
+  intelOpen?: boolean
   onToggleTools?: () => void
   onToggleSidebar?: () => void
+  onToggleIntel?: () => void
   onSelectSymbol: (sym: string) => void
   onSelectInterval: (iv: Interval) => void
   onAddCustomSymbol: (raw: string) => void
@@ -41,8 +43,10 @@ export function ChartHeader({
   activeLayerCount = 0,
   toolsOpen = false,
   sidebarOpen = false,
+  intelOpen = false,
   onToggleTools,
   onToggleSidebar,
+  onToggleIntel,
   onSelectSymbol,
   onSelectInterval,
   onAddCustomSymbol,
@@ -128,9 +132,24 @@ export function ChartHeader({
             )}
             onClick={onToggleSidebar}
             aria-expanded={sidebarOpen}
-            aria-label="Toggle sidebar"
+            aria-label="Toggle signals rail"
           >
-            Intel
+            Signals
+          </Button>
+        )}
+
+        {onToggleIntel && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn('btc-chart__intel-trigger h-8 rounded-none px-3', intelOpen && 'is-on')}
+            onClick={onToggleIntel}
+            aria-expanded={intelOpen}
+            aria-haspopup="dialog"
+            title="Intel panels"
+          >
+            <span className="btc-chart__intel-trigger-label">Intel</span>
           </Button>
         )}
 
