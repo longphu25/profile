@@ -1,5 +1,6 @@
 // BTC Chart — Signal config: choose indicators for ML signal + trade setup.
 
+import { cn } from '@/lib/utils'
 import {
   SIGNAL_PRESETS,
   FEATURE_GROUPS,
@@ -9,7 +10,6 @@ import {
   type SignalConfig,
   type FeatureKey,
 } from '../lib'
-import { Button } from '@/components/ui/button'
 
 export interface SignalConfigBodyProps {
   config: SignalConfig
@@ -45,41 +45,44 @@ export function SignalConfigBody({ config, onChange }: SignalConfigBodyProps) {
 
   return (
     <div className="btc-chart__sigcfg-body">
-      <div className="btc-chart__sigcfg-presets">
-        {SIGNAL_PRESETS.map((p) => (
-          <Button
-            key={p.id}
-            type="button"
-            variant={activePreset?.id === p.id ? 'default' : 'outline'}
-            size="sm"
-            className="text-[10px] h-7"
-            onClick={() => applyPreset(p.id)}
-            title={p.description}
-          >
-            {p.name}
-          </Button>
-        ))}
+      <div className="btc-chart__sigcfg-section">
+        <div className="btc-chart__sigcfg-section-head">
+          <span className="btc-chart__sigcfg-section-label">Chiến lược</span>
+          <span className="btc-chart__sigcfg-section-hint">Chọn preset</span>
+        </div>
+        <div
+          className="btc-chart__sigcfg-presets"
+          role="group"
+          aria-label="Signal strategy presets"
+        >
+          {SIGNAL_PRESETS.map((p) => {
+            const isOn = activePreset?.id === p.id
+            return (
+              <button
+                key={p.id}
+                type="button"
+                className={cn('btc-chart__sigcfg-preset', isOn && 'is-on')}
+                onClick={() => applyPreset(p.id)}
+                title={p.description}
+                aria-pressed={isOn}
+              >
+                {p.name}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      <div className="flex gap-1 mt-1">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="text-[10px] h-7"
-          onClick={selectAll}
-        >
-          Bat tat ca
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="text-[10px] h-7"
-          onClick={clearAll}
-        >
-          Tat tat ca
-        </Button>
+      <div className="btc-chart__sigcfg-actions" role="group" aria-label="Quick selection">
+        <button type="button" onClick={selectAll}>
+          Bật tất cả
+        </button>
+        <button type="button" onClick={clearAll}>
+          Tắt tất cả
+        </button>
+        <span className="btc-chart__sigcfg-count">
+          {enabledCount}/{ALL_FEATURES.length} chỉ báo
+        </span>
       </div>
 
       {FEATURE_GROUPS.map((g) => (

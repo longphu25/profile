@@ -4327,52 +4327,115 @@
   color: var(--muted);
 }
 .btc-chart__sigcfg-body {
-  padding: 0 10px 10px;
+  padding: 8px 0 10px;
+}
+.btc-chart__sigcfg-section {
+  margin-bottom: 10px;
+}
+.btc-chart__sigcfg-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.btc-chart__sigcfg-section-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+}
+.btc-chart__sigcfg-section-hint {
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--font-mono);
 }
 .btc-chart__sigcfg-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
 }
 .btc-chart__sigcfg-preset {
-  font-size: 9px;
-  padding: 3px 7px;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 5px 8px;
   border-radius: 4px;
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-2);
   cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
   font-family: var(--font-mono);
-  transition: all 0.15s;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .btc-chart__sigcfg-preset:hover {
-  border-color: var(--mint);
+  border-color: rgba(128, 255, 213, 0.55);
+  background: var(--surface-3);
   color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(128, 255, 213, 0.12);
+}
+.btc-chart__sigcfg-preset:focus-visible {
+  outline: none;
+  border-color: var(--mint);
+  box-shadow: 0 0 0 2px rgba(128, 255, 213, 0.2);
 }
 .btc-chart__sigcfg-preset.is-on {
-  background: rgba(128, 255, 213, 0.1);
+  background: rgba(128, 255, 213, 0.12);
   border-color: var(--mint);
   color: var(--mint);
+  box-shadow: inset 0 0 0 1px rgba(128, 255, 213, 0.25);
 }
 .btc-chart__sigcfg-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
 }
 .btc-chart__sigcfg-actions button {
   font-size: 9px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  color: var(--muted);
+  font-weight: 600;
+  padding: 4px 8px;
+  min-height: 24px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-2);
   cursor: pointer;
   font-family: var(--font-mono);
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
 }
 .btc-chart__sigcfg-actions button:hover {
   color: var(--text);
-  border-color: var(--line-strong);
+  border-color: rgba(128, 255, 213, 0.45);
+  background: var(--surface-3);
+}
+.btc-chart__sigcfg-actions button:focus-visible {
+  outline: none;
+  border-color: var(--mint);
+  box-shadow: 0 0 0 2px rgba(128, 255, 213, 0.2);
+}
+.btc-chart__sigcfg-count {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
 }
 .btc-chart__sigcfg-group {
   margin-bottom: 6px;
