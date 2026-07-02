@@ -2173,6 +2173,20 @@
   letter-spacing: 0.02em;
 }
 
+.sb-signal-conflict {
+  margin: 0;
+  padding: 6px 12px 6px 14px;
+  font-size: 9px;
+  line-height: 1.45;
+  color: var(--hi);
+  background: rgba(232, 184, 74, 0.08);
+  border-bottom: 1px solid rgba(232, 184, 74, 0.22);
+}
+.sb-signal-conflict--inline {
+  border-bottom: none;
+  border-top: 1px solid rgba(232, 184, 74, 0.18);
+}
+
 /* Verdict strip: direction + confidence + key stats */
 .sb-trade-verdict {
   display: grid;

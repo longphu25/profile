@@ -1,12 +1,21 @@
 // BTC Chart — Trade Setup panel: limit plan + position sizing.
 
 import { useState, memo } from 'react'
-import { fmtP, type TradeSetup } from '../lib'
+import { detectSignalConflict, fmtP, type MLResult, type TradeSetup } from '../lib'
 import { ExplainModal } from './ExplainModal'
 import { SideBlock, SideHead, SideBody, SideNote, SideDivider, SideRow, SideBadge } from './sidebar'
 
 interface Props {
   setup: TradeSetup
+  ml?: MLResult
+}
+
+function ConflictBanner({ message }: { message: string }) {
+  return (
+    <p className="sb-signal-conflict" role="status">
+      {message}
+    </p>
+  )
 }
 
 function countConfluenceGroups(reasons: string[]) {
@@ -71,7 +80,7 @@ function PlanRow({ label, price, delta, hint, tone }: PlanRowProps) {
   )
 }
 
-export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
+export const TradeSetupPanel = memo(function TradeSetupPanel({ setup, ml }: Props) {
   const [capital, setCapital] = useState(10)
   const [leverage, setLeverage] = useState(10)
   const [open, setOpen] = useState(false)
@@ -135,6 +144,7 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
     .join(' · ')
 
   const compactMeta = `R:R ${rrLabel} · Risk ${riskPct}% · ${setup.reasons.length} signals`
+  const conflict = ml ? detectSignalConflict(ml, setup) : null
 
   return (
     <SideBlock variant="trade" tone={isLong ? 'long' : 'short'} className="sb-trade-cockpit">
@@ -153,6 +163,8 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
       />
 
       {explainOpen && <ExplainModal setup={setup} onClose={() => setExplainOpen(false)} />}
+
+      {conflict?.hasConflict && <ConflictBanner message={conflict.message} />}
 
       {!open && (
         <div className={`sb-trade-compact sb-trade-compact--${dirTone}`}>

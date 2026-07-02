@@ -1,11 +1,18 @@
 // BTC Chart — ML signal gauge and its feature-weight breakdown.
 
 import React from 'react'
-import { FEATURE_LABEL, type MLResult } from '../lib'
+import { detectSignalConflict, FEATURE_LABEL, type MLResult, type TradeSetup } from '../lib'
 import { SideBlock, SideHero, SideBody, StatGrid, StatCell } from './sidebar'
 
-export const SignalPanel = React.memo(function SignalPanel({ ml }: { ml: MLResult }) {
+export const SignalPanel = React.memo(function SignalPanel({
+  ml,
+  setup,
+}: {
+  ml: MLResult
+  setup?: TradeSetup
+}) {
   const pct = Math.round(ml.score * 100)
+  const conflict = setup ? detectSignalConflict(ml, setup) : null
 
   return (
     <SideBlock variant="signal">
@@ -14,8 +21,13 @@ export const SignalPanel = React.memo(function SignalPanel({ ml }: { ml: MLResul
         title={ml.label}
         pct={pct}
         color={ml.color}
-        hint="Lux NWE · MA50/200 · RSI · MACD confluence"
+        hint="Bias tổng hợp · không thay thế confluence entry"
       />
+      {conflict?.hasConflict && (
+        <p className="sb-signal-conflict sb-signal-conflict--inline" role="status">
+          {conflict.message}
+        </p>
+      )}
     </SideBlock>
   )
 })

@@ -2525,10 +2525,10 @@ function BtcChartView() {
         <div className="btc-chart__sidebar">
           <RailSection label="Signals">
             <Suspense fallback={<div className="sb-empty">Loading signal…</div>}>
-              <SignalPanelLazy ml={sidebar.ml} />
+              <SignalPanelLazy ml={sidebar.ml} setup={sidebar.tradeSetup} />
             </Suspense>
             <Suspense fallback={<div className="sb-empty">Loading setup…</div>}>
-              <TradeSetupPanelLazy setup={sidebar.tradeSetup} />
+              <TradeSetupPanelLazy setup={sidebar.tradeSetup} ml={sidebar.ml} />
             </Suspense>
             <Suspense fallback={<div className="sb-empty">Loading funding…</div>}>
               <FundingNwePanelLazy

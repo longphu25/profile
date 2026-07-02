@@ -217,11 +217,11 @@ export function calcTradeSetup(
   let bear = 0
   const reasons: string[] = []
 
-  // ML signal
-  if (ml.score >= 0.65) {
+  // ML signal (aligned with ml.ts BUY/SELL thresholds: 0.58 / 0.42)
+  if (ml.score > 0.58) {
     bull++
     reasons.push('ML Bullish')
-  } else if (ml.score <= 0.35) {
+  } else if (ml.score < 0.42) {
     bear++
     reasons.push('ML Bearish')
   }
