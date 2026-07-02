@@ -54,3 +54,6 @@ package_summaries/
 .factory/
 .agents/skills/archify
 .claude/skills/archify
+
+# Local agent session exports (not for version control)
+my-session.json
