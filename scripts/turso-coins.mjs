@@ -177,15 +177,25 @@ async function cmdSeed() {
 
 async function cmdList() {
   const [result] = await exec([
-    { sql: 'SELECT id, symbol, exchange, enabled, sort_order FROM coins ORDER BY sort_order ASC, id ASC' },
+    {
+      sql: 'SELECT id, symbol, exchange, enabled, sort_order FROM coins ORDER BY sort_order ASC, id ASC',
+    },
   ])
   const { cols, rows } = result.response.result
   const colNames = cols.map((c) => c.name)
-  console.log(colNames.join('\t'))
-  for (const row of rows) {
-    console.log(row.map((cell) => (cell.type === 'null' ? '-' : cell.value)).join('\t'))
-  }
-  console.log(`\n${rows.length} coin(s)`)
+
+  const table = rows.map((row) => {
+    const obj = {}
+    row.forEach((cell, i) => {
+      const name = colNames[i]
+      const val = cell.type === 'null' ? '-' : cell.value
+      obj[name] = name === 'enabled' ? (val === '1' ? '✓' : '✗') : val
+    })
+    return obj
+  })
+
+  console.table(table)
+  console.log(`${rows.length} coin(s)`)
 }
 
 async function cmdAdd(pairs) {
