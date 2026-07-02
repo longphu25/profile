@@ -1,18 +1,9 @@
-// BTC Chart — Trade Setup panel: Entry / SL / TP + position sizing.
+// BTC Chart — Trade Setup panel (stitch-design-taste cockpit layout).
 
 import { useState, memo } from 'react'
 import { fmtP, type TradeSetup } from '../lib'
 import { ExplainModal } from './ExplainModal'
-import {
-  SideBlock,
-  SideHead,
-  SideBody,
-  SideBadge,
-  SideNote,
-  SideDivider,
-  SideRow,
-  SideEmpty,
-} from './sidebar'
+import { SideBlock, SideHead, SideBody, SideNote, SideDivider, SideRow } from './sidebar'
 
 interface Props {
   setup: TradeSetup
@@ -49,29 +40,79 @@ function fmtSpotOffset(entry: number, spot: number): string | null {
   const pct = ((entry - spot) / spot) * 100
   if (Math.abs(pct) < 0.01) return 'At spot'
   const sign = pct >= 0 ? '+' : ''
-  return `${sign}${pct.toFixed(2)}% from spot`
+  return `${sign}${pct.toFixed(2)}%`
 }
 
-interface TradeLevelProps {
+interface RiskMapProps {
+  sl: number
+  entry: number
+  tp1: number
+  tp2: number
+}
+
+function TradeRiskMap({ sl, entry, tp1, tp2 }: RiskMapProps) {
+  const min = Math.min(sl, entry, tp1, tp2)
+  const max = Math.max(sl, entry, tp1, tp2)
+  const span = max - min || 1
+  const pos = (v: number) => ((v - min) / span) * 100
+  const riskLo = Math.min(sl, entry)
+  const riskHi = Math.max(sl, entry)
+
+  return (
+    <div className="sb-trade-map" aria-label="Price levels map">
+      <div className="sb-trade-map__track">
+        <span
+          className="sb-trade-map__zone sb-trade-map__zone--risk"
+          style={{ left: `${pos(riskLo)}%`, width: `${pos(riskHi) - pos(riskLo)}%` }}
+        />
+        <span
+          className="sb-trade-map__pin sb-trade-map__pin--sl"
+          style={{ left: `${pos(sl)}%` }}
+          title="SL"
+        />
+        <span
+          className="sb-trade-map__pin sb-trade-map__pin--entry is-active"
+          style={{ left: `${pos(entry)}%` }}
+          title="Entry"
+        />
+        <span
+          className="sb-trade-map__pin sb-trade-map__pin--tp1"
+          style={{ left: `${pos(tp1)}%` }}
+          title="TP1"
+        />
+        <span
+          className="sb-trade-map__pin sb-trade-map__pin--tp2"
+          style={{ left: `${pos(tp2)}%` }}
+          title="TP2"
+        />
+      </div>
+      <div className="sb-trade-map__legend">
+        <span>SL</span>
+        <span className="is-accent">Entry</span>
+        <span>TP1</span>
+        <span>TP2</span>
+      </div>
+    </div>
+  )
+}
+
+interface LadderRowProps {
   label: string
   price: number
   delta?: string
   tone?: 'up' | 'dn' | 'entry'
-  active?: boolean
+  delay?: number
 }
 
-function TradeLevel({ label, price, delta, tone, active }: TradeLevelProps) {
-  const rowTone = tone === 'entry' ? 'entry' : (tone ?? '')
+function LadderRow({ label, price, delta, tone = '', delay = 0 }: LadderRowProps) {
   return (
-    <div className={`sb-trade-level sb-trade-level--${rowTone}${active ? ' is-active' : ''}`}>
-      <div className="sb-trade-level__rail" aria-hidden>
-        <span className="sb-trade-level__dot" />
-      </div>
-      <div className="sb-trade-level__main">
-        <span className="sb-trade-level__label">{label}</span>
-        <span className={`sb-trade-level__price ${rowTone}`}>{fmtP(price)}</span>
-      </div>
-      {delta && <span className={`sb-trade-level__delta ${rowTone}`}>{delta}</span>}
+    <div
+      className={`sb-trade-ladder__row sb-trade-ladder__row--${tone}`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <span className="sb-trade-ladder__tag">{label}</span>
+      <span className={`sb-trade-ladder__price ${tone}`}>{fmtP(price)}</span>
+      {delta && <span className={`sb-trade-ladder__delta ${tone}`}>{delta}</span>}
     </div>
   )
 }
@@ -85,30 +126,32 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
   const explainBtn = (
     <button
       type="button"
-      className="sb-chip"
+      className="sb-trade-ghost-btn"
       onClick={(e) => {
         e.stopPropagation()
         setExplainOpen(true)
       }}
       title="Giải thích chỉ báo"
+      aria-label="Giải thích chỉ báo"
     >
-      ?
+      Explain
     </button>
   )
 
   if (!setup.dir) {
     return (
       <SideBlock variant="trade">
-        <SideHead title="Trade Setup" subtitle="Chờ confluence 2+ signals" actions={explainBtn} />
-        <SideEmpty>
-          <div className="sb-trade-wait">
-            <span className="sb-trade-wait__ring" aria-hidden />
-            <p className="sb-trade-wait__title">Chưa có setup</p>
-            <p className="sb-trade-wait__hint">
-              Cần ít nhất 2 tín hiệu đồng thuận (ML, NWE, Boucher, Lien) để hiện Entry, SL và TP.
-            </p>
-          </div>
-        </SideEmpty>
+        <SideHead title="Trade Setup" subtitle="Awaiting confluence" actions={explainBtn} />
+        <div className="sb-trade-empty">
+          <div className="sb-trade-empty__skeleton sb-trade-empty__skeleton--hero" />
+          <div className="sb-trade-empty__skeleton sb-trade-empty__skeleton--map" />
+          <div className="sb-trade-empty__skeleton sb-trade-empty__skeleton--row" />
+          <div className="sb-trade-empty__skeleton sb-trade-empty__skeleton--row sb-trade-empty__skeleton--short" />
+          <p className="sb-trade-empty__title">No active setup</p>
+          <p className="sb-trade-empty__hint">
+            Need 2+ aligned signals (ML, NWE, Boucher, Lien) before limit entry, SL, and TP render.
+          </p>
+        </div>
         {explainOpen && <ExplainModal setup={setup} onClose={() => setExplainOpen(false)} />}
       </SideBlock>
     )
@@ -126,74 +169,83 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
   const spotOffset = fmtSpotOffset(setup.entry, setup.spotPrice)
 
   const { mlCount, boucherCount, lienCount, nweCount } = countConfluenceGroups(setup.reasons)
+  const tags = [
+    mlCount > 0 && { label: 'ML/Ind', count: mlCount },
+    boucherCount > 0 && { label: 'Boucher', count: boucherCount },
+    lienCount > 0 && { label: 'Lien', count: lienCount },
+    nweCount > 0 && { label: 'NWE', count: nweCount },
+  ].filter(Boolean) as { label: string; count: number }[]
 
   return (
-    <SideBlock variant="trade" tone={isLong ? 'long' : 'short'}>
+    <SideBlock variant="trade" tone={isLong ? 'long' : 'short'} className="sb-trade-cockpit">
       <SideHead
         title="Trade Setup"
-        subtitle={`${setup.reasons.length} confluence · R:R ${rrLabel}`}
+        subtitle={`${setup.reasons.length} signals · R:R ${rrLabel}`}
         actions={explainBtn}
       />
 
       {explainOpen && <ExplainModal setup={setup} onClose={() => setExplainOpen(false)} />}
 
-      <div className="sb-trade-hero">
-        <div className="sb-trade-hero__head">
-          <span className="sb-trade-hero__kicker">Direction</span>
-          <SideBadge tone={dirTone}>{setup.confidence}% conf</SideBadge>
+      <div className="sb-trade-split">
+        <div className="sb-trade-split__bias">
+          <span className="sb-trade-split__kicker">Bias</span>
+          <span className={`sb-trade-split__dir ${dirTone}`}>{isLong ? 'LONG' : 'SHORT'}</span>
+          <div
+            className="sb-trade-split__meter"
+            role="meter"
+            aria-valuenow={setup.confidence}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div
+              className={`sb-trade-split__meter-fill ${dirTone}`}
+              style={{ width: `${setup.confidence}%` }}
+            />
+          </div>
+          <span className="sb-trade-split__conf">{setup.confidence}% conf</span>
         </div>
-        <div className={`sb-trade-hero__dir ${dirTone}`}>
-          {isLong ? 'LONG' : 'SHORT'}
-          <span className="sb-trade-hero__arrow" aria-hidden>
-            {isLong ? '▲' : '▼'}
-          </span>
-        </div>
-        <div className="sb-trade-hero__entry">
-          <span className="sb-trade-hero__entry-label">Limit entry</span>
-          <span className="sb-trade-hero__entry-price">{fmtP(setup.entry)}</span>
-          {setup.entryMethod && (
-            <span className="sb-trade-hero__entry-method">{setup.entryMethod}</span>
-          )}
+
+        <div className="sb-trade-split__entry">
+          <span className="sb-trade-split__kicker">Limit entry</span>
+          <span className="sb-trade-split__price">{fmtP(setup.entry)}</span>
+          {setup.entryMethod && <span className="sb-trade-split__method">{setup.entryMethod}</span>}
           {spotOffset && setup.spotPrice > 0 && (
-            <span className="sb-trade-hero__entry-offset">
+            <span className="sb-trade-split__spot">
               Spot {fmtP(setup.spotPrice)} · {spotOffset}
             </span>
           )}
         </div>
-        <div className="sb-trade-hero__meta">
-          <span>R:R {rrLabel}</span>
-          <span>{setup.reasons.length} signals</span>
-        </div>
       </div>
 
-      <div className="sb-trade-levels">
-        <TradeLevel label="Stop Loss" price={setup.sl} delta={`-${riskPct}%`} tone="dn" />
-        <TradeLevel label="Limit entry" price={setup.entry} tone="entry" active />
-        <TradeLevel
-          label="Take Profit 1"
+      <TradeRiskMap sl={setup.sl} entry={setup.entry} tp1={setup.tp1} tp2={setup.tp2} />
+
+      <div className="sb-trade-ladder">
+        <LadderRow label="SL" price={setup.sl} delta={`-${riskPct}%`} tone="dn" delay={40} />
+        <LadderRow label="Entry" price={setup.entry} tone="entry" delay={80} />
+        <LadderRow
+          label="TP1"
           price={setup.tp1}
           delta={pctFromEntry(setup.entry, setup.tp1)}
           tone="up"
+          delay={120}
         />
-        <TradeLevel
-          label="Take Profit 2"
+        <LadderRow
+          label="TP2"
           price={setup.tp2}
           delta={pctFromEntry(setup.entry, setup.tp2)}
           tone="up"
+          delay={160}
         />
       </div>
 
-      {(mlCount > 0 || boucherCount > 0 || lienCount > 0 || nweCount > 0) && (
-        <div className="sb-trade-confluence">
-          <span className="sb-trade-confluence__label">Confluence</span>
-          <div className="sb-chip-row">
-            {mlCount > 0 && <span className="sb-chip sb-chip--trade">ML/Ind {mlCount}</span>}
-            {boucherCount > 0 && (
-              <span className="sb-chip sb-chip--trade">Boucher {boucherCount}</span>
-            )}
-            {lienCount > 0 && <span className="sb-chip sb-chip--trade">Lien {lienCount}</span>}
-            {nweCount > 0 && <span className="sb-chip sb-chip--trade">NWE {nweCount}</span>}
-          </div>
+      {tags.length > 0 && (
+        <div className="sb-trade-tags">
+          {tags.map((t) => (
+            <span key={t.label} className="sb-trade-tags__item">
+              <span className="sb-trade-tags__name">{t.label}</span>
+              <span className="sb-trade-tags__count">{t.count}</span>
+            </span>
+          ))}
         </div>
       )}
 
@@ -204,7 +256,7 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
         aria-expanded={sizingOpen}
       >
         <span className="sb-trade-sizing-toggle__caret" aria-hidden>
-          {sizingOpen ? '▾' : '▸'}
+          {sizingOpen ? '−' : '+'}
         </span>
         <span>Position sizing</span>
         <span className="sb-trade-sizing-toggle__summary">
@@ -214,9 +266,9 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
 
       {sizingOpen && (
         <SideBody className="sb-trade-sizing">
-          <div className="sb-input-row">
+          <div className="sb-trade-inputs">
             <div className="sb-input-field">
-              <label htmlFor="sb-capital">Vốn (USD)</label>
+              <label htmlFor="sb-capital">Capital (USD)</label>
               <input
                 id="sb-capital"
                 type="number"
@@ -239,7 +291,7 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
             </div>
           </div>
 
-          <div className="sb-calc-box sb-panel-grid">
+          <div className="sb-trade-pnl">
             <SideRow label="Size" value={`$${positionSize.toFixed(1)}`} />
             <SideRow label="Qty" value={qty.toFixed(5)} />
             <SideRow label="Risk @ SL" value={`-$${lossAtSL.toFixed(1)}`} tone="dn" />
@@ -248,7 +300,7 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
 
           <SideDivider />
 
-          <SideNote>Tính toán tham khảo, không phải lời khuyên đầu tư</SideNote>
+          <SideNote>Reference sizing only, not investment advice</SideNote>
         </SideBody>
       )}
     </SideBlock>
