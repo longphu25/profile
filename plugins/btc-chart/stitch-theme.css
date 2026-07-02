@@ -286,14 +286,14 @@
   opacity: 0.85;
 }
 
-.btc-chart--stitch .sb-funding-hero,
+.btc-chart--stitch .sb-funding-compact,
 .btc-chart--stitch .sb-trade-verdict,
 .btc-chart--stitch .sb-hero {
   background: transparent;
 }
 
-.btc-chart--stitch .sb-funding-hero__rate.up,
-.btc-chart--stitch .sb-funding-hero__rate.dn,
+.btc-chart--stitch .sb-funding-compact__rate.up,
+.btc-chart--stitch .sb-funding-compact__rate.dn,
 .btc-chart--stitch .sb-trade-verdict__dir.up,
 .btc-chart--stitch .sb-trade-verdict__dir.dn {
   text-shadow: none;

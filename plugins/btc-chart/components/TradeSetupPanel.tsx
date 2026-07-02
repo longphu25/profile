@@ -3,7 +3,7 @@
 import { useState, memo } from 'react'
 import { fmtP, type TradeSetup } from '../lib'
 import { ExplainModal } from './ExplainModal'
-import { SideBlock, SideHead, SideBody, SideNote, SideDivider, SideRow } from './sidebar'
+import { SideBlock, SideHead, SideBody, SideNote, SideDivider, SideRow, SideBadge } from './sidebar'
 
 interface Props {
   setup: TradeSetup
@@ -74,6 +74,7 @@ function PlanRow({ label, price, delta, hint, tone }: PlanRowProps) {
 export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
   const [capital, setCapital] = useState(10)
   const [leverage, setLeverage] = useState(10)
+  const [open, setOpen] = useState(false)
   const [sizingOpen, setSizingOpen] = useState(false)
   const [explainOpen, setExplainOpen] = useState(false)
 
@@ -133,119 +134,148 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({ setup }: Props) {
     .filter(Boolean)
     .join(' · ')
 
+  const compactMeta = `R:R ${rrLabel} · Risk ${riskPct}% · ${setup.reasons.length} signals`
+
   return (
     <SideBlock variant="trade" tone={isLong ? 'long' : 'short'} className="sb-trade-cockpit">
-      <SideHead title="Trade Setup" subtitle="Limit plan" actions={explainBtn} />
+      <SideHead
+        title="Trade Setup"
+        subtitle={open ? 'Limit plan' : setup.entryMethod}
+        collapsible
+        open={open}
+        onToggle={() => setOpen((o) => !o)}
+        badges={
+          !open ? (
+            <SideBadge tone={isLong ? 'up' : 'dn'}>{isLong ? 'LONG' : 'SHORT'}</SideBadge>
+          ) : undefined
+        }
+        actions={explainBtn}
+      />
 
       {explainOpen && <ExplainModal setup={setup} onClose={() => setExplainOpen(false)} />}
 
-      <div className={`sb-trade-verdict sb-trade-verdict--${dirTone}`}>
-        <span className={`sb-trade-verdict__dir ${dirTone}`}>{isLong ? 'LONG' : 'SHORT'}</span>
-        <span
-          className="sb-trade-verdict__meter"
-          role="meter"
-          aria-valuenow={setup.confidence}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <span
-            className={`sb-trade-verdict__meter-fill ${dirTone}`}
-            style={{ width: `${setup.confidence}%` }}
-          />
-        </span>
-        <span className="sb-trade-verdict__conf">{setup.confidence}%</span>
-        <div className="sb-trade-verdict__stats">
-          <span className="sb-trade-verdict__stat">R:R {rrLabel}</span>
-          <span className="sb-trade-verdict__stat">Risk {riskPct}%</span>
-        </div>
-      </div>
-
-      <div className="sb-trade-plan">
-        <PlanRow label="Stop loss" price={setup.sl} delta={`-${riskPct}%`} tone="sl" />
-        <PlanRow
-          label="Limit entry"
-          price={setup.entry}
-          hint={entryHint || undefined}
-          tone="entry"
-        />
-        <PlanRow
-          label="Take profit 1"
-          price={setup.tp1}
-          delta={pctFromEntry(setup.entry, setup.tp1)}
-          tone="tp"
-        />
-        <PlanRow
-          label="Take profit 2"
-          price={setup.tp2}
-          delta={pctFromEntry(setup.entry, setup.tp2)}
-          tone="tp"
-        />
-      </div>
-
-      {chips.length > 0 && (
-        <div className="sb-trade-chips" aria-label="Confluence groups">
-          {chips.map((chip) => (
-            <span key={chip} className="sb-trade-chips__item">
-              {chip}
-            </span>
-          ))}
-          <span className="sb-trade-chips__total">{setup.reasons.length} signals</span>
+      {!open && (
+        <div className={`sb-trade-compact sb-trade-compact--${dirTone}`}>
+          <div className="sb-trade-compact__hero">
+            <span className={`sb-trade-compact__dir ${dirTone}`}>{isLong ? 'LONG' : 'SHORT'}</span>
+            <span className="sb-trade-compact__entry">{fmtP(setup.entry)}</span>
+            <span className="sb-trade-compact__conf">{setup.confidence}%</span>
+          </div>
+          <p className="sb-trade-compact__meta">{compactMeta}</p>
         </div>
       )}
 
-      <button
-        type="button"
-        className="sb-trade-sizing-toggle"
-        onClick={() => setSizingOpen((o) => !o)}
-        aria-expanded={sizingOpen}
-      >
-        <span className="sb-trade-sizing-toggle__caret" aria-hidden>
-          {sizingOpen ? '−' : '+'}
-        </span>
-        <span>Position sizing</span>
-        <span className="sb-trade-sizing-toggle__summary">
-          ${positionSize.toFixed(0)} · {leverage}x
-        </span>
-      </button>
-
-      {sizingOpen && (
-        <SideBody className="sb-trade-sizing">
-          <div className="sb-trade-inputs">
-            <div className="sb-input-field">
-              <label htmlFor="sb-capital">Vốn (USD)</label>
-              <input
-                id="sb-capital"
-                type="number"
-                min={1}
-                step={1}
-                value={capital}
-                onChange={(e) => setCapital(Math.max(1, +e.target.value || 1))}
+      {open && (
+        <>
+          <div className={`sb-trade-verdict sb-trade-verdict--${dirTone}`}>
+            <span className={`sb-trade-verdict__dir ${dirTone}`}>{isLong ? 'LONG' : 'SHORT'}</span>
+            <span
+              className="sb-trade-verdict__meter"
+              role="meter"
+              aria-valuenow={setup.confidence}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <span
+                className={`sb-trade-verdict__meter-fill ${dirTone}`}
+                style={{ width: `${setup.confidence}%` }}
               />
-            </div>
-            <div className="sb-input-field">
-              <label htmlFor="sb-lev">Leverage</label>
-              <input
-                id="sb-lev"
-                type="number"
-                min={1}
-                max={125}
-                value={leverage}
-                onChange={(e) => setLeverage(Math.max(1, Math.min(125, +e.target.value || 1)))}
-              />
+            </span>
+            <span className="sb-trade-verdict__conf">{setup.confidence}%</span>
+            <div className="sb-trade-verdict__stats">
+              <span className="sb-trade-verdict__stat">R:R {rrLabel}</span>
+              <span className="sb-trade-verdict__stat">Risk {riskPct}%</span>
             </div>
           </div>
 
-          <div className="sb-trade-pnl">
-            <SideRow label="Size" value={`$${positionSize.toFixed(1)}`} />
-            <SideRow label="Qty" value={qty.toFixed(5)} />
-            <SideRow label="Risk @ SL" value={`-$${lossAtSL.toFixed(1)}`} tone="dn" />
-            <SideRow label="PnL @ TP1" value={`+$${profitAtTP1.toFixed(1)}`} tone="up" />
+          <div className="sb-trade-plan">
+            <PlanRow label="Stop loss" price={setup.sl} delta={`-${riskPct}%`} tone="sl" />
+            <PlanRow
+              label="Limit entry"
+              price={setup.entry}
+              hint={entryHint || undefined}
+              tone="entry"
+            />
+            <PlanRow
+              label="Take profit 1"
+              price={setup.tp1}
+              delta={pctFromEntry(setup.entry, setup.tp1)}
+              tone="tp"
+            />
+            <PlanRow
+              label="Take profit 2"
+              price={setup.tp2}
+              delta={pctFromEntry(setup.entry, setup.tp2)}
+              tone="tp"
+            />
           </div>
 
-          <SideDivider />
+          {chips.length > 0 && (
+            <div className="sb-trade-chips" aria-label="Confluence groups">
+              {chips.map((chip) => (
+                <span key={chip} className="sb-trade-chips__item">
+                  {chip}
+                </span>
+              ))}
+              <span className="sb-trade-chips__total">{setup.reasons.length} signals</span>
+            </div>
+          )}
 
-          <SideNote>Tính toán tham khảo, không phải lời khuyên đầu tư</SideNote>
-        </SideBody>
+          <button
+            type="button"
+            className="sb-trade-sizing-toggle"
+            onClick={() => setSizingOpen((o) => !o)}
+            aria-expanded={sizingOpen}
+          >
+            <span className="sb-trade-sizing-toggle__caret" aria-hidden>
+              {sizingOpen ? '−' : '+'}
+            </span>
+            <span>Position sizing</span>
+            <span className="sb-trade-sizing-toggle__summary">
+              ${positionSize.toFixed(0)} · {leverage}x
+            </span>
+          </button>
+
+          {sizingOpen && (
+            <SideBody className="sb-trade-sizing">
+              <div className="sb-trade-inputs">
+                <div className="sb-input-field">
+                  <label htmlFor="sb-capital">Vốn (USD)</label>
+                  <input
+                    id="sb-capital"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={capital}
+                    onChange={(e) => setCapital(Math.max(1, +e.target.value || 1))}
+                  />
+                </div>
+                <div className="sb-input-field">
+                  <label htmlFor="sb-lev">Leverage</label>
+                  <input
+                    id="sb-lev"
+                    type="number"
+                    min={1}
+                    max={125}
+                    value={leverage}
+                    onChange={(e) => setLeverage(Math.max(1, Math.min(125, +e.target.value || 1)))}
+                  />
+                </div>
+              </div>
+
+              <div className="sb-trade-pnl">
+                <SideRow label="Size" value={`$${positionSize.toFixed(1)}`} />
+                <SideRow label="Qty" value={qty.toFixed(5)} />
+                <SideRow label="Risk @ SL" value={`-$${lossAtSL.toFixed(1)}`} tone="dn" />
+                <SideRow label="PnL @ TP1" value={`+$${profitAtTP1.toFixed(1)}`} tone="up" />
+              </div>
+
+              <SideDivider />
+
+              <SideNote>Tính toán tham khảo, không phải lời khuyên đầu tư</SideNote>
+            </SideBody>
+          )}
+        </>
       )}
     </SideBlock>
   )

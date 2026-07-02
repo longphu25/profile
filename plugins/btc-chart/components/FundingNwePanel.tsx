@@ -1,12 +1,21 @@
 // BTC Chart — Funding Rate + NWE bias combined panel.
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { FundingState } from '../lib/types'
 import React from 'react'
 import type { NadarayaWatsonResult } from '../lib/nadaraya-watson'
 import type { Candle } from '../lib/types'
 import { calcRSI } from '../lib/indicators'
-import { SideBlock, SideBody, SideRow, SideBadge, SideNote, StatGrid, StatCell } from './sidebar'
+import {
+  SideBlock,
+  SideBody,
+  SideHead,
+  SideRow,
+  SideBadge,
+  SideNote,
+  StatGrid,
+  StatCell,
+} from './sidebar'
 
 export interface FundingNwePanelProps {
   funding: FundingState
@@ -100,72 +109,81 @@ export const FundingNwePanel = React.memo(function FundingNwePanel({
   candles,
   symbol,
 }: FundingNwePanelProps) {
+  const [open, setOpen] = useState(false)
   const analysis = useMemo(() => analyzeSignals(funding, nwe, candles), [funding, nwe, candles])
-
-  const avgRate =
-    funding.breakdown.length > 0
-      ? funding.breakdown.reduce((sum, b) => sum + b.rate, 0) / funding.breakdown.length
-      : 0
 
   const dirTone = analysis.direction === 'LONG' ? 'up' : analysis.direction === 'SHORT' ? 'dn' : ''
   const riskTone =
     analysis.riskLevel === 'LOW' ? 'up' : analysis.riskLevel === 'MEDIUM' ? 'hi' : 'dn'
 
-  const fundTone = funding.cls || (avgRate < 0 ? 'up' : avgRate > 0.05 ? 'dn' : '')
+  const fundTone = funding.cls
   const strengthPct = `${Math.round(analysis.strength * 100)}%`
+  const biasBadgeTone =
+    analysis.direction === 'LONG' ? 'up' : analysis.direction === 'SHORT' ? 'dn' : 'muted'
 
   return (
     <SideBlock variant="market" className="sb-block--funding">
-      <div className="sb-funding-hero">
-        <div className="sb-funding-hero__head">
-          <span className="sb-funding-hero__kicker">Funding Rate</span>
-          <span className="sb-funding-hero__sym">{symbol}</span>
-        </div>
-        <div className={`sb-funding-hero__rate ${fundTone}`}>{funding.val}</div>
-        <div className="sb-funding-hero__meta">
-          <span className={`sb-funding-hero__sentiment ${fundTone}`}>{funding.sub}</span>
-          <SideBadge
-            tone={
-              analysis.direction === 'LONG' ? 'up' : analysis.direction === 'SHORT' ? 'dn' : 'muted'
-            }
-          >
-            {analysis.direction}
-          </SideBadge>
-        </div>
-      </div>
+      <SideHead
+        title="Funding Rate"
+        subtitle={symbol}
+        collapsible
+        open={open}
+        onToggle={() => setOpen((o) => !o)}
+        badges={
+          !open ? <SideBadge tone={biasBadgeTone}>{analysis.direction}</SideBadge> : undefined
+        }
+      />
 
-      <SideBody>
-        {funding.breakdown.length > 0 && (
-          <div className="sb-kv-list sb-kv-list--funding">
-            {funding.breakdown.map((b) => (
-              <SideRow
-                key={b.name}
-                label={b.name}
-                value={`${b.rate >= 0 ? '+' : ''}${b.rate.toFixed(4)}%`}
-                tone={b.rate < 0 ? 'up' : b.rate > 0.05 ? 'dn' : ''}
-                className="sb-row--funding"
-              />
-            ))}
+      {!open && (
+        <div className="sb-funding-compact">
+          <div className={`sb-funding-compact__rate ${fundTone}`}>{funding.val}</div>
+          <p className={`sb-funding-compact__sentiment ${fundTone}`}>{funding.sub}</p>
+        </div>
+      )}
+
+      {open && (
+        <SideBody className="sb-funding-body">
+          <div className={`sb-funding-compact__rate sb-funding-compact__rate--inline ${fundTone}`}>
+            {funding.val}
           </div>
-        )}
+          <p
+            className={`sb-funding-compact__sentiment sb-funding-compact__sentiment--inline ${fundTone}`}
+          >
+            {funding.sub}
+          </p>
 
-        <StatGrid cols={3}>
-          <StatCell label="Bias" value={analysis.direction} tone={dirTone} />
-          <StatCell label="Risk" value={analysis.riskLevel} tone={riskTone} />
-          <StatCell
-            label="Strength"
-            value={strengthPct}
-            tone={analysis.strength >= 0.6 ? 'hi' : ''}
-          />
-        </StatGrid>
+          {funding.breakdown.length > 0 && (
+            <div className="sb-kv-list sb-kv-list--funding">
+              {funding.breakdown.map((b) => (
+                <SideRow
+                  key={b.name}
+                  label={b.name}
+                  value={`${b.rate >= 0 ? '+' : ''}${b.rate.toFixed(4)}%`}
+                  tone={b.rate < 0 ? 'up' : b.rate > 0.05 ? 'dn' : ''}
+                  className="sb-row--funding"
+                />
+              ))}
+            </div>
+          )}
 
-        {analysis.reasons[0] && <SideNote>{analysis.reasons[0]}</SideNote>}
+          <StatGrid cols={3}>
+            <StatCell label="Bias" value={analysis.direction} tone={dirTone} />
+            <StatCell label="Risk" value={analysis.riskLevel} tone={riskTone} />
+            <StatCell
+              label="Strength"
+              value={strengthPct}
+              tone={analysis.strength >= 0.6 ? 'hi' : ''}
+            />
+          </StatGrid>
 
-        <SideNote>
-          FR &lt; -0.01% lean <span className="up">LONG</span> · FR &gt; +0.01% lean{' '}
-          <span className="dn">SHORT</span>
-        </SideNote>
-      </SideBody>
+          {analysis.reasons[0] && <SideNote>{analysis.reasons[0]}</SideNote>}
+
+          <SideNote>
+            FR &lt; -0.01% lean <span className="up">LONG</span> · FR &gt; +0.01% lean{' '}
+            <span className="dn">SHORT</span>
+          </SideNote>
+        </SideBody>
+      )}
     </SideBlock>
   )
 })

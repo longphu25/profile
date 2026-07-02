@@ -1956,86 +1956,73 @@
   margin: 0;
 }
 
-/* Funding panel — hero rate is the focal metric */
+/* Funding panel — collapsed: big avg rate; expanded: small per-venue rows */
 .sb-block--funding {
   --sb-accent: #e8b84a;
 }
-.sb-funding-hero {
-  padding: 14px 12px 12px 14px;
+.sb-funding-compact {
+  padding: 2px 12px 10px 14px;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(232, 184, 74, 0.08) 0%, transparent 72%);
 }
-.sb-funding-hero__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.sb-funding-hero__kicker {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.sb-funding-hero__sym {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--muted-2);
-  letter-spacing: 0.04em;
-}
-.sb-funding-hero__rate {
-  margin-top: 8px;
+.sb-funding-compact__rate {
   font-family: var(--font-display);
-  font-size: 34px;
+  font-size: clamp(1.85rem, 5.5vw, 2.15rem);
   font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   color: var(--mint);
 }
-.sb-funding-hero__rate.up {
+.sb-funding-compact__rate.up {
   color: var(--up);
   text-shadow: 0 0 28px rgba(61, 214, 140, 0.28);
 }
-.sb-funding-hero__rate.dn {
+.sb-funding-compact__rate.dn {
   color: var(--dn);
   text-shadow: 0 0 28px rgba(242, 87, 87, 0.28);
 }
-.sb-funding-hero__meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
+.sb-funding-compact__rate--inline {
+  font-size: clamp(1.5rem, 4.5vw, 1.75rem);
 }
-.sb-funding-hero__sentiment {
-  font-size: 11px;
+.sb-funding-compact__sentiment {
+  margin: 5px 0 0;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-2);
+  color: var(--muted);
 }
-.sb-funding-hero__sentiment.up { color: var(--up); }
-.sb-funding-hero__sentiment.dn { color: var(--dn); }
+.sb-funding-compact__sentiment.up { color: var(--up); }
+.sb-funding-compact__sentiment.dn { color: var(--dn); }
+.sb-funding-compact__sentiment--inline {
+  margin-bottom: 4px;
+}
+.sb-funding-body.sb-body {
+  padding-top: 6px;
+  gap: 6px;
+}
 .sb-kv-list--funding {
-  gap: 4px;
-  padding: 6px 0 2px;
+  gap: 2px;
+  padding: 4px 0 6px;
   border-bottom: 1px solid var(--border);
 }
 .sb-row--funding {
-  padding: 4px 0;
+  padding: 2px 0;
+  min-height: 0;
 }
 .sb-row--funding .sb-row__label {
-  font-size: 11px;
+  font-size: 8px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--muted);
 }
 .sb-row--funding .sb-row__value {
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
 }
 .sb-empty {
   padding: 10px 14px;
@@ -2141,6 +2128,49 @@
 .sb-trade-ghost-btn:focus-visible {
   outline: none;
   box-shadow: inset 0 0 0 1px var(--mint);
+}
+
+/* Collapsed trade summary when signal is active */
+.sb-trade-compact {
+  padding: 2px 12px 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sb-trade-compact__hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 6px 8px;
+}
+.sb-trade-compact__dir {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.sb-trade-compact__dir.up { color: var(--up); }
+.sb-trade-compact__dir.dn { color: var(--dn); }
+.sb-trade-compact__entry {
+  font-family: var(--font-mono);
+  font-size: clamp(1.05rem, 3.5vw, 1.25rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--mint);
+  letter-spacing: -0.03em;
+}
+.sb-trade-compact__conf {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+.sb-trade-compact__meta {
+  margin: 4px 0 0;
+  font-size: 9px;
+  line-height: 1.4;
+  color: var(--muted);
+  letter-spacing: 0.02em;
 }
 
 /* Verdict strip: direction + confidence + key stats */
