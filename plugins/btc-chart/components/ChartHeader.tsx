@@ -1,5 +1,11 @@
 // BTC Chart — header: pair selector, custom-coin add, interval tabs, price/OHLCV.
 
+import { motion } from 'motion/react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+import { stitchEase } from '../lib/motion'
 import {
   INTERVALS,
   type Interval,
@@ -74,10 +80,10 @@ export function ChartHeader({
           }}
           className="btc-chart__custom-sym"
         >
-          <input
+          <Input
             name="coin"
             placeholder="+coin"
-            className="btc-chart__custom-input"
+            className="btc-chart__custom-input h-7 w-[4.5rem] rounded-none border-[var(--border)] bg-[var(--surface-2)] px-2 font-mono text-[10px] shadow-none focus-visible:ring-[var(--mint)]"
             aria-label="Add custom coin"
           />
         </form>
@@ -85,8 +91,16 @@ export function ChartHeader({
 
       <div className="btc-chart__header-price">
         <div className="btc-chart__price">
-          <span className={`btc-chart__price-cur ${price.up ? 'up' : 'dn'}`}>{price.cur}</span>
-          <span className={`btc-chart__price-chg ${price.up ? 'up' : 'dn'}`}>{price.chg}</span>
+          <motion.span
+            key={price.cur}
+            className={cn('btc-chart__price-cur', price.up ? 'up' : 'dn')}
+            initial={{ opacity: 0.55, y: 3 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, ease: stitchEase }}
+          >
+            {price.cur}
+          </motion.span>
+          <span className={cn('btc-chart__price-chg', price.up ? 'up' : 'dn')}>{price.chg}</span>
         </div>
 
         <div className="btc-chart__ohlcv">
@@ -110,9 +124,11 @@ export function ChartHeader({
 
       <div className="btc-chart__header-controls">
         {onToggleTools && (
-          <button
+          <Button
             type="button"
-            className={`btc-chart__tools-trigger${toolsOpen ? ' is-on' : ''}`}
+            variant="ghost"
+            size="sm"
+            className={cn('btc-chart__tools-trigger h-8 rounded-none px-3', toolsOpen && 'is-on')}
             onClick={onToggleTools}
             aria-expanded={toolsOpen}
             aria-haspopup="dialog"
@@ -120,28 +136,42 @@ export function ChartHeader({
           >
             <span className="btc-chart__tools-trigger-label">Tools</span>
             {activeLayerCount > 0 && (
-              <span className="btc-chart__tools-trigger-count">{activeLayerCount}</span>
+              <Badge
+                variant="secondary"
+                className="btc-chart__tools-trigger-count ml-1.5 h-4 min-w-4 rounded-none border-[var(--border-strong)] bg-[var(--surface-3)] px-1 font-mono text-[9px] tabular-nums"
+              >
+                {activeLayerCount}
+              </Badge>
             )}
-          </button>
+          </Button>
         )}
 
-        <div className="btc-chart__intervals">
+        <div className="btc-chart__intervals" role="group" aria-label="Chart interval">
           {INTERVALS.map((iv) => (
-            <button
+            <Button
               key={iv}
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => onSelectInterval(iv)}
-              className={`btc-chart__iv-btn${interval === iv ? ' is-active' : ''}`}
+              className={cn(
+                'btc-chart__iv-btn h-7 rounded-none px-2.5 font-mono text-[10px] tracking-wider',
+                interval === iv && 'is-active',
+              )}
+              aria-pressed={interval === iv}
             >
               {iv.toUpperCase()}
-            </button>
+            </Button>
           ))}
         </div>
 
-        <div className="btc-chart__live">
-          <span className="btc-chart__live-dot" />
+        <Badge
+          variant="outline"
+          className="btc-chart__live gap-1.5 rounded-none border-[var(--border-strong)] bg-transparent px-2 py-0.5 font-mono text-[9px] font-semibold tracking-[0.18em] text-[var(--mint)]"
+        >
+          <span className="btc-chart__live-dot" aria-hidden />
           LIVE
-        </div>
+        </Badge>
       </div>
     </header>
   )

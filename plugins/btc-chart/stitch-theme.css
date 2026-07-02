@@ -355,12 +355,76 @@
   margin-left: 0;
 }
 
+.btc-chart--stitch .btc-chart__toast-stack {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: min(92vw, 480px);
+  pointer-events: none;
+}
+
+.btc-chart--stitch .btc-chart__toast-stack .btc-chart__toast {
+  pointer-events: auto;
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  animation: none;
+}
+
 .btc-chart--stitch .btc-chart__toast {
   border-radius: 0;
   border: 1px solid var(--border-strong);
   border-left: 2px solid var(--mint);
   box-shadow: none;
   background: var(--surface-2);
+}
+
+/* shadcn controls in stitch header */
+.btc-chart--stitch .btc-chart__header .btc-chart__iv-btn,
+.btc-chart--stitch .btc-chart__header .btc-chart__tools-trigger {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  background: transparent;
+  box-shadow: none;
+}
+
+.btc-chart--stitch .btc-chart__header .btc-chart__iv-btn:hover,
+.btc-chart--stitch .btc-chart__header .btc-chart__tools-trigger:hover {
+  background: rgba(232, 184, 74, 0.04);
+  color: var(--text);
+}
+
+.btc-chart--stitch .btc-chart__accordion-hdr {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  font: inherit;
+}
+
+.btc-chart--stitch .btc-chart__accordion-hdr:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: 2px;
+}
+
+.btc-chart--stitch .btc-chart__tools-panel .ind-panel-chip {
+  justify-content: flex-start;
+  font-weight: 500;
 }
 
 /* ── Loading: skeleton (no spinner) ─────────────────────────────── */
@@ -496,5 +560,9 @@
   .btc-chart--stitch.is-ready .btc-chart__body,
   .btc-chart--stitch.is-ready .btc-chart__status {
     animation: none;
+  }
+
+  .btc-chart--stitch .btc-chart__accordion-caret {
+    transition: none;
   }
 }

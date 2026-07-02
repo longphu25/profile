@@ -52,6 +52,8 @@ import { StatsPanel, FearGreedPanel } from './components/MarketPanels'
 import { VolumeSpikePanel } from './components/VolumeSpikePanel'
 import { ChartHeader } from './components/ChartHeader'
 import { ChartToolbarPanel } from './components/ChartToolbarPanel'
+import { ChartToasts } from './components/ChartToasts'
+import { ChartLoadingOverlay } from './components/ChartLoadingOverlay'
 import { ALL_IND_KEYS } from './lib/indicator-groups'
 
 import { SidebarAccordion } from './components/SidebarAccordion'
@@ -2354,38 +2356,13 @@ function BtcChartView() {
 
   return (
     <div className={`btc-chart btc-chart--stitch${loading ? '' : ' is-ready'}`} ref={rootRef}>
-      <div className={`btc-chart__loading${loading ? '' : ' is-done'}`} aria-hidden={!loading}>
-        <div className="btc-chart__load-skeleton" aria-hidden>
-          <div className="btc-chart__load-skeleton-bar btc-chart__load-skeleton-bar--wide" />
-          <div className="btc-chart__load-skeleton-bar" />
-          <div className="btc-chart__load-skeleton-bar btc-chart__load-skeleton-bar--short" />
-        </div>
-        <div className="btc-chart__spinner" aria-hidden />
-        <span className="btc-chart__loading-text">{loadingText}</span>
-      </div>
-      {firedToast && (
-        <div className="btc-chart__toast" role="status">
-          <span className="btc-chart__toast-tag">ALERT</span>
-          <span>{firedToast}</span>
-          <button
-            type="button"
-            className="btc-chart__toast-x"
-            onClick={() => setFiredToast(null)}
-            aria-label="Dismiss"
-          >
-            ×
-          </button>
-        </div>
-      )}
-      {importErr && (
-        <div className="btc-chart__toast btc-chart__toast--err" role="alert">
-          <span className="btc-chart__toast-tag">IMPORT</span>
-          <span>{importErr}</span>
-          <button type="button" className="btc-chart__toast-x" onClick={() => setImportErr(null)}>
-            ×
-          </button>
-        </div>
-      )}
+      <ChartLoadingOverlay loading={loading} text={loadingText} />
+      <ChartToasts
+        alertMessage={firedToast}
+        onDismissAlert={() => setFiredToast(null)}
+        errorMessage={importErr}
+        onDismissError={() => setImportErr(null)}
+      />
       <div className="btc-chart__chrome">
         <ChartHeader
           symbolInfo={symbolInfo}
@@ -2405,22 +2382,21 @@ function BtcChartView() {
 
       {/* Body */}
       <div className="btc-chart__body">
-        {toolsOpen && (
-          <ChartToolbarPanel
-            vis={vis}
-            nweCfg={nweCfg}
-            onToggle={toggle}
-            onUpdateNweConfig={updateNweConfig}
-            onClose={() => setToolsOpen(false)}
-            soundEnabled={sound.enabled}
-            onToggleSound={toggleSound}
-            notifAllowed={notifAllowed}
-            onRequestNotif={requestNotif}
-            onSnapshot={snapshot}
-            onExport={exportNow}
-            onImport={importNow}
-          />
-        )}
+        <ChartToolbarPanel
+          open={toolsOpen}
+          vis={vis}
+          nweCfg={nweCfg}
+          onToggle={toggle}
+          onUpdateNweConfig={updateNweConfig}
+          onClose={() => setToolsOpen(false)}
+          soundEnabled={sound.enabled}
+          onToggleSound={toggleSound}
+          notifAllowed={notifAllowed}
+          onRequestNotif={requestNotif}
+          onSnapshot={snapshot}
+          onExport={exportNow}
+          onImport={importNow}
+        />
         <div className="btc-chart__col">
           <div className="btc-chart__chart-stage">
             <div className="btc-chart__legend" ref={legendRef} />
