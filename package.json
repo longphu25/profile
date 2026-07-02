@@ -1,7 +1,7 @@
 {
   "name": "profile",
   "private": true,
-  "version": "0.101.3",
+  "version": "0.101.4",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -31,7 +31,9 @@
     "convex:typecheck": "bun run --filter @profile/convex typecheck",
     "market-core:typecheck": "bun run --filter @profile/market-core typecheck",
     "prepare": "husky",
-    "doctor": "bunx react-doctor@latest"
+    "doctor": "bunx react-doctor@latest -y --verbose",
+    "doctor:diff": "bunx react-doctor@latest -y --verbose --diff",
+    "doctor:score": "bunx react-doctor@latest -y --score"
   },
   "dependencies": {
     "@blossom-carousel/react": "^1.1.1",
