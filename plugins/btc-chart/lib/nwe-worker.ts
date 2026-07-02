@@ -11,7 +11,7 @@ import type { NadarayaWatsonConfig, NadarayaWatsonResult } from './nadaraya-wats
 self.onmessage = (ev: MessageEvent) => {
   const { candles, cfg, id } = ev.data || {}
   if (!Array.isArray(candles)) {
-    ;(self as Worker).postMessage({ error: 'bad candles', id })
+    ;(self as unknown as Worker).postMessage({ error: 'bad candles', id })
     return
   }
   try {
@@ -19,9 +19,9 @@ self.onmessage = (ev: MessageEvent) => {
       candles as Candle[],
       (cfg || {}) as Partial<NadarayaWatsonConfig>,
     )
-    ;(self as Worker).postMessage({ result, id })
+    ;(self as unknown as Worker).postMessage({ result, id })
   } catch (e) {
-    ;(self as Worker).postMessage({ error: String(e), id })
+    ;(self as unknown as Worker).postMessage({ error: String(e), id })
   }
 }
 

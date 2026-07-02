@@ -72,7 +72,7 @@ export const LiquidityPanel = React.memo(function LiquidityPanel({ liquidity }: 
           <div className="sb-panel-grid">
             <SideRow
               label="BOS bias"
-              value={range.hasBOS ? range.bosBias.toUpperCase() : '—'}
+              value={range.hasBOS && range.bosBias ? range.bosBias.toUpperCase() : '—'}
               tone={bosTone}
             />
             <SideRow label="Pools" value={`${externalCount}E · ${internalCount}I`} />

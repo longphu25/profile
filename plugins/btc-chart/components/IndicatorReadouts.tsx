@@ -1,16 +1,7 @@
 // BTC Chart — indicator readout panels driven by the sidebar snapshot.
 
 import type { SidebarState } from '../lib'
-import {
-  SideBlock,
-  SideBody,
-  SideRow,
-  SideNote,
-  SideEmpty,
-  StatGrid,
-  StatCell,
-  SideBadge,
-} from './sidebar'
+import { SideBlock, SideBody, SideNote, SideEmpty, StatGrid, StatCell, SideBadge } from './sidebar'
 
 export function OrderFlowPanel({ ofLog }: { ofLog: SidebarState['ofLog'] }) {
   return (
