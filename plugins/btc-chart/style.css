@@ -1817,6 +1817,29 @@
   flex-shrink: 0;
 }
 
+.sb-head--split {
+  gap: 0;
+  padding: 0;
+}
+.sb-head__toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px 8px 14px;
+  min-height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.sb-head--split .sb-head__actions {
+  padding-right: 10px;
+}
+
 .sb-body {
   padding: 8px 10px 10px 14px;
   display: flex;

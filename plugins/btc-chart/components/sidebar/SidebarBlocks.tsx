@@ -86,7 +86,7 @@ export function SideHead({
   summary?: ReactNode
   actions?: ReactNode
 }) {
-  const inner = (
+  const toggleContent = (
     <>
       {collapsible && (
         <span className="sb-head__caret" aria-hidden>
@@ -99,9 +99,24 @@ export function SideHead({
       </div>
       {badges && <div className="sb-head__badges">{badges}</div>}
       {summary && <div className="sb-head__summary">{summary}</div>}
-      {actions && <div className="sb-head__actions">{actions}</div>}
     </>
   )
+
+  if (collapsible && actions) {
+    return (
+      <div className="sb-head sb-head--split">
+        <button
+          type="button"
+          className="sb-head__toggle sb-head--btn"
+          onClick={onToggle}
+          aria-expanded={open}
+        >
+          {toggleContent}
+        </button>
+        <div className="sb-head__actions">{actions}</div>
+      </div>
+    )
+  }
 
   if (collapsible) {
     return (
@@ -111,12 +126,17 @@ export function SideHead({
         onClick={onToggle}
         aria-expanded={open}
       >
-        {inner}
+        {toggleContent}
       </button>
     )
   }
 
-  return <div className="sb-head">{inner}</div>
+  return (
+    <div className="sb-head">
+      {toggleContent}
+      {actions && <div className="sb-head__actions">{actions}</div>}
+    </div>
+  )
 }
 
 export function SideBody({
