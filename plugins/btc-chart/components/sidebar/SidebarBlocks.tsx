@@ -233,5 +233,5 @@ export function SideEmpty({ children }: { children: ReactNode }) {
 }
 
 export function SideDivider() {
-  return <div className="sb-divider" role="separator" />
+  return <hr className="sb-divider" />
 }

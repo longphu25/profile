@@ -1,16 +1,19 @@
 // BTC Chart — Positions: manual tracking with add form and inline SL updates.
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import {
-  type Position,
-  type PosForm,
-  type TradeSetup,
-  calcLiquidation,
-  calcPnl,
-  fmtP,
-} from '../lib'
+import { fmtP } from '../lib/format'
+import { calcLiquidation, calcPnl, type PosForm, type Position } from '../lib/positions'
+import type { TradeSetup } from '../lib/trade-setup'
 import type { PositionPatch } from '../hooks/usePositions'
+
+function formQtyLabel(form: PosForm): string {
+  const entry = parseFloat(form.entry)
+  const margin = parseFloat(form.margin)
+  const lev = parseFloat(form.leverage) || 10
+  if (!entry || entry <= 0 || !margin || margin <= 0) return ''
+  return ((margin * lev) / entry).toFixed(6)
+}
 
 export interface PosSuggestion {
   sl: number
@@ -46,14 +49,16 @@ function PositionCard({
   onRemove: (id: string) => void
   onUpdate: (id: string, patch: PositionPatch) => void
 }) {
-  const [slDraft, setSlDraft] = useState(p.stopLoss != null ? String(p.stopLoss) : '')
+  const [slDraft, setSlDraft] = useState(() => (p.stopLoss != null ? String(p.stopLoss) : ''))
+  const [prevStopLoss, setPrevStopLoss] = useState(p.stopLoss)
   const mark = markPrice ?? p.entryPrice
   const { pnl, pct } = calcPnl(p, mark)
   const liq = calcLiquidation(p)
 
-  useEffect(() => {
+  if (p.stopLoss !== prevStopLoss) {
+    setPrevStopLoss(p.stopLoss)
     setSlDraft(p.stopLoss != null ? String(p.stopLoss) : '')
-  }, [p.stopLoss])
+  }
 
   const saveSl = () => {
     const trimmed = slDraft.trim()
@@ -123,6 +128,7 @@ function PositionCard({
           type="number"
           className="btc-chart__pos-input"
           placeholder="Chưa đặt"
+          aria-label={`Stop loss cho vị thế ${p.side}`}
           value={slDraft}
           onChange={(e) => setSlDraft(e.target.value)}
         />
@@ -159,18 +165,6 @@ export function PositionsBody({
   setup,
   onFillFromSetup,
 }: PositionsBodyProps) {
-  useEffect(() => {
-    const entry = parseFloat(form.entry)
-    const margin = parseFloat(form.margin)
-    const lev = parseFloat(form.leverage) || 10
-    if (!entry || entry <= 0 || !margin || margin <= 0) return
-    const qty = (margin * lev) / entry
-    setForm((f) => ({
-      ...f,
-      size: qty.toFixed(6),
-    }))
-  }, [form.margin, form.leverage, form.entry, setForm])
-
   const canFillSetup = Boolean(setup?.dir && onFillFromSetup)
 
   return (
@@ -282,7 +276,7 @@ export function PositionsBody({
             parseFloat(form.margin) > 0 && (
               <p className="btc-chart__pos-form-hint">
                 Size ${(parseFloat(form.margin) * (parseFloat(form.leverage) || 10)).toFixed(2)} ·
-                Qty {form.size}
+                Qty {formQtyLabel(form)}
               </p>
             )}
 

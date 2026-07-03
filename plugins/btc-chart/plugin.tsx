@@ -53,14 +53,17 @@ import { ChartLoadingOverlay } from './components/ChartLoadingOverlay'
 import { ChartStatusBar } from './components/ChartStatusBar'
 import { ChartLayerDots } from './components/ChartLayerDots'
 import { OscillatorPane } from './components/OscillatorPane'
-import { IntelDrawer, type IntelTab } from './components/IntelDrawer'
+import { IntelDrawer } from './components/IntelDrawer'
 import { IntelPanelStack } from './components/IntelPanelStack'
+import type { IntelTab } from './lib/intel-panels'
 import { ALL_IND_KEYS } from './lib/indicator-groups'
 
 import { applyLayerPreset, type LayerPresetId } from './lib/layer-presets'
 
-import { RailSection } from './components/sidebar'
-import { SidebarRailTabs, type MobileRailTab } from './components/SidebarRailTabs'
+import { RailSection } from './components/sidebar/SidebarBlocks'
+import { BtcMotionProvider } from './components/BtcMotionProvider'
+import { SidebarRailTabs } from './components/SidebarRailTabs'
+import type { MobileRailTab } from './lib/mobile-rail-tabs'
 // (FundingNwe / Sessions / Liquidity / OI / Technicals are lazy-loaded below)
 
 // Lazy loaded heavier panels (code split + initial perf)
@@ -86,16 +89,10 @@ const SignalPanelLazy = lazy(() =>
 const TradeSetupPanelLazy = lazy(() =>
   import('./components/TradeSetupPanel').then((m) => ({ default: m.TradeSetupPanel })),
 )
-import {
-  usePositions,
-  useTicker,
-  useFunding,
-  useFearGreed,
-  useKlines,
-  useOpenInterest,
-  useSupply,
-  useWhaleTracker,
-} from './hooks'
+import { usePositions } from './hooks/usePositions'
+import { useTicker, useFunding, useFearGreed, useKlines } from './hooks/useMarketData'
+import { useOpenInterest, useSupply } from './hooks/useOI'
+import { useWhaleTracker } from './hooks/useWhaleTracker'
 import {
   CHART,
   LIMIT,
@@ -157,6 +154,17 @@ import {
   type FngState,
   applyDefaultViewport,
 } from './lib'
+
+const chartAlertSound = new AlertSound()
+
+function persistConfigField(patch: Record<string, unknown>) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('btc-chart:config:v1') || '{}')
+    localStorage.setItem('btc-chart:config:v1', JSON.stringify({ ...saved, ...patch }))
+  } catch {
+    /* noop */
+  }
+}
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -234,7 +242,7 @@ function BtcChartView() {
   const symbolRef = useRef<SymbolId>((cfgInit.symbol as SymbolId) || 'BTCUSDT')
   const vpOptsRef = useRef({ hvnRatio: 0.8 })
   const alertsRef = useRef<AlertRule[]>([...cfgInit.alerts])
-  const soundRef = useRef<AlertSound>(new AlertSound())
+  const soundRef = useRef(chartAlertSound)
   const lastPriceRef = useRef<number | null>(null)
   // Throttle: skip UI updates if interval not elapsed
   const lastPriceUpdateRef = useRef(0) // 1s throttle for price/PnL
@@ -456,9 +464,7 @@ function BtcChartView() {
       result[p.id] = suggestSlTp(p, candles, nweData)
     }
     return result
-    // Re-compute when positions change or sidebar updates (new candle tick).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positions, panelCandles, sidebar.rsiNow])
+  }, [positions, panelCandles])
 
   useLayoutEffect(() => {
     symbolInfoRef.current = symbolInfo
@@ -1654,7 +1660,7 @@ function BtcChartView() {
       chartRefs.current?.cleanup()
       chartRefs.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-doctor/exhaustive-deps
   }, [])
 
   // ── Advanced oscillator pane (ADX / StochRSI / OBV) ────────────────
@@ -1770,7 +1776,7 @@ function BtcChartView() {
       oscRefs.current?.cleanup()
       oscRefs.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-doctor/exhaustive-deps
   }, [oscOpen])
 
   // Re-render oscillator series when switching which one is shown.
@@ -1778,7 +1784,7 @@ function BtcChartView() {
     if (oscOpen && oscRefs.current && candlesRef.current.length) {
       queueMicrotask(() => renderData(candlesRef.current))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-doctor/exhaustive-deps
   }, [oscView])
 
   // ── Wire klines + WebSocket once the query resolves ────────────────
@@ -2335,15 +2341,6 @@ function BtcChartView() {
   }, [firedToast])
 
   // ── Header handlers ─────────────────────────────────────────────────
-  const persistConfigField = (patch: Record<string, unknown>) => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('btc-chart:config:v1') || '{}')
-      localStorage.setItem('btc-chart:config:v1', JSON.stringify({ ...saved, ...patch }))
-    } catch {
-      /* noop */
-    }
-  }
-
   const selectSymbol = (next: SymbolId) => {
     if (next === symbol) return
     const entry = allSymbols.find((s) => s.symbol === next)
@@ -2393,175 +2390,112 @@ function BtcChartView() {
   }
 
   return (
-    <div className={`btc-chart btc-chart--stitch${loading ? '' : ' is-ready'}`} ref={rootRef}>
-      <ChartLoadingOverlay loading={loading} text={loadingText} />
-      <ChartToasts
-        alertMessage={firedToast}
-        onDismissAlert={() => setFiredToast(null)}
-        errorMessage={importErr}
-        onDismissError={() => setImportErr(null)}
-      />
-      <div className="btc-chart__chrome">
-        <ChartHeader
-          symbolInfo={symbolInfo}
-          symbol={symbol}
-          symbols={allSymbols}
-          interval={interval}
-          price={price}
-          ohlcv={ohlcv}
-          activeLayerCount={ALL_IND_KEYS.filter((k) => vis[k]).length}
-          toolsOpen={toolsOpen}
-          sidebarOpen={sidebarMobileOpen}
-          intelOpen={intelOpen}
-          onToggleTools={() => setToolsOpen((o) => !o)}
-          onToggleSidebar={() =>
-            setSidebarMobileOpen((o) => {
-              const next = !o
-              if (next) setIntelOpen(false)
-              return next
-            })
-          }
-          onToggleIntel={() =>
-            setIntelOpen((o) => {
-              const next = !o
-              if (next) setSidebarMobileOpen(false)
-              return next
-            })
-          }
-          onSelectSymbol={selectSymbol}
-          onSelectInterval={selectInterval}
-          onAddCustomSymbol={addCustomSymbol}
+    <BtcMotionProvider>
+      <div className={`btc-chart btc-chart--stitch${loading ? '' : ' is-ready'}`} ref={rootRef}>
+        <ChartLoadingOverlay loading={loading} text={loadingText} />
+        <ChartToasts
+          alertMessage={firedToast}
+          onDismissAlert={() => setFiredToast(null)}
+          errorMessage={importErr}
+          onDismissError={() => setImportErr(null)}
         />
-      </div>
-
-      {/* Body */}
-      <div className="btc-chart__body">
-        <div className="btc-chart__col">
-          <ChartToolbarPanel
-            open={toolsOpen}
-            vis={vis}
-            nweCfg={nweCfg}
-            onToggle={toggle}
-            onUpdateNweConfig={updateNweConfig}
-            onClose={() => setToolsOpen(false)}
-            soundEnabled={sound.enabled}
-            onToggleSound={toggleSound}
-            notifAllowed={notifAllowed}
-            onRequestNotif={requestNotif}
-            onSnapshot={snapshot}
-            onExport={exportNow}
-            onImport={importNow}
-            onApplyPreset={applyPreset}
-          />
-          <div className="btc-chart__chart-stage">
-            <div className="btc-chart__legend-dock">
-              <div className="btc-chart__legend" ref={legendRef} />
-            </div>
-            <ChartLayerDots vis={vis} onToggle={toggle} onOpenTools={() => setToolsOpen(true)} />
-            <canvas className="btc-chart__of-canvas" ref={ofCanvasRef} />
-            <canvas className="btc-chart__ict-canvas" ref={ictCanvasRef} />
-            <canvas className="btc-chart__liq-canvas" ref={liqCanvasRef} />
-            <canvas className="btc-chart__smc-canvas" ref={smcCanvasRef} />
-            <canvas className="btc-chart__box-canvas" ref={boxCanvasRef} />
-            <div className="btc-chart__main" ref={mainElRef} />
-            <canvas className="btc-chart__vp-canvas" ref={vpCanvasRef} />
-          </div>
-          <OscillatorPane
-            open={oscOpen}
-            height={oscHeight}
-            view={oscView}
-            readouts={{
-              rsi: sidebar.rsiNow,
-              adx: sidebar.adxNow,
-              stochK: sidebar.stochKNow,
-              obv: sidebar.obvNow,
-            }}
-            oscElRef={oscElRef}
-            onToggleOpen={toggleOscOpen}
-            onViewChange={setOscView}
-            onResizeStart={startOscResize}
+        <div className="btc-chart__chrome">
+          <ChartHeader
+            symbolInfo={symbolInfo}
+            symbol={symbol}
+            symbols={allSymbols}
+            interval={interval}
+            price={price}
+            ohlcv={ohlcv}
+            activeLayerCount={ALL_IND_KEYS.filter((k) => vis[k]).length}
+            toolsOpen={toolsOpen}
+            sidebarOpen={sidebarMobileOpen}
+            intelOpen={intelOpen}
+            onToggleTools={() => setToolsOpen((o) => !o)}
+            onToggleSidebar={() =>
+              setSidebarMobileOpen((o) => {
+                const next = !o
+                if (next) setIntelOpen(false)
+                return next
+              })
+            }
+            onToggleIntel={() =>
+              setIntelOpen((o) => {
+                const next = !o
+                if (next) setSidebarMobileOpen(false)
+                return next
+              })
+            }
+            onSelectSymbol={selectSymbol}
+            onSelectInterval={selectInterval}
+            onAddCustomSymbol={addCustomSymbol}
           />
         </div>
 
-        {sidebarMobileOpen && (
-          <button
-            type="button"
-            className="btc-chart__sidebar-scrim"
-            aria-label="Đóng rail panel"
-            onClick={() => setSidebarMobileOpen(false)}
-          />
-        )}
-
-        {/* Sidebar */}
-        <div className={`btc-chart__sidebar${sidebarMobileOpen ? ' is-mobile-open' : ''}`}>
-          <SidebarRailTabs active={mobileRailTab} onChange={setMobileRailTab} />
-
-          <div className="btc-chart__rail-desktop">
-            <RailSection label="Signals">
-              <Suspense fallback={<div className="sb-empty">Loading signal…</div>}>
-                <SignalPanelLazy
-                  ml={sidebar.ml}
-                  setup={sidebar.tradeSetup}
-                  signalConfig={signalConfig}
-                  onSignalConfigChange={updateSignalConfig}
-                />
-              </Suspense>
-              <Suspense fallback={<div className="sb-empty">Loading setup…</div>}>
-                <TradeSetupPanelLazy
-                  setup={sidebar.tradeSetup}
-                  positions={positions}
-                  showPosForm={showPosForm}
-                  setShowPosForm={setShowPosForm}
-                  posForm={posForm}
-                  setPosForm={setPosForm}
-                  onAddPosition={addPosition}
-                  onRemovePosition={removePosition}
-                  onUpdatePosition={updatePosition}
-                  markPrice={markPrice}
-                  posSuggestions={posSuggestions}
-                />
-              </Suspense>
-              <Suspense fallback={<div className="sb-empty">Loading funding…</div>}>
-                <FundingNwePanelLazy
-                  funding={funding}
-                  nwe={luxNweResult}
-                  candles={panelCandles}
-                  symbol={symbol}
-                />
-              </Suspense>
-            </RailSection>
-
-            <RailSection label="Context">
-              <Suspense fallback={<div className="sb-empty">Loading sessions…</div>}>
-                <SessionsPanelLazy ict={ictResult} />
-              </Suspense>
-              <Suspense fallback={<div className="sb-empty">Loading liquidity…</div>}>
-                <LiquidityPanelLazy liquidity={liquidityResult} />
-              </Suspense>
-            </RailSection>
-
-            <RailSection label="Strategies">
-              <Suspense fallback={<div className="sb-empty">Loading scalping…</div>}>
-                <ScalpingPanel
-                  scalp={boucherScalp}
-                  interval={interval}
-                  enabled={boucherEnabled}
-                  onToggle={() => setBoucherEnabled((v) => !v)}
-                />
-              </Suspense>
-              <Suspense fallback={<div className="sb-empty">Loading reversal…</div>}>
-                <ReversalPanel
-                  lien={lienReversal}
-                  enabled={lienEnabled}
-                  onToggle={() => setLienEnabled((v) => !v)}
-                />
-              </Suspense>
-            </RailSection>
+        {/* Body */}
+        <div className="btc-chart__body">
+          <div className="btc-chart__col">
+            <ChartToolbarPanel
+              open={toolsOpen}
+              vis={vis}
+              nweCfg={nweCfg}
+              onToggle={toggle}
+              onUpdateNweConfig={updateNweConfig}
+              onClose={() => setToolsOpen(false)}
+              soundEnabled={sound.enabled}
+              onToggleSound={toggleSound}
+              notifAllowed={notifAllowed}
+              onRequestNotif={requestNotif}
+              onSnapshot={snapshot}
+              onExport={exportNow}
+              onImport={importNow}
+              onApplyPreset={applyPreset}
+            />
+            <div className="btc-chart__chart-stage">
+              <div className="btc-chart__legend-dock">
+                <div className="btc-chart__legend" ref={legendRef} />
+              </div>
+              <ChartLayerDots vis={vis} onToggle={toggle} onOpenTools={() => setToolsOpen(true)} />
+              <canvas className="btc-chart__of-canvas" ref={ofCanvasRef} />
+              <canvas className="btc-chart__ict-canvas" ref={ictCanvasRef} />
+              <canvas className="btc-chart__liq-canvas" ref={liqCanvasRef} />
+              <canvas className="btc-chart__smc-canvas" ref={smcCanvasRef} />
+              <canvas className="btc-chart__box-canvas" ref={boxCanvasRef} />
+              <div className="btc-chart__main" ref={mainElRef} />
+              <canvas className="btc-chart__vp-canvas" ref={vpCanvasRef} />
+            </div>
+            <OscillatorPane
+              open={oscOpen}
+              height={oscHeight}
+              view={oscView}
+              readouts={{
+                rsi: sidebar.rsiNow,
+                adx: sidebar.adxNow,
+                stochK: sidebar.stochKNow,
+                obv: sidebar.obvNow,
+              }}
+              oscElRef={oscElRef}
+              onToggleOpen={toggleOscOpen}
+              onViewChange={setOscView}
+              onResizeStart={startOscResize}
+            />
           </div>
 
-          <div className="btc-chart__rail-mobile" role="tabpanel" aria-label={mobileRailTab}>
-            {mobileRailTab === 'setup' && (
-              <>
+          {sidebarMobileOpen && (
+            <button
+              type="button"
+              className="btc-chart__sidebar-scrim"
+              aria-label="Đóng rail panel"
+              onClick={() => setSidebarMobileOpen(false)}
+            />
+          )}
+
+          {/* Sidebar */}
+          <div className={`btc-chart__sidebar${sidebarMobileOpen ? ' is-mobile-open' : ''}`}>
+            <SidebarRailTabs active={mobileRailTab} onChange={setMobileRailTab} />
+
+            <div className="btc-chart__rail-desktop">
+              <RailSection label="Signals">
                 <Suspense fallback={<div className="sb-empty">Loading signal…</div>}>
                   <SignalPanelLazy
                     ml={sidebar.ml}
@@ -2585,30 +2519,26 @@ function BtcChartView() {
                     posSuggestions={posSuggestions}
                   />
                 </Suspense>
-              </>
-            )}
-            {mobileRailTab === 'funding' && (
-              <Suspense fallback={<div className="sb-empty">Loading funding…</div>}>
-                <FundingNwePanelLazy
-                  funding={funding}
-                  nwe={luxNweResult}
-                  candles={panelCandles}
-                  symbol={symbol}
-                />
-              </Suspense>
-            )}
-            {mobileRailTab === 'context' && (
-              <>
+                <Suspense fallback={<div className="sb-empty">Loading funding…</div>}>
+                  <FundingNwePanelLazy
+                    funding={funding}
+                    nwe={luxNweResult}
+                    candles={panelCandles}
+                    symbol={symbol}
+                  />
+                </Suspense>
+              </RailSection>
+
+              <RailSection label="Context">
                 <Suspense fallback={<div className="sb-empty">Loading sessions…</div>}>
                   <SessionsPanelLazy ict={ictResult} />
                 </Suspense>
                 <Suspense fallback={<div className="sb-empty">Loading liquidity…</div>}>
                   <LiquidityPanelLazy liquidity={liquidityResult} />
                 </Suspense>
-              </>
-            )}
-            {mobileRailTab === 'strategies' && (
-              <>
+              </RailSection>
+
+              <RailSection label="Strategies">
                 <Suspense fallback={<div className="sb-empty">Loading scalping…</div>}>
                   <ScalpingPanel
                     scalp={boucherScalp}
@@ -2624,65 +2554,134 @@ function BtcChartView() {
                     onToggle={() => setLienEnabled((v) => !v)}
                   />
                 </Suspense>
-              </>
-            )}
+              </RailSection>
+            </div>
+
+            <div className="btc-chart__rail-mobile" role="tabpanel" aria-label={mobileRailTab}>
+              {mobileRailTab === 'setup' && (
+                <>
+                  <Suspense fallback={<div className="sb-empty">Loading signal…</div>}>
+                    <SignalPanelLazy
+                      ml={sidebar.ml}
+                      setup={sidebar.tradeSetup}
+                      signalConfig={signalConfig}
+                      onSignalConfigChange={updateSignalConfig}
+                    />
+                  </Suspense>
+                  <Suspense fallback={<div className="sb-empty">Loading setup…</div>}>
+                    <TradeSetupPanelLazy
+                      setup={sidebar.tradeSetup}
+                      positions={positions}
+                      showPosForm={showPosForm}
+                      setShowPosForm={setShowPosForm}
+                      posForm={posForm}
+                      setPosForm={setPosForm}
+                      onAddPosition={addPosition}
+                      onRemovePosition={removePosition}
+                      onUpdatePosition={updatePosition}
+                      markPrice={markPrice}
+                      posSuggestions={posSuggestions}
+                    />
+                  </Suspense>
+                </>
+              )}
+              {mobileRailTab === 'funding' && (
+                <Suspense fallback={<div className="sb-empty">Loading funding…</div>}>
+                  <FundingNwePanelLazy
+                    funding={funding}
+                    nwe={luxNweResult}
+                    candles={panelCandles}
+                    symbol={symbol}
+                  />
+                </Suspense>
+              )}
+              {mobileRailTab === 'context' && (
+                <>
+                  <Suspense fallback={<div className="sb-empty">Loading sessions…</div>}>
+                    <SessionsPanelLazy ict={ictResult} />
+                  </Suspense>
+                  <Suspense fallback={<div className="sb-empty">Loading liquidity…</div>}>
+                    <LiquidityPanelLazy liquidity={liquidityResult} />
+                  </Suspense>
+                </>
+              )}
+              {mobileRailTab === 'strategies' && (
+                <>
+                  <Suspense fallback={<div className="sb-empty">Loading scalping…</div>}>
+                    <ScalpingPanel
+                      scalp={boucherScalp}
+                      interval={interval}
+                      enabled={boucherEnabled}
+                      onToggle={() => setBoucherEnabled((v) => !v)}
+                    />
+                  </Suspense>
+                  <Suspense fallback={<div className="sb-empty">Loading reversal…</div>}>
+                    <ReversalPanel
+                      lien={lienReversal}
+                      enabled={lienEnabled}
+                      onToggle={() => setLienEnabled((v) => !v)}
+                    />
+                  </Suspense>
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {intelOpen && (
-        <IntelDrawer
-          open={intelOpen}
-          onClose={() => setIntelOpen(false)}
-          tab={intelTab}
-          onTabChange={setIntelTab}
-          search={intelSearch}
-          onSearchChange={setIntelSearch}
-        >
-          <IntelPanelStack
+        {intelOpen && (
+          <IntelDrawer
+            open={intelOpen}
+            onClose={() => setIntelOpen(false)}
             tab={intelTab}
+            onTabChange={setIntelTab}
             search={intelSearch}
-            vis={vis}
-            onToggleVis={toggle}
-            sidebar={sidebar}
-            stats={stats}
-            fng={fng}
-            oiUsd={oiQuery.data?.totalUsd ?? null}
-            oiBreakdown={oiQuery.data?.breakdown}
-            oiHistory={oiQuery.data?.history}
-            oiDeltaPct={oiQuery.data?.deltaPct}
-            mcap={mcap}
-            whaleAlerts={whaleTracker.whaleAlerts}
-            whaleExchangeFlow={whaleTracker.exchangeFlow}
-            whaleStats={whaleTracker.whaleStats}
-            whaleRecentBuy={whaleTracker.recentBuyVolume}
-            whaleRecentSell={whaleTracker.recentSellVolume}
-            onClearWhale={whaleTracker.clearAlerts}
-            alerts={alerts}
-            onAddAlert={addAlert}
-            onRemoveAlert={removeAlert}
-            onToggleAlert={toggleAlert}
-            onResetAlert={resetAlert}
-            lastCandleClose={lastCandleClose}
-            spikeMult={spikeMult}
-            onSpikeMultChange={(val) => {
-              setSpikeMult(val)
-              spikeMultRef.current = val
-              if (candlesRef.current.length) queueMicrotask(() => renderData(candlesRef.current))
-            }}
-          />
-        </IntelDrawer>
-      )}
+            onSearchChange={setIntelSearch}
+          >
+            <IntelPanelStack
+              tab={intelTab}
+              search={intelSearch}
+              vis={vis}
+              onToggleVis={toggle}
+              sidebar={sidebar}
+              stats={stats}
+              fng={fng}
+              oiUsd={oiQuery.data?.totalUsd ?? null}
+              oiBreakdown={oiQuery.data?.breakdown}
+              oiHistory={oiQuery.data?.history}
+              oiDeltaPct={oiQuery.data?.deltaPct}
+              mcap={mcap}
+              whaleAlerts={whaleTracker.whaleAlerts}
+              whaleExchangeFlow={whaleTracker.exchangeFlow}
+              whaleStats={whaleTracker.whaleStats}
+              whaleRecentBuy={whaleTracker.recentBuyVolume}
+              whaleRecentSell={whaleTracker.recentSellVolume}
+              onClearWhale={whaleTracker.clearAlerts}
+              alerts={alerts}
+              onAddAlert={addAlert}
+              onRemoveAlert={removeAlert}
+              onToggleAlert={toggleAlert}
+              onResetAlert={resetAlert}
+              lastCandleClose={lastCandleClose}
+              spikeMult={spikeMult}
+              onSpikeMultChange={(val) => {
+                setSpikeMult(val)
+                spikeMultRef.current = val
+                if (candlesRef.current.length) queueMicrotask(() => renderData(candlesRef.current))
+              }}
+            />
+          </IntelDrawer>
+        )}
 
-      <ChartStatusBar
-        wsText={wsStatus.text}
-        wsTone={wsStatus.tone}
-        lastUpdate={lastUpdate}
-        ofCount={sidebar.ofLog.length}
-        boxCount={sidebar.boxFlip.count}
-        vis={vis}
-      />
-    </div>
+        <ChartStatusBar
+          wsText={wsStatus.text}
+          wsTone={wsStatus.tone}
+          lastUpdate={lastUpdate}
+          ofCount={sidebar.ofLog.length}
+          boxCount={sidebar.boxFlip.count}
+          vis={vis}
+        />
+      </div>
+    </BtcMotionProvider>
   )
 }
 

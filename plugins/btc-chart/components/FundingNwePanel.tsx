@@ -15,7 +15,7 @@ import {
   SideNote,
   StatGrid,
   StatCell,
-} from './sidebar'
+} from './sidebar/SidebarBlocks'
 
 export interface FundingNwePanelProps {
   funding: FundingState

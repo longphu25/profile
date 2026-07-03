@@ -3,13 +3,15 @@
 import { useState, memo, useCallback, type ReactNode } from 'react'
 import { Briefcase } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fmtP, type TradeSetup, type Position, type PosForm } from '../lib'
+import { fmtP } from '../lib/format'
+import type { PosForm, Position } from '../lib/positions'
+import type { TradeSetup } from '../lib/trade-setup'
 import { parseBoundedInt } from '../lib/numeric-field'
 import type { PositionPatch } from '../hooks/usePositions'
 import { ExplainModal } from './ExplainModal'
 import { NumericFieldInput } from './NumericFieldInput'
 import { PositionsBody, type PosSuggestion } from './PositionsPanel'
-import { SideBlock, SideHead, SideNote, SideBadge } from './sidebar'
+import { SideBlock, SideHead, SideNote, SideBadge } from './sidebar/SidebarBlocks'
 
 export interface TradeSetupPanelProps {
   setup: TradeSetup
@@ -387,18 +389,13 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
 
           <div className={`sb-trade-verdict sb-trade-verdict--${dirTone}`}>
             <span className={`sb-trade-verdict__dir ${dirTone}`}>{isLong ? 'LONG' : 'SHORT'}</span>
-            <span
-              className="sb-trade-verdict__meter"
-              role="meter"
-              aria-valuenow={setup.confidence}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <span
-                className={`sb-trade-verdict__meter-fill ${dirTone}`}
-                style={{ width: `${setup.confidence}%` }}
-              />
-            </span>
+            <meter
+              className={`sb-trade-verdict__meter sb-trade-verdict__meter--${dirTone}`}
+              value={setup.confidence}
+              min={0}
+              max={100}
+              aria-label={`Độ tin cậy ${setup.confidence}%`}
+            />
             <span className="sb-trade-verdict__conf">{setup.confidence}%</span>
             <div className="sb-trade-verdict__stats">
               <span className="sb-trade-verdict__stat">R:R {rrLabel}</span>

@@ -1,6 +1,6 @@
 // BTC Chart — animated toast stack (alert + import errors).
 
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, m } from '../lib/btc-motion'
 import { Button } from '@/components/ui/button'
 import { toastItem, transitionFast } from '../lib/motion'
 
@@ -21,7 +21,7 @@ export function ChartToasts({
     <div className="btc-chart__toast-stack" aria-live="polite">
       <AnimatePresence mode="popLayout">
         {alertMessage && (
-          <motion.div
+          <m.div
             key="alert"
             className="btc-chart__toast"
             role="status"
@@ -44,10 +44,10 @@ export function ChartToasts({
             >
               ×
             </Button>
-          </motion.div>
+          </m.div>
         )}
         {errorMessage && (
-          <motion.div
+          <m.div
             key="import-err"
             className="btc-chart__toast btc-chart__toast--err"
             role="alert"
@@ -70,7 +70,7 @@ export function ChartToasts({
             >
               ×
             </Button>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

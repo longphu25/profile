@@ -998,7 +998,7 @@
 @media (prefers-reduced-motion: reduce) {
   .btc-chart--stitch .btc-chart__load-skeleton-bar,
   .btc-chart--stitch .btc-chart__live-dot,
-  .btc-chart--stitch .sb-trade-verdict__meter-fill,
+  .btc-chart--stitch .sb-trade-verdict__meter,
   .btc-chart--stitch .sb-trade-plan__price--entry {
     animation: none;
   }

@@ -1,17 +1,14 @@
 // BTC Chart — right tools panel (layers + toolbar actions).
 
-import React, { useEffect } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import React, { useEffect, useEffectEvent } from 'react'
+import { AnimatePresence, m } from '../lib/btc-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { NadarayaConfig, VisFlags } from '../storage'
 import { ALL_IND_KEYS, IND_GROUPS, IND_LABELS } from '../lib/indicator-groups'
 import { drawerPanel, drawerScrim, transitionDrawer } from '../lib/motion'
-import {
-  LAYER_PRESET_LABELS,
-  type LayerPresetId,
-} from '../lib/layer-presets'
+import { LAYER_PRESET_LABELS, type LayerPresetId } from '../lib/layer-presets'
 import { NweSettingsSection } from './NweSettingsSection'
 
 const PRESET_IDS: LayerPresetId[] = ['scalp', 'swing', 'analysis']
@@ -51,14 +48,18 @@ export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
 }: ChartToolbarPanelProps) {
   const activeCount = ALL_IND_KEYS.filter((k) => vis[k]).length
 
+  const handleClose = useEffectEvent(() => {
+    onClose()
+  })
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') handleClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, open])
+  }, [open])
 
   const toggleGroup = (groupKeys: Array<keyof VisFlags>, enable: boolean) => {
     groupKeys.forEach((k) => {
@@ -72,7 +73,7 @@ export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
     <AnimatePresence>
       {open && (
         <div className="btc-chart__tools-overlay" role="presentation">
-          <motion.button
+          <m.button
             type="button"
             className="btc-chart__tools-scrim"
             aria-label="Close tools panel"
@@ -83,7 +84,7 @@ export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
             exit="hidden"
             transition={transitionDrawer}
           />
-          <motion.aside
+          <m.aside
             className="btc-chart__tools-panel"
             role="dialog"
             aria-label="Chart tools"
@@ -296,7 +297,7 @@ export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
                 Done
               </Button>
             </div>
-          </motion.aside>
+          </m.aside>
         </div>
       )}
     </AnimatePresence>

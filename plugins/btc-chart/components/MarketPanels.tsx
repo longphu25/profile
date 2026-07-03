@@ -1,7 +1,14 @@
 // BTC Chart — market-data readouts: 24h stats, Fear & Greed.
 
-import type { StatsState, FngState } from '../lib'
-import { SideBlock, SideBody, SideHero, SideRow, SideMeter, SideNote } from './sidebar'
+import type { FngState, StatsState } from '../lib/types'
+import {
+  SideBlock,
+  SideBody,
+  SideHero,
+  SideRow,
+  SideMeter,
+  SideNote,
+} from './sidebar/SidebarBlocks'
 
 export function StatsPanel({ stats }: { stats: StatsState }) {
   return (

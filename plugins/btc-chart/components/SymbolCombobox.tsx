@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
-import type { SymbolEntry } from '../lib'
+import type { SymbolEntry } from '../lib/symbols'
 
 export interface SymbolComboboxProps {
   symbol: string
@@ -84,7 +84,6 @@ export function SymbolCombobox({ symbol, symbols, onSelect }: SymbolComboboxProp
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search trading pairs"
-            autoFocus
           />
           <ul className="btc-chart__symbol-list">
             {filtered.length === 0 ? (

@@ -1,6 +1,6 @@
 // BTC Chart — oscillator bar with readout chips and tab controls.
 
-import { motion } from 'motion/react'
+import { m } from '../lib/btc-motion'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { OscView } from '../storage'
@@ -116,6 +116,7 @@ export function OscillatorPane({
           title="Kéo để chỉnh chiều cao"
           role="separator"
           aria-orientation="horizontal"
+          aria-label="Chỉnh chiều cao oscillators"
         />
       )}
 
@@ -125,16 +126,17 @@ export function OscillatorPane({
           className="btc-chart__osc-toggle"
           onClick={onToggleOpen}
           aria-expanded={open}
+          aria-label="Toggle oscillators panel"
         >
           <span className="btc-chart__osc-toggle-main">
-            <motion.span
+            <m.span
               className="btc-chart__osc-caret"
               aria-hidden
               animate={{ rotate: open ? 90 : 0 }}
               transition={transitionSpring}
             >
               ▸
-            </motion.span>
+            </m.span>
             Oscillators
           </span>
           <span className="btc-chart__osc-active-summary" aria-hidden>
@@ -146,64 +148,61 @@ export function OscillatorPane({
           </span>
         </button>
 
-        <div className="btc-chart__osc-chips" role="list">
-          <button
-            type="button"
-            className={cn('btc-chart__osc-chip', view === 'rsi' && 'is-active')}
-            onClick={() => onViewChange('rsi')}
-            aria-pressed={view === 'rsi'}
-          >
-            <span className="btc-chart__osc-chip-top">
-              <span className="btc-chart__osc-chip-key">RSI</span>
-              <span className="btc-chart__osc-chip-val">
-                {readouts.rsi != null ? readouts.rsi.toFixed(1) : '—'}
-              </span>
-            </span>
-            <span className={cn('btc-chart__osc-chip-hint', rsi.tone)}>{rsi.text}</span>
-          </button>
-          <button
-            type="button"
-            className={cn('btc-chart__osc-chip', view === 'adx' && 'is-active')}
-            onClick={() => onViewChange('adx')}
-            aria-pressed={view === 'adx'}
-          >
-            <span className="btc-chart__osc-chip-top">
-              <span className="btc-chart__osc-chip-key">ADX</span>
-              <span className="btc-chart__osc-chip-val">
-                {readouts.adx != null ? readouts.adx.toFixed(1) : '—'}
-              </span>
-            </span>
-            <span className={cn('btc-chart__osc-chip-hint', adx.tone)}>{adx.text}</span>
-          </button>
-          <button
-            type="button"
-            className={cn('btc-chart__osc-chip', view === 'stoch' && 'is-active')}
-            onClick={() => onViewChange('stoch')}
-            aria-pressed={view === 'stoch'}
-          >
-            <span className="btc-chart__osc-chip-top">
-              <span className="btc-chart__osc-chip-key">Stoch</span>
-              <span className="btc-chart__osc-chip-val">
-                {readouts.stochK != null ? readouts.stochK.toFixed(1) : '—'}
-              </span>
-            </span>
-            <span className={cn('btc-chart__osc-chip-hint', stoch.tone)}>{stoch.text}</span>
-          </button>
-          <button
-            type="button"
-            className={cn('btc-chart__osc-chip', view === 'obv' && 'is-active')}
-            onClick={() => onViewChange('obv')}
-            aria-pressed={view === 'obv'}
-          >
-            <span className="btc-chart__osc-chip-top">
-              <span className="btc-chart__osc-chip-key">OBV</span>
-              <span className="btc-chart__osc-chip-val">
-                {readouts.obv != null ? `${(readouts.obv / 1e6).toFixed(1)}M` : '—'}
-              </span>
-            </span>
-            <span className={cn('btc-chart__osc-chip-hint', obv.tone)}>{obv.text}</span>
-          </button>
-        </div>
+        <ul className="btc-chart__osc-chips" aria-label="Oscillator metrics">
+          {(
+            [
+              {
+                id: 'rsi' as const,
+                label: 'RSI',
+                val: readouts.rsi,
+                hint: rsi,
+                fmt: (v: number) => v.toFixed(1),
+              },
+              {
+                id: 'adx' as const,
+                label: 'ADX',
+                val: readouts.adx,
+                hint: adx,
+                fmt: (v: number) => v.toFixed(1),
+              },
+              {
+                id: 'stoch' as const,
+                label: 'Stoch',
+                val: readouts.stochK,
+                hint: stoch,
+                fmt: (v: number) => v.toFixed(1),
+              },
+              {
+                id: 'obv' as const,
+                label: 'OBV',
+                val: readouts.obv,
+                hint: obv,
+                fmt: (v: number) => `${(v / 1e6).toFixed(1)}M`,
+              },
+            ] as const
+          ).map((chip) => {
+            const display = chip.val != null ? chip.fmt(chip.val) : '—'
+            return (
+              <li key={chip.id}>
+                <button
+                  type="button"
+                  className={cn('btc-chart__osc-chip', view === chip.id && 'is-active')}
+                  onClick={() => onViewChange(chip.id)}
+                  aria-pressed={view === chip.id}
+                  aria-label={`${chip.label} ${display}, ${chip.hint.text}`}
+                >
+                  <span className="btc-chart__osc-chip-top">
+                    <span className="btc-chart__osc-chip-key">{chip.label}</span>
+                    <span className="btc-chart__osc-chip-val">{display}</span>
+                  </span>
+                  <span className={cn('btc-chart__osc-chip-hint', chip.hint.tone)}>
+                    {chip.hint.text}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
 
         {open && (
           <div

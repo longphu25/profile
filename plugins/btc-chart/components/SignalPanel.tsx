@@ -3,15 +3,13 @@
 import React, { useState } from 'react'
 import { Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import {
-  detectSignalConflict,
-  FEATURE_LABEL,
-  ALL_FEATURES,
-  type MLResult,
-  type TradeSetup,
-  type SignalConfig,
-} from '../lib'
-import { SideBlock, SideHero, SideBody, StatGrid, StatCell } from './sidebar'
+import { detectSignalConflict } from '../lib/signal-conflict'
+import { ALL_FEATURES } from '../lib/signal-config'
+import { FEATURE_LABEL } from '../lib/ml'
+import type { MLResult } from '../lib/types'
+import type { SignalConfig } from '../lib/signal-config'
+import type { TradeSetup } from '../lib/trade-setup'
+import { SideBlock, SideHero, SideBody, StatGrid, StatCell } from './sidebar/SidebarBlocks'
 import { SignalConfigBody } from './SignalConfigPanel'
 
 export const SignalPanel = React.memo(function SignalPanel({

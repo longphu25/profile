@@ -2,14 +2,14 @@
 
 import { cn } from '@/lib/utils'
 import {
-  SIGNAL_PRESETS,
-  FEATURE_GROUPS,
-  FEATURE_NAMES,
   ALL_FEATURES,
   configFromPreset,
-  type SignalConfig,
+  FEATURE_GROUPS,
+  FEATURE_NAMES,
+  SIGNAL_PRESETS,
   type FeatureKey,
-} from '../lib'
+  type SignalConfig,
+} from '../lib/signal-config'
 
 export interface SignalConfigBodyProps {
   config: SignalConfig

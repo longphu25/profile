@@ -1,7 +1,8 @@
 // BTC Chart — Kathy Lien Reversal Panel.
 
 import { useState } from 'react'
-import { fmtP, type LienResult } from '../lib'
+import { fmtP } from '../lib/format'
+import type { LienResult } from '../lib/lien-reversal'
 import {
   SideBlock,
   SideHead,
@@ -12,7 +13,7 @@ import {
   SideNote,
   SideEmpty,
   SideRow,
-} from './sidebar'
+} from './sidebar/SidebarBlocks'
 
 interface Props {
   lien: LienResult

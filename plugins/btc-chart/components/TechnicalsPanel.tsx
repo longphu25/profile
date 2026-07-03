@@ -1,6 +1,6 @@
 // BTC Chart — Technicals readout: one signal row per indicator.
 
-import type { SidebarState } from '../lib'
+import type { SidebarState } from '../lib/types'
 import { Card } from '@/components/ui/card'
 
 const ROWS: { label: string; key: keyof SidebarState }[] = [

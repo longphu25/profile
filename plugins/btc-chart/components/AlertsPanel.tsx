@@ -2,10 +2,18 @@
 
 import { useState } from 'react'
 import { type AlertRule, type AlertKind, describeRule } from '../alerts'
-import { formatPriceShort } from '../lib'
+import { formatPriceShort } from '../lib/format'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+
+function defaultAlertThreshold(nextKind: AlertKind, price: number | null): string {
+  if (nextKind === 'rsi-overbought') return '70'
+  if (nextKind === 'rsi-oversold') return '30'
+  if (nextKind === 'nwe-upper' || nextKind === 'nwe-lower') return '0'
+  if (price != null) return String(Math.round(price))
+  return ''
+}
 
 export interface AlertsPanelProps {
   alerts: AlertRule[]
@@ -26,22 +34,14 @@ export function AlertsPanel({
   currentPrice,
   currentRsi,
 }: AlertsPanelProps) {
-  const defaultThreshold = (nextKind: AlertKind, price: number | null): string => {
-    if (nextKind === 'rsi-overbought') return '70'
-    if (nextKind === 'rsi-oversold') return '30'
-    if (nextKind === 'nwe-upper' || nextKind === 'nwe-lower') return '0'
-    if (price != null) return String(Math.round(price))
-    return ''
-  }
-
   const [kind, setKind] = useState<AlertKind>('price-cross-up')
-  const [val, setVal] = useState(() => defaultThreshold('price-cross-up', currentPrice))
+  const [val, setVal] = useState(() => defaultAlertThreshold('price-cross-up', currentPrice))
   const [prevKind, setPrevKind] = useState(kind)
   const [prevPrice, setPrevPrice] = useState(currentPrice)
 
   if (kind !== prevKind) {
     setPrevKind(kind)
-    setVal(defaultThreshold(kind, currentPrice))
+    setVal(defaultAlertThreshold(kind, currentPrice))
   } else if (
     (kind === 'price-cross-up' || kind === 'price-cross-down') &&
     currentPrice !== prevPrice
@@ -68,7 +68,7 @@ export function AlertsPanel({
           onChange={(e) => {
             const nextKind = e.target.value as AlertKind
             setKind(nextKind)
-            setVal(defaultThreshold(nextKind, currentPrice))
+            setVal(defaultAlertThreshold(nextKind, currentPrice))
           }}
         >
           <option value="price-cross-up">Price ↑ crosses</option>

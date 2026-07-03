@@ -5,7 +5,9 @@
 // Rendered inline (not via portal) because the plugin lives in a Shadow DOM —
 // a portal to document.body would escape the scoped stylesheet.
 
-import { fmtP, explainReason, INDICATOR_DOCS, type TradeSetup, type ReasonSide } from '../lib'
+import { fmtP } from '../lib/format'
+import { explainReason, INDICATOR_DOCS, type ReasonSide } from '../lib/explain'
+import type { TradeSetup } from '../lib/trade-setup'
 
 interface Props {
   setup: TradeSetup
@@ -28,15 +30,25 @@ export function ExplainModal({ setup, onClose }: Props) {
   const riskPct = setup.entry > 0 ? ((risk / setup.entry) * 100).toFixed(2) : '0'
 
   return (
-    <div className="btc-chart__modal-backdrop" onClick={onClose}>
+    <div className="btc-chart__modal-backdrop">
+      <button
+        type="button"
+        className="btc-chart__modal-scrim"
+        aria-label="Đóng giải thích"
+        onClick={onClose}
+      />
       <div
         className="btc-chart__modal"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="btc-chart-explain-title"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose()
+        }}
       >
         <div className="btc-chart__modal-hdr">
-          <h3>Vì sao có Trade Setup này?</h3>
+          <h3 id="btc-chart-explain-title">Vì sao có Trade Setup này?</h3>
           <button
             type="button"
             className="btc-chart__modal-close"

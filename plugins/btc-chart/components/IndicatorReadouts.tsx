@@ -1,7 +1,15 @@
 // BTC Chart — indicator readout panels driven by the sidebar snapshot.
 
-import type { SidebarState } from '../lib'
-import { SideBlock, SideBody, SideNote, SideEmpty, StatGrid, StatCell, SideBadge } from './sidebar'
+import type { SidebarState } from '../lib/types'
+import {
+  SideBlock,
+  SideBody,
+  SideNote,
+  SideEmpty,
+  StatGrid,
+  StatCell,
+  SideBadge,
+} from './sidebar/SidebarBlocks'
 
 export function OrderFlowPanel({ ofLog }: { ofLog: SidebarState['ofLog'] }) {
   return (
@@ -14,8 +22,12 @@ export function OrderFlowPanel({ ofLog }: { ofLog: SidebarState['ofLog'] }) {
           <SideEmpty>Chưa có tín hiệu rebound</SideEmpty>
         ) : (
           <div className="sb-kv-list">
-            {ofLog.map((s, idx) => (
-              <div key={idx} className="sb-row" style={{ alignItems: 'center' }}>
+            {ofLog.map((s) => (
+              <div
+                key={`${s.type}-${s.price}-${s.time}`}
+                className="sb-row"
+                style={{ alignItems: 'center' }}
+              >
                 <SideBadge tone={s.type === 'buy' ? 'up' : 'dn'}>
                   {s.type === 'buy' ? 'BUY' : 'SELL'}
                 </SideBadge>

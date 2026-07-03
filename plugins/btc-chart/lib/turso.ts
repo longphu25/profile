@@ -2,14 +2,16 @@
  * Turso HTTP client for btc-chart coin list.
  *
  * Uses the /v2/pipeline endpoint with a read-only token exposed via
- * VITE_TURSO_DB_TOKEN. This is acceptable for public read data (coin list).
+ * VITE_TURSO_DB_READ_TOKEN (legacy alias: VITE_TURSO_DB_TOKEN). Public read-only
+ * coin list access only.
  * No write operations are performed from the client.
  */
 
 import type { Exchange, SymbolEntry } from './symbols'
 
 const RAW_URL = import.meta.env.VITE_TURSO_DB_URL as string | undefined
-const TURSO_TOKEN = import.meta.env.VITE_TURSO_DB_TOKEN as string | undefined
+const TURSO_TOKEN = (import.meta.env.VITE_TURSO_DB_READ_TOKEN ??
+  import.meta.env.VITE_TURSO_DB_TOKEN) as string | undefined
 
 /** Normalize libsql:// or https:// URL to https:// for HTTP API. */
 const TURSO_URL = RAW_URL?.replace(/^libsql:\/\//, 'https://') ?? undefined

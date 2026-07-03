@@ -1,7 +1,8 @@
 // BTC Chart — Boucher M1 Scalping Panel.
 
 import { useState } from 'react'
-import { fmtP, type BoucherResult } from '../lib'
+import { fmtP } from '../lib/format'
+import type { BoucherResult } from '../lib/boucher-scalping'
 import {
   SideBlock,
   SideHead,
@@ -11,7 +12,7 @@ import {
   SideBadge,
   SideNote,
   SideEmpty,
-} from './sidebar'
+} from './sidebar/SidebarBlocks'
 
 interface Props {
   scalp: BoucherResult

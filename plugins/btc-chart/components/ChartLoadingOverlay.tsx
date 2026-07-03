@@ -1,6 +1,6 @@
 // BTC Chart — skeleton loading overlay with motion fade-out.
 
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, m } from '../lib/btc-motion'
 import { loadingOverlay } from '../lib/motion'
 
 export interface ChartLoadingOverlayProps {
@@ -12,7 +12,7 @@ export function ChartLoadingOverlay({ loading, text }: ChartLoadingOverlayProps)
   return (
     <AnimatePresence>
       {loading && (
-        <motion.div
+        <m.div
           className="btc-chart__loading"
           role="status"
           aria-busy="true"
@@ -28,7 +28,7 @@ export function ChartLoadingOverlay({ loading, text }: ChartLoadingOverlayProps)
             <div className="btc-chart__load-skeleton-bar btc-chart__load-skeleton-bar--short" />
           </div>
           <span className="btc-chart__loading-text">{text}</span>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   )

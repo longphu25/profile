@@ -1,18 +1,14 @@
 // BTC Chart — header: pair selector, custom-coin add, interval tabs, price/OHLCV.
 
-import { motion } from 'motion/react'
+import { m } from '../lib/btc-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { stitchEase } from '../lib/motion'
 import { SymbolCombobox } from './SymbolCombobox'
-import {
-  INTERVALS,
-  type Interval,
-  type SymbolEntry,
-  type PriceState,
-  type OhlcvState,
-} from '../lib'
+import { INTERVALS, type Interval } from '../lib/constants'
+import type { SymbolEntry } from '../lib/symbols'
+import type { OhlcvState, PriceState } from '../lib/types'
 
 export interface ChartHeaderProps {
   symbolInfo: SymbolEntry
@@ -84,7 +80,7 @@ export function ChartHeader({
 
       <div className="btc-chart__header-price">
         <div className="btc-chart__price">
-          <motion.span
+          <m.span
             key={price.cur}
             className={cn('btc-chart__price-cur', price.up ? 'up' : 'dn')}
             initial={{ opacity: 0.55, y: 3 }}
@@ -92,7 +88,7 @@ export function ChartHeader({
             transition={{ duration: 0.22, ease: stitchEase }}
           >
             {price.cur}
-          </motion.span>
+          </m.span>
           <span className={cn('btc-chart__price-chg', price.up ? 'up' : 'dn')}>{price.chg}</span>
         </div>
 

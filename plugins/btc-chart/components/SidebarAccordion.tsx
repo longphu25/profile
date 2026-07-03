@@ -1,11 +1,11 @@
 // BTC Chart — sidebar accordion with motion expand/collapse.
 
-import { useEffect, useState, type ReactNode } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { useState, type ReactNode } from 'react'
+import { AnimatePresence, m } from '../lib/btc-motion'
 import { cn } from '@/lib/utils'
 import { accordionBody, transitionSpring } from '../lib/motion'
 import { intelPanelMatches } from '../lib/intel-panels'
-import { SideBadge } from './sidebar'
+import { SideBadge } from './sidebar/SidebarBlocks'
 
 interface Props {
   title: string
@@ -43,19 +43,16 @@ export function SidebarAccordion({
   expandOnFilter = true,
   onToggle,
 }: Props) {
-  const [open, setOpen] = useState(defaultOpen)
+  const [userOpen, setUserOpen] = useState(defaultOpen)
   const visible = intelPanelMatches(title, filterKeywords, filterQuery ?? '')
-
-  useEffect(() => {
-    if (!expandOnFilter || !filterQuery?.trim() || !visible) return
-    setOpen(true)
-  }, [expandOnFilter, filterQuery, visible])
+  const filterExpanded = expandOnFilter && !!filterQuery?.trim() && visible
+  const open = userOpen || filterExpanded
 
   if (!visible) return null
 
   const toggle = () => {
     const next = !open
-    setOpen(next)
+    setUserOpen(next)
     onToggle?.(next)
   }
 
@@ -73,14 +70,14 @@ export function SidebarAccordion({
         aria-expanded={open}
         onClick={toggle}
       >
-        <motion.span
+        <m.span
           className="btc-chart__accordion-caret"
           aria-hidden
           animate={{ rotate: open ? 90 : 0 }}
           transition={transitionSpring}
         >
           ▸
-        </motion.span>
+        </m.span>
         <span className="btc-chart__accordion-title">{title}</span>
         {!open && badge && <span className="sb-head__badges">{badge}</span>}
         {!open && summary && <span className="sb-head__summary">{summary}</span>}
@@ -94,7 +91,7 @@ export function SidebarAccordion({
       ) : (
         <AnimatePresence initial={false}>
           {open && (
-            <motion.div
+            <m.div
               className="btc-chart__accordion-body"
               variants={accordionBody}
               initial="collapsed"
@@ -104,7 +101,7 @@ export function SidebarAccordion({
               style={{ overflow: 'hidden' }}
             >
               {children}
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       )}

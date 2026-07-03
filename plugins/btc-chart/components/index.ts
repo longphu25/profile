@@ -12,15 +12,12 @@ export { SymbolCombobox, type SymbolComboboxProps } from './SymbolCombobox'
 export { ChartStatusBar, type ChartStatusBarProps } from './ChartStatusBar'
 export { ChartLayerDots, type ChartLayerDotsProps } from './ChartLayerDots'
 export { OscillatorPane, type OscillatorPaneProps } from './OscillatorPane'
-export { IntelDrawer, INTEL_TABS, type IntelTab, type IntelDrawerProps } from './IntelDrawer'
+export { IntelDrawer, type IntelDrawerProps } from './IntelDrawer'
+export { INTEL_TABS, type IntelTab, intelPanelMatches, intelKeywordsFor } from '../lib/intel-panels'
 export { IntelPanelStack, type IntelPanelStackProps } from './IntelPanelStack'
-export {
-  SidebarRailTabs,
-  MOBILE_RAIL_TABS,
-  type MobileRailTab,
-  type SidebarRailTabsProps,
-} from './SidebarRailTabs'
-export { IntelRail, type IntelRailProps } from './IntelRail'
+export { MOBILE_RAIL_TABS, type MobileRailTab } from '../lib/mobile-rail-tabs'
+export { SidebarRailTabs, type SidebarRailTabsProps } from './SidebarRailTabs'
+export { IntelDrawer as IntelRail, type IntelDrawerProps as IntelRailProps } from './IntelDrawer'
 export { ChartToolbarPanel, type ChartToolbarPanelProps } from './ChartToolbarPanel'
 export { ChartToasts, type ChartToastsProps } from './ChartToasts'
 export { ChartLoadingOverlay, type ChartLoadingOverlayProps } from './ChartLoadingOverlay'

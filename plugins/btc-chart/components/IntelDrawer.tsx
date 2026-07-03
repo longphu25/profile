@@ -1,7 +1,7 @@
 // BTC Chart — Intel panels in a right slide-over (flat list, no nested rails).
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useEffectEvent, useMemo, type ReactNode } from 'react'
+import { AnimatePresence, m } from '../lib/btc-motion'
 import { Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { drawerPanel, drawerScrim, transitionDrawer } from '../lib/motion'
@@ -11,9 +11,6 @@ import {
   intelVisiblePanelCount,
   type IntelTab,
 } from '../lib/intel-panels'
-
-export type { IntelTab } from '../lib/intel-panels'
-export { INTEL_TABS, intelPanelMatches, intelKeywordsFor } from '../lib/intel-panels'
 
 export interface IntelDrawerProps {
   open: boolean
@@ -34,7 +31,6 @@ export function IntelDrawer({
   onSearchChange,
   children,
 }: IntelDrawerProps) {
-  const [panelsReady, setPanelsReady] = useState(false)
   const trimmed = search.trim()
   const tabDef = INTEL_TABS.find((t) => t.id === tab) ?? INTEL_TABS[0]
   const chips = INTEL_PANEL_CATALOG[tab]
@@ -48,29 +44,24 @@ export function IntelDrawer({
     return tabDef.hint
   }, [noMatches, isFiltering, visiblePanels, tabDef])
 
-  useEffect(() => {
-    if (!open) {
-      setPanelsReady(false)
-      return
-    }
-    const id = requestAnimationFrame(() => setPanelsReady(true))
-    return () => cancelAnimationFrame(id)
-  }, [open, tab])
+  const handleClose = useEffectEvent(() => {
+    onClose()
+  })
 
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') handleClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open])
 
   return (
     <AnimatePresence>
       {open && (
         <>
-          <motion.button
+          <m.button
             type="button"
             className="btc-chart__intel-scrim"
             aria-label="Đóng Intel"
@@ -82,7 +73,7 @@ export function IntelDrawer({
             transition={transitionDrawer}
           />
 
-          <motion.aside
+          <m.aside
             className="btc-chart__intel-drawer is-open"
             role="dialog"
             aria-modal="true"
@@ -197,15 +188,13 @@ export function IntelDrawer({
                     Hiện tất cả
                   </button>
                 </div>
-              ) : panelsReady ? (
-                <div className="btc-chart__intel-panel-list">{children}</div>
               ) : (
-                <div className="btc-chart__intel-panel-list btc-chart__intel-panel-list--pending">
-                  <div className="sb-empty">Đang mở panel…</div>
+                <div className="btc-chart__intel-panel-list" key={tab}>
+                  {children}
                 </div>
               )}
             </div>
-          </motion.aside>
+          </m.aside>
         </>
       )}
     </AnimatePresence>

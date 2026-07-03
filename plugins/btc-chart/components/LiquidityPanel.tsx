@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import React from 'react'
-import { fmtP, type LiquidityResult } from '../lib'
+import { fmtP } from '../lib/format'
+import type { LiquidityResult } from '../lib/liquidity'
 import {
   SideBlock,
   SideHead,
@@ -13,7 +14,7 @@ import {
   SideRow,
   SideNote,
   SideEmpty,
-} from './sidebar'
+} from './sidebar/SidebarBlocks'
 
 interface Props {
   liquidity: LiquidityResult

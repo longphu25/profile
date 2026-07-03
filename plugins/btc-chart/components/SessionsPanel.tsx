@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import React from 'react'
-import { fmtP, type ICTResult } from '../lib'
+import { fmtP } from '../lib/format'
+import type { ICTResult } from '../lib/ict-sessions'
 import {
   SideBlock,
   SideHead,
@@ -14,7 +15,7 @@ import {
   SideMeter,
   SideNote,
   SideEmpty,
-} from './sidebar'
+} from './sidebar/SidebarBlocks'
 
 interface Props {
   ict: ICTResult

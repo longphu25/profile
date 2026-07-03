@@ -1,14 +1,14 @@
 // BTC Chart — Open Interest + Market Cap panel.
 
+import { fmtV } from '../lib/format'
 import {
   buildOiSparklinePoints,
-  fmtV,
   formatOiDeltaPct,
   oiDeltaClass,
   type OiDeltaPct,
   type OiHistoryPoint,
-} from '../lib'
-import { StatGrid, StatCell, SideNote } from './sidebar'
+} from '../lib/open-interest'
+import { StatGrid, StatCell, SideNote } from './sidebar/SidebarBlocks'
 
 interface Props {
   oi: number | null

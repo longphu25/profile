@@ -1,15 +1,9 @@
 // BTC Chart — mobile rail section tabs (Setup, Funding, Context, Strategies).
 
 import { cn } from '@/lib/utils'
+import { MOBILE_RAIL_TABS, type MobileRailTab } from '../lib/mobile-rail-tabs'
 
-export type MobileRailTab = 'setup' | 'funding' | 'context' | 'strategies'
-
-export const MOBILE_RAIL_TABS: ReadonlyArray<{ id: MobileRailTab; label: string }> = [
-  { id: 'setup', label: 'Setup' },
-  { id: 'funding', label: 'Funding' },
-  { id: 'context', label: 'Context' },
-  { id: 'strategies', label: 'Strategies' },
-]
+export type { MobileRailTab } from '../lib/mobile-rail-tabs'
 
 export interface SidebarRailTabsProps {
   active: MobileRailTab
