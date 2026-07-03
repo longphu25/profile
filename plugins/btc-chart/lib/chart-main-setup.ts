@@ -21,6 +21,7 @@ import {
   drawICTOverlay,
   drawLiquidityOverlay,
 } from './overlays'
+import { shouldDrawTradeSetupOverlay } from './pipeline-needs'
 import { drawTradeSetupOverlay } from './trade-setup-overlay'
 import type { Candle, ChartRefs, OhlcvState, SidebarState, TradeSetup } from './types'
 
@@ -325,7 +326,11 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
         params.visRef.current.boxFlip,
       )
     }
-    if (params.setupCanvasRef.current && params.mainElRef.current) {
+    if (
+      shouldDrawTradeSetupOverlay(params.visRef.current) &&
+      params.setupCanvasRef.current &&
+      params.mainElRef.current
+    ) {
       drawTradeSetupOverlay(
         params.setupCanvasRef.current,
         params.mainElRef.current,
@@ -333,7 +338,7 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
         candleSeries,
         params.candlesRef.current,
         params.tradeSetupRef.current,
-        params.visRef.current.tradeSetup,
+        true,
       )
     }
     const cands = params.candlesRef.current
@@ -477,7 +482,7 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
         params.visRef.current.liquidity,
       )
     }
-    if (params.setupCanvasRef.current) {
+    if (shouldDrawTradeSetupOverlay(params.visRef.current) && params.setupCanvasRef.current) {
       drawTradeSetupOverlay(
         params.setupCanvasRef.current,
         params.mainElRef.current,
@@ -485,7 +490,7 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
         candleSeries,
         params.candlesRef.current,
         params.tradeSetupRef.current,
-        params.visRef.current.tradeSetup,
+        true,
       )
     }
   }

@@ -342,6 +342,13 @@ function resolveLastCandleX(chart: any, candles: Candle[]): number | null {
  * LONG: risk below entry (SL→Entry), reward above (Entry→TP3).
  * SHORT: reward below entry (TP3→Entry), risk above (Entry→SL).
  */
+/** Clear setup overlay canvas without resize (cheap path when layer is off). */
+export function clearTradeSetupOverlay(canvas: HTMLCanvasElement): void {
+  if (canvas.width < 1 || canvas.height < 1) return
+  const ctx = canvas.getContext('2d')
+  ctx?.clearRect(0, 0, canvas.width, canvas.height)
+}
+
 export function drawTradeSetupOverlay(
   canvas: HTMLCanvasElement,
   mainEl: HTMLElement,
@@ -351,6 +358,11 @@ export function drawTradeSetupOverlay(
   setup: TradeSetup,
   visible: boolean,
 ) {
+  if (!visible) {
+    clearTradeSetupOverlay(canvas)
+    return
+  }
+
   const rect = mainEl.getBoundingClientRect()
   const dpr = window.devicePixelRatio || 1
   canvas.width = Math.max(1, Math.floor(rect.width * dpr))
@@ -367,7 +379,7 @@ export function drawTradeSetupOverlay(
 
   const isLong = isDrawableLongSetup(setup)
   const isShort = isDrawableShortSetup(setup)
-  if (!visible || (!isLong && !isShort)) {
+  if (!isLong && !isShort) {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     return
   }

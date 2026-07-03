@@ -12,7 +12,7 @@ import type { ChartRenderContext } from './chart-render-context'
 import { buildSidebarSnapshot } from './build-sidebar-snapshot'
 import { stabilizeTradeSetup } from './trade-setup-stable'
 import { CHART, HEAVY_COMPUTE_MS, LIMIT, NWE_DEFAULT_WINDOW } from './constants'
-import { resolvePipelineNeeds } from './pipeline-needs'
+import { resolvePipelineNeeds, shouldDrawTradeSetupOverlay } from './pipeline-needs'
 import { sidebarSnapshotKey } from './sidebar-snapshot-key'
 import { detectCandlePatterns } from './candlestick-patterns'
 import { computeBoucherScalping } from './boucher-scalping'
@@ -41,7 +41,7 @@ import {
   drawICTOverlay,
   drawLiquidityOverlay,
 } from './overlays'
-import { drawTradeSetupOverlay } from './trade-setup-overlay'
+import { clearTradeSetupOverlay, drawTradeSetupOverlay } from './trade-setup-overlay'
 import { applyDefaultViewport } from './chart-viewport'
 import { fmtP } from './format'
 import type { Candle, OrderFlowSignal } from './types'
@@ -600,21 +600,20 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     ctx.setSidebar((s) => ({ ...s, ...snapshotWithPlan }))
   }
   ctx.tradeSetupRef.current = stabilizedSetup
-  if (
-    needs.tradeSetup &&
-    ctx.setupCanvasRef.current &&
-    ctx.mainElRef.current &&
-    refs.candleSeries
-  ) {
-    drawTradeSetupOverlay(
-      ctx.setupCanvasRef.current,
-      ctx.mainElRef.current,
-      refs.mainChart,
-      refs.candleSeries,
-      data,
-      stabilizedSetup,
-      visFlags.tradeSetup,
-    )
+  if (ctx.setupCanvasRef.current && ctx.mainElRef.current && refs.candleSeries) {
+    if (shouldDrawTradeSetupOverlay(visFlags)) {
+      drawTradeSetupOverlay(
+        ctx.setupCanvasRef.current,
+        ctx.mainElRef.current,
+        refs.mainChart,
+        refs.candleSeries,
+        data,
+        stabilizedSetup,
+        true,
+      )
+    } else {
+      clearTradeSetupOverlay(ctx.setupCanvasRef.current)
+    }
   }
   if (needHeavy && bScalp) ctx.setBoucherScalp(bScalp)
   if (needHeavy && lienR) ctx.setLienReversal(lienR)
