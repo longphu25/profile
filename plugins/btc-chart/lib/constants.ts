@@ -18,6 +18,9 @@ export const CHART = {
 
 export const LIMIT = 300
 
+/** Live chart repaint + polled market data cadence (ms). */
+export const LIVE_REFRESH_MS = 1000
+
 /** Default window size for heavy NWE computation (repaint mode benefits most from not using full history). */
 export const NWE_DEFAULT_WINDOW = 500
 

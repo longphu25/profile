@@ -1,9 +1,8 @@
 // BTC Chart — React Query hooks for polled market data.
-// WebSocket streaming stays imperative elsewhere; only the periodic REST
-// endpoints live here (ticker 5s, funding 30s, Fear & Greed 60s).
+// WebSocket streaming stays imperative elsewhere; ticker polls at LIVE_REFRESH_MS.
 
 import { useQuery } from '@tanstack/react-query'
-import type { Interval } from '../lib/constants'
+import { LIVE_REFRESH_MS, type Interval } from '../lib/constants'
 import type { SymbolEntry } from '../lib/symbols'
 import { fetchTicker, fetchFunding, fetchFearGreed, fetchKlines } from '../lib/api'
 
@@ -11,8 +10,8 @@ export function useTicker(symbol: string, info: SymbolEntry) {
   return useQuery({
     queryKey: ['btc-chart', 'ticker', symbol],
     queryFn: () => fetchTicker(symbol, info),
-    refetchInterval: 5_000,
-    staleTime: 5_000,
+    refetchInterval: LIVE_REFRESH_MS,
+    staleTime: LIVE_REFRESH_MS,
   })
 }
 

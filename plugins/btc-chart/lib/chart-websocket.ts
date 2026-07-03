@@ -9,7 +9,7 @@ import {
   pushNotification,
   type AlertRule,
 } from '../alerts'
-import { CHART, LIMIT, type Interval } from './constants'
+import { CHART, LIMIT, LIVE_REFRESH_MS, type Interval } from './constants'
 import { fmtP, tsNow } from './format'
 import {
   BYBIT_INTERVAL,
@@ -103,7 +103,7 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
 
   const throttledPriceUpdate = (close: number) => {
     const now = Date.now()
-    if (now - params.lastPriceUpdateRef.current < 1000) return
+    if (now - params.lastPriceUpdateRef.current < LIVE_REFRESH_MS) return
     params.lastPriceUpdateRef.current = now
     params.setPrice((p) => ({ ...p, cur: fmtP(close) }))
     params.setMarkPrice(close)
@@ -113,7 +113,7 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
 
   const throttledRender = (candles: Candle[]) => {
     const now = Date.now()
-    if (now - params.lastChartUpdateRef.current < 5000) return
+    if (now - params.lastChartUpdateRef.current < LIVE_REFRESH_MS) return
     params.lastChartUpdateRef.current = now
     params.renderData(candles)
   }
@@ -305,13 +305,13 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
           params.setFiredToast(fired.map((f) => describeRule(f.rule)).join(' · '))
           params.setAlerts([...params.alertsRef.current])
         }
-        if (k.x) throttledRender(arr)
+        throttledRender(arr)
       }
     }
 
     function applyCandleUpdate(
       candle: Candle,
-      closed: boolean,
+      _closed: boolean,
       onPrice: (close: number) => void,
       onRender: (arr: Candle[]) => void,
     ) {
@@ -335,7 +335,7 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
         color: candle.close >= candle.open ? CHART.upSoft : CHART.dnSoft,
       })
       onPrice(candle.close)
-      if (closed) onRender(arr)
+      onRender(arr)
     }
 
     if (!ws.onerror) ws.onerror = () => params.setWsStatus({ text: 'Error', tone: 'err' })

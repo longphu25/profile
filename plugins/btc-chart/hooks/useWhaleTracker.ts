@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { closeWebSocketSafe } from '../lib/chart-websocket'
+import { LIVE_REFRESH_MS } from '../lib/constants'
 import {
   detectWhaleTrade,
   calculateExchangeFlow,
@@ -134,7 +135,7 @@ export function useWhaleTracker(
         const flow = calculateExchangeFlow(tradesRef.current, flowWindowMs)
         setExchangeFlow(flow)
       }
-    }, 5000)
+    }, LIVE_REFRESH_MS)
     return () => clearInterval(iv)
   }, [enabled, flowWindowMs])
 

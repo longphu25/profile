@@ -14,7 +14,7 @@ import { createOscChart } from '../lib/chart-osc-setup'
 import { closeKlinesWebSocket, wireKlinesWebSocket } from '../lib/chart-websocket'
 import type { ChartRenderContext, LuxNweResult } from '../lib/chart-render-context'
 import { renderChartPipeline } from '../lib/chart-render-pipeline'
-import { NWE_DEFAULT_WINDOW } from '../lib/constants'
+import { LIVE_REFRESH_MS, NWE_DEFAULT_WINDOW } from '../lib/constants'
 import { INITIAL_SIDEBAR } from '../lib/types'
 import type { BoucherResult } from '../lib/boucher-scalping'
 import type { Interval } from '../lib/constants'
@@ -422,6 +422,17 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
       closeKlinesWebSocket(wsRef)
     }
   }, [klinesQuery.data, klinesQuery.error, config.interval, config.symbol, renderData])
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      if (!candlesRef.current.length) return
+      const now = Date.now()
+      if (now - lastChartUpdateRef.current < LIVE_REFRESH_MS) return
+      lastChartUpdateRef.current = now
+      renderData(candlesRef.current)
+    }, LIVE_REFRESH_MS)
+    return () => clearInterval(iv)
+  }, [config.symbol, config.interval, renderData])
 
   const toggle = useCallback(
     (key: keyof VisFlags) => {
