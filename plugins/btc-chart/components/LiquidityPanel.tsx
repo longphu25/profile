@@ -18,9 +18,30 @@ import {
 
 interface Props {
   liquidity: LiquidityResult
+  enabled: boolean
+  onToggle: () => void
 }
 
-export const LiquidityPanel = React.memo(function LiquidityPanel({ liquidity }: Props) {
+function OnOffToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`btc-chart__collapse-toggle${enabled ? ' is-on' : ''}`}
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggle()
+      }}
+    >
+      {enabled ? 'ON' : 'OFF'}
+    </button>
+  )
+}
+
+export const LiquidityPanel = React.memo(function LiquidityPanel({
+  liquidity,
+  enabled,
+  onToggle,
+}: Props) {
   const [open, setOpen] = useState(false)
 
   const { range } = liquidity
@@ -28,12 +49,20 @@ export const LiquidityPanel = React.memo(function LiquidityPanel({ liquidity }: 
   const lastIfvg = liquidity.inverseFvgs[liquidity.inverseFvgs.length - 1]
   const internalCount = liquidity.levels.filter((l) => l.side === 'internal').length
   const externalCount = liquidity.levels.filter((l) => l.side === 'external').length
+  const hasData = !!range
 
-  if (!range) {
+  if (!hasData) {
     return (
-      <SideBlock variant="context">
-        <SideHead title="Liquidity" subtitle="ICT range model" />
-        <SideEmpty>Chưa đủ dữ liệu để xác định range</SideEmpty>
+      <SideBlock variant="context" className={!enabled ? 'is-disabled' : ''}>
+        <SideHead
+          title="Liquidity"
+          subtitle="ICT range model"
+          collapsible
+          open={open}
+          onToggle={() => setOpen((o) => !o)}
+          actions={<OnOffToggle enabled={enabled} onToggle={onToggle} />}
+        />
+        {open && enabled && <SideEmpty>Chưa đủ dữ liệu để xác định range</SideEmpty>}
       </SideBlock>
     )
   }
@@ -42,7 +71,7 @@ export const LiquidityPanel = React.memo(function LiquidityPanel({ liquidity }: 
   const bosTone = range.bosBias === 'bull' ? 'up' : range.bosBias === 'bear' ? 'dn' : ''
 
   return (
-    <SideBlock variant="context">
+    <SideBlock variant="context" className={!enabled ? 'is-disabled' : ''}>
       <SideHead
         title="Liquidity"
         subtitle="Premium / discount"
@@ -50,19 +79,22 @@ export const LiquidityPanel = React.memo(function LiquidityPanel({ liquidity }: 
         open={open}
         onToggle={() => setOpen((o) => !o)}
         badges={
-          <>
-            {range.hasBOS && <SideBadge tone="mint">BOS</SideBadge>}
-            {lastSweep && (
-              <SideBadge tone={lastSweep.type === 'bullish' ? 'up' : 'dn'}>
-                {lastSweep.type === 'bullish' ? 'SWEEP ▲' : 'SWEEP ▼'}
-              </SideBadge>
-            )}
-          </>
+          !open && enabled ? (
+            <>
+              {range.hasBOS && <SideBadge tone="mint">BOS</SideBadge>}
+              {lastSweep && (
+                <SideBadge tone={lastSweep.type === 'bullish' ? 'up' : 'dn'}>
+                  {lastSweep.type === 'bullish' ? 'SWEEP ▲' : 'SWEEP ▼'}
+                </SideBadge>
+              )}
+            </>
+          ) : undefined
         }
-        summary={target ? `→ ${fmtP(target.price)}` : undefined}
+        summary={!open && enabled && target ? `→ ${fmtP(target.price)}` : undefined}
+        actions={<OnOffToggle enabled={enabled} onToggle={onToggle} />}
       />
 
-      {open && (
+      {open && enabled && (
         <SideBody>
           <StatGrid cols={3}>
             <StatCell label="High" value={fmtP(range.high)} tone="dn" />
@@ -73,7 +105,7 @@ export const LiquidityPanel = React.memo(function LiquidityPanel({ liquidity }: 
           <div className="sb-panel-grid">
             <SideRow
               label="BOS bias"
-              value={range.hasBOS && range.bosBias ? range.bosBias.toUpperCase() : '—'}
+              value={range.hasBOS && range.bosBias ? range.bosBias.toUpperCase() : '-'}
               tone={bosTone}
             />
             <SideRow label="Pools" value={`${externalCount}E · ${internalCount}I`} />
@@ -82,7 +114,7 @@ export const LiquidityPanel = React.memo(function LiquidityPanel({ liquidity }: 
               value={
                 lastIfvg
                   ? `${lastIfvg.flippedBias === 'bull' ? '▲' : '▼'} ${liquidity.inverseFvgs.length}`
-                  : '—'
+                  : '-'
               }
             />
             <SideRow label="Next draw" value={target ? fmtP(target.price) : '—'} tone="neu" />

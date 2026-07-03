@@ -159,6 +159,10 @@ export function BtcChartPage() {
     lienEnabled: engine.lienEnabled,
     onToggleBoucher: () => engine.setBoucherEnabled((v) => !v),
     onToggleLien: () => engine.setLienEnabled((v) => !v),
+    ictEnabled: engine.ictEnabled,
+    liquidityEnabled: engine.liquidityEnabled,
+    onToggleIct: () => engine.setIctEnabled((v) => !v),
+    onToggleLiquidity: () => engine.setLiquidityEnabled((v) => !v),
   } as const
 
   return (
@@ -231,6 +235,8 @@ export function BtcChartPage() {
               onExport={config.exportNow}
               onImport={config.importNow}
               onApplyPreset={engine.applyPreset}
+              signalNotify={config.signalNotify}
+              onUpdateSignalNotify={config.updateSignalNotify}
             />
             <div className="btc-chart__chart-stage">
               <div className="btc-chart__legend-dock">

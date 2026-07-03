@@ -12,9 +12,8 @@ import {
   type FeatureKey,
   type SignalConfig,
 } from '../lib/signal-config'
-import { LAYER_PRESET_LABELS, type LayerPresetId } from '../lib/layer-presets'
-
-const LAYER_PRESET_IDS: LayerPresetId[] = ['scalp', 'swing', 'analysis']
+import type { LayerPresetId } from '../lib/layer-presets'
+import { LayerPresetGrid } from './LayerPresetGrid'
 
 export interface SignalConfigBodyProps {
   config: SignalConfig
@@ -56,25 +55,9 @@ export function SignalConfigBody({ config, onChange, onApplyLayerPreset }: Signa
         <div className="btc-chart__sigcfg-section">
           <div className="btc-chart__sigcfg-section-head">
             <span className="btc-chart__sigcfg-section-label">Chart layers</span>
-            <span className="btc-chart__sigcfg-section-hint">Preset nhanh</span>
+            <span className="btc-chart__sigcfg-section-hint">Nhấn để áp dụng</span>
           </div>
-          <div
-            className="btc-chart__sigcfg-presets btc-chart__sigcfg-presets--layer"
-            role="group"
-            aria-label="Chart layer presets"
-          >
-            {LAYER_PRESET_IDS.map((id) => (
-              <button
-                key={id}
-                type="button"
-                className="btc-chart__sigcfg-preset"
-                onClick={() => onApplyLayerPreset(id)}
-                title={`Bật bộ layer ${LAYER_PRESET_LABELS[id]}`}
-              >
-                {LAYER_PRESET_LABELS[id]}
-              </button>
-            ))}
-          </div>
+          <LayerPresetGrid onApply={onApplyLayerPreset} variant="compact" />
         </div>
       )}
 

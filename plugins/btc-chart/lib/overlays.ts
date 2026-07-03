@@ -40,18 +40,27 @@ export function drawSMCOverlay(
     return coord ?? -1
   }
 
-  // FVG boxes
+  // FVG boxes (Fair Value Gap)
   for (const fvg of smc.fvgs) {
+    if (fvg.top === fvg.bottom) continue
     const x = toX(fvg.time)
     const y1 = toY(fvg.top)
     const y2 = toY(fvg.bottom)
     if (x < 0 || y1 < 0 || y2 < 0) continue
-    ctx.fillStyle = fvg.bias === 'bull' ? 'rgba(0,255,104,0.08)' : 'rgba(255,0,8,0.08)'
-    ctx.strokeStyle = fvg.bias === 'bull' ? 'rgba(0,255,104,0.3)' : 'rgba(255,0,8,0.3)'
+    const isBull = fvg.bias === 'bull'
+    ctx.fillStyle = isBull ? 'rgba(0,255,104,0.12)' : 'rgba(255,0,8,0.12)'
+    ctx.strokeStyle = isBull ? 'rgba(0,255,104,0.45)' : 'rgba(255,0,8,0.45)'
     ctx.lineWidth = 1
     const boxW = Math.max(w - x, 60)
-    ctx.fillRect(x, Math.min(y1, y2), boxW, Math.abs(y2 - y1))
-    ctx.strokeRect(x, Math.min(y1, y2), boxW, Math.abs(y2 - y1))
+    const top = Math.min(y1, y2)
+    const height = Math.abs(y2 - y1)
+    ctx.fillRect(x, top, boxW, height)
+    ctx.strokeRect(x, top, boxW, height)
+    if (height >= 6) {
+      ctx.font = '8px monospace'
+      ctx.fillStyle = isBull ? '#089981' : '#F23645'
+      ctx.fillText(isBull ? 'FVG+' : 'FVG-', x + 3, top + 10)
+    }
   }
 
   // Order blocks

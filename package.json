@@ -1,7 +1,7 @@
 {
   "name": "profile",
   "private": true,
-  "version": "0.111.0",
+  "version": "0.113.2",
   "type": "module",
   "workspaces": [
     "packages/*",

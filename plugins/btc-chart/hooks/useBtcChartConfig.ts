@@ -28,6 +28,7 @@ import {
   type SymbolId,
 } from '../lib/symbols'
 import { DEFAULT_SIGNAL_CONFIG, type SignalConfig } from '../lib/signal-config'
+import { mergeSignalNotifyConfig, type SignalNotifyConfig } from '../lib/signal-notify-config'
 import type { ChartRefs } from '../lib/types'
 
 const chartAlertSound = new AlertSound()
@@ -75,6 +76,11 @@ export interface UseBtcChartConfig {
   soundEnabledRef: React.MutableRefObject<boolean>
   notifAllowed: boolean
   setNotifAllowed: React.Dispatch<React.SetStateAction<boolean>>
+  notifAllowedRef: React.MutableRefObject<boolean>
+  signalNotify: SignalNotifyConfig
+  setSignalNotify: React.Dispatch<React.SetStateAction<SignalNotifyConfig>>
+  signalNotifyRef: React.MutableRefObject<SignalNotifyConfig>
+  updateSignalNotify: (patch: Partial<SignalNotifyConfig>) => void
   oscOpen: boolean
   setOscOpen: React.Dispatch<React.SetStateAction<boolean>>
   oscView: OscView
@@ -142,10 +148,15 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
   const [alerts, setAlerts] = useState<AlertRule[]>(() => [...cfgInit.alerts])
   const [sound, setSound] = useState(cfgInit.sound)
   const [notifAllowed, setNotifAllowed] = useState(cfgInit.notifications)
+  const notifAllowedRef = useRef(cfgInit.notifications)
   const [signalConfig, setSignalConfig] = useState<SignalConfig>(
     () => (loadConfig().signalConfig as SignalConfig) ?? { ...DEFAULT_SIGNAL_CONFIG },
   )
   const signalConfigRef = useRef<SignalConfig>(signalConfig)
+  const [signalNotify, setSignalNotify] = useState<SignalNotifyConfig>(() =>
+    mergeSignalNotifyConfig(cfgInit.signalNotify),
+  )
+  const signalNotifyRef = useRef<SignalNotifyConfig>(signalNotify)
 
   useLayoutEffect(() => {
     spikeMultRef.current = spikeMult
@@ -153,7 +164,9 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
     oscOpenRef.current = oscOpen
     nweCfgRef.current = nweCfg
     signalConfigRef.current = signalConfig
-  }, [spikeMult, oscView, oscOpen, nweCfg, signalConfig])
+    signalNotifyRef.current = signalNotify
+    notifAllowedRef.current = notifAllowed
+  }, [spikeMult, oscView, oscOpen, nweCfg, signalConfig, signalNotify, notifAllowed])
 
   useEffect(() => {
     visRef.current = vis
@@ -192,6 +205,7 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
         spikeMult,
         signalConfig,
         luxNwe: nweCfg,
+        signalNotify,
       })
     },
     [
@@ -207,8 +221,17 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
       spikeMult,
       signalConfig,
       nweCfg,
+      signalNotify,
     ],
   )
+
+  const updateSignalNotify = useCallback((patch: Partial<SignalNotifyConfig>) => {
+    setSignalNotify((prev) => {
+      const next = { ...prev, ...patch }
+      signalNotifyRef.current = next
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     persist(undefined)
@@ -319,8 +342,25 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
       oscView,
       oscHeight,
       spikeMult,
+      signalConfig,
+      luxNwe: nweCfg,
+      signalNotify,
     })
-  }, [interval, symbol, vis, alerts, sound, notifAllowed, oscOpen, oscView, oscHeight, spikeMult])
+  }, [
+    interval,
+    symbol,
+    vis,
+    alerts,
+    sound,
+    notifAllowed,
+    oscOpen,
+    oscView,
+    oscHeight,
+    spikeMult,
+    signalConfig,
+    nweCfg,
+    signalNotify,
+  ])
 
   const importNow = useCallback(
     async (file: File) => {
@@ -332,6 +372,10 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
         alertsRef.current = cfg.alerts
         setSound(cfg.sound)
         setNotifAllowed(cfg.notifications)
+        notifAllowedRef.current = cfg.notifications
+        const importedNotify = mergeSignalNotifyConfig(cfg.signalNotify)
+        setSignalNotify(importedNotify)
+        signalNotifyRef.current = importedNotify
         setOscOpen(cfg.oscOpen)
         setOscView(cfg.oscView)
         setOscHeight(cfg.oscHeight)
@@ -380,6 +424,11 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
     soundEnabledRef,
     notifAllowed,
     setNotifAllowed,
+    notifAllowedRef,
+    signalNotify,
+    setSignalNotify,
+    signalNotifyRef,
+    updateSignalNotify,
     oscOpen,
     setOscOpen,
     oscView,

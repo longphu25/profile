@@ -53,6 +53,10 @@ export interface SidebarRailProps {
   readonly lienEnabled: boolean
   readonly onToggleBoucher: () => void
   readonly onToggleLien: () => void
+  readonly ictEnabled: boolean
+  readonly liquidityEnabled: boolean
+  readonly onToggleIct: () => void
+  readonly onToggleLiquidity: () => void
 }
 
 function SignalAndSetupPanels({
@@ -120,14 +124,30 @@ function SignalAndSetupPanels({
 function ContextPanels({
   ictResult,
   liquidityResult,
-}: Pick<SidebarRailProps, 'ictResult' | 'liquidityResult'>) {
+  ictEnabled,
+  liquidityEnabled,
+  onToggleIct,
+  onToggleLiquidity,
+}: Pick<
+  SidebarRailProps,
+  | 'ictResult'
+  | 'liquidityResult'
+  | 'ictEnabled'
+  | 'liquidityEnabled'
+  | 'onToggleIct'
+  | 'onToggleLiquidity'
+>) {
   return (
     <>
       <Suspense fallback={<div className="sb-empty">Loading sessions…</div>}>
-        <SessionsPanelLazy ict={ictResult} />
+        <SessionsPanelLazy ict={ictResult} enabled={ictEnabled} onToggle={onToggleIct} />
       </Suspense>
       <Suspense fallback={<div className="sb-empty">Loading liquidity…</div>}>
-        <LiquidityPanelLazy liquidity={liquidityResult} />
+        <LiquidityPanelLazy
+          liquidity={liquidityResult}
+          enabled={liquidityEnabled}
+          onToggle={onToggleLiquidity}
+        />
       </Suspense>
     </>
   )

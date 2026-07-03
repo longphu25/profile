@@ -15,6 +15,8 @@ import type { LienResult } from './lien-reversal'
 import type { LiquidityResult } from './liquidity'
 import type { SupplyDemandResult } from './supply-demand'
 import type { SignalConfig } from './signal-config'
+import type { SignalNotifyConfig } from './signal-notify-config'
+import type { SignalNotifyState } from './signal-notify'
 import type { TradeSetupLockState } from './trade-setup-stable'
 import type { Candle, ChartRefs, SidebarState, TradeSetup } from './types'
 
@@ -98,6 +100,9 @@ export interface ChartRenderContext {
   readonly oscOpenRef: RefObject<boolean>
   readonly nweCfgRef: RefObject<NadarayaConfig>
   readonly signalConfigRef: RefObject<SignalConfig>
+  readonly signalNotifyRef: RefObject<SignalNotifyConfig>
+  readonly notifAllowedRef: RefObject<boolean>
+  readonly signalNotifyStateRef: RefObject<SignalNotifyState>
   readonly vpOptsRef: RefObject<{ hvnRatio: number }>
 
   // Compute caches

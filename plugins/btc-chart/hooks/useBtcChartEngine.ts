@@ -9,6 +9,7 @@ import { loadConfig, saveConfig, type VisFlags, type NadarayaConfig } from '../s
 
 import { downloadChartSnapshot } from '../snapshot'
 import { applyLayerPreset, type LayerPresetId } from '../lib/layer-presets'
+import { visOverlayTurnedOn } from '../lib/overlay-vis-keys'
 import { createMainChart } from '../lib/chart-main-setup'
 import { createOscChart } from '../lib/chart-osc-setup'
 import { closeKlinesWebSocket, wireKlinesWebSocket } from '../lib/chart-websocket'
@@ -19,6 +20,7 @@ import {
   type ScheduleChartRenderOptions,
 } from '../lib/chart-render-scheduler'
 import { NWE_DEFAULT_WINDOW } from '../lib/constants'
+import { EMPTY_SIGNAL_NOTIFY_STATE, resetSignalNotifyState } from '../lib/signal-notify'
 import { INITIAL_SIDEBAR } from '../lib/types'
 import type { BoucherResult } from '../lib/boucher-scalping'
 import type { Interval } from '../lib/constants'
@@ -47,6 +49,8 @@ export interface UseBtcChartEngineParams {
     | 'signalConfig'
     | 'setSignalConfig'
     | 'signalConfigRef'
+    | 'signalNotifyRef'
+    | 'notifAllowedRef'
     | 'oscOpen'
     | 'setOscOpen'
     | 'oscView'
@@ -104,6 +108,10 @@ export interface UseBtcChartEngine {
   setBoucherEnabled: React.Dispatch<React.SetStateAction<boolean>>
   lienEnabled: boolean
   setLienEnabled: React.Dispatch<React.SetStateAction<boolean>>
+  ictEnabled: boolean
+  setIctEnabled: React.Dispatch<React.SetStateAction<boolean>>
+  liquidityEnabled: boolean
+  setLiquidityEnabled: React.Dispatch<React.SetStateAction<boolean>>
   renderData: (data: Candle[], options?: ScheduleChartRenderOptions) => void
   toggle: (key: keyof VisFlags) => void
   applyPreset: (preset: LayerPresetId) => void
@@ -204,6 +212,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   const renderGenRef = useRef(0)
   const nwePendingKeyRef = useRef('')
   const renderGenerationRef = useRef({ current: 0 })
+  const signalNotifyStateRef = useRef({ ...EMPTY_SIGNAL_NOTIFY_STATE })
 
   const [loading, setLoading] = useState(true)
   const [loadingText, setLoadingText] = useState('Đang tải BTC/USDT…')
@@ -245,6 +254,8 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   const [lastCandleClose, setLastCandleClose] = useState<number | null>(null)
   const [boucherEnabled, setBoucherEnabled] = useState(false)
   const [lienEnabled, setLienEnabled] = useState(false)
+  const [ictEnabled, setIctEnabled] = useState(false)
+  const [liquidityEnabled, setLiquidityEnabled] = useState(false)
   const [luxNweResult, setLuxNweResult] = useState<LuxNweResult>({
     mid: [],
     upper: [],
@@ -306,6 +317,9 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     oscOpenRef: config.oscOpenRef,
     nweCfgRef: config.nweCfgRef,
     signalConfigRef: config.signalConfigRef,
+    signalNotifyRef: config.signalNotifyRef,
+    notifAllowedRef: config.notifAllowedRef,
+    signalNotifyStateRef,
     vpOptsRef,
     nweCacheKeyRef,
     nweCacheRef,
@@ -343,6 +357,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     bumpRenderGeneration(renderGenerationRef.current)
     renderGenRef.current = renderGenerationRef.current.current
     nwePendingKeyRef.current = ''
+    resetSignalNotifyState(signalNotifyStateRef.current)
     fitNextRef.current = true
     panelCandleKeyRef.current = ''
     smcCacheKeyRef.current = ''
@@ -470,7 +485,12 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
       config.setVis((prev) => {
         const next = { ...prev, [key]: !prev[key] }
         config.visRef.current = next
-        if (candlesRef.current.length) queueMicrotask(() => renderData(candlesRef.current))
+        if (candlesRef.current.length) {
+          const sync = visOverlayTurnedOn(prev, next)
+          queueMicrotask(() =>
+            renderData(candlesRef.current, sync ? { deferHeavy: false } : undefined),
+          )
+        }
         return next
       })
     },
@@ -482,7 +502,9 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
       config.setVis((prev) => {
         const next = applyLayerPreset(prev, preset)
         config.visRef.current = next
-        if (candlesRef.current.length) queueMicrotask(() => renderData(candlesRef.current))
+        if (candlesRef.current.length) {
+          queueMicrotask(() => renderData(candlesRef.current, { deferHeavy: false }))
+        }
         return next
       })
     },
@@ -587,6 +609,10 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     setBoucherEnabled,
     lienEnabled,
     setLienEnabled,
+    ictEnabled,
+    setIctEnabled,
+    liquidityEnabled,
+    setLiquidityEnabled,
     renderData,
     toggle,
     applyPreset,

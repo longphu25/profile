@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { pushNotification } from '../alerts'
+import { evaluateSignalNotifications } from './signal-notify'
 import type { OFOverlaySignal } from '../order-flow-overlay'
 import { drawVolumeProfile as drawVP } from '../volume-profile'
 import { drawOrderFlow } from '../order-flow-overlay'
@@ -45,6 +46,7 @@ import {
 import { clearTradeSetupOverlay, drawTradeSetupOverlay } from './trade-setup-overlay'
 import { applyDefaultViewport } from './chart-viewport'
 import { fmtP } from './format'
+import { fvgLegendHtml, summarizeFvgs } from './smc-fvg-summary'
 import type { Candle, OrderFlowSignal } from './types'
 
 export type PipelinePhase = 'all' | 'fast' | 'heavy'
@@ -199,7 +201,9 @@ export function renderChartPipeline(
   }
 
   let ict = ctx.ictDataRef.current
-  if (runHeavy && needs.ict && (needHeavy || !ctx.ictDataRef.current.sessions.length)) {
+  const ictNeedsCompute = needs.ict && (needHeavy || !ctx.ictDataRef.current.sessions.length)
+  const ictComputePhase = runHeavy || (runFast && !ctx.ictDataRef.current.sessions.length)
+  if (ictComputePhase && ictNeedsCompute) {
     ict = computeICT(data, ctx.intervalRef.current)
     ctx.ictDataRef.current = ict
     ctx.setICTResult(ict)
@@ -520,7 +524,9 @@ export function renderChartPipeline(
   }
 
   let smcResult = ctx.smcCacheRef.current ?? ctx.smcDataRef.current
-  if (runHeavy && needs.smc && (needHeavy || !ctx.smcCacheRef.current)) {
+  const smcNeedsCompute = needs.smc && (needHeavy || !ctx.smcCacheRef.current)
+  const smcComputePhase = runHeavy || (runFast && !ctx.smcCacheRef.current)
+  if (smcComputePhase && smcNeedsCompute) {
     const smcKey = barKey
     if (smcKey !== ctx.smcCacheKeyRef.current || !ctx.smcCacheRef.current) {
       const t0 = performance.now()
@@ -541,7 +547,9 @@ export function renderChartPipeline(
   }
 
   let sdResult = ctx.sdDataRef.current
-  if (runHeavy && needs.supplyDemand && (needHeavy || !ctx.sdDataRef.current.zones.length)) {
+  const sdNeedsCompute = needs.supplyDemand && (needHeavy || !ctx.sdDataRef.current.zones.length)
+  const sdComputePhase = runHeavy || (runFast && !ctx.sdDataRef.current.zones.length)
+  if (sdComputePhase && sdNeedsCompute) {
     const ltfInterval = ctx.intervalRef.current
     const htfInterval = HTF_MAP[ltfInterval]
     sdResult = computeSupplyDemand(data, {
@@ -552,7 +560,12 @@ export function renderChartPipeline(
     ctx.sdDataRef.current = sdResult
   }
 
-  if (runHeavy && ctx.smcCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
+  if (
+    (runFast || runHeavy) &&
+    ctx.smcCanvasRef.current &&
+    ctx.mainElRef.current &&
+    refs.mainChart
+  ) {
     drawSmcStackOverlay(
       ctx.smcCanvasRef.current,
       ctx.mainElRef.current,
@@ -565,7 +578,12 @@ export function renderChartPipeline(
     )
   }
 
-  if (runHeavy && ctx.ictCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
+  if (
+    (runFast || runHeavy) &&
+    ctx.ictCanvasRef.current &&
+    ctx.mainElRef.current &&
+    refs.mainChart
+  ) {
     drawICTOverlay(
       ctx.ictCanvasRef.current,
       ctx.mainElRef.current,
@@ -578,12 +596,19 @@ export function renderChartPipeline(
   }
 
   let liq = ctx.liqDataRef.current
-  if (runHeavy && needs.liquidity && (needHeavy || !ctx.liqDataRef.current.range)) {
+  const liqNeedsCompute = needs.liquidity && (needHeavy || !ctx.liqDataRef.current.range)
+  const liqComputePhase = runHeavy || (runFast && !ctx.liqDataRef.current.range)
+  if (liqComputePhase && liqNeedsCompute) {
     liq = computeLiquidity(data, ctx.htfRef.current, smcResult, ctx.intervalRef.current)
     ctx.liqDataRef.current = liq
     ctx.setLiquidityResult(liq)
   }
-  if (runHeavy && ctx.liqCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
+  if (
+    (runFast || runHeavy) &&
+    ctx.liqCanvasRef.current &&
+    ctx.mainElRef.current &&
+    refs.mainChart
+  ) {
     drawLiquidityOverlay(
       ctx.liqCanvasRef.current,
       ctx.mainElRef.current,
@@ -619,6 +644,7 @@ export function renderChartPipeline(
       visFlags.vwap && vwapR.vwap[i] != null
         ? `<span style="color:#c792ea">VWAP ${fmtP(vwapR.vwap[i] as number)}</span>`
         : null,
+      visFlags.smc ? fvgLegendHtml(summarizeFvgs(smcResult.fvgs)) : null,
     ]
       .filter(Boolean)
       .join('')
@@ -684,6 +710,23 @@ export function renderChartPipeline(
     ctx.setSidebar((s) => ({ ...s, ...snapshotWithPlan }))
   }
   ctx.tradeSetupRef.current = stabilizedSetup
+
+  const signalFires = evaluateSignalNotifications(
+    ctx.signalNotifyRef.current,
+    {
+      symbol: ctx.symbolRef.current,
+      ml,
+      setup: stabilizedSetup,
+      notificationsEnabled: ctx.notifAllowedRef.current,
+    },
+    ctx.signalNotifyStateRef.current,
+  )
+  for (const sig of signalFires) {
+    if (ctx.soundEnabledRef.current) ctx.soundRef.current.play()
+    pushNotification(sig.title, sig.body)
+    ctx.setFiredToast(sig.toast)
+  }
+
   if (ctx.setupCanvasRef.current && ctx.mainElRef.current && refs.candleSeries) {
     if (shouldDrawTradeSetupOverlay(visFlags)) {
       drawTradeSetupOverlay(

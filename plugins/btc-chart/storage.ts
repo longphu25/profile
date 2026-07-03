@@ -1,6 +1,11 @@
 // BTC Chart — localStorage persistence + JSON import/export.
 
 import type { AlertRule } from './alerts'
+import {
+  DEFAULT_SIGNAL_NOTIFY_CONFIG,
+  mergeSignalNotifyConfig,
+  type SignalNotifyConfig,
+} from './lib/signal-notify-config'
 
 const KEY = 'btc-chart:config:v1'
 
@@ -80,6 +85,8 @@ export interface ChartConfig {
   signalConfig?: Record<string, boolean>
   /** LuxAlgo Nadaraya-Watson Envelope configuration. */
   luxNwe?: NadarayaConfig
+  /** Long/Short signal notifications for the active symbol. */
+  signalNotify?: SignalNotifyConfig
 }
 
 export const DEFAULT_CONFIG: ChartConfig = {
@@ -121,6 +128,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
   oscHeight: 170,
   spikeMult: 2.5,
   luxNwe: { bandwidth: 8, multiplier: 3, repaint: false, maxBarsBack: 250 },
+  signalNotify: { ...DEFAULT_SIGNAL_NOTIFY_CONFIG },
 }
 
 /** Read full config from localStorage, with safe fallback. */
@@ -147,6 +155,7 @@ export function mergeConfig(p: Partial<ChartConfig>): ChartConfig {
     alerts: Array.isArray(p.alerts) ? p.alerts : [],
     zoom: p.zoom ?? null,
     luxNwe: p.luxNwe ? { ...DEFAULT_CONFIG.luxNwe!, ...p.luxNwe } : DEFAULT_CONFIG.luxNwe,
+    signalNotify: mergeSignalNotifyConfig(p.signalNotify),
   }
 }
 

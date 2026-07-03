@@ -19,6 +19,8 @@ import {
 
 interface Props {
   ict: ICTResult
+  enabled: boolean
+  onToggle: () => void
 }
 
 const SESSION_LABEL: Record<string, string> = {
@@ -27,18 +29,41 @@ const SESSION_LABEL: Record<string, string> = {
   ny: 'New York',
 }
 
-export const SessionsPanel = React.memo(function SessionsPanel({ ict }: Props) {
+function OnOffToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`btc-chart__collapse-toggle${enabled ? ' is-on' : ''}`}
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggle()
+      }}
+    >
+      {enabled ? 'ON' : 'OFF'}
+    </button>
+  )
+}
+
+export const SessionsPanel = React.memo(function SessionsPanel({ ict, enabled, onToggle }: Props) {
   const [open, setOpen] = useState(false)
 
   const activeKz = ict.killzones.find((k) => k.active)
   const lastJudas = ict.judas[ict.judas.length - 1]
   const asiaToday = [...ict.sessions].reverse().find((s) => s.name === 'asia')
+  const hasData = ict.sessions.length > 0
 
-  if (!ict.sessions.length) {
+  if (!hasData) {
     return (
-      <SideBlock variant="context">
-        <SideHead title="ICT Sessions" subtitle="Intraday only" />
-        <SideEmpty>Chỉ khả dụng ở khung 1m đến 1h</SideEmpty>
+      <SideBlock variant="context" className={!enabled ? 'is-disabled' : ''}>
+        <SideHead
+          title="ICT Sessions"
+          subtitle="Intraday only"
+          collapsible
+          open={open}
+          onToggle={() => setOpen((o) => !o)}
+          actions={<OnOffToggle enabled={enabled} onToggle={onToggle} />}
+        />
+        {open && enabled && <SideEmpty>Chỉ khả dụng ở khung 1m đến 1h</SideEmpty>}
       </SideBlock>
     )
   }
@@ -47,7 +72,7 @@ export const SessionsPanel = React.memo(function SessionsPanel({ ict }: Props) {
   const adrTone = ict.adrPct > 85 ? 'dn' : ict.adrPct > 60 ? 'hi' : 'up'
 
   return (
-    <SideBlock variant="context">
+    <SideBlock variant="context" className={!enabled ? 'is-disabled' : ''}>
       <SideHead
         title="ICT Sessions"
         subtitle="Daily range decode"
@@ -55,24 +80,29 @@ export const SessionsPanel = React.memo(function SessionsPanel({ ict }: Props) {
         open={open}
         onToggle={() => setOpen((o) => !o)}
         badges={
-          <>
-            {activeKz && <SideBadge tone="mint">KZ</SideBadge>}
-            {lastJudas && (
-              <SideBadge tone={lastJudas.type === 'bullish' ? 'up' : 'dn'}>
-                {lastJudas.type === 'bullish' ? 'JUDAS ▲' : 'JUDAS ▼'}
-              </SideBadge>
-            )}
-          </>
+          !open && enabled ? (
+            <>
+              {activeKz && <SideBadge tone="mint">KZ</SideBadge>}
+              {lastJudas && (
+                <SideBadge tone={lastJudas.type === 'bullish' ? 'up' : 'dn'}>
+                  {lastJudas.type === 'bullish' ? 'JUDAS ▲' : 'JUDAS ▼'}
+                </SideBadge>
+              )}
+            </>
+          ) : undefined
         }
         summary={
-          <>
-            <span className={activeKz ? 'mint' : ''}>{sessionShort}</span>
-            <span>ADR {ict.adrPct.toFixed(0)}%</span>
-          </>
+          !open && enabled ? (
+            <>
+              <span className={activeKz ? 'mint' : ''}>{sessionShort}</span>
+              <span>ADR {ict.adrPct.toFixed(0)}%</span>
+            </>
+          ) : undefined
         }
+        actions={<OnOffToggle enabled={enabled} onToggle={onToggle} />}
       />
 
-      {open && (
+      {open && enabled && (
         <SideBody>
           <SideRow
             label="Phiên hiện tại"

@@ -26,7 +26,11 @@ export function ChartLayerDots({ vis, onToggle, onOpenTools }: ChartLayerDotsPro
             size="sm"
             className={cn('btc-chart__layer-dot', on && 'is-on')}
             aria-pressed={on}
-            title={`${IND_LABELS[key] ?? key}${on ? ' (on)' : ' (off)'}`}
+            title={
+              key === 'smc' && on
+                ? 'SMC on: FVG/OB/BOS trên chart. Xem legend (FVG ▲▼) hoặc bật Liquidity panel.'
+                : `${IND_LABELS[key] ?? key}${on ? ' (on)' : ' (off)'}`
+            }
             onClick={() => onToggle(key)}
             onDoubleClick={onOpenTools}
           >

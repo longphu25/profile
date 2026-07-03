@@ -6,12 +6,19 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { NadarayaConfig, VisFlags } from '../storage'
-import { ALL_IND_KEYS, IND_GROUPS, IND_LABELS } from '../lib/indicator-groups'
+import {
+  ALL_IND_KEYS,
+  IND_GROUPS,
+  IND_LABELS,
+  TRADE_SETUP_LAYER_HINTS,
+  TRADE_SETUP_LAYER_KEYS,
+} from '../lib/indicator-groups'
 import { drawerPanel, drawerScrim, transitionDrawer } from '../lib/motion'
-import { LAYER_PRESET_LABELS, type LayerPresetId } from '../lib/layer-presets'
+import type { LayerPresetId } from '../lib/layer-presets'
+import { LayerPresetGrid } from './LayerPresetGrid'
 import { NweSettingsSection } from './NweSettingsSection'
-
-const PRESET_IDS: LayerPresetId[] = ['scalp', 'swing', 'analysis']
+import { SignalNotifySection } from './SignalNotifySection'
+import type { SignalNotifyConfig } from '../lib/signal-notify-config'
 
 export interface ChartToolbarPanelProps {
   open: boolean
@@ -28,6 +35,8 @@ export interface ChartToolbarPanelProps {
   onExport: () => void
   onImport: (file: File) => void
   onApplyPreset?: (preset: LayerPresetId) => void
+  signalNotify: SignalNotifyConfig
+  onUpdateSignalNotify: (patch: Partial<SignalNotifyConfig>) => void
 }
 
 export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
@@ -45,6 +54,8 @@ export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
   onExport,
   onImport,
   onApplyPreset,
+  signalNotify,
+  onUpdateSignalNotify,
 }: ChartToolbarPanelProps) {
   const activeCount = ALL_IND_KEYS.filter((k) => vis[k]).length
 
@@ -120,23 +131,46 @@ export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
             <div className="btc-chart__tools-body">
               {onApplyPreset && (
                 <section className="btc-chart__tools-section btc-chart__tools-section--presets">
-                  <span className="btc-chart__tools-section-label">Presets</span>
-                  <div className="btc-chart__tools-preset-row">
-                    {PRESET_IDS.map((id) => (
-                      <Button
-                        key={id}
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="btc-chart__tools-preset h-7 rounded-none px-2 font-mono text-[9px]"
-                        onClick={() => onApplyPreset(id)}
-                      >
-                        {LAYER_PRESET_LABELS[id]}
-                      </Button>
-                    ))}
+                  <div className="btc-chart__tools-section-head">
+                    <span className="btc-chart__tools-section-label">Presets</span>
+                    <span className="btc-chart__tools-section-hint">Nhấn để áp dụng</span>
                   </div>
+                  <LayerPresetGrid vis={vis} onApply={onApplyPreset} variant="tools" />
                 </section>
               )}
+
+              <section className="btc-chart__tools-section btc-chart__tools-section--trade-setup">
+                <div className="btc-chart__tools-section-head">
+                  <span className="btc-chart__tools-section-label">Trade Setup</span>
+                </div>
+                <p className="btc-chart__trade-setup-intro">
+                  Sidebar luôn có setup cơ bản (ML, RSI, NWE). Hai tùy chọn dưới bật tính toán sâu
+                  và vẽ trên chart.
+                </p>
+                <div className="ind-panel-chips">
+                  {TRADE_SETUP_LAYER_KEYS.map((key) => {
+                    const on = !!vis[key]
+                    return (
+                      <Button
+                        key={key}
+                        type="button"
+                        variant="ghost"
+                        className={cn('ind-panel-chip h-auto rounded-none', on && 'is-on')}
+                        aria-pressed={on}
+                        title={TRADE_SETUP_LAYER_HINTS[key]}
+                        onClick={() => onToggle(key)}
+                      >
+                        <span className="ind-panel-chip__dot" aria-hidden />
+                        {IND_LABELS[key]}
+                      </Button>
+                    )
+                  })}
+                </div>
+                <p className="btc-chart__trade-setup-foot">
+                  <strong>Setup confluence</strong>: gộp ICT, SMC, Scalping, Reversal để khóa
+                  Entry/SL/TP. Không bắt buộc nếu bạn chỉ theo dõi ML Signal.
+                </p>
+              </section>
 
               <section className="btc-chart__tools-section">
                 <div className="btc-chart__tools-section-head">
@@ -284,6 +318,13 @@ export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
                   </label>
                 </div>
               </section>
+
+              <SignalNotifySection
+                cfg={signalNotify}
+                notifAllowed={notifAllowed}
+                onChange={onUpdateSignalNotify}
+                onRequestNotif={onRequestNotif}
+              />
 
               <NweSettingsSection cfg={nweCfg} onChange={onUpdateNweConfig} />
             </div>
