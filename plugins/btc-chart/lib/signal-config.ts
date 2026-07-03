@@ -83,6 +83,22 @@ export const SIGNAL_PRESETS: SignalPreset[] = [
   },
 ]
 
+/** Preset groups for the signal config panel (strategy style). */
+export const SIGNAL_PRESET_GROUPS: ReadonlyArray<{
+  readonly label: string
+  readonly presetIds: readonly string[]
+}> = [
+  { label: 'Tổng hợp', presetIds: ['all', 'conservative'] },
+  { label: 'Xu hướng', presetIds: ['trend', 'momentum'] },
+  { label: 'Đảo chiều', presetIds: ['reversal'] },
+  { label: 'Scalp & Dòng tiền', presetIds: ['scalp', 'volume'] },
+]
+
+/** Resolve a preset id from {@link SIGNAL_PRESET_GROUPS}. */
+export function lookupSignalPreset(presetId: string): SignalPreset | undefined {
+  return SIGNAL_PRESETS.find((p) => p.id === presetId)
+}
+
 /** Human-readable labels for features. */
 export const FEATURE_NAMES: Record<FeatureKey, string> = {
   NWE_pos: 'Band Position',

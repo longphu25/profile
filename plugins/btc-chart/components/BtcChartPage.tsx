@@ -135,6 +135,7 @@ export function BtcChartPage() {
     sidebar: engine.sidebar,
     signalConfig: config.signalConfig,
     onSignalConfigChange: engine.updateSignalConfig,
+    onApplyLayerPreset: engine.applyPreset,
     positions,
     showPosForm,
     setShowPosForm,

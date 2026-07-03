@@ -7,6 +7,7 @@ import type { LienResult } from '../lib/lien-reversal'
 import type { LiquidityResult } from '../lib/liquidity'
 import type { LuxNweResult } from '../lib/chart-render-context'
 import type { SignalConfig } from '../lib/signal-config'
+import type { LayerPresetId } from '../lib/layer-presets'
 import type { Candle, SidebarState } from '../lib/types'
 import type { SymbolId } from '../lib/symbols'
 import type { MobileRailTab } from '../lib/mobile-rail-tabs'
@@ -28,6 +29,7 @@ export interface SidebarRailProps {
   readonly sidebar: SidebarState
   readonly signalConfig: SignalConfig
   readonly onSignalConfigChange: (cfg: SignalConfig) => void
+  readonly onApplyLayerPreset?: (preset: LayerPresetId) => void
   readonly positions: UsePositions['positions']
   readonly showPosForm: boolean
   readonly setShowPosForm: UsePositions['setShowForm']
@@ -57,6 +59,7 @@ function SignalAndSetupPanels({
   sidebar,
   signalConfig,
   onSignalConfigChange,
+  onApplyLayerPreset,
   positions,
   showPosForm,
   setShowPosForm,
@@ -72,6 +75,7 @@ function SignalAndSetupPanels({
   | 'sidebar'
   | 'signalConfig'
   | 'onSignalConfigChange'
+  | 'onApplyLayerPreset'
   | 'positions'
   | 'showPosForm'
   | 'setShowPosForm'
@@ -91,6 +95,7 @@ function SignalAndSetupPanels({
           setup={sidebar.tradeSetup}
           signalConfig={signalConfig}
           onSignalConfigChange={onSignalConfigChange}
+          onApplyLayerPreset={onApplyLayerPreset}
         />
       </Suspense>
       <Suspense fallback={<div className="sb-empty">Loading setup…</div>}>

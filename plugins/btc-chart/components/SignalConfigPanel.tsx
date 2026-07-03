@@ -6,18 +6,25 @@ import {
   configFromPreset,
   FEATURE_GROUPS,
   FEATURE_NAMES,
+  lookupSignalPreset,
+  SIGNAL_PRESET_GROUPS,
   SIGNAL_PRESETS,
   type FeatureKey,
   type SignalConfig,
 } from '../lib/signal-config'
+import { LAYER_PRESET_LABELS, type LayerPresetId } from '../lib/layer-presets'
+
+const LAYER_PRESET_IDS: LayerPresetId[] = ['scalp', 'swing', 'analysis']
 
 export interface SignalConfigBodyProps {
   config: SignalConfig
   onChange: (cfg: SignalConfig) => void
+  /** Quick chart layer presets (Scalp / Swing / Analysis). */
+  onApplyLayerPreset?: (preset: LayerPresetId) => void
 }
 
 /** Config form body (presets + feature toggles), embeddable in Signal block. */
-export function SignalConfigBody({ config, onChange }: SignalConfigBodyProps) {
+export function SignalConfigBody({ config, onChange, onApplyLayerPreset }: SignalConfigBodyProps) {
   const enabledCount = ALL_FEATURES.filter((k) => config[k]).length
   const activePreset = SIGNAL_PRESETS.find(
     (p) =>
@@ -45,32 +52,65 @@ export function SignalConfigBody({ config, onChange }: SignalConfigBodyProps) {
 
   return (
     <div className="btc-chart__sigcfg-body">
+      {onApplyLayerPreset && (
+        <div className="btc-chart__sigcfg-section">
+          <div className="btc-chart__sigcfg-section-head">
+            <span className="btc-chart__sigcfg-section-label">Chart layers</span>
+            <span className="btc-chart__sigcfg-section-hint">Preset nhanh</span>
+          </div>
+          <div
+            className="btc-chart__sigcfg-presets btc-chart__sigcfg-presets--layer"
+            role="group"
+            aria-label="Chart layer presets"
+          >
+            {LAYER_PRESET_IDS.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className="btc-chart__sigcfg-preset"
+                onClick={() => onApplyLayerPreset(id)}
+                title={`Bật bộ layer ${LAYER_PRESET_LABELS[id]}`}
+              >
+                {LAYER_PRESET_LABELS[id]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="btc-chart__sigcfg-section">
         <div className="btc-chart__sigcfg-section-head">
-          <span className="btc-chart__sigcfg-section-label">Chiến lược</span>
-          <span className="btc-chart__sigcfg-section-hint">Chọn preset</span>
+          <span className="btc-chart__sigcfg-section-label">Chiến lược ML</span>
+          <span className="btc-chart__sigcfg-section-hint">Theo nhóm</span>
         </div>
-        <div
-          className="btc-chart__sigcfg-presets"
-          role="group"
-          aria-label="Signal strategy presets"
-        >
-          {SIGNAL_PRESETS.map((p) => {
-            const isOn = activePreset?.id === p.id
-            return (
-              <button
-                key={p.id}
-                type="button"
-                className={cn('btc-chart__sigcfg-preset', isOn && 'is-on')}
-                onClick={() => applyPreset(p.id)}
-                title={p.description}
-                aria-pressed={isOn}
-              >
-                {p.name}
-              </button>
-            )
-          })}
-        </div>
+        {SIGNAL_PRESET_GROUPS.map((group) => (
+          <div key={group.label} className="btc-chart__sigcfg-preset-group">
+            <span className="btc-chart__sigcfg-grp-label">{group.label}</span>
+            <div
+              className="btc-chart__sigcfg-presets"
+              role="group"
+              aria-label={`Signal presets: ${group.label}`}
+            >
+              {group.presetIds.map((presetId) => {
+                const p = lookupSignalPreset(presetId)
+                if (!p) return null
+                const isOn = activePreset?.id === p.id
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={cn('btc-chart__sigcfg-preset', isOn && 'is-on')}
+                    onClick={() => applyPreset(p.id)}
+                    title={p.description}
+                    aria-pressed={isOn}
+                  >
+                    {p.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="btc-chart__sigcfg-actions" role="group" aria-label="Quick selection">

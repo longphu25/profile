@@ -8,6 +8,7 @@ import { ALL_FEATURES } from '../lib/signal-config'
 import { FEATURE_LABEL } from '../lib/ml'
 import type { MLResult } from '../lib/types'
 import type { SignalConfig } from '../lib/signal-config'
+import type { LayerPresetId } from '../lib/layer-presets'
 import type { TradeSetup } from '../lib/trade-setup'
 import { SideBlock, SideHero, SideBody, StatGrid, StatCell } from './sidebar/SidebarBlocks'
 import { SignalConfigBody } from './SignalConfigPanel'
@@ -17,11 +18,13 @@ export const SignalPanel = React.memo(function SignalPanel({
   setup,
   signalConfig,
   onSignalConfigChange,
+  onApplyLayerPreset,
 }: {
   ml: MLResult
   setup?: TradeSetup
   signalConfig: SignalConfig
   onSignalConfigChange: (cfg: SignalConfig) => void
+  onApplyLayerPreset?: (preset: LayerPresetId) => void
 }) {
   const [configOpen, setConfigOpen] = useState(false)
   const pct = Math.round(ml.score * 100)
@@ -51,7 +54,11 @@ export const SignalPanel = React.memo(function SignalPanel({
       />
       {configOpen && (
         <div className="sb-signal-config">
-          <SignalConfigBody config={signalConfig} onChange={onSignalConfigChange} />
+          <SignalConfigBody
+            config={signalConfig}
+            onChange={onSignalConfigChange}
+            onApplyLayerPreset={onApplyLayerPreset}
+          />
         </div>
       )}
       {conflict?.hasConflict && (

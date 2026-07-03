@@ -5284,6 +5284,15 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 5px;
 }
+.btc-chart__sigcfg-presets--layer {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.btc-chart__sigcfg-preset-group {
+  margin-bottom: 8px;
+}
+.btc-chart__sigcfg-preset-group:last-child {
+  margin-bottom: 0;
+}
 .btc-chart__sigcfg-preset {
   display: block;
   width: 100%;
