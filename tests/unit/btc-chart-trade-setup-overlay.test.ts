@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 import {
+  findNearestCuttingCandleIndex,
   isDrawableLongSetup,
   isDrawableShortSetup,
   isDrawableTradeSetup,
   resolveSetupBoxLeft,
 } from '../../plugins/btc-chart/lib/trade-setup-overlay'
+import type { Candle } from '../../plugins/btc-chart/lib/types'
 import type { TradeSetup } from '../../plugins/btc-chart/lib/types'
 
 function baseSetup(overrides: Partial<TradeSetup> = {}): TradeSetup {
@@ -61,6 +63,20 @@ describe('isDrawableShortSetup', () => {
     expect(
       isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 95 })),
     ).toBe(false)
+  })
+})
+
+const sampleCandles: Candle[] = [
+  { time: 1, open: 98, high: 102, low: 97, close: 100, volume: 1 },
+  { time: 2, open: 100, high: 105, low: 99, close: 104, volume: 1 },
+  { time: 3, open: 104, high: 108, low: 103, close: 106, volume: 1 },
+]
+
+describe('findNearestCuttingCandleIndex', () => {
+  test('returns the latest candle that intersects the price', () => {
+    expect(findNearestCuttingCandleIndex(sampleCandles, 100)).toBe(1)
+    expect(findNearestCuttingCandleIndex(sampleCandles, 107)).toBe(2)
+    expect(findNearestCuttingCandleIndex(sampleCandles, 120)).toBe(-1)
   })
 })
 
