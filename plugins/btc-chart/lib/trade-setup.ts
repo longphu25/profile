@@ -1,6 +1,7 @@
 // BTC Chart — automatic Entry / SL / TP calculation from indicator confluence.
 
 import type { Candle, NWE, MLResult, TradeSetup } from './types'
+import { ML_HYSTERESIS_LONG, ML_HYSTERESIS_SHORT, buildTradeSetupBias } from './trade-setup-stable'
 import type { BoucherResult } from './boucher-scalping'
 import type { LienResult } from './lien-reversal'
 import type { NadarayaWatsonResult } from './nadaraya-watson'
@@ -8,6 +9,7 @@ import type { ICTResult } from './ict-sessions'
 import type { LiquidityResult } from './liquidity'
 import type { SMCResult } from '../smc'
 import { collectSmcConfluenceVotes } from './smc-signals'
+import { collectSupplyDemandVotes, type SupplyDemandResult } from './supply-demand'
 
 export type { TradeSetup }
 
@@ -165,6 +167,19 @@ function collectLongEntryCandidates(
     if (luxLo != null) out.push(luxLo * 1.002)
   }
 
+  if (extra?.supplyDemand) {
+    const sd = extra.supplyDemand
+    const touchEps = spot * 0.003
+    if (sd.mtfLong?.confirmed) out.push(sd.mtfLong.entry)
+    if (sd.longEntry != null && sd.longEntry < spot) out.push(sd.longEntry)
+    if (sd.nearestDemand && spot >= sd.nearestDemand.bottom - touchEps) {
+      out.push(sd.nearestDemand.top, sd.nearestDemand.mid)
+    }
+    if (sd.nearestHtfDemand && spot >= sd.nearestHtfDemand.bottom - touchEps) {
+      out.push(sd.nearestHtfDemand.top, sd.nearestHtfDemand.mid)
+    }
+  }
+
   if (extra?.liquidity) {
     const liq = extra.liquidity
     if (liq.range) {
@@ -222,6 +237,19 @@ function collectShortEntryCandidates(
     if (luxUp != null) out.push(luxUp * 0.998)
   }
 
+  if (extra?.supplyDemand) {
+    const sd = extra.supplyDemand
+    const touchEps = spot * 0.003
+    if (sd.mtfShort?.confirmed) out.push(sd.mtfShort.entry)
+    if (sd.shortEntry != null && sd.shortEntry > spot) out.push(sd.shortEntry)
+    if (sd.nearestSupply && spot <= sd.nearestSupply.top + touchEps) {
+      out.push(sd.nearestSupply.bottom, sd.nearestSupply.mid)
+    }
+    if (sd.nearestHtfSupply && spot <= sd.nearestHtfSupply.top + touchEps) {
+      out.push(sd.nearestHtfSupply.bottom, sd.nearestHtfSupply.mid)
+    }
+  }
+
   if (extra?.liquidity) {
     const liq = extra.liquidity
     if (liq.range) {
@@ -257,7 +285,7 @@ function collectShortEntryCandidates(
   return out
 }
 
-/** Extra signals from Boucher + Lien + Lux NWE + ICT + Liquidity + SMC for confluence. */
+/** Extra signals from Boucher + Lien + Lux NWE + ICT + Liquidity + SMC + S/D for confluence. */
 export interface TradeSetupExtra {
   boucher?: BoucherResult
   lien?: LienResult
@@ -265,6 +293,7 @@ export interface TradeSetupExtra {
   ict?: ICTResult
   liquidity?: LiquidityResult
   smc?: SMCResult
+  supplyDemand?: SupplyDemandResult
 }
 
 /**
@@ -296,11 +325,11 @@ export function calcTradeSetup(
   let bear = 0
   const reasons: string[] = []
 
-  // ML signal (aligned with ml.ts BUY/SELL thresholds: 0.58 / 0.42)
-  if (ml.score > 0.58) {
+  // ML signal (hysteresis: >0.62 bull, <0.38 bear, neutral band in between)
+  if (ml.score > ML_HYSTERESIS_LONG) {
     bull++
     reasons.push('ML Bullish')
-  } else if (ml.score < 0.42) {
+  } else if (ml.score < ML_HYSTERESIS_SHORT) {
     bear++
     reasons.push('ML Bearish')
   }
@@ -519,6 +548,14 @@ export function calcTradeSetup(
     reasons.push(...smcVotes.reasons)
   }
 
+  // ── Supply & Demand: zone touch + liquidity grab (FX Tactix) ──
+  if (extra?.supplyDemand) {
+    const sdVotes = collectSupplyDemandVotes(data, extra.supplyDemand)
+    bull += sdVotes.bull
+    bear += sdVotes.bear
+    reasons.push(...sdVotes.reasons)
+  }
+
   // Swing high/low for SL (last 20 bars)
   const lookback = data.slice(Math.max(0, i - 20), i + 1)
   const swingLow = Math.min(...lookback.map((d) => d.low))
@@ -537,13 +574,31 @@ export function calcTradeSetup(
   else if (bear >= 2 && bear > bull) dir = 'short'
 
   const confidence = Math.min(100, Math.max(bull, bear) * 20 + Math.abs(bull - bear) * 10)
+  const bias = buildTradeSetupBias(bull, bear, reasons, ml.score)
+  const emptyPlan = { plan: null as const, planStatus: 'waiting' as const }
 
   if (dir === 'long') {
     const luxLo = extra?.luxNwe?.lower[i]
     const luxUp = extra?.luxNwe?.upper[i]
-    const sl = Math.min(swingLow, nweLo ?? swingLow, luxLo ?? swingLow) * 0.998
+    let sl = Math.min(swingLow, nweLo ?? swingLow, luxLo ?? swingLow) * 0.998
     const candidates = collectLongEntryCandidates(i, price, swingLow, swingHigh, nwe, extra)
-    const { entry, method } = calcLimitEntry('long', price, sl, candidates)
+    let { entry, method } = calcLimitEntry('long', price, sl, candidates)
+    const sdLong = extra?.supplyDemand
+    const sdEntry = sdLong?.longEntry
+    const sdEntryOk =
+      sdEntry != null &&
+      sdEntry < price &&
+      (sdLong?.mtfLong?.confirmed === true || sdEntry >= price * 0.97)
+    if (sdEntryOk) {
+      const sdSl = sdLong?.longSl
+      if (sdSl != null && sdSl < sdEntry) sl = sdSl
+      if (sdEntry > sl) {
+        entry = sdEntry
+        method = sdLong?.mtfLong?.confirmed
+          ? `MTF Demand (${sdLong.htfInterval ?? 'HTF'}) + LTF grab`
+          : 'Demand zone top + spread'
+      }
+    }
     const risk = entry - sl
     const extendHigh = Math.max(swingHigh * 0.998, luxUp ?? 0, nweUp ?? 0)
     const { tp1, tp2, tp3 } = calcTpLadder('long', entry, risk, {
@@ -563,14 +618,32 @@ export function calcTradeSetup(
       volRatio,
       spotPrice: price,
       entryMethod: method,
+      bias,
+      ...emptyPlan,
     }
   }
   if (dir === 'short') {
     const luxUp = extra?.luxNwe?.upper[i]
     const luxLo = extra?.luxNwe?.lower[i]
-    const sl = Math.max(swingHigh, nweUp ?? swingHigh, luxUp ?? swingHigh) * 1.002
+    let sl = Math.max(swingHigh, nweUp ?? swingHigh, luxUp ?? swingHigh) * 1.002
     const candidates = collectShortEntryCandidates(i, price, swingLow, swingHigh, nwe, extra)
-    const { entry, method } = calcLimitEntry('short', price, sl, candidates)
+    let { entry, method } = calcLimitEntry('short', price, sl, candidates)
+    const sdShort = extra?.supplyDemand
+    const sdEntry = sdShort?.shortEntry
+    const sdEntryOk =
+      sdEntry != null &&
+      sdEntry > price &&
+      (sdShort?.mtfShort?.confirmed === true || sdEntry <= price * 1.03)
+    if (sdEntryOk) {
+      const sdSl = sdShort?.shortSl
+      if (sdSl != null && sdSl > sdEntry) sl = sdSl
+      if (sdEntry < sl) {
+        entry = sdEntry
+        method = sdShort?.mtfShort?.confirmed
+          ? `MTF Supply (${sdShort.htfInterval ?? 'HTF'}) + LTF grab`
+          : 'Supply zone bottom - spread'
+      }
+    }
     const risk = sl - entry
     const extendLow = Math.min(
       swingLow * 1.002,
@@ -594,6 +667,8 @@ export function calcTradeSetup(
       volRatio,
       spotPrice: price,
       entryMethod: method,
+      bias,
+      ...emptyPlan,
     }
   }
 
@@ -611,6 +686,8 @@ export function calcTradeSetup(
     volRatio,
     spotPrice: price,
     entryMethod: '',
+    bias,
+    ...emptyPlan,
   }
 }
 
