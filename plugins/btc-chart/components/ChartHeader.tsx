@@ -132,9 +132,9 @@ export function ChartHeader({
             )}
             onClick={onToggleSidebar}
             aria-expanded={sidebarOpen}
-            aria-label="Toggle signals rail"
+            aria-label="Mở trade setup, funding, context, strategies"
           >
-            Signals
+            Rail
           </Button>
         )}
 

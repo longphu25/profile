@@ -60,6 +60,7 @@ import { ALL_IND_KEYS } from './lib/indicator-groups'
 import { applyLayerPreset, type LayerPresetId } from './lib/layer-presets'
 
 import { RailSection } from './components/sidebar'
+import { SidebarRailTabs, type MobileRailTab } from './components/SidebarRailTabs'
 // (FundingNwe / Sessions / Liquidity / OI / Technicals are lazy-loaded below)
 
 // Lazy loaded heavier panels (code split + initial perf)
@@ -275,6 +276,7 @@ function BtcChartView() {
   const [intelTab, setIntelTab] = useState<IntelTab>('trade')
   const [intelSearch, setIntelSearch] = useState('')
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false)
+  const [mobileRailTab, setMobileRailTab] = useState<MobileRailTab>('setup')
   const [intelOpen, setIntelOpen] = useState(false)
   const [oscOpen, setOscOpen] = useState<boolean>(cfgInit.oscOpen)
   const [oscView, setOscView] = useState<OscView>(cfgInit.oscView)
@@ -477,6 +479,15 @@ function BtcChartView() {
   useEffect(() => {
     symbolRef.current = symbol
   }, [symbol])
+
+  useEffect(() => {
+    if (!sidebarMobileOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarMobileOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [sidebarMobileOpen])
 
   // Reset chart state when the user switches pair or timeframe (not on first mount).
   const prevViewRef = useRef({ symbol, interval })
@@ -2472,68 +2483,150 @@ function BtcChartView() {
           />
         </div>
 
+        {sidebarMobileOpen && (
+          <button
+            type="button"
+            className="btc-chart__sidebar-scrim"
+            aria-label="Đóng rail panel"
+            onClick={() => setSidebarMobileOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
         <div className={`btc-chart__sidebar${sidebarMobileOpen ? ' is-mobile-open' : ''}`}>
-          <RailSection label="Signals">
-            <Suspense fallback={<div className="sb-empty">Loading signal…</div>}>
-              <SignalPanelLazy
-                ml={sidebar.ml}
-                setup={sidebar.tradeSetup}
-                signalConfig={signalConfig}
-                onSignalConfigChange={updateSignalConfig}
-              />
-            </Suspense>
-            <Suspense fallback={<div className="sb-empty">Loading setup…</div>}>
-              <TradeSetupPanelLazy
-                setup={sidebar.tradeSetup}
-                positions={positions}
-                showPosForm={showPosForm}
-                setShowPosForm={setShowPosForm}
-                posForm={posForm}
-                setPosForm={setPosForm}
-                onAddPosition={addPosition}
-                onRemovePosition={removePosition}
-                onUpdatePosition={updatePosition}
-                markPrice={markPrice}
-                posSuggestions={posSuggestions}
-              />
-            </Suspense>
-            <Suspense fallback={<div className="sb-empty">Loading funding…</div>}>
-              <FundingNwePanelLazy
-                funding={funding}
-                nwe={luxNweResult}
-                candles={panelCandles}
-                symbol={symbol}
-              />
-            </Suspense>
-          </RailSection>
+          <SidebarRailTabs active={mobileRailTab} onChange={setMobileRailTab} />
 
-          <RailSection label="Context">
-            <Suspense fallback={<div className="sb-empty">Loading sessions…</div>}>
-              <SessionsPanelLazy ict={ictResult} />
-            </Suspense>
-            <Suspense fallback={<div className="sb-empty">Loading liquidity…</div>}>
-              <LiquidityPanelLazy liquidity={liquidityResult} />
-            </Suspense>
-          </RailSection>
+          <div className="btc-chart__rail-desktop">
+            <RailSection label="Signals">
+              <Suspense fallback={<div className="sb-empty">Loading signal…</div>}>
+                <SignalPanelLazy
+                  ml={sidebar.ml}
+                  setup={sidebar.tradeSetup}
+                  signalConfig={signalConfig}
+                  onSignalConfigChange={updateSignalConfig}
+                />
+              </Suspense>
+              <Suspense fallback={<div className="sb-empty">Loading setup…</div>}>
+                <TradeSetupPanelLazy
+                  setup={sidebar.tradeSetup}
+                  positions={positions}
+                  showPosForm={showPosForm}
+                  setShowPosForm={setShowPosForm}
+                  posForm={posForm}
+                  setPosForm={setPosForm}
+                  onAddPosition={addPosition}
+                  onRemovePosition={removePosition}
+                  onUpdatePosition={updatePosition}
+                  markPrice={markPrice}
+                  posSuggestions={posSuggestions}
+                />
+              </Suspense>
+              <Suspense fallback={<div className="sb-empty">Loading funding…</div>}>
+                <FundingNwePanelLazy
+                  funding={funding}
+                  nwe={luxNweResult}
+                  candles={panelCandles}
+                  symbol={symbol}
+                />
+              </Suspense>
+            </RailSection>
 
-          <RailSection label="Strategies">
-            <Suspense fallback={<div className="sb-empty">Loading scalping…</div>}>
-              <ScalpingPanel
-                scalp={boucherScalp}
-                interval={interval}
-                enabled={boucherEnabled}
-                onToggle={() => setBoucherEnabled((v) => !v)}
-              />
-            </Suspense>
-            <Suspense fallback={<div className="sb-empty">Loading reversal…</div>}>
-              <ReversalPanel
-                lien={lienReversal}
-                enabled={lienEnabled}
-                onToggle={() => setLienEnabled((v) => !v)}
-              />
-            </Suspense>
-          </RailSection>
+            <RailSection label="Context">
+              <Suspense fallback={<div className="sb-empty">Loading sessions…</div>}>
+                <SessionsPanelLazy ict={ictResult} />
+              </Suspense>
+              <Suspense fallback={<div className="sb-empty">Loading liquidity…</div>}>
+                <LiquidityPanelLazy liquidity={liquidityResult} />
+              </Suspense>
+            </RailSection>
+
+            <RailSection label="Strategies">
+              <Suspense fallback={<div className="sb-empty">Loading scalping…</div>}>
+                <ScalpingPanel
+                  scalp={boucherScalp}
+                  interval={interval}
+                  enabled={boucherEnabled}
+                  onToggle={() => setBoucherEnabled((v) => !v)}
+                />
+              </Suspense>
+              <Suspense fallback={<div className="sb-empty">Loading reversal…</div>}>
+                <ReversalPanel
+                  lien={lienReversal}
+                  enabled={lienEnabled}
+                  onToggle={() => setLienEnabled((v) => !v)}
+                />
+              </Suspense>
+            </RailSection>
+          </div>
+
+          <div className="btc-chart__rail-mobile" role="tabpanel" aria-label={mobileRailTab}>
+            {mobileRailTab === 'setup' && (
+              <>
+                <Suspense fallback={<div className="sb-empty">Loading signal…</div>}>
+                  <SignalPanelLazy
+                    ml={sidebar.ml}
+                    setup={sidebar.tradeSetup}
+                    signalConfig={signalConfig}
+                    onSignalConfigChange={updateSignalConfig}
+                  />
+                </Suspense>
+                <Suspense fallback={<div className="sb-empty">Loading setup…</div>}>
+                  <TradeSetupPanelLazy
+                    setup={sidebar.tradeSetup}
+                    positions={positions}
+                    showPosForm={showPosForm}
+                    setShowPosForm={setShowPosForm}
+                    posForm={posForm}
+                    setPosForm={setPosForm}
+                    onAddPosition={addPosition}
+                    onRemovePosition={removePosition}
+                    onUpdatePosition={updatePosition}
+                    markPrice={markPrice}
+                    posSuggestions={posSuggestions}
+                  />
+                </Suspense>
+              </>
+            )}
+            {mobileRailTab === 'funding' && (
+              <Suspense fallback={<div className="sb-empty">Loading funding…</div>}>
+                <FundingNwePanelLazy
+                  funding={funding}
+                  nwe={luxNweResult}
+                  candles={panelCandles}
+                  symbol={symbol}
+                />
+              </Suspense>
+            )}
+            {mobileRailTab === 'context' && (
+              <>
+                <Suspense fallback={<div className="sb-empty">Loading sessions…</div>}>
+                  <SessionsPanelLazy ict={ictResult} />
+                </Suspense>
+                <Suspense fallback={<div className="sb-empty">Loading liquidity…</div>}>
+                  <LiquidityPanelLazy liquidity={liquidityResult} />
+                </Suspense>
+              </>
+            )}
+            {mobileRailTab === 'strategies' && (
+              <>
+                <Suspense fallback={<div className="sb-empty">Loading scalping…</div>}>
+                  <ScalpingPanel
+                    scalp={boucherScalp}
+                    interval={interval}
+                    enabled={boucherEnabled}
+                    onToggle={() => setBoucherEnabled((v) => !v)}
+                  />
+                </Suspense>
+                <Suspense fallback={<div className="sb-empty">Loading reversal…</div>}>
+                  <ReversalPanel
+                    lien={lienReversal}
+                    enabled={lienEnabled}
+                    onToggle={() => setLienEnabled((v) => !v)}
+                  />
+                </Suspense>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

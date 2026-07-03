@@ -14,6 +14,12 @@ export { ChartLayerDots, type ChartLayerDotsProps } from './ChartLayerDots'
 export { OscillatorPane, type OscillatorPaneProps } from './OscillatorPane'
 export { IntelDrawer, INTEL_TABS, type IntelTab, type IntelDrawerProps } from './IntelDrawer'
 export { IntelPanelStack, type IntelPanelStackProps } from './IntelPanelStack'
+export {
+  SidebarRailTabs,
+  MOBILE_RAIL_TABS,
+  type MobileRailTab,
+  type SidebarRailTabsProps,
+} from './SidebarRailTabs'
 export { IntelRail, type IntelRailProps } from './IntelRail'
 export { ChartToolbarPanel, type ChartToolbarPanelProps } from './ChartToolbarPanel'
 export { ChartToasts, type ChartToastsProps } from './ChartToasts'
