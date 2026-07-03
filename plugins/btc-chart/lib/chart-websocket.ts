@@ -61,11 +61,8 @@ export interface WireKlinesWebSocketParams {
   readonly setAlerts: Dispatch<SetStateAction<AlertRule[]>>
 }
 
-/** Close an active WebSocket without leaking handlers. */
-export function closeKlinesWebSocket(wsRef: MutableRefObject<WebSocket | null>): void {
-  const ws = wsRef.current
-  if (!ws) return
-  wsRef.current = null
+/** Close a WebSocket without "closed before connection established" console noise. */
+export function closeWebSocketSafe(ws: WebSocket): void {
   ws.onmessage = null
   ws.onerror = null
   ws.onclose = null
@@ -77,13 +74,21 @@ export function closeKlinesWebSocket(wsRef: MutableRefObject<WebSocket | null>):
         /* noop */
       }
     }
-  } else {
-    try {
-      ws.close()
-    } catch {
-      /* noop */
-    }
+    return
   }
+  try {
+    ws.close()
+  } catch {
+    /* noop */
+  }
+}
+
+/** Close an active WebSocket without leaking handlers. */
+export function closeKlinesWebSocket(wsRef: MutableRefObject<WebSocket | null>): void {
+  const ws = wsRef.current
+  if (!ws) return
+  wsRef.current = null
+  closeWebSocketSafe(ws)
 }
 
 /**

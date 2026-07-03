@@ -1,6 +1,7 @@
 // BTC Chart — Whale tracking hook
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { closeWebSocketSafe } from '../lib/chart-websocket'
 import {
   detectWhaleTrade,
   calculateExchangeFlow,
@@ -58,11 +59,7 @@ export function useWhaleTracker(
   useEffect(() => {
     if (!enabled) {
       if (wsRef.current) {
-        try {
-          wsRef.current.close()
-        } catch {
-          /* noop */
-        }
+        closeWebSocketSafe(wsRef.current)
         wsRef.current = null
       }
       return
@@ -72,6 +69,10 @@ export function useWhaleTracker(
     const sym = symbol.toLowerCase()
     const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${sym}@aggTrade`)
     wsRef.current = ws
+
+    ws.onopen = () => {
+      if (cancelledRef.current) closeWebSocketSafe(ws)
+    }
 
     ws.onmessage = (ev) => {
       if (cancelledRef.current) return
@@ -120,11 +121,7 @@ export function useWhaleTracker(
 
     return () => {
       cancelledRef.current = true
-      try {
-        ws.close()
-      } catch {
-        /* noop */
-      }
+      closeWebSocketSafe(ws)
       wsRef.current = null
     }
   }, [symbol, enabled, whaleThreshold, flowWindowMs, maxAlerts])
