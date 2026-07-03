@@ -1,5 +1,4 @@
 # Deploy static content to GitHub Pages (build + deploy jobs).
-# Split jobs so re-running only "deploy" does not upload a second "github-pages" artifact.
 name: Deploy static content to Pages
 
 on:
@@ -43,19 +42,35 @@ jobs:
       - name: Copy 404 fallback for SPA routing
         run: cp dist/index.html dist/404.html
       - name: Setup Pages
-        uses: actions/configure-pages@v6
+        uses: actions/configure-pages@v5
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@v4
         with:
           path: './dist'
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4
+      - name: Diagnose Pages deployment on failure
+        if: failure()
+        run: |
+          echo "Recent Pages deployments (check status/error in GitHub UI):"
+          curl -sS -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages/deployments?per_page=5" \
+            | jq '[.[] | {id, status, environment, created_at, updated_at}]' || true
+          echo ""
+          echo "If status stays failure: Settings → Pages → custom domain DNS must point to GitHub (grey cloud on Cloudflare), not Cloudflare proxy IPs."
