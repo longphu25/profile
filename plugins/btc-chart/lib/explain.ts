@@ -52,6 +52,30 @@ export function explainReason(reason: string): ReasonExplain {
       text: 'Vùng thanh khoản giá đang nhắm tới tiếp theo (không đổi hướng, chỉ định hướng mục tiêu).',
     }
   }
+  if (reason.startsWith('MTF Demand + LTF grab')) {
+    return {
+      side: 'bull',
+      text: 'Chiến lược đa khung: vùng Cầu HTF + quét thanh khoản xác nhận trên LTF (FX Tactix).',
+    }
+  }
+  if (reason.startsWith('MTF Supply + LTF grab')) {
+    return {
+      side: 'bear',
+      text: 'Chiến lược đa khung: vùng Cung HTF + quét thanh khoản xác nhận trên LTF (FX Tactix).',
+    }
+  }
+  if (reason.startsWith('At HTF Demand zone')) {
+    return {
+      side: 'bull',
+      text: 'Giá đang hồi về vùng Cầu khung lớn (HTF): chờ tín hiệu xác nhận LTF trước khi vào.',
+    }
+  }
+  if (reason.startsWith('At HTF Supply zone')) {
+    return {
+      side: 'bear',
+      text: 'Giá đang hồi về vùng Cung khung lớn (HTF): chờ tín hiệu xác nhận LTF trước khi vào.',
+    }
+  }
 
   return (
     REASON_MAP[reason] ?? {
@@ -158,6 +182,22 @@ const REASON_MAP: Record<string, ReasonExplain> = {
     side: 'bear',
     text: 'Giá ở nửa trên range (premium) + có FVG giảm phía dưới làm mục tiêu: canh Short.',
   },
+  'At Demand Zone (support)': {
+    side: 'bull',
+    text: 'Giá đang chạm vùng Cầu (Demand): nơi phe mua từng đẩy giá bật mạnh, đóng vai trò hỗ trợ.',
+  },
+  'At Supply Zone (resistance)': {
+    side: 'bear',
+    text: 'Giá đang chạm vùng Cung (Supply): nơi phe bán từng đẩy giá giảm mạnh, đóng vai trò kháng cự.',
+  },
+  'S/D Liquidity Grab Long': {
+    side: 'bull',
+    text: 'Quét thanh khoản tại Demand: giá xuyên đáy vùng rồi đóng lại trong zone, xác nhận kiệt sức bán.',
+  },
+  'S/D Liquidity Grab Short': {
+    side: 'bear',
+    text: 'Quét thanh khoản tại Supply: giá xuyên đỉnh vùng rồi đóng lại trong zone, xác nhận kiệt sức mua.',
+  },
 }
 
 export interface IndicatorDoc {
@@ -214,6 +254,10 @@ export const INDICATOR_DOCS: IndicatorDoc[] = [
   {
     name: 'Liquidity',
     desc: 'Range + Premium/Discount, thanh khoản External (BSL/SSL) vs Internal (FVG), và cú quét thanh khoản.',
+  },
+  {
+    name: 'Supply & Demand',
+    desc: 'Vùng Cung/Cầu từ cú bứt phá 3+ nến: nến đối nghịch cuối làm base, entry trên Demand + spread, SL tại 50% zone.',
   },
   {
     name: 'Boucher Scalping',

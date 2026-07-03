@@ -5,6 +5,7 @@ import type { BoucherResult } from './boucher-scalping'
 import type { ICTResult } from './ict-sessions'
 import type { LienResult } from './lien-reversal'
 import type { LiquidityResult } from './liquidity'
+import type { SupplyDemandResult } from './supply-demand'
 import type { Candle, Divergence, MLResult, NWE, OrderFlowSignal, SidebarState } from './types'
 import type { LuxNweResult } from './chart-render-context'
 import { calcTradeSetup } from './trade-setup'
@@ -57,6 +58,7 @@ export interface BuildSidebarSnapshotParams {
   ict: ICTResult
   liq: LiquidityResult
   smcResult: SMCResult
+  supplyDemand: SupplyDemandResult
 }
 
 /** Sidebar fields updated on each chart render (volume profile is set separately). */
@@ -88,6 +90,7 @@ export function buildSidebarSnapshot(params: BuildSidebarSnapshotParams): Sideba
     ict,
     liq,
     smcResult,
+    supplyDemand,
   } = params
 
   const i = data.length - 1
@@ -231,6 +234,7 @@ export function buildSidebarSnapshot(params: BuildSidebarSnapshotParams): Sideba
       ict,
       liquidity: liq,
       smc: smcResult,
+      supplyDemand,
     }),
   }
 }

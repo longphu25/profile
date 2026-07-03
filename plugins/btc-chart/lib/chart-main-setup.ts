@@ -14,8 +14,9 @@ import { fmtP } from './format'
 import type { DbbSeriesRefs } from './chart-render-context'
 import type { ICTResult } from './ict-sessions'
 import type { LiquidityResult } from './liquidity'
+import type { SupplyDemandResult } from './supply-demand'
 import {
-  drawSMCOverlay,
+  drawSmcStackOverlay,
   drawBoxFlipOverlay,
   drawICTOverlay,
   drawLiquidityOverlay,
@@ -41,6 +42,7 @@ export interface MainChartSetupParams {
   readonly vpOptsRef: MutableRefObject<{ hvnRatio: number }>
   readonly ofOverlayRef: MutableRefObject<OFOverlaySignal[]>
   readonly smcDataRef: MutableRefObject<SMCResult>
+  readonly sdDataRef: MutableRefObject<SupplyDemandResult>
   readonly ictDataRef: MutableRefObject<ICTResult>
   readonly liqDataRef: MutableRefObject<LiquidityResult>
   readonly boxFlipRef: MutableRefObject<BoxFlipResult>
@@ -279,13 +281,15 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
       )
     }
     if (params.smcCanvasRef.current && params.mainElRef.current) {
-      drawSMCOverlay(
+      drawSmcStackOverlay(
         params.smcCanvasRef.current,
         params.mainElRef.current,
         mainChart,
         candleSeries,
         params.smcDataRef.current,
+        params.sdDataRef.current,
         params.visRef.current.smc,
+        params.visRef.current.supplyDemand,
       )
     }
     if (params.ictCanvasRef.current && params.mainElRef.current) {
@@ -440,13 +444,15 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
       )
     }
     if (params.smcCanvasRef.current) {
-      drawSMCOverlay(
+      drawSmcStackOverlay(
         params.smcCanvasRef.current,
         params.mainElRef.current,
         mainChart,
         candleSeries,
         params.smcDataRef.current,
+        params.sdDataRef.current,
         params.visRef.current.smc,
+        params.visRef.current.supplyDemand,
       )
     }
     if (params.ictCanvasRef.current) {

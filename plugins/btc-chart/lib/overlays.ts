@@ -7,6 +7,7 @@ import { fmtP } from './format'
 import type { Candle } from './types'
 import type { ICTResult, SessionName } from './ict-sessions'
 import type { LiquidityResult } from './liquidity'
+import type { SupplyDemandResult } from './supply-demand'
 
 export function drawSMCOverlay(
   canvas: HTMLCanvasElement,
@@ -88,6 +89,160 @@ export function drawSMCOverlay(
   }
 
   ctx.setTransform(1, 0, 0, 1, 0, 0)
+}
+
+/**
+ * Supply & Demand zones on the SMC canvas (demand = teal, supply = rose).
+ * Call after {@link drawSMCOverlay} on the same context without clearing.
+ */
+export function drawSupplyDemandOverlay(
+  canvas: HTMLCanvasElement,
+  container: HTMLElement,
+  chart: any,
+  series: any,
+  sd: SupplyDemandResult,
+  show: boolean,
+  clearFirst = false,
+) {
+  const dpr = window.devicePixelRatio || 1
+  const w = container.clientWidth
+  const h = container.clientHeight
+  if (clearFirst) {
+    canvas.width = w * dpr
+    canvas.height = h * dpr
+    canvas.style.width = w + 'px'
+    canvas.style.height = h + 'px'
+    const ctx0 = canvas.getContext('2d')!
+    ctx0.clearRect(0, 0, canvas.width, canvas.height)
+    if (!show) return
+  } else if (!show || !sd.zones.length) {
+    return
+  }
+
+  const ctx = canvas.getContext('2d')!
+  if (!clearFirst) {
+    ctx.save()
+    ctx.scale(dpr, dpr)
+  } else {
+    ctx.scale(dpr, dpr)
+  }
+
+  const ts = chart.timeScale()
+  const toX = (time: number) => {
+    const coord = ts.timeToCoordinate(time)
+    return coord ?? -1
+  }
+  const toY = (price: number) => {
+    const coord = series.priceToCoordinate(price)
+    return coord ?? -1
+  }
+
+  const mtfConfirmed = sd.mtfLong?.confirmed === true || sd.mtfShort?.confirmed === true
+
+  for (const z of sd.zones) {
+    if (!z.active) continue
+    const x = toX(z.startTime)
+    const y1 = toY(z.top)
+    const y2 = toY(z.bottom)
+    if (x < 0 || y1 < 0 || y2 < 0) continue
+    const isDemand = z.kind === 'demand'
+    const isHtf = z.timeframe === 'htf'
+    const htfConfirmed =
+      (sd.mtfLong?.confirmed && sd.mtfLong.htfZone === z) ||
+      (sd.mtfShort?.confirmed && sd.mtfShort.htfZone === z)
+    ctx.fillStyle = isDemand
+      ? isHtf
+        ? 'rgba(52,216,164,0.06)'
+        : 'rgba(52,216,164,0.1)'
+      : isHtf
+        ? 'rgba(255,122,133,0.06)'
+        : 'rgba(255,122,133,0.1)'
+    ctx.strokeStyle = htfConfirmed
+      ? isDemand
+        ? 'rgba(52,216,164,0.95)'
+        : 'rgba(255,122,133,0.95)'
+      : isDemand
+        ? isHtf
+          ? 'rgba(52,216,164,0.45)'
+          : 'rgba(52,216,164,0.55)'
+        : isHtf
+          ? 'rgba(255,122,133,0.45)'
+          : 'rgba(255,122,133,0.55)'
+    ctx.lineWidth = htfConfirmed ? 2 : z.tested ? 1 : 1.5
+    const boxW = Math.max(w - x, 48)
+    const top = Math.min(y1, y2)
+    const boxH = Math.abs(y2 - y1)
+    if (isHtf) ctx.setLineDash([6, 4])
+    ctx.fillRect(x, top, boxW, boxH)
+    ctx.strokeRect(x, top, boxW, boxH)
+    ctx.setLineDash([])
+
+    const yMid = toY(z.mid)
+    if (yMid >= 0) {
+      ctx.setLineDash([2, 3])
+      ctx.strokeStyle = isDemand ? 'rgba(52,216,164,0.35)' : 'rgba(255,122,133,0.35)'
+      ctx.beginPath()
+      ctx.moveTo(x, yMid)
+      ctx.lineTo(x + boxW, yMid)
+      ctx.stroke()
+      ctx.setLineDash([])
+    }
+
+    ctx.font = '9px monospace'
+    ctx.fillStyle = isDemand ? 'rgba(52,216,164,0.9)' : 'rgba(255,122,133,0.9)'
+    const side = isDemand ? 'DEM' : 'SUP'
+    const tf = isHtf ? `HTF${z.intervalLabel ? ` ${z.intervalLabel}` : ''}` : 'LTF'
+    ctx.fillText(`${tf} ${side} ${fmtP(z.bottom)}-${fmtP(z.top)}`, x + 4, top + 12)
+  }
+
+  for (const g of sd.grabs.slice(0, 6)) {
+    const x = toX(g.time)
+    const y = toY(g.level)
+    if (x < 0 || y < 0) continue
+    const color = g.type === 'bullish' ? '#34d8a4' : '#ff7a85'
+    ctx.fillStyle = color
+    ctx.font = 'bold 8px monospace'
+    const isMtfGrab =
+      mtfConfirmed &&
+      g.zone.timeframe === 'ltf' &&
+      (sd.mtfLong?.ltfGrab === g || sd.mtfShort?.ltfGrab === g)
+    const tag = isMtfGrab ? 'MTF' : 'GRAB'
+    const tw = ctx.measureText(tag).width
+    ctx.fillText(tag, x - tw / 2, g.type === 'bullish' ? y + 14 : y - 6)
+  }
+
+  if (!clearFirst) {
+    ctx.restore()
+  } else {
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+  }
+}
+
+/** Paint SMC and/or Supply & Demand on the shared SMC canvas. */
+export function drawSmcStackOverlay(
+  canvas: HTMLCanvasElement,
+  container: HTMLElement,
+  chart: any,
+  series: any,
+  smc: SMCResult,
+  sd: SupplyDemandResult,
+  showSmc: boolean,
+  showSd: boolean,
+) {
+  if (!showSmc && !showSd) {
+    drawSMCOverlay(canvas, container, chart, series, smc, false)
+    return
+  }
+  if (showSmc && showSd) {
+    drawSMCOverlay(canvas, container, chart, series, smc, true)
+    drawSupplyDemandOverlay(canvas, container, chart, series, sd, true, false)
+    return
+  }
+  if (showSmc) {
+    drawSMCOverlay(canvas, container, chart, series, smc, true)
+    return
+  }
+  drawSupplyDemandOverlay(canvas, container, chart, series, sd, true, true)
 }
 
 export function drawBoxFlipOverlay(

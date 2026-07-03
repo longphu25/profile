@@ -4,7 +4,7 @@ import type { VisFlags } from '../storage'
 
 export const IND_GROUPS: Record<string, Array<keyof VisFlags>> = {
   'Trend & Momentum': ['luxNwe', 'nwe', 'ma50', 'ma200', 'dbb', 'vwap'],
-  'Smart Money (ICT/SMC)': ['smc', 'ict', 'liquidity', 'boxFlip'],
+  'Smart Money (ICT/SMC)': ['smc', 'supplyDemand', 'ict', 'liquidity', 'boxFlip'],
   'Volume & Order Flow': ['of', 'vp', 'heatmap', 'vol', 'volSpike'],
   'Reversal & Signals': ['rsiDiv', 'scalping', 'reversal', 'whale', 'tradeSetup'],
 }
@@ -16,6 +16,7 @@ export const IND_LABELS: Partial<Record<keyof VisFlags, string>> = {
   ma200: 'MA200',
   dbb: 'DBB',
   smc: 'SMC',
+  supplyDemand: 'Supply & Demand',
   ict: 'ICT Sessions',
   liquidity: 'Liquidity',
   boxFlip: 'Box Flip',

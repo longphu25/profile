@@ -26,6 +26,8 @@ export interface VisFlags {
   luxNwe: boolean
   ict: boolean
   liquidity: boolean
+  /** Supply & Demand zones (FX Tactix style, shares SMC canvas). */
+  supplyDemand: boolean
   /** Auto trade setup zones (Entry / SL / TP rectangles on chart). */
   tradeSetup: boolean
 }
@@ -85,7 +87,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
     ma200: false,
     of: false,
     vp: false,
-    heatmap: true,
+    heatmap: false,
     rsi: false,
     vol: false,
     smc: false,
@@ -98,8 +100,9 @@ export const DEFAULT_CONFIG: ChartConfig = {
     reversal: false,
     whale: false,
     luxNwe: true,
-    ict: true,
-    liquidity: true,
+    ict: false,
+    liquidity: false,
+    supplyDemand: false,
     tradeSetup: true,
   },
   zoom: null,
@@ -111,7 +114,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
   oscView: 'rsi',
   oscHeight: 170,
   spikeMult: 2.5,
-  luxNwe: { bandwidth: 8, multiplier: 3, repaint: true, maxBarsBack: 500 },
+  luxNwe: { bandwidth: 8, multiplier: 3, repaint: false, maxBarsBack: 250 },
 }
 
 /** Read full config from localStorage, with safe fallback. */
