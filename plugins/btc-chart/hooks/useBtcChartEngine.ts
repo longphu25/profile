@@ -13,7 +13,11 @@ import { createMainChart } from '../lib/chart-main-setup'
 import { createOscChart } from '../lib/chart-osc-setup'
 import { closeKlinesWebSocket, wireKlinesWebSocket } from '../lib/chart-websocket'
 import type { ChartRenderContext, LuxNweResult } from '../lib/chart-render-context'
-import { renderChartPipeline } from '../lib/chart-render-pipeline'
+import {
+  bumpRenderGeneration,
+  scheduleChartRender,
+  type ScheduleChartRenderOptions,
+} from '../lib/chart-render-scheduler'
 import { NWE_DEFAULT_WINDOW } from '../lib/constants'
 import { INITIAL_SIDEBAR } from '../lib/types'
 import type { BoucherResult } from '../lib/boucher-scalping'
@@ -100,7 +104,7 @@ export interface UseBtcChartEngine {
   setBoucherEnabled: React.Dispatch<React.SetStateAction<boolean>>
   lienEnabled: boolean
   setLienEnabled: React.Dispatch<React.SetStateAction<boolean>>
-  renderData: (data: Candle[]) => void
+  renderData: (data: Candle[], options?: ScheduleChartRenderOptions) => void
   toggle: (key: keyof VisFlags) => void
   applyPreset: (preset: LayerPresetId) => void
   updateSignalConfig: (cfg: SignalConfig) => void
@@ -197,6 +201,9 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   const lienCacheRef = useRef<LienResult | null>(null)
   const fitNextRef = useRef(true)
   const panelCandleKeyRef = useRef('')
+  const renderGenRef = useRef(0)
+  const nwePendingKeyRef = useRef('')
+  const renderGenerationRef = useRef({ current: 0 })
 
   const [loading, setLoading] = useState(true)
   const [loadingText, setLoadingText] = useState('Đang tải BTC/USDT…')
@@ -318,10 +325,12 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     setBoucherScalp,
     setLienReversal,
     setFiredToast,
+    renderGenRef,
+    nwePendingKeyRef,
   })
 
-  const renderData = useCallback((data: Candle[]) => {
-    renderChartPipeline(renderCtx.current, data)
+  const renderData = useCallback((data: Candle[], options?: ScheduleChartRenderOptions) => {
+    scheduleChartRender(renderCtx.current, data, renderGenerationRef.current, options)
   }, [])
 
   const prevViewRef = useRef({ symbol: config.symbol, interval: config.interval })
@@ -331,8 +340,10 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     prevViewRef.current = { symbol: config.symbol, interval: config.interval }
     if (!changed) return
 
+    bumpRenderGeneration(renderGenerationRef.current)
+    renderGenRef.current = renderGenerationRef.current.current
+    nwePendingKeyRef.current = ''
     fitNextRef.current = true
-    candlesRef.current = []
     panelCandleKeyRef.current = ''
     smcCacheKeyRef.current = ''
     smcCacheRef.current = null
@@ -344,12 +355,6 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     lienCacheRef.current = null
     nweCacheKeyRef.current = ''
     nweCacheRef.current = null
-
-    const refs = chartRefs.current
-    if (refs?.candleSeries) {
-      refs.candleSeries.setData([])
-      refs.volSeries?.setData([])
-    }
 
     const cfg = loadConfig()
     saveConfig({ ...cfg, zoom: null, symbol: config.symbol, interval: config.interval })

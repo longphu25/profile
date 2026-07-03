@@ -50,7 +50,10 @@ export interface WireKlinesWebSocketParams {
   readonly sidebarRef: MutableRefObject<SidebarState>
   readonly soundRef: MutableRefObject<AlertSound>
   readonly soundEnabledRef: MutableRefObject<boolean>
-  readonly renderData: (data: Candle[]) => void
+  readonly renderData: (
+    data: Candle[],
+    options?: { deferHeavy?: boolean; phase?: 'all' | 'fast' | 'heavy' },
+  ) => void
   readonly setPrice: Dispatch<SetStateAction<PriceState>>
   readonly setMarkPrice: Dispatch<SetStateAction<number | null>>
   readonly setOhlcv: Dispatch<SetStateAction<OhlcvState>>
@@ -362,10 +365,10 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
       params.chartRefs.current.ma200S.applyOptions({ priceFormat: pf })
       params.chartRefs.current.mainChart.priceScale('right').applyOptions({ autoScale: true })
     }
-    params.fitNextRef.current = true
-    params.renderData(data.candles)
-    connectWs(data.usedSpot)
     params.setLoading(false)
+    params.fitNextRef.current = true
+    params.renderData(data.candles, { deferHeavy: true })
+    connectWs(data.usedSpot)
   } else if (error) {
     console.error(error)
     const step =
@@ -389,10 +392,10 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
       })
     }
     params.candlesRef.current = cands
-    params.fitNextRef.current = true
-    params.renderData(cands)
-    params.setWsStatus({ text: 'Demo data (offline)', tone: 'err' })
     params.setLoading(false)
+    params.fitNextRef.current = true
+    params.renderData(cands, { deferHeavy: true })
+    params.setWsStatus({ text: 'Demo data (offline)', tone: 'err' })
   }
 
   return true

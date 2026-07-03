@@ -231,6 +231,11 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
   }
 
   const selectInterval = (iv: Interval) => {
+    if (iv === interval) return
+    const entry = allSymbolsRef.current.find((s) => s.symbol === symbol)
+    const label = entry ? `${entry.base}/${entry.quote}` : symbol.replace(/USDT$/, '/USDT')
+    setLoading(true)
+    setLoadingText(`Tải dữ liệu ${label} ${iv}…`)
     setInterval_(iv)
     persistConfigField({ interval: iv })
   }

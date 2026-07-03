@@ -6,9 +6,10 @@ import type { OFOverlaySignal } from '../order-flow-overlay'
 import { drawVolumeProfile as drawVP } from '../volume-profile'
 import { drawOrderFlow } from '../order-flow-overlay'
 import { computeSMC, computeNadarayaWatson } from '../smc-wasm'
+import { computeLuxNweAsync, padLuxNweResult } from './nwe-worker-client'
 import { buildBoxFlipSignals } from '../box-flip'
 import { loadConfig } from '../storage'
-import type { ChartRenderContext } from './chart-render-context'
+import type { ChartRenderContext, LuxNweResult } from './chart-render-context'
 import { buildSidebarSnapshot } from './build-sidebar-snapshot'
 import { stabilizeTradeSetup } from './trade-setup-stable'
 import { CHART, HEAVY_COMPUTE_MS, LIMIT, NWE_DEFAULT_WINDOW } from './constants'
@@ -46,13 +47,87 @@ import { applyDefaultViewport } from './chart-viewport'
 import { fmtP } from './format'
 import type { Candle, OrderFlowSignal } from './types'
 
+export type PipelinePhase = 'all' | 'fast' | 'heavy'
+
+const EMPTY_LUX_NWE: LuxNweResult = {
+  mid: [],
+  upper: [],
+  lower: [],
+  signals: [],
+}
+
+function isStaleGen(
+  ctx: ChartRenderContext,
+  gen: number | undefined,
+  phase: PipelinePhase,
+): boolean {
+  return gen != null && phase !== 'all' && gen !== ctx.renderGenRef.current
+}
+
+function scheduleLuxNweCompute(
+  ctx: ChartRenderContext,
+  data: Candle[],
+  barKey: string,
+  gen: number | undefined,
+): void {
+  const currentNweCfg = ctx.nweCfgRef.current
+  const nweKey = `${barKey}:${currentNweCfg.repaint}:${currentNweCfg.bandwidth}:${currentNweCfg.multiplier}:${currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW}`
+  if (nweKey === ctx.nweCacheKeyRef.current && ctx.nweCacheRef.current) return
+  if (ctx.nwePendingKeyRef.current === nweKey) return
+
+  ctx.nwePendingKeyRef.current = nweKey
+  const win = Math.min(currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW, data.length)
+  const nweInput = currentNweCfg.repaint ? data.slice(-win) : data
+  const t0 = performance.now()
+
+  computeLuxNweAsync(nweInput, { ...currentNweCfg, maxBarsBack: win })
+    .then((raw) => {
+      if (isStaleGen(ctx, gen, 'heavy')) return
+      const luxNwe = padLuxNweResult(raw, data.length, nweInput.length)
+      const t1 = performance.now()
+      // eslint-disable-next-line no-console
+      console.log(
+        `[perf] NWE worker ${currentNweCfg.repaint ? 'repaint' : 'non-repaint'}: ${(t1 - t0).toFixed(2)}ms (win=${win}, n=${data.length})`,
+      )
+      ctx.nweCacheKeyRef.current = nweKey
+      ctx.nweCacheRef.current = luxNwe
+      ctx.nwePendingKeyRef.current = ''
+      ctx.setLuxNweResult(luxNwe)
+      applyLuxNweToChart(ctx, data, luxNwe)
+      renderChartPipeline(ctx, data, 'heavy', gen)
+    })
+    .catch(() => {
+      ctx.nwePendingKeyRef.current = ''
+    })
+}
+
+function applyLuxNweToChart(ctx: ChartRenderContext, data: Candle[], luxNwe: LuxNweResult): void {
+  const refs = ctx.chartRefs.current
+  if (!refs || !ctx.visRef.current.luxNwe) return
+  const toLine = (arr: (number | null)[]) =>
+    data
+      .map((c, i) => (arr[i] != null ? { time: c.time, value: arr[i] as number } : null))
+      .filter(Boolean) as { time: number; value: number }[]
+  refs.luxNweMidS.setData(toLine(luxNwe.mid))
+  refs.luxNweUpS.setData(toLine(luxNwe.upper))
+  refs.luxNweLoS.setData(toLine(luxNwe.lower))
+}
+
 /**
- * Render all chart series, overlays, and sidebar state for the given candle data.
- * Behavior matches the original `renderData` callback in plugin.tsx.
+ * Render chart series, overlays, and sidebar. Use `fast` for first paint, `heavy` for deferred work.
  */
-export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): void {
+export function renderChartPipeline(
+  ctx: ChartRenderContext,
+  data: Candle[],
+  phase: PipelinePhase = 'all',
+  gen?: number,
+): void {
   const refs = ctx.chartRefs.current
   if (!data.length || !refs) return
+  if (isStaleGen(ctx, gen, phase)) return
+
+  const runFast = phase === 'all' || phase === 'fast'
+  const runHeavy = phase === 'all' || phase === 'heavy'
 
   const panelKey = `${data.length}:${data[data.length - 1]?.time ?? 0}`
   if (panelKey !== ctx.panelCandleKeyRef.current) {
@@ -98,42 +173,33 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
       })
     : ctx.boxFlipRef.current
 
-  let luxNwe = ctx.nweCacheRef.current ?? {
-    mid: [],
-    upper: [],
-    lower: [],
-    signals: [],
-  }
+  let luxNwe = ctx.nweCacheRef.current ?? EMPTY_LUX_NWE
   if (needs.luxNwe && (needHeavy || !ctx.nweCacheRef.current)) {
     const currentNweCfg = ctx.nweCfgRef.current
     const nweKey = `${barKey}:${currentNweCfg.repaint}:${currentNweCfg.bandwidth}:${currentNweCfg.multiplier}:${currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW}`
     if (nweKey !== ctx.nweCacheKeyRef.current || !ctx.nweCacheRef.current) {
-      const t0 = performance.now()
-      const win = Math.min(currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW, data.length)
-      const nweInput = currentNweCfg.repaint ? data.slice(-win) : data
-      luxNwe = computeNadarayaWatson(nweInput, { ...currentNweCfg, maxBarsBack: win })
-      if (currentNweCfg.repaint && nweInput.length < data.length) {
-        const pad = data.length - nweInput.length
-        luxNwe = {
-          mid: [...Array(pad).fill(null), ...luxNwe.mid],
-          upper: [...Array(pad).fill(null), ...luxNwe.upper],
-          lower: [...Array(pad).fill(null), ...luxNwe.lower],
-          signals: luxNwe.signals.map((s: any) => ({ ...s, index: s.index + pad })),
-        }
+      if (runFast && phase !== 'all') {
+        scheduleLuxNweCompute(ctx, data, barKey, gen)
+      } else if (runHeavy) {
+        const t0 = performance.now()
+        const win = Math.min(currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW, data.length)
+        const nweInput = currentNweCfg.repaint ? data.slice(-win) : data
+        luxNwe = computeNadarayaWatson(nweInput, { ...currentNweCfg, maxBarsBack: win })
+        luxNwe = padLuxNweResult(luxNwe, data.length, nweInput.length)
+        const t1 = performance.now()
+        // eslint-disable-next-line no-console
+        console.log(
+          `[perf] NWE sync ${currentNweCfg.repaint ? 'repaint' : 'non-repaint'}: ${(t1 - t0).toFixed(2)}ms (win=${win}, n=${data.length})`,
+        )
+        ctx.nweCacheKeyRef.current = nweKey
+        ctx.nweCacheRef.current = luxNwe
+        ctx.setLuxNweResult(luxNwe)
       }
-      const t1 = performance.now()
-      // eslint-disable-next-line no-console
-      console.log(
-        `[perf] NWE ${currentNweCfg.repaint ? 'repaint' : 'non-repaint'} compute: ${(t1 - t0).toFixed(2)}ms (win=${win}, n=${data.length})`,
-      )
-      ctx.nweCacheKeyRef.current = nweKey
-      ctx.nweCacheRef.current = luxNwe
-      ctx.setLuxNweResult(luxNwe)
     }
   }
 
   let ict = ctx.ictDataRef.current
-  if (needs.ict && (needHeavy || !ctx.ictDataRef.current.sessions.length)) {
+  if (runHeavy && needs.ict && (needHeavy || !ctx.ictDataRef.current.sessions.length)) {
     ict = computeICT(data, ctx.intervalRef.current)
     ctx.ictDataRef.current = ict
     ctx.setICTResult(ict)
@@ -160,15 +226,17 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
       .map((c, i) => (arr[i] != null ? { time: c.time, value: arr[i] as number } : null))
       .filter(Boolean) as { time: number; value: number }[]
 
-  refs.candleSeries.setData(
-    data.map((c) => ({
-      time: c.time,
-      open: c.open,
-      high: c.high,
-      low: c.low,
-      close: c.close,
-    })),
-  )
+  if (runFast) {
+    refs.candleSeries.setData(
+      data.map((c) => ({
+        time: c.time,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      })),
+    )
+  }
 
   const markers: any[] = []
   if (visFlags.boxFlip) {
@@ -195,7 +263,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
   }
 
   let bScalp = ctx.boucherCacheRef.current
-  if (needs.boucher && (needHeavy || !bScalp)) {
+  if (runHeavy && needs.boucher && (needHeavy || !bScalp)) {
     bScalp = computeBoucherScalping(data)
     ctx.boucherCacheRef.current = bScalp
   }
@@ -212,7 +280,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
   }
 
   let lienR = ctx.lienCacheRef.current
-  if (needs.lien && (needHeavy || !lienR)) {
+  if (runHeavy && needs.lien && (needHeavy || !lienR)) {
     lienR = computeLienReversal(data)
     ctx.lienCacheRef.current = lienR
   }
@@ -236,7 +304,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
       })
     }
   }
-  if (visFlags.luxNwe) {
+  if (runHeavy && visFlags.luxNwe) {
     for (const sig of luxNwe.signals) {
       markers.push({
         time: data[sig.index].time,
@@ -247,13 +315,15 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
       })
     }
   }
-  markers.sort((a, b) => a.time - b.time)
-  if (ctx.markersRef.current) {
-    ctx.markersRef.current.setMarkers(markers)
-  } else {
-    const LWC = window.LightweightCharts
-    if (LWC?.createSeriesMarkers) {
-      ctx.markersRef.current = LWC.createSeriesMarkers(refs.candleSeries, markers)
+  if (runFast || runHeavy) {
+    markers.sort((a, b) => a.time - b.time)
+    if (ctx.markersRef.current) {
+      ctx.markersRef.current.setMarkers(markers)
+    } else if (runFast) {
+      const LWC = window.LightweightCharts
+      if (LWC?.createSeriesMarkers) {
+        ctx.markersRef.current = LWC.createSeriesMarkers(refs.candleSeries, markers)
+      }
     }
   }
   ctx.boxFlipRef.current = boxFlip
@@ -280,21 +350,23 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     )
   }
 
-  refs.nweMidS.setData(visFlags.nwe ? toLine(nwe.mid) : [])
-  refs.nweUpS.setData(visFlags.nwe ? toLine(nwe.upper) : [])
-  refs.nweLowS.setData(visFlags.nwe ? toLine(nwe.lower) : [])
+  if (runFast) {
+    refs.nweMidS.setData(visFlags.nwe ? toLine(nwe.mid) : [])
+    refs.nweUpS.setData(visFlags.nwe ? toLine(nwe.upper) : [])
+    refs.nweLowS.setData(visFlags.nwe ? toLine(nwe.lower) : [])
 
-  refs.luxNweMidS.setData(visFlags.luxNwe ? toLine(luxNwe.mid) : [])
-  refs.luxNweUpS.setData(visFlags.luxNwe ? toLine(luxNwe.upper) : [])
-  refs.luxNweLoS.setData(visFlags.luxNwe ? toLine(luxNwe.lower) : [])
+    refs.luxNweMidS.setData(visFlags.luxNwe ? toLine(luxNwe.mid) : [])
+    refs.luxNweUpS.setData(visFlags.luxNwe ? toLine(luxNwe.upper) : [])
+    refs.luxNweLoS.setData(visFlags.luxNwe ? toLine(luxNwe.lower) : [])
 
-  refs.ma50S.setData(visFlags.ma50 ? toLine(sma50) : [])
-  refs.ma200S.setData(visFlags.ma200 ? toLine(sma200) : [])
-  refs.vwapS.setData(visFlags.vwap ? toLine(vwapR.vwap) : [])
-  refs.vwapUpS.setData(visFlags.vwap ? toLine(vwapR.upper) : [])
-  refs.vwapLoS.setData(visFlags.vwap ? toLine(vwapR.lower) : [])
+    refs.ma50S.setData(visFlags.ma50 ? toLine(sma50) : [])
+    refs.ma200S.setData(visFlags.ma200 ? toLine(sma200) : [])
+    refs.vwapS.setData(visFlags.vwap ? toLine(vwapR.vwap) : [])
+    refs.vwapUpS.setData(visFlags.vwap ? toLine(vwapR.upper) : [])
+    refs.vwapLoS.setData(visFlags.vwap ? toLine(vwapR.lower) : [])
+  }
 
-  if (ctx.dbbSeriesRef.current) {
+  if (runFast && ctx.dbbSeriesRef.current) {
     const dbbS = ctx.dbbSeriesRef.current
     if (visFlags.dbb && data.length >= 20) {
       const period = 20
@@ -334,24 +406,32 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
   const SPIKE_MULT = ctx.spikeMultRef.current
   const volArrAll = data.map((c) => c.volume)
   const volSmaAll = smaNum(volArrAll, 20)
-  refs.volSeries.setData(
-    visFlags.vol
-      ? data.map((c, idx) => {
-          const avg = volSmaAll[idx]
-          const isSpike =
-            visFlags.volSpike && avg != null && c.volume > (avg as number) * SPIKE_MULT
-          const isBuy = c.close >= c.open
-          return {
-            time: c.time,
-            value: c.volume,
-            color: isSpike ? (isBuy ? '#34ffc8' : '#ff5c6a') : isBuy ? CHART.upSoft : CHART.dnSoft,
-          }
-        })
-      : [],
-  )
+  if (runFast) {
+    refs.volSeries.setData(
+      visFlags.vol
+        ? data.map((c, idx) => {
+            const avg = volSmaAll[idx]
+            const isSpike =
+              visFlags.volSpike && avg != null && c.volume > (avg as number) * SPIKE_MULT
+            const isBuy = c.close >= c.open
+            return {
+              time: c.time,
+              value: c.volume,
+              color: isSpike
+                ? isBuy
+                  ? '#34ffc8'
+                  : '#ff5c6a'
+                : isBuy
+                  ? CHART.upSoft
+                  : CHART.dnSoft,
+            }
+          })
+        : [],
+    )
+  }
 
   const osc = needs.oscillators ? ctx.oscRefs.current : null
-  if (osc) {
+  if (runFast && osc) {
     const view = ctx.oscViewRef.current
     const empty: { time: number; value: number }[] = []
     osc.rsiS.setData(view === 'rsi' ? toLine(rsi) : empty)
@@ -378,7 +458,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     visFlags.volSpike &&
     volSmaAll[lastIdx] != null &&
     data[lastIdx].volume > (volSmaAll[lastIdx] as number) * SPIKE_MULT
-  if (lastSpike) {
+  if (runFast && lastSpike) {
     markers.push({
       time: lastTime,
       position: 'aboveBar',
@@ -398,7 +478,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     }
   }
 
-  if (ctx.fitNextRef.current) {
+  if (runFast && ctx.fitNextRef.current) {
     const cfg = loadConfig()
     const canRestoreZoom =
       cfg.zoom != null &&
@@ -417,7 +497,11 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     ctx.fitNextRef.current = false
   }
 
-  if (needs.vp && ctx.vpCanvasRef.current && ctx.mainElRef.current) {
+  if (runHeavy && visFlags.luxNwe && ctx.nweCacheRef.current) {
+    applyLuxNweToChart(ctx, data, ctx.nweCacheRef.current)
+  }
+
+  if (runHeavy && needs.vp && ctx.vpCanvasRef.current && ctx.mainElRef.current) {
     const info = drawVP(
       ctx.vpCanvasRef.current,
       ctx.mainElRef.current,
@@ -436,7 +520,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
   }
 
   let smcResult = ctx.smcCacheRef.current ?? ctx.smcDataRef.current
-  if (needs.smc && (needHeavy || !ctx.smcCacheRef.current)) {
+  if (runHeavy && needs.smc && (needHeavy || !ctx.smcCacheRef.current)) {
     const smcKey = barKey
     if (smcKey !== ctx.smcCacheKeyRef.current || !ctx.smcCacheRef.current) {
       const t0 = performance.now()
@@ -457,7 +541,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
   }
 
   let sdResult = ctx.sdDataRef.current
-  if (needs.supplyDemand && (needHeavy || !ctx.sdDataRef.current.zones.length)) {
+  if (runHeavy && needs.supplyDemand && (needHeavy || !ctx.sdDataRef.current.zones.length)) {
     const ltfInterval = ctx.intervalRef.current
     const htfInterval = HTF_MAP[ltfInterval]
     sdResult = computeSupplyDemand(data, {
@@ -468,7 +552,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     ctx.sdDataRef.current = sdResult
   }
 
-  if (needHeavy && ctx.smcCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
+  if (runHeavy && ctx.smcCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
     drawSmcStackOverlay(
       ctx.smcCanvasRef.current,
       ctx.mainElRef.current,
@@ -481,7 +565,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     )
   }
 
-  if (needHeavy && ctx.ictCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
+  if (runHeavy && ctx.ictCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
     drawICTOverlay(
       ctx.ictCanvasRef.current,
       ctx.mainElRef.current,
@@ -494,12 +578,12 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
   }
 
   let liq = ctx.liqDataRef.current
-  if (needs.liquidity && (needHeavy || !ctx.liqDataRef.current.range)) {
+  if (runHeavy && needs.liquidity && (needHeavy || !ctx.liqDataRef.current.range)) {
     liq = computeLiquidity(data, ctx.htfRef.current, smcResult, ctx.intervalRef.current)
     ctx.liqDataRef.current = liq
     ctx.setLiquidityResult(liq)
   }
-  if (needHeavy && ctx.liqCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
+  if (runHeavy && ctx.liqCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
     drawLiquidityOverlay(
       ctx.liqCanvasRef.current,
       ctx.mainElRef.current,
@@ -512,7 +596,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
   }
 
   const i = data.length - 1
-  if (ctx.legendRef.current) {
+  if (runFast && ctx.legendRef.current) {
     ctx.legendRef.current.innerHTML = [
       nwe.mid[i] != null
         ? `<span style="color:${CHART.neu}">NWE ${fmtP(nwe.mid[i] as number)}</span>`
