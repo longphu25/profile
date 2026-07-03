@@ -9,7 +9,7 @@ import {
   pushNotification,
   type AlertRule,
 } from '../alerts'
-import { CHART, LIMIT, LIVE_REFRESH_MS, type Interval } from './constants'
+import { CHART, CHART_REFRESH_MS, LIMIT, type Interval } from './constants'
 import { fmtP, tsNow } from './format'
 import {
   BYBIT_INTERVAL,
@@ -103,7 +103,7 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
 
   const throttledPriceUpdate = (close: number) => {
     const now = Date.now()
-    if (now - params.lastPriceUpdateRef.current < LIVE_REFRESH_MS) return
+    if (now - params.lastPriceUpdateRef.current < CHART_REFRESH_MS) return
     params.lastPriceUpdateRef.current = now
     params.setPrice((p) => ({ ...p, cur: fmtP(close) }))
     params.setMarkPrice(close)
@@ -113,7 +113,7 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
 
   const throttledRender = (candles: Candle[]) => {
     const now = Date.now()
-    if (now - params.lastChartUpdateRef.current < LIVE_REFRESH_MS) return
+    if (now - params.lastChartUpdateRef.current < CHART_REFRESH_MS) return
     params.lastChartUpdateRef.current = now
     params.renderData(candles)
   }
