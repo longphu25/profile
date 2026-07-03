@@ -1,7 +1,7 @@
 // BTC Chart — Open Interest + Market Cap hooks.
 
 import { useQuery } from '@tanstack/react-query'
-import { fetchOpenInterest, fetchCirculatingSupply } from '../lib'
+import { fetchOpenInterest, fetchCirculatingSupply } from '../lib/api'
 
 /** OI aggregated from Binance + Bybit, polled every 30s. */
 export function useOpenInterest(symbol: string, price: number) {

@@ -3,14 +3,9 @@
 // endpoints live here (ticker 5s, funding 30s, Fear & Greed 60s).
 
 import { useQuery } from '@tanstack/react-query'
-import {
-  type Interval,
-  type SymbolEntry,
-  fetchTicker,
-  fetchFunding,
-  fetchFearGreed,
-  fetchKlines,
-} from '../lib'
+import type { Interval } from '../lib/constants'
+import type { SymbolEntry } from '../lib/symbols'
+import { fetchTicker, fetchFunding, fetchFearGreed, fetchKlines } from '../lib/api'
 
 export function useTicker(symbol: string, info: SymbolEntry) {
   return useQuery({

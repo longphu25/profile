@@ -2,14 +2,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useEffect, useRef, useState } from 'react'
+import type { ChartRefs } from '../lib/types'
 import {
-  type ChartRefs,
   type Position,
   type PosForm,
   EMPTY_POS_FORM,
   loadPositions,
   persistPositions,
-} from '../lib'
+} from '../lib/positions'
 
 export type PositionPatch = Partial<
   Pick<Position, 'stopLoss' | 'entryPrice' | 'margin' | 'leverage' | 'side' | 'type'>
