@@ -110,6 +110,10 @@ export interface ChartRenderContext {
   readonly sidebarKeyRef: RefObject<string>
   readonly boucherCacheRef: RefObject<BoucherResult | null>
   readonly lienCacheRef: RefObject<LienResult | null>
+  /** Bumped on view change; stale scheduled renders no-op when mismatched. */
+  readonly renderGenRef: RefObject<number>
+  /** In-flight Lux NWE worker cache key (dedupe). */
+  readonly nwePendingKeyRef: RefObject<string>
 
   // React state setters invoked during render
   readonly setPanelCandles: Dispatch<SetStateAction<Candle[]>>
