@@ -28,8 +28,13 @@ export interface VisFlags {
   liquidity: boolean
   /** Supply & Demand zones (FX Tactix style, shares SMC canvas). */
   supplyDemand: boolean
-  /** Auto trade setup zones (Entry / SL / TP rectangles on chart). */
+  /**
+   * Rich trade-setup confluence (ICT, SMC, Boucher, etc.). Off by default for lighter pipeline.
+   * Sidebar still shows a basic setup from ML/RSI/NWE without this.
+   */
   tradeSetup: boolean
+  /** Entry / SL / TP risk-reward overlay on chart canvas. Off by default (heavy on pan/zoom). */
+  tradeSetupOverlay: boolean
 }
 
 export interface NadarayaConfig {
@@ -103,7 +108,8 @@ export const DEFAULT_CONFIG: ChartConfig = {
     ict: false,
     liquidity: false,
     supplyDemand: false,
-    tradeSetup: true,
+    tradeSetup: false,
+    tradeSetupOverlay: false,
   },
   zoom: null,
   alerts: [],

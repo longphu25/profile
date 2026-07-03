@@ -46,3 +46,8 @@ export function resolvePipelineNeeds(vis: VisFlags, oscOpen: boolean): PipelineN
 export function needsHtfKlines(vis: VisFlags): boolean {
   return vis.liquidity || vis.supplyDemand || vis.tradeSetup
 }
+
+/** Chart canvas overlay for entry / SL / TP zones (independent of confluence compute). */
+export function shouldDrawTradeSetupOverlay(vis: VisFlags): boolean {
+  return vis.tradeSetupOverlay
+}
