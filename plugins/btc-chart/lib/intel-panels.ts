@@ -1,5 +1,7 @@
 // BTC Chart — Intel rail panel catalog (filter chips, keywords, tab hints).
 
+import { WHALE_TRACKER_ENABLED } from './feature-flags'
+
 export type IntelTab = 'trade' | 'market' | 'flow' | 'alerts' | 'ml'
 
 export interface IntelTabDef {
@@ -21,7 +23,9 @@ export const INTEL_TABS: IntelTabDef[] = [
   {
     id: 'market',
     label: 'Market',
-    hint: 'Open Interest, whale, thống kê 24h, Fear & Greed',
+    hint: WHALE_TRACKER_ENABLED
+      ? 'Open Interest, whale, thống kê 24h, Fear & Greed'
+      : 'Open Interest, thống kê 24h, Fear & Greed',
   },
   { id: 'flow', label: 'Flow', hint: 'Order flow, box flip, volume spike, volume profile' },
   { id: 'alerts', label: 'Alerts', hint: 'Tạo và quản lý cảnh báo giá / RSI' },
@@ -44,12 +48,16 @@ export const INTEL_PANEL_CATALOG: Record<IntelTab, IntelPanelDef[]> = {
       chip: 'OI',
       keywords: ['oi', 'open', 'interest', 'mcap', 'liquidity'],
     },
-    {
-      id: 'whale',
-      title: 'Whale Tracker',
-      chip: 'Whale',
-      keywords: ['whale', 'cá voi', 'flow', 'exchange', 'volume'],
-    },
+    ...(WHALE_TRACKER_ENABLED
+      ? [
+          {
+            id: 'whale',
+            title: 'Whale Tracker',
+            chip: 'Whale',
+            keywords: ['whale', 'cá voi', 'flow', 'exchange', 'volume'],
+          } as IntelPanelDef,
+        ]
+      : []),
     {
       id: 'stats',
       title: '24h Stats',

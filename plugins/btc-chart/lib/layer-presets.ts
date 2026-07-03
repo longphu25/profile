@@ -1,6 +1,7 @@
 // BTC Chart — quick layer visibility presets for the tools drawer.
 
 import type { VisFlags } from '../storage'
+import { WHALE_TRACKER_ENABLED } from './feature-flags'
 import { ALL_IND_KEYS } from './indicator-groups'
 
 export type LayerPresetId = 'scalp' | 'swing' | 'analysis'
@@ -9,7 +10,16 @@ export type LayerPresetId = 'scalp' | 'swing' | 'analysis'
 export const LAYER_PRESETS: Record<LayerPresetId, ReadonlyArray<keyof VisFlags>> = {
   scalp: ['of', 'volSpike', 'scalping', 'luxNwe', 'vol'],
   swing: ['ma50', 'ma200', 'vp', 'nwe', 'rsiDiv', 'vwap'],
-  analysis: ['smc', 'supplyDemand', 'ict', 'liquidity', 'whale', 'vp', 'heatmap', 'boxFlip'],
+  analysis: [
+    'smc',
+    'supplyDemand',
+    'ict',
+    'liquidity',
+    ...(WHALE_TRACKER_ENABLED ? (['whale'] as const) : []),
+    'vp',
+    'heatmap',
+    'boxFlip',
+  ],
 }
 
 export const LAYER_PRESET_LABELS: Record<LayerPresetId, string> = {

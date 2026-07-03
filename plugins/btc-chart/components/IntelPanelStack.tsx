@@ -3,6 +3,7 @@
 import { memo, Suspense, lazy } from 'react'
 import type { IntelTab } from '../lib/intel-panels'
 import { intelKeywordsFor } from '../lib/intel-panels'
+import { WHALE_TRACKER_ENABLED } from '../lib/feature-flags'
 import type { AlertKind, AlertRule } from '../alerts'
 import type { VisFlags } from '../storage'
 import type { OiDeltaPct, OiHistoryPoint } from '../lib/open-interest'
@@ -113,27 +114,29 @@ function MarketTab({
           />
         </Suspense>
       </SidebarAccordion>
-      <SidebarAccordion
-        flat
-        lightweight
-        filterQuery={search}
-        filterKeywords={intelKeywordsFor('market', 'Whale Tracker')}
-        title="Whale Tracker"
-        onToggle={(open) => {
-          if (open && !vis.whale) onToggleVis('whale')
-        }}
-      >
-        <Suspense fallback={panelFallback('Loading whale…')}>
-          <WhalePanel
-            whaleAlerts={whaleAlerts}
-            exchangeFlow={whaleExchangeFlow}
-            whaleStats={whaleStats}
-            recentBuyVolume={whaleRecentBuy}
-            recentSellVolume={whaleRecentSell}
-            onClear={onClearWhale}
-          />
-        </Suspense>
-      </SidebarAccordion>
+      {WHALE_TRACKER_ENABLED && (
+        <SidebarAccordion
+          flat
+          lightweight
+          filterQuery={search}
+          filterKeywords={intelKeywordsFor('market', 'Whale Tracker')}
+          title="Whale Tracker"
+          onToggle={(open) => {
+            if (open && !vis.whale) onToggleVis('whale')
+          }}
+        >
+          <Suspense fallback={panelFallback('Loading whale…')}>
+            <WhalePanel
+              whaleAlerts={whaleAlerts}
+              exchangeFlow={whaleExchangeFlow}
+              whaleStats={whaleStats}
+              recentBuyVolume={whaleRecentBuy}
+              recentSellVolume={whaleRecentSell}
+              onClear={onClearWhale}
+            />
+          </Suspense>
+        </SidebarAccordion>
+      )}
       <SidebarAccordion
         flat
         lightweight

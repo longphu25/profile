@@ -1,6 +1,7 @@
 // BTC Chart — Whale tracking hook
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { WHALE_TRACKER_ENABLED } from '../lib/feature-flags'
 import { closeWebSocketSafe } from '../lib/chart-websocket'
 import { TICKER_REFRESH_MS } from '../lib/constants'
 import {
@@ -39,11 +40,21 @@ interface UseWhaleTrackerResult {
  * Hook to track whale trades and exchange flow from Binance aggTrades stream.
  * Connects to Binance's aggregated trades WebSocket and detects large trades.
  */
+const EMPTY_WHALE_STATS: WhaleStats = {
+  totalBuyVolume: 0,
+  totalSellVolume: 0,
+  netFlow: 0,
+  largeTradeCount: 0,
+  avgTradeSize: 0,
+  whaleAlerts: [],
+}
+
 export function useWhaleTracker(
   symbol: string,
   options: UseWhaleTrackerOptions,
 ): UseWhaleTrackerResult {
   const { enabled, whaleThreshold = 100000, flowWindowMs = 3600000, maxAlerts = 100 } = options
+  const trackerActive = WHALE_TRACKER_ENABLED && enabled
 
   const [whaleAlerts, setWhaleAlerts] = useState<WhaleAlert[]>([])
   const [exchangeFlow, setExchangeFlow] = useState<ExchangeFlow | null>(null)
@@ -58,7 +69,7 @@ export function useWhaleTracker(
   }, [])
 
   useEffect(() => {
-    if (!enabled) {
+    if (!trackerActive) {
       if (wsRef.current) {
         closeWebSocketSafe(wsRef.current)
         wsRef.current = null
@@ -110,7 +121,7 @@ export function useWhaleTracker(
       /* silent */
     }
     ws.onclose = () => {
-      if (!cancelledRef.current && enabled) {
+      if (!cancelledRef.current && trackerActive) {
         // Reconnect after 3 seconds
         setTimeout(() => {
           if (!cancelledRef.current) {
@@ -125,11 +136,11 @@ export function useWhaleTracker(
       closeWebSocketSafe(ws)
       wsRef.current = null
     }
-  }, [symbol, enabled, whaleThreshold, flowWindowMs, maxAlerts])
+  }, [symbol, trackerActive, whaleThreshold, flowWindowMs, maxAlerts])
 
   // Periodic flow update (every 5s)
   useEffect(() => {
-    if (!enabled) return
+    if (!trackerActive) return
     const iv = setInterval(() => {
       if (tradesRef.current.length > 0) {
         const flow = calculateExchangeFlow(tradesRef.current, flowWindowMs)
@@ -137,15 +148,24 @@ export function useWhaleTracker(
       }
     }, TICKER_REFRESH_MS)
     return () => clearInterval(iv)
-  }, [enabled, flowWindowMs])
+  }, [trackerActive, flowWindowMs])
 
-  const whaleStats = aggregateWhaleStats(whaleAlerts)
-  const recentBuyVolume = whaleAlerts
-    .filter((a) => a.side === 'buy' && Date.now() - a.timestamp < 3600000)
-    .reduce((sum, a) => sum + a.value, 0)
-  const recentSellVolume = whaleAlerts
-    .filter((a) => a.side === 'sell' && Date.now() - a.timestamp < 3600000)
-    .reduce((sum, a) => sum + a.value, 0)
+  const whaleStats = useMemo(
+    () => (trackerActive ? aggregateWhaleStats(whaleAlerts) : EMPTY_WHALE_STATS),
+    [trackerActive, whaleAlerts],
+  )
+  const recentBuyVolume = useMemo(() => {
+    if (!trackerActive) return 0
+    return whaleAlerts
+      .filter((a) => a.side === 'buy' && Date.now() - a.timestamp < 3600000)
+      .reduce((sum, a) => sum + a.value, 0)
+  }, [trackerActive, whaleAlerts])
+  const recentSellVolume = useMemo(() => {
+    if (!trackerActive) return 0
+    return whaleAlerts
+      .filter((a) => a.side === 'sell' && Date.now() - a.timestamp < 3600000)
+      .reduce((sum, a) => sum + a.value, 0)
+  }, [trackerActive, whaleAlerts])
 
   return {
     whaleAlerts,

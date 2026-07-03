@@ -1,6 +1,7 @@
 // BTC Chart — indicator layer groups for the select panel.
 
 import type { VisFlags } from '../storage'
+import { WHALE_TRACKER_ENABLED } from './feature-flags'
 
 export const IND_GROUPS: Record<string, Array<keyof VisFlags>> = {
   'Trend & Momentum': ['luxNwe', 'nwe', 'ma50', 'ma200', 'dbb', 'vwap'],
@@ -10,7 +11,7 @@ export const IND_GROUPS: Record<string, Array<keyof VisFlags>> = {
     'rsiDiv',
     'scalping',
     'reversal',
-    'whale',
+    ...(WHALE_TRACKER_ENABLED ? (['whale'] as const) : []),
     'tradeSetup',
     'tradeSetupOverlay',
   ],
