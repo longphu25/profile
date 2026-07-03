@@ -13,6 +13,40 @@ export type { TradeSetup }
 
 const OTE_RATIO = 0.618
 
+/** Minimum spacing between adjacent TP prices (fraction of entry). */
+const TP_MIN_GAP_FRAC = 1e-5
+
+function minTpGap(entry: number, risk: number): number {
+  return Math.max(risk * 0.15, entry * TP_MIN_GAP_FRAC)
+}
+
+/**
+ * Ensure TP2 and TP3 stay strictly ordered and visually distinct on the chart.
+ * When structure levels collapse (e.g. swing low equals 3R), nudge TP3 first.
+ */
+export function separateTpRungs(
+  dir: 'long' | 'short',
+  entry: number,
+  risk: number,
+  tp1: number,
+  tp2: number,
+  tp3: number,
+): { tp2: number; tp3: number } {
+  const gap = minTpGap(entry, risk)
+  if (dir === 'long') {
+    let t2 = tp2
+    let t3 = tp3
+    if (t2 <= tp1) t2 = tp1 + gap
+    if (t3 <= t2) t3 = t2 + gap
+    return { tp2: t2, tp3: t3 }
+  }
+  let t2 = tp2
+  let t3 = tp3
+  if (t2 >= tp1) t2 = tp1 - gap
+  if (t3 >= t2) t3 = t2 - gap
+  return { tp2: t2, tp3: t3 }
+}
+
 function median(values: number[]): number | null {
   if (values.length === 0) return null
   const sorted = [...values].sort((a, b) => a - b)
@@ -471,8 +505,9 @@ export function calcTradeSetup(
     const risk = entry - sl
     const bestUp = luxUp != null && nweUp != null ? Math.max(luxUp, nweUp) : (luxUp ?? nweUp)
     const tp1 = entry + risk * 2
-    const tp2 = bestUp != null ? Math.max(bestUp, entry + risk * 3) : entry + risk * 3
-    const tp3 = Math.max(tp2, entry + risk * 4, swingHigh * 0.998)
+    const tp2Raw = bestUp != null ? Math.max(bestUp, entry + risk * 3) : entry + risk * 3
+    const tp3Raw = Math.max(tp2Raw, entry + risk * 4, swingHigh * 0.998)
+    const { tp2, tp3 } = separateTpRungs('long', entry, risk, tp1, tp2Raw, tp3Raw)
     const rr = risk > 0 ? (tp1 - entry) / risk : 2
     return {
       dir,
@@ -498,8 +533,9 @@ export function calcTradeSetup(
     const risk = sl - entry
     const bestLo = luxLo != null && nweLo != null ? Math.min(luxLo, nweLo) : (luxLo ?? nweLo)
     const tp1 = entry - risk * 2
-    const tp2 = bestLo != null ? Math.min(bestLo, entry - risk * 3) : entry - risk * 3
-    const tp3 = Math.min(tp2, entry - risk * 4, swingLow * 1.002)
+    const tp2Raw = bestLo != null ? Math.min(bestLo, entry - risk * 3) : entry - risk * 3
+    const tp3Raw = Math.min(tp2Raw, entry - risk * 4, swingLow * 1.002)
+    const { tp2, tp3 } = separateTpRungs('short', entry, risk, tp1, tp2Raw, tp3Raw)
     const rr = risk > 0 ? (entry - tp1) / risk : 2
     return {
       dir,
@@ -563,8 +599,9 @@ export function suggestSlTp(
     const sl = nweLo != null && nweLo < pos.entryPrice ? Math.max(atrSl, nweLo) : atrSl
     const risk = pos.entryPrice - sl
     const tp1 = pos.entryPrice + risk * 2
-    const tp2 = nweUp != null && nweUp > pos.entryPrice ? nweUp : pos.entryPrice + risk * 3
-    const tp3 = Math.max(tp2, pos.entryPrice + risk * 4)
+    const tp2Raw = nweUp != null && nweUp > pos.entryPrice ? nweUp : pos.entryPrice + risk * 3
+    const tp3Raw = Math.max(tp2Raw, pos.entryPrice + risk * 4)
+    const { tp2, tp3 } = separateTpRungs('long', pos.entryPrice, risk, tp1, tp2Raw, tp3Raw)
     return { sl, tp1, tp2, tp3 }
   }
   // short: SL must be above entry
@@ -572,7 +609,8 @@ export function suggestSlTp(
   const sl = nweUp != null && nweUp > pos.entryPrice ? Math.min(atrSl, nweUp) : atrSl
   const risk = sl - pos.entryPrice
   const tp1 = pos.entryPrice - risk * 2
-  const tp2 = nweLo != null && nweLo < pos.entryPrice ? nweLo : pos.entryPrice - risk * 3
-  const tp3 = Math.min(tp2, pos.entryPrice - risk * 4)
+  const tp2Raw = nweLo != null && nweLo < pos.entryPrice ? nweLo : pos.entryPrice - risk * 3
+  const tp3Raw = Math.min(tp2Raw, pos.entryPrice - risk * 4)
+  const { tp2, tp3 } = separateTpRungs('short', pos.entryPrice, risk, tp1, tp2Raw, tp3Raw)
   return { sl, tp1, tp2, tp3 }
 }

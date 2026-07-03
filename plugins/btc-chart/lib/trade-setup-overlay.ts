@@ -25,6 +25,9 @@ export const MIN_SETUP_TOTAL_PX = 96
 /** Minimum height for each risk/reward zone when compressed. */
 export const MIN_ZONE_PX = 22
 
+/** Minimum vertical gap between stacked price tags (px). */
+export const MIN_TAG_GAP_PX = 16
+
 const COLORS = {
   riskFill: 'rgba(242, 54, 69, 0.2)',
   riskStroke: 'rgba(242, 54, 69, 0.65)',
@@ -229,6 +232,26 @@ function drawHLine(
   ctx.setLineDash([])
 }
 
+/**
+ * Push tag Y coordinates apart when multiple levels share the same pixel row.
+ * Ticks stay on true prices; only labels are staggered.
+ */
+export function staggerLevelTagYs(
+  levels: readonly { id: string; y: number }[],
+  minGap = MIN_TAG_GAP_PX,
+): Map<string, number> {
+  const sorted = [...levels].sort((a, b) => a.y - b.y)
+  const out = new Map<string, number>()
+  let prev = -Infinity
+  for (const lvl of sorted) {
+    let tagY = lvl.y
+    if (tagY - prev < minGap) tagY = prev + minGap
+    out.set(lvl.id, tagY)
+    prev = tagY
+  }
+  return out
+}
+
 function drawPriceTag(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -420,11 +443,18 @@ export function drawTradeSetupOverlay(
   drawLevelTick(ctx, layout.tp3Y, boxLeft, COLORS.tp, true)
 
   const tagAnchor = boxLeft + 4
-  drawPriceTag(ctx, tagAnchor, layout.entryY, 'Entry', entry, entryColor)
-  drawPriceTag(ctx, tagAnchor, layout.slY, 'SL', sl, COLORS.sl)
-  drawPriceTag(ctx, tagAnchor, layout.tp1Y, 'TP1', tp1, COLORS.tp)
-  drawPriceTag(ctx, tagAnchor, layout.tp2Y, 'TP2', tp2, COLORS.tp)
-  drawPriceTag(ctx, tagAnchor, layout.tp3Y, 'TP3', tp3, COLORS.tp)
+  const tagYs = staggerLevelTagYs([
+    { id: 'sl', y: layout.slY },
+    { id: 'entry', y: layout.entryY },
+    { id: 'tp1', y: layout.tp1Y },
+    { id: 'tp2', y: layout.tp2Y },
+    { id: 'tp3', y: layout.tp3Y },
+  ])
+  drawPriceTag(ctx, tagAnchor, tagYs.get('entry') ?? layout.entryY, 'Entry', entry, entryColor)
+  drawPriceTag(ctx, tagAnchor, tagYs.get('sl') ?? layout.slY, 'SL', sl, COLORS.sl)
+  drawPriceTag(ctx, tagAnchor, tagYs.get('tp1') ?? layout.tp1Y, 'TP1', tp1, COLORS.tp)
+  drawPriceTag(ctx, tagAnchor, tagYs.get('tp2') ?? layout.tp2Y, 'TP2', tp2, COLORS.tp)
+  drawPriceTag(ctx, tagAnchor, tagYs.get('tp3') ?? layout.tp3Y, 'TP3', tp3, COLORS.tp)
 
   ctx.font = 'bold 9px ui-monospace, SFMono-Regular, Menlo, monospace'
   ctx.fillStyle = badgeColor

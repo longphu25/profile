@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { separateTpRungs } from '../../plugins/btc-chart/lib/trade-setup'
 import {
   findNearestCuttingCandleIndex,
   isDrawableLongSetup,
@@ -8,6 +9,7 @@ import {
   resolveOverlayAdjacentTickSpan,
   resolveSetupBoxLeft,
   resolveSetupBoxLeftForViewport,
+  staggerLevelTagYs,
 } from '../../plugins/btc-chart/lib/trade-setup-overlay'
 import type { Candle } from '../../plugins/btc-chart/lib/types'
 import type { TradeSetup } from '../../plugins/btc-chart/lib/types'
@@ -167,6 +169,27 @@ describe('resolveSetupBoxLeft', () => {
     expect(resolveSetupBoxLeft(400, 10, 600, 76)).toBeCloseTo(414.5, 0)
     // clamp when candle is near right edge
     expect(resolveSetupBoxLeft(550, 10, 600, 76)).toBe(524)
+  })
+})
+
+describe('staggerLevelTagYs', () => {
+  test('separates tags when TP2 and TP3 share the same pixel row', () => {
+    const ys = staggerLevelTagYs([
+      { id: 'tp1', y: 100 },
+      { id: 'tp2', y: 200 },
+      { id: 'tp3', y: 200 },
+    ])
+    expect(ys.get('tp2')).toBe(200)
+    expect(ys.get('tp3')).toBe(216)
+  })
+})
+
+describe('separateTpRungs', () => {
+  test('keeps short TP3 below TP2 when structure collapses them', () => {
+    const { tp2, tp3 } = separateTpRungs('short', 0.07576, 0.00111, 0.07516, 0.07229, 0.07229)
+    expect(tp2).toBeCloseTo(0.07229, 5)
+    expect(tp3).toBeLessThan(tp2)
+    expect(tp2).toBeLessThan(0.07516)
   })
 })
 
