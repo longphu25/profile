@@ -56,7 +56,36 @@ export interface ChartRefs {
   cleanup: () => void
 }
 
+/** Live directional lean from confluence votes (updates every tick). */
+export interface TradeSetupBias {
+  dir: 'long' | 'short' | null
+  confidence: number
+  reasons: string[]
+  mlScore: number
+  bull: number
+  bear: number
+}
+
+/** Locked execution plan: entry / SL / TP held until invalidation or new bar. */
+export interface TradeSetupPlan {
+  dir: 'long' | 'short'
+  entry: number
+  sl: number
+  tp1: number
+  tp2: number
+  tp3: number
+  rr: number
+  entryMethod: string
+  /** Wall-clock ms when this plan was locked. */
+  lockedAt: number
+  /** Candle open time (unix s) for the bar that locked direction. */
+  candleTime: number
+}
+
+export type TradeSetupPlanStatus = 'active' | 'waiting' | 'invalidated'
+
 export interface TradeSetup {
+  /** Mirrors active plan direction for overlay and position fill. */
   dir: 'long' | 'short' | null
   entry: number
   sl: number
@@ -72,6 +101,11 @@ export interface TradeSetup {
   spotPrice: number
   /** How the limit entry was derived (structure confluence, OTE, etc.). */
   entryMethod: string
+  /** Live bias: direction lean and reasons (may differ from locked plan). */
+  bias: TradeSetupBias
+  /** Locked plan levels, null when no stable setup is active. */
+  plan: TradeSetupPlan | null
+  planStatus: TradeSetupPlanStatus
 }
 
 export interface SidebarState {
@@ -179,6 +213,16 @@ export const INITIAL_SIDEBAR: SidebarState = {
     volRatio: 0,
     spotPrice: 0,
     entryMethod: '',
+    bias: {
+      dir: null,
+      confidence: 0,
+      reasons: [],
+      mlScore: 0.5,
+      bull: 0,
+      bear: 0,
+    },
+    plan: null,
+    planStatus: 'waiting',
   },
 }
 
