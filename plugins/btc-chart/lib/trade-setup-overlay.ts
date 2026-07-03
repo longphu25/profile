@@ -163,53 +163,30 @@ function drawZoneBox(
   return top
 }
 
-function resolveCuttingCandleRightX(
-  chart: any,
-  candles: Candle[],
-  price: number,
-  barSpacing: number,
-): number | null {
-  const idx = findNearestCuttingCandleIndex(candles, price)
-  if (idx < 0) return null
-  const timeScale = chart?.timeScale?.()
-  if (!timeScale) return null
-  const x = timeScale.timeToCoordinate(candles[idx].time)
-  if (typeof x !== 'number' || !Number.isFinite(x)) return null
-  const candleHalfW = Math.max(4, barSpacing * 0.45)
-  return x + candleHalfW
-}
-
 /**
- * Short horizontal tick beside the cutting candle, stopping before the overlay column.
+ * Short tick immediately left of the overlay column (fixed width, never spans the chart).
  */
-export function resolveLevelTickSpan(
-  cutRight: number,
+export function resolveOverlayAdjacentTickSpan(
   boxLeft: number,
   tickLen = LEVEL_TICK_LEN,
   gap = OVERLAY_LINE_GAP,
 ): { x0: number; x1: number } | null {
-  const x1 = Math.min(cutRight, boxLeft - gap)
+  const x1 = boxLeft - gap
   if (!Number.isFinite(x1) || x1 <= 0) return null
   const x0 = Math.max(0, x1 - tickLen)
   if (x1 - x0 < 4) return null
   return { x0, x1 }
 }
 
-function drawLevelConnector(
+function drawLevelTick(
   ctx: CanvasRenderingContext2D,
-  chart: any,
-  candles: Candle[],
-  barSpacing: number,
-  price: number,
   y: number | null,
   boxLeft: number,
   color: string,
   dashed: boolean,
 ) {
   if (y == null) return
-  const cutRight = resolveCuttingCandleRightX(chart, candles, price, barSpacing)
-  if (cutRight == null) return
-  const span = resolveLevelTickSpan(cutRight, boxLeft)
+  const span = resolveOverlayAdjacentTickSpan(boxLeft)
   if (!span) return
   drawHLine(ctx, y, span.x0, span.x1, color, dashed)
 }
@@ -224,8 +201,8 @@ function resolveLastCandleX(chart: any, candles: Candle[]): number | null {
 }
 
 /**
- * Paint risk/reward rectangles beside the last candle plus short level connectors
- * to the nearest intersecting candle (no full-width horizontal guides).
+ * Paint risk/reward rectangles beside the last candle plus short level ticks
+ * hugging the overlay column (no chart-spanning guides).
  * LONG: risk below entry (SL→Entry), reward above (Entry→TP2).
  * SHORT: reward below entry (TP2→Entry), risk above (Entry→SL).
  */
@@ -312,10 +289,10 @@ export function drawTradeSetupOverlay(
     ctx.setLineDash([])
   }
 
-  drawLevelConnector(ctx, chart, candles, barSpacing, entry, yEntry, boxLeft, entryColor, false)
-  drawLevelConnector(ctx, chart, candles, barSpacing, sl, ySl, boxLeft, COLORS.sl, true)
-  drawLevelConnector(ctx, chart, candles, barSpacing, tp1, yTp1, boxLeft, COLORS.tp, true)
-  drawLevelConnector(ctx, chart, candles, barSpacing, tp2, yTp2, boxLeft, COLORS.tp, true)
+  drawLevelTick(ctx, yEntry, boxLeft, entryColor, false)
+  drawLevelTick(ctx, ySl, boxLeft, COLORS.sl, true)
+  drawLevelTick(ctx, yTp1, boxLeft, COLORS.tp, true)
+  drawLevelTick(ctx, yTp2, boxLeft, COLORS.tp, true)
 
   const tagAnchor = boxLeft + 4
   drawPriceTag(ctx, tagAnchor, yEntry, 'Entry', entry, entryColor)

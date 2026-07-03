@@ -4,7 +4,7 @@ import {
   isDrawableLongSetup,
   isDrawableShortSetup,
   isDrawableTradeSetup,
-  resolveLevelTickSpan,
+  resolveOverlayAdjacentTickSpan,
   resolveSetupBoxLeft,
 } from '../../plugins/btc-chart/lib/trade-setup-overlay'
 import type { Candle } from '../../plugins/btc-chart/lib/types'
@@ -81,11 +81,10 @@ describe('findNearestCuttingCandleIndex', () => {
   })
 })
 
-describe('resolveLevelTickSpan', () => {
-  test('stops before overlay and uses a short fixed length', () => {
-    expect(resolveLevelTickSpan(300, 400)).toEqual({ x0: 260, x1: 300 })
-    expect(resolveLevelTickSpan(390, 400)).toEqual({ x0: 346, x1: 386 })
-    expect(resolveLevelTickSpan(10, 10)).toBeNull()
+describe('resolveOverlayAdjacentTickSpan', () => {
+  test('always hugs overlay left edge with a short fixed width', () => {
+    expect(resolveOverlayAdjacentTickSpan(400)).toEqual({ x0: 346, x1: 386 })
+    expect(resolveOverlayAdjacentTickSpan(14)).toBeNull()
   })
 })
 
