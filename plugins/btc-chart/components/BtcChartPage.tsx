@@ -21,6 +21,7 @@ import { MobileSetupFab } from './MobileSetupFab'
 import { SidebarRail } from './SidebarRail'
 
 import { usePositions } from '../hooks/usePositions'
+import { useTradeSetupOverlay } from '../hooks/useTradeSetupOverlay'
 import { useBtcChartEngine, useBtcChartConfig, useBtcChartMarket, useBtcChartUI } from '../hooks'
 
 /** Main BTC chart workspace: composes config, market, engine, and UI hooks. */
@@ -98,6 +99,13 @@ export function BtcChartPage() {
     removePosition,
     updatePosition,
   } = usePositions(engine.chartRefs, !engine.loading, engine.markPrice)
+
+  useTradeSetupOverlay(
+    engine.chartRefs,
+    engine.sidebar.tradeSetup,
+    config.vis.tradeSetup,
+    !engine.loading,
+  )
 
   const posSuggestions = useMemo(() => {
     const candles = engine.panelCandles
@@ -225,6 +233,7 @@ export function BtcChartPage() {
               <canvas className="btc-chart__smc-canvas" ref={engine.smcCanvasRef} />
               <canvas className="btc-chart__box-canvas" ref={engine.boxCanvasRef} />
               <div className="btc-chart__main" ref={engine.mainElRef} />
+              <canvas className="btc-chart__setup-canvas" ref={engine.setupCanvasRef} />
               <canvas className="btc-chart__vp-canvas" ref={engine.vpCanvasRef} />
             </div>
             <OscillatorPane

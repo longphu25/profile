@@ -6,7 +6,7 @@ export const IND_GROUPS: Record<string, Array<keyof VisFlags>> = {
   'Trend & Momentum': ['luxNwe', 'nwe', 'ma50', 'ma200', 'dbb', 'vwap'],
   'Smart Money (ICT/SMC)': ['smc', 'ict', 'liquidity', 'boxFlip'],
   'Volume & Order Flow': ['of', 'vp', 'heatmap', 'vol', 'volSpike'],
-  'Reversal & Signals': ['rsiDiv', 'scalping', 'reversal', 'whale'],
+  'Reversal & Signals': ['rsiDiv', 'scalping', 'reversal', 'whale', 'tradeSetup'],
 }
 
 export const IND_LABELS: Partial<Record<keyof VisFlags, string>> = {
@@ -29,6 +29,7 @@ export const IND_LABELS: Partial<Record<keyof VisFlags, string>> = {
   heatmap: 'Heatmap',
   vol: 'Volume',
   volSpike: 'Vol Spike',
+  tradeSetup: 'Trade Setup',
 }
 
 export const ALL_IND_KEYS = Object.values(IND_GROUPS).flat() as Array<keyof VisFlags>

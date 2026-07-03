@@ -20,7 +20,8 @@ import {
   drawICTOverlay,
   drawLiquidityOverlay,
 } from './overlays'
-import type { Candle, ChartRefs, OhlcvState, SidebarState } from './types'
+import { drawTradeSetupOverlay } from './trade-setup-overlay'
+import type { Candle, ChartRefs, OhlcvState, SidebarState, TradeSetup } from './types'
 
 /** Refs and callbacks required to create and wire the main chart pane. */
 export interface MainChartSetupParams {
@@ -31,6 +32,7 @@ export interface MainChartSetupParams {
   readonly boxCanvasRef: RefObject<HTMLCanvasElement | null>
   readonly ictCanvasRef: RefObject<HTMLCanvasElement | null>
   readonly liqCanvasRef: RefObject<HTMLCanvasElement | null>
+  readonly setupCanvasRef: RefObject<HTMLCanvasElement | null>
   readonly chartRefs: MutableRefObject<ChartRefs | null>
   readonly dbbSeriesRef: MutableRefObject<DbbSeriesRefs | null>
   readonly hiLoLinesRef: MutableRefObject<{ high: any; low: any } | null>
@@ -42,6 +44,7 @@ export interface MainChartSetupParams {
   readonly ictDataRef: MutableRefObject<ICTResult>
   readonly liqDataRef: MutableRefObject<LiquidityResult>
   readonly boxFlipRef: MutableRefObject<BoxFlipResult>
+  readonly tradeSetupRef: MutableRefObject<TradeSetup>
   readonly oscOpenRef: MutableRefObject<boolean>
   readonly oscRefs: MutableRefObject<{ chart: any } | null>
   readonly oscElRef: RefObject<HTMLDivElement | null>
@@ -318,6 +321,16 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
         params.visRef.current.boxFlip,
       )
     }
+    if (params.setupCanvasRef.current && params.mainElRef.current) {
+      drawTradeSetupOverlay(
+        params.setupCanvasRef.current,
+        params.mainElRef.current,
+        mainChart,
+        candleSeries,
+        params.tradeSetupRef.current,
+        params.visRef.current.tradeSetup,
+      )
+    }
     const cands = params.candlesRef.current
     if (cands.length) {
       const from = Math.max(0, Math.floor(r.from))
@@ -455,6 +468,16 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
         params.liqDataRef.current,
         params.candlesRef.current,
         params.visRef.current.liquidity,
+      )
+    }
+    if (params.setupCanvasRef.current) {
+      drawTradeSetupOverlay(
+        params.setupCanvasRef.current,
+        params.mainElRef.current,
+        mainChart,
+        candleSeries,
+        params.tradeSetupRef.current,
+        params.visRef.current.tradeSetup,
       )
     }
   }

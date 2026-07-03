@@ -14,7 +14,7 @@ import type { ICTResult } from './ict-sessions'
 import type { LienResult } from './lien-reversal'
 import type { LiquidityResult } from './liquidity'
 import type { SignalConfig } from './signal-config'
-import type { Candle, ChartRefs, SidebarState } from './types'
+import type { Candle, ChartRefs, SidebarState, TradeSetup } from './types'
 
 /** Oscillator pane series handles (ADX / StochRSI / OBV / RSI). */
 export interface OscChartRefs {
@@ -64,6 +64,7 @@ export interface ChartRenderContext {
   readonly boxCanvasRef: RefObject<HTMLCanvasElement | null>
   readonly ictCanvasRef: RefObject<HTMLCanvasElement | null>
   readonly liqCanvasRef: RefObject<HTMLCanvasElement | null>
+  readonly setupCanvasRef: RefObject<HTMLCanvasElement | null>
   readonly legendRef: RefObject<HTMLDivElement | null>
 
   // Chart + overlay data refs
@@ -75,6 +76,7 @@ export interface ChartRenderContext {
   readonly htfRef: RefObject<Candle[] | null>
   readonly smcDataRef: RefObject<SMCResult>
   readonly boxFlipRef: RefObject<BoxFlipResult>
+  readonly tradeSetupRef: RefObject<TradeSetup>
   readonly ofOverlayRef: RefObject<OFOverlaySignal[]>
   readonly oscRefs: RefObject<OscChartRefs | null>
 

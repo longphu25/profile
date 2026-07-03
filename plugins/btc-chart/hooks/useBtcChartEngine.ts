@@ -75,6 +75,7 @@ export interface UseBtcChartEngine {
   boxCanvasRef: React.RefObject<HTMLCanvasElement | null>
   ictCanvasRef: React.RefObject<HTMLCanvasElement | null>
   liqCanvasRef: React.RefObject<HTMLCanvasElement | null>
+  setupCanvasRef: React.RefObject<HTMLCanvasElement | null>
   legendRef: React.RefObject<HTMLDivElement | null>
   oscElRef: React.RefObject<HTMLDivElement | null>
   chartRefs: React.MutableRefObject<ChartRefs | null>
@@ -127,6 +128,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   const boxCanvasRef = useRef<HTMLCanvasElement>(null)
   const ictCanvasRef = useRef<HTMLCanvasElement>(null)
   const liqCanvasRef = useRef<HTMLCanvasElement>(null)
+  const setupCanvasRef = useRef<HTMLCanvasElement>(null)
   const legendRef = useRef<HTMLDivElement>(null)
   const oscElRef = useRef<HTMLDivElement>(null)
 
@@ -146,6 +148,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   })
   const smcDataRef = useRef<SMCResult>({ structures: [], orderBlocks: [], fvgs: [] })
   const boxFlipRef = useRef<BoxFlipResult>({ boxes: [], signals: [] })
+  const tradeSetupRef = useRef(INITIAL_SIDEBAR.tradeSetup)
   const ofOverlayRef = useRef<OFOverlaySignal[]>([])
   const chartRefs = useRef<ChartRefs | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -246,6 +249,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     boxCanvasRef,
     ictCanvasRef,
     liqCanvasRef,
+    setupCanvasRef,
     legendRef,
     chartRefs,
     markersRef,
@@ -255,6 +259,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     htfRef,
     smcDataRef,
     boxFlipRef,
+    tradeSetupRef,
     ofOverlayRef,
     oscRefs,
     fitNextRef,
@@ -332,6 +337,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
       boxCanvasRef,
       ictCanvasRef,
       liqCanvasRef,
+      setupCanvasRef,
       chartRefs,
       dbbSeriesRef,
       hiLoLinesRef,
@@ -343,6 +349,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
       ictDataRef,
       liqDataRef,
       boxFlipRef,
+      tradeSetupRef,
       oscOpenRef: config.oscOpenRef,
       oscRefs,
       oscElRef,
@@ -525,6 +532,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     boxCanvasRef,
     ictCanvasRef,
     liqCanvasRef,
+    setupCanvasRef,
     legendRef,
     oscElRef,
     chartRefs,

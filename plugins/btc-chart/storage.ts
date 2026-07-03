@@ -26,6 +26,8 @@ export interface VisFlags {
   luxNwe: boolean
   ict: boolean
   liquidity: boolean
+  /** Auto trade setup zones (Entry / SL / TP rectangles on chart). */
+  tradeSetup: boolean
 }
 
 export interface NadarayaConfig {
@@ -98,6 +100,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
     luxNwe: true,
     ict: true,
     liquidity: true,
+    tradeSetup: true,
   },
   zoom: null,
   alerts: [],

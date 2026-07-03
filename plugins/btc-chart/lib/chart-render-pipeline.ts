@@ -36,6 +36,7 @@ import {
   drawICTOverlay,
   drawLiquidityOverlay,
 } from './overlays'
+import { drawTradeSetupOverlay } from './trade-setup-overlay'
 import { applyDefaultViewport } from './chart-viewport'
 import { fmtP } from './format'
 import type { Candle } from './types'
@@ -509,6 +510,17 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
   })
 
   ctx.setSidebar((s) => ({ ...s, ...snapshot }))
+  ctx.tradeSetupRef.current = snapshot.tradeSetup
+  if (ctx.setupCanvasRef.current && ctx.mainElRef.current && refs.candleSeries) {
+    drawTradeSetupOverlay(
+      ctx.setupCanvasRef.current,
+      ctx.mainElRef.current,
+      refs.mainChart,
+      refs.candleSeries,
+      snapshot.tradeSetup,
+      visFlags.tradeSetup,
+    )
+  }
   ctx.setBoucherScalp(bScalp)
   ctx.setLienReversal(lienR)
 }
