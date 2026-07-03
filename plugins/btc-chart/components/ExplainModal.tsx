@@ -88,6 +88,7 @@ export function ExplainModal({ setup, onClose }: Props) {
               </span>
               <span className="up">TP1 {fmtP(setup.tp1)}</span>
               <span className="up">TP2 {fmtP(setup.tp2)}</span>
+              <span className="up">TP3 {fmtP(setup.tp3)}</span>
               <span className="muted">R:R 1:{setup.rr > 0 ? setup.rr.toFixed(1) : '2.0'}</span>
             </div>
           )}

@@ -37,7 +37,7 @@ export interface SidebarRailProps {
   readonly onRemovePosition: UsePositions['removePosition']
   readonly onUpdatePosition: UsePositions['updatePosition']
   readonly markPrice: number | null
-  readonly posSuggestions: Record<string, { sl: number; tp1: number; tp2: number }>
+  readonly posSuggestions: Record<string, { sl: number; tp1: number; tp2: number; tp3: number }>
   readonly funding: FundingState
   readonly luxNweResult: LuxNweResult
   readonly panelCandles: Candle[]

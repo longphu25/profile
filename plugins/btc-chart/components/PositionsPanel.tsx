@@ -19,6 +19,7 @@ export interface PosSuggestion {
   sl: number
   tp1: number
   tp2: number
+  tp3: number
 }
 
 export interface PositionsBodyProps {

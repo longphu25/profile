@@ -62,6 +62,7 @@ export interface TradeSetup {
   sl: number
   tp1: number
   tp2: number
+  tp3: number
   rr: number
   confidence: number
   reasons: string[]
@@ -171,6 +172,7 @@ export const INITIAL_SIDEBAR: SidebarState = {
     sl: 0,
     tp1: 0,
     tp2: 0,
+    tp3: 0,
     rr: 0,
     confidence: 0,
     reasons: [],

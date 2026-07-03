@@ -103,7 +103,7 @@ export function BtcChartPage() {
     const candles = engine.panelCandles
     if (!candles.length || !positions.length) return {}
     const nweData = calcMHBand(candles)
-    const result: Record<string, { sl: number; tp1: number; tp2: number }> = {}
+    const result: Record<string, { sl: number; tp1: number; tp2: number; tp3: number }> = {}
     for (const p of positions) {
       result[p.id] = suggestSlTp(p, candles, nweData)
     }

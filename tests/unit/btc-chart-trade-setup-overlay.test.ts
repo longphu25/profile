@@ -19,6 +19,7 @@ function baseSetup(overrides: Partial<TradeSetup> = {}): TradeSetup {
     sl: 95,
     tp1: 110,
     tp2: 120,
+    tp3: 130,
     rr: 2,
     confidence: 60,
     reasons: [],
@@ -30,9 +31,9 @@ function baseSetup(overrides: Partial<TradeSetup> = {}): TradeSetup {
 }
 
 describe('isDrawableLongSetup', () => {
-  test('accepts valid LONG with sl < entry < tp1 <= tp2', () => {
+  test('accepts valid LONG with sl < entry < tp1 <= tp2 <= tp3', () => {
     expect(isDrawableLongSetup(baseSetup())).toBe(true)
-    expect(isDrawableLongSetup(baseSetup({ tp1: 120, tp2: 120 }))).toBe(true)
+    expect(isDrawableLongSetup(baseSetup({ tp1: 120, tp2: 120, tp3: 120 }))).toBe(true)
   })
 
   test('rejects short, null direction, or misordered levels', () => {
@@ -40,17 +41,22 @@ describe('isDrawableLongSetup', () => {
     expect(isDrawableLongSetup(baseSetup({ dir: null }))).toBe(false)
     expect(isDrawableLongSetup(baseSetup({ sl: 101 }))).toBe(false)
     expect(isDrawableLongSetup(baseSetup({ entry: 100, tp1: 99 }))).toBe(false)
-    expect(isDrawableLongSetup(baseSetup({ tp1: 125, tp2: 120 }))).toBe(false)
+    expect(isDrawableLongSetup(baseSetup({ tp1: 125, tp2: 120, tp3: 130 }))).toBe(false)
+    expect(isDrawableLongSetup(baseSetup({ tp1: 110, tp2: 130, tp3: 120 }))).toBe(false)
   })
 })
 
 describe('isDrawableShortSetup', () => {
-  test('accepts valid SHORT with tp2 <= tp1 < entry < sl', () => {
+  test('accepts valid SHORT with tp3 <= tp2 <= tp1 < entry < sl', () => {
     expect(
-      isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 80 })),
+      isDrawableShortSetup(
+        baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 80, tp3: 70 }),
+      ),
     ).toBe(true)
     expect(
-      isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 80, tp2: 80 })),
+      isDrawableShortSetup(
+        baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 80, tp2: 80, tp3: 80 }),
+      ),
     ).toBe(true)
   })
 
@@ -58,13 +64,24 @@ describe('isDrawableShortSetup', () => {
     expect(isDrawableShortSetup(baseSetup())).toBe(false)
     expect(isDrawableShortSetup(baseSetup({ dir: null }))).toBe(false)
     expect(
-      isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 99, tp1: 90, tp2: 80 })),
+      isDrawableShortSetup(
+        baseSetup({ dir: 'short', entry: 100, sl: 99, tp1: 90, tp2: 80, tp3: 70 }),
+      ),
     ).toBe(false)
     expect(
-      isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 101, tp2: 80 })),
+      isDrawableShortSetup(
+        baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 101, tp2: 80, tp3: 70 }),
+      ),
     ).toBe(false)
     expect(
-      isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 95 })),
+      isDrawableShortSetup(
+        baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 95, tp3: 70 }),
+      ),
+    ).toBe(false)
+    expect(
+      isDrawableShortSetup(
+        baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 80, tp3: 85 }),
+      ),
     ).toBe(false)
   })
 })
@@ -108,11 +125,13 @@ describe('layoutSetupZones', () => {
       200,
       198,
       195,
+      190,
       {
         sl: 0.075,
         entry: 0.077,
         tp1: 0.081,
         tp2: 0.096,
+        tp3: 0.11,
       },
       true,
     )
@@ -126,17 +145,19 @@ describe('layoutSetupZones', () => {
       200,
       120,
       80,
+      50,
       {
         sl: 0.075,
         entry: 0.077,
         tp1: 0.081,
         tp2: 0.096,
+        tp3: 0.12,
       },
       true,
     )
     expect(layout.compressed).toBe(false)
     expect(layout.riskH).toBe(100)
-    expect(layout.rewardH).toBe(120)
+    expect(layout.rewardH).toBe(150)
   })
 })
 
@@ -153,7 +174,9 @@ describe('isDrawableTradeSetup', () => {
   test('accepts either valid LONG or SHORT', () => {
     expect(isDrawableTradeSetup(baseSetup())).toBe(true)
     expect(
-      isDrawableTradeSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 80 })),
+      isDrawableTradeSetup(
+        baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 80, tp3: 70 }),
+      ),
     ).toBe(true)
     expect(isDrawableTradeSetup(baseSetup({ dir: null }))).toBe(false)
   })

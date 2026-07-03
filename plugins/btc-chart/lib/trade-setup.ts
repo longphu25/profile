@@ -472,6 +472,7 @@ export function calcTradeSetup(
     const bestUp = luxUp != null && nweUp != null ? Math.max(luxUp, nweUp) : (luxUp ?? nweUp)
     const tp1 = entry + risk * 2
     const tp2 = bestUp != null ? Math.max(bestUp, entry + risk * 3) : entry + risk * 3
+    const tp3 = Math.max(tp2, entry + risk * 4, swingHigh * 0.998)
     const rr = risk > 0 ? (tp1 - entry) / risk : 2
     return {
       dir,
@@ -479,6 +480,7 @@ export function calcTradeSetup(
       sl,
       tp1,
       tp2,
+      tp3,
       rr,
       confidence,
       reasons,
@@ -497,6 +499,7 @@ export function calcTradeSetup(
     const bestLo = luxLo != null && nweLo != null ? Math.min(luxLo, nweLo) : (luxLo ?? nweLo)
     const tp1 = entry - risk * 2
     const tp2 = bestLo != null ? Math.min(bestLo, entry - risk * 3) : entry - risk * 3
+    const tp3 = Math.min(tp2, entry - risk * 4, swingLow * 1.002)
     const rr = risk > 0 ? (entry - tp1) / risk : 2
     return {
       dir,
@@ -504,6 +507,7 @@ export function calcTradeSetup(
       sl,
       tp1,
       tp2,
+      tp3,
       rr,
       confidence,
       reasons,
@@ -520,6 +524,7 @@ export function calcTradeSetup(
     sl: price,
     tp1: price,
     tp2: price,
+    tp3: price,
     rr: 0,
     confidence: 0,
     reasons: ['No confluence'],
@@ -534,7 +539,7 @@ export function suggestSlTp(
   pos: { side: 'long' | 'short'; entryPrice: number },
   data: Candle[],
   nwe: NWE,
-): { sl: number; tp1: number; tp2: number } {
+): { sl: number; tp1: number; tp2: number; tp3: number } {
   const i = data.length - 1
   const nweUp = nwe.upper[i]
   const nweLo = nwe.lower[i]
@@ -559,7 +564,8 @@ export function suggestSlTp(
     const risk = pos.entryPrice - sl
     const tp1 = pos.entryPrice + risk * 2
     const tp2 = nweUp != null && nweUp > pos.entryPrice ? nweUp : pos.entryPrice + risk * 3
-    return { sl, tp1, tp2 }
+    const tp3 = Math.max(tp2, pos.entryPrice + risk * 4)
+    return { sl, tp1, tp2, tp3 }
   }
   // short: SL must be above entry
   const atrSl = pos.entryPrice + atr * 1.5
@@ -567,5 +573,6 @@ export function suggestSlTp(
   const risk = sl - pos.entryPrice
   const tp1 = pos.entryPrice - risk * 2
   const tp2 = nweLo != null && nweLo < pos.entryPrice ? nweLo : pos.entryPrice - risk * 3
-  return { sl, tp1, tp2 }
+  const tp3 = Math.min(tp2, pos.entryPrice - risk * 4)
+  return { sl, tp1, tp2, tp3 }
 }

@@ -42,24 +42,24 @@ const COLORS = {
 
 /**
  * Returns true when the setup is a valid LONG with ordered price levels.
- * Required order: sl < entry < tp1 <= tp2.
+ * Required order: sl < entry < tp1 <= tp2 <= tp3.
  */
 export function isDrawableLongSetup(setup: TradeSetup): boolean {
   if (setup.dir !== 'long') return false
-  const { sl, entry, tp1, tp2 } = setup
-  if (![sl, entry, tp1, tp2].every((p) => Number.isFinite(p) && p > 0)) return false
-  return sl < entry && entry < tp1 && tp1 <= tp2
+  const { sl, entry, tp1, tp2, tp3 } = setup
+  if (![sl, entry, tp1, tp2, tp3].every((p) => Number.isFinite(p) && p > 0)) return false
+  return sl < entry && entry < tp1 && tp1 <= tp2 && tp2 <= tp3
 }
 
 /**
  * Returns true when the setup is a valid SHORT with ordered price levels.
- * Required order: tp2 <= tp1 < entry < sl.
+ * Required order: tp3 <= tp2 <= tp1 < entry < sl.
  */
 export function isDrawableShortSetup(setup: TradeSetup): boolean {
   if (setup.dir !== 'short') return false
-  const { sl, entry, tp1, tp2 } = setup
-  if (![sl, entry, tp1, tp2].every((p) => Number.isFinite(p) && p > 0)) return false
-  return tp2 <= tp1 && tp1 < entry && entry < sl
+  const { sl, entry, tp1, tp2, tp3 } = setup
+  if (![sl, entry, tp1, tp2, tp3].every((p) => Number.isFinite(p) && p > 0)) return false
+  return tp3 <= tp2 && tp2 <= tp1 && tp1 < entry && entry < sl
 }
 
 /** True when the setup can be painted on chart (LONG or SHORT). */
@@ -78,6 +78,7 @@ export interface SetupZoneLayout {
   readonly slY: number
   readonly tp1Y: number
   readonly tp2Y: number
+  readonly tp3Y: number
 }
 
 /**
@@ -130,11 +131,12 @@ export function layoutSetupZones(
   yEntry: number,
   yTp1: number,
   yTp2: number,
-  prices: { sl: number; entry: number; tp1: number; tp2: number },
+  yTp3: number,
+  prices: { sl: number; entry: number; tp1: number; tp2: number; tp3: number },
   isLong: boolean,
 ): SetupZoneLayout {
   const naturalRiskH = isLong ? Math.abs(ySl - yEntry) : Math.abs(yEntry - ySl)
-  const naturalRewardH = isLong ? Math.abs(yEntry - yTp2) : Math.abs(yTp2 - yEntry)
+  const naturalRewardH = isLong ? Math.abs(yEntry - yTp3) : Math.abs(yTp3 - yEntry)
   const naturalTotal = naturalRiskH + naturalRewardH
 
   if (naturalTotal >= MIN_SETUP_TOTAL_PX) {
@@ -142,32 +144,34 @@ export function layoutSetupZones(
       return {
         riskTop: Math.min(ySl, yEntry),
         riskH: naturalRiskH,
-        rewardTop: Math.min(yEntry, yTp2),
+        rewardTop: Math.min(yEntry, yTp3),
         rewardH: naturalRewardH,
         compressed: false,
         entryY: yEntry,
         slY: ySl,
         tp1Y: yTp1,
         tp2Y: yTp2,
+        tp3Y: yTp3,
       }
     }
     return {
       riskTop: Math.min(yEntry, ySl),
       riskH: naturalRiskH,
-      rewardTop: Math.min(yTp2, yEntry),
+      rewardTop: Math.min(yTp3, yEntry),
       rewardH: naturalRewardH,
       compressed: false,
       entryY: yEntry,
       slY: ySl,
       tp1Y: yTp1,
       tp2Y: yTp2,
+      tp3Y: yTp3,
     }
   }
 
   const riskShare = isLong ? Math.abs(prices.entry - prices.sl) : Math.abs(prices.sl - prices.entry)
   const rewardShare = isLong
-    ? Math.abs(prices.tp2 - prices.entry)
-    : Math.abs(prices.entry - prices.tp2)
+    ? Math.abs(prices.tp3 - prices.entry)
+    : Math.abs(prices.entry - prices.tp3)
   const totalShare = riskShare + rewardShare || 1
   const riskH = Math.max(MIN_ZONE_PX, (riskShare / totalShare) * MIN_SETUP_TOTAL_PX)
   const rewardH = Math.max(MIN_ZONE_PX, MIN_SETUP_TOTAL_PX - riskH)
@@ -181,8 +185,9 @@ export function layoutSetupZones(
       compressed: true,
       entryY: yEntry,
       slY: yEntry + riskH * 0.82,
-      tp1Y: yEntry - rewardH * 0.42,
-      tp2Y: yEntry - rewardH * 0.88,
+      tp1Y: yEntry - rewardH * 0.3,
+      tp2Y: yEntry - rewardH * 0.6,
+      tp3Y: yEntry - rewardH * 0.92,
     }
   }
   return {
@@ -193,8 +198,9 @@ export function layoutSetupZones(
     compressed: true,
     entryY: yEntry,
     slY: yEntry - riskH * 0.82,
-    tp1Y: yEntry + rewardH * 0.42,
-    tp2Y: yEntry + rewardH * 0.88,
+    tp1Y: yEntry + rewardH * 0.3,
+    tp2Y: yEntry + rewardH * 0.6,
+    tp3Y: yEntry + rewardH * 0.92,
   }
 }
 
@@ -310,8 +316,8 @@ function resolveLastCandleX(chart: any, candles: Candle[]): number | null {
 /**
  * Paint risk/reward rectangles beside the last candle plus short level ticks
  * hugging the overlay column (no chart-spanning guides).
- * LONG: risk below entry (SL→Entry), reward above (Entry→TP2).
- * SHORT: reward below entry (TP2→Entry), risk above (Entry→SL).
+ * LONG: risk below entry (SL→Entry), reward above (Entry→TP3).
+ * SHORT: reward below entry (TP3→Entry), risk above (Entry→SL).
  */
 export function drawTradeSetupOverlay(
   canvas: HTMLCanvasElement,
@@ -348,12 +354,13 @@ export function drawTradeSetupOverlay(
     return typeof y === 'number' ? y : null
   }
 
-  const { sl, entry, tp1, tp2 } = setup
+  const { sl, entry, tp1, tp2, tp3 } = setup
   const ySl = toY(sl)
   const yEntry = toY(entry)
   const yTp1 = toY(tp1)
   const yTp2 = toY(tp2)
-  if (ySl == null || yEntry == null || yTp1 == null || yTp2 == null) {
+  const yTp3 = toY(tp3)
+  if (ySl == null || yEntry == null || yTp1 == null || yTp2 == null || yTp3 == null) {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     return
   }
@@ -364,7 +371,15 @@ export function drawTradeSetupOverlay(
   const barSpacing =
     typeof chart?.timeScale?.()?.barSpacing === 'function' ? chart.timeScale().barSpacing() : 8
   const boxLeft = resolveSetupBoxLeftForViewport(lastX, barSpacing, plotRight)
-  const layout = layoutSetupZones(ySl, yEntry, yTp1, yTp2, { sl, entry, tp1, tp2 }, isLong)
+  const layout = layoutSetupZones(
+    ySl,
+    yEntry,
+    yTp1,
+    yTp2,
+    yTp3,
+    { sl, entry, tp1, tp2, tp3 },
+    isLong,
+  )
   const entryColor = isLong ? COLORS.entryLong : COLORS.entryShort
   const badgeLabel = isLong ? 'LONG' : 'SHORT'
   const badgeColor = isLong ? COLORS.badgeLong : COLORS.badgeShort
@@ -382,29 +397,34 @@ export function drawTradeSetupOverlay(
     COLORS.rewardStroke,
   )
 
-  const tp1InReward =
-    layout.tp1Y > layout.rewardTop && layout.tp1Y < layout.rewardTop + layout.rewardH
-  if (tp1InReward) {
+  const drawRewardDivider = (y: number) => {
+    const inReward = y > layout.rewardTop && y < layout.rewardTop + layout.rewardH
+    if (!inReward) return
     ctx.strokeStyle = COLORS.tp
     ctx.lineWidth = 1
     ctx.setLineDash([4, 3])
     ctx.beginPath()
-    ctx.moveTo(boxLeft, layout.tp1Y)
-    ctx.lineTo(boxLeft + BOX_W, layout.tp1Y)
+    ctx.moveTo(boxLeft, y)
+    ctx.lineTo(boxLeft + BOX_W, y)
     ctx.stroke()
     ctx.setLineDash([])
   }
+
+  drawRewardDivider(layout.tp1Y)
+  drawRewardDivider(layout.tp2Y)
 
   drawLevelTick(ctx, layout.entryY, boxLeft, entryColor, false)
   drawLevelTick(ctx, layout.slY, boxLeft, COLORS.sl, true)
   drawLevelTick(ctx, layout.tp1Y, boxLeft, COLORS.tp, true)
   drawLevelTick(ctx, layout.tp2Y, boxLeft, COLORS.tp, true)
+  drawLevelTick(ctx, layout.tp3Y, boxLeft, COLORS.tp, true)
 
   const tagAnchor = boxLeft + 4
   drawPriceTag(ctx, tagAnchor, layout.entryY, 'Entry', entry, entryColor)
   drawPriceTag(ctx, tagAnchor, layout.slY, 'SL', sl, COLORS.sl)
   drawPriceTag(ctx, tagAnchor, layout.tp1Y, 'TP1', tp1, COLORS.tp)
   drawPriceTag(ctx, tagAnchor, layout.tp2Y, 'TP2', tp2, COLORS.tp)
+  drawPriceTag(ctx, tagAnchor, layout.tp3Y, 'TP3', tp3, COLORS.tp)
 
   ctx.font = 'bold 9px ui-monospace, SFMono-Regular, Menlo, monospace'
   ctx.fillStyle = badgeColor

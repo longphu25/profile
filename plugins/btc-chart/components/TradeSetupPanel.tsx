@@ -89,6 +89,7 @@ interface SizingTopProps {
   lossAtSL: number
   profitAtTP1: number
   profitAtTP2: number
+  profitAtTP3: number
 }
 
 function SizingTop({
@@ -100,6 +101,7 @@ function SizingTop({
   lossAtSL,
   profitAtTP1,
   profitAtTP2,
+  profitAtTP3,
 }: SizingTopProps) {
   return (
     <div className="sb-trade-sizing-top">
@@ -115,6 +117,10 @@ function SizingTop({
         <div className="sb-trade-pnl-hero__item sb-trade-pnl-hero__item--tp2">
           <span className="sb-trade-pnl-hero__label">PnL @ TP2</span>
           <span className="sb-trade-pnl-hero__value up">+${profitAtTP2.toFixed(1)}</span>
+        </div>
+        <div className="sb-trade-pnl-hero__item sb-trade-pnl-hero__item--tp3">
+          <span className="sb-trade-pnl-hero__label">PnL @ TP3</span>
+          <span className="sb-trade-pnl-hero__value up">+${profitAtTP3.toFixed(1)}</span>
         </div>
       </div>
 
@@ -328,6 +334,7 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
   const lossAtSL = qty * risk
   const profitAtTP1 = qty * Math.abs(setup.tp1 - setup.entry)
   const profitAtTP2 = qty * Math.abs(setup.tp2 - setup.entry)
+  const profitAtTP3 = qty * Math.abs(setup.tp3 - setup.entry)
   const rrLabel = setup.rr > 0 ? setup.rr.toFixed(1) : '2.0'
   const spotOffset = fmtSpotOffset(setup.entry, setup.spotPrice)
 
@@ -385,6 +392,7 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
             lossAtSL={lossAtSL}
             profitAtTP1={profitAtTP1}
             profitAtTP2={profitAtTP2}
+            profitAtTP3={profitAtTP3}
           />
 
           <div className={`sb-trade-verdict sb-trade-verdict--${dirTone}`}>
@@ -421,6 +429,12 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
               label="Take profit 2"
               price={setup.tp2}
               delta={pctFromEntry(setup.entry, setup.tp2)}
+              tone="tp"
+            />
+            <PlanRow
+              label="Take profit 3"
+              price={setup.tp3}
+              delta={pctFromEntry(setup.entry, setup.tp3)}
               tone="tp"
             />
           </div>

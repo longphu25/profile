@@ -8,6 +8,7 @@ const baseSetup: TradeSetup = {
   sl: 102,
   tp1: 96,
   tp2: 94,
+  tp3: 92,
   rr: 2,
   confidence: 60,
   reasons: ['NWE Cross Sell', 'Lien Bearish Rev'],
