@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { isDrawableLongSetup } from '../../plugins/btc-chart/lib/trade-setup-overlay'
+import {
+  isDrawableLongSetup,
+  isDrawableShortSetup,
+  isDrawableTradeSetup,
+} from '../../plugins/btc-chart/lib/trade-setup-overlay'
 import type { TradeSetup } from '../../plugins/btc-chart/lib/types'
 
 function baseSetup(overrides: Partial<TradeSetup> = {}): TradeSetup {
@@ -31,5 +35,40 @@ describe('isDrawableLongSetup', () => {
     expect(isDrawableLongSetup(baseSetup({ sl: 101 }))).toBe(false)
     expect(isDrawableLongSetup(baseSetup({ entry: 100, tp1: 99 }))).toBe(false)
     expect(isDrawableLongSetup(baseSetup({ tp1: 125, tp2: 120 }))).toBe(false)
+  })
+})
+
+describe('isDrawableShortSetup', () => {
+  test('accepts valid SHORT with tp2 <= tp1 < entry < sl', () => {
+    expect(
+      isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 80 })),
+    ).toBe(true)
+    expect(
+      isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 80, tp2: 80 })),
+    ).toBe(true)
+  })
+
+  test('rejects long, null direction, or misordered levels', () => {
+    expect(isDrawableShortSetup(baseSetup())).toBe(false)
+    expect(isDrawableShortSetup(baseSetup({ dir: null }))).toBe(false)
+    expect(
+      isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 99, tp1: 90, tp2: 80 })),
+    ).toBe(false)
+    expect(
+      isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 101, tp2: 80 })),
+    ).toBe(false)
+    expect(
+      isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 95 })),
+    ).toBe(false)
+  })
+})
+
+describe('isDrawableTradeSetup', () => {
+  test('accepts either valid LONG or SHORT', () => {
+    expect(isDrawableTradeSetup(baseSetup())).toBe(true)
+    expect(
+      isDrawableTradeSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 80 })),
+    ).toBe(true)
+    expect(isDrawableTradeSetup(baseSetup({ dir: null }))).toBe(false)
   })
 })

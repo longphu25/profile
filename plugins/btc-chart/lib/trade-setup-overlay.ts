@@ -1,4 +1,4 @@
-// BTC Chart — TradingView-style LONG trade setup canvas overlay (risk/reward zones).
+// BTC Chart — TradingView-style trade setup canvas overlay (risk/reward zones).
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { fmtP } from './format'
@@ -15,9 +15,12 @@ const COLORS = {
   riskStroke: 'rgba(242, 54, 69, 0.65)',
   rewardFill: 'rgba(49, 121, 245, 0.2)',
   rewardStroke: 'rgba(49, 121, 245, 0.65)',
-  entry: 'rgba(8, 153, 129, 0.9)',
+  entryLong: 'rgba(8, 153, 129, 0.9)',
+  entryShort: 'rgba(242, 54, 69, 0.9)',
   sl: 'rgba(242, 54, 69, 0.85)',
   tp: 'rgba(49, 121, 245, 0.75)',
+  badgeLong: 'rgba(242, 54, 69, 0.9)',
+  badgeShort: 'rgba(49, 121, 245, 0.9)',
   labelBg: 'rgba(15, 17, 23, 0.82)',
   labelText: '#e8eaed',
 } as const
@@ -31,6 +34,22 @@ export function isDrawableLongSetup(setup: TradeSetup): boolean {
   const { sl, entry, tp1, tp2 } = setup
   if (![sl, entry, tp1, tp2].every((p) => Number.isFinite(p) && p > 0)) return false
   return sl < entry && entry < tp1 && tp1 <= tp2
+}
+
+/**
+ * Returns true when the setup is a valid SHORT with ordered price levels.
+ * Required order: tp2 <= tp1 < entry < sl.
+ */
+export function isDrawableShortSetup(setup: TradeSetup): boolean {
+  if (setup.dir !== 'short') return false
+  const { sl, entry, tp1, tp2 } = setup
+  if (![sl, entry, tp1, tp2].every((p) => Number.isFinite(p) && p > 0)) return false
+  return tp2 <= tp1 && tp1 < entry && entry < sl
+}
+
+/** True when the setup can be painted on chart (LONG or SHORT). */
+export function isDrawableTradeSetup(setup: TradeSetup): boolean {
+  return isDrawableLongSetup(setup) || isDrawableShortSetup(setup)
 }
 
 function readPriceScaleWidth(el: HTMLElement): number {
@@ -88,9 +107,29 @@ function drawPriceTag(
   ctx.fillText(text, bx + padX, by + th + padY - 2)
 }
 
+function drawZoneBox(
+  ctx: CanvasRenderingContext2D,
+  boxLeft: number,
+  yA: number,
+  yB: number,
+  fill: string,
+  stroke: string,
+) {
+  const top = Math.min(yA, yB)
+  const h = Math.abs(yA - yB)
+  if (h < 1) return
+  ctx.fillStyle = fill
+  ctx.strokeStyle = stroke
+  ctx.lineWidth = 1
+  ctx.fillRect(boxLeft, top, BOX_W, h)
+  ctx.strokeRect(boxLeft, top, BOX_W, h)
+  return top
+}
+
 /**
- * Paint right-anchored risk (SL→Entry) and reward (Entry→TP2) rectangles plus
- * full-width horizontal guides for a LONG trade setup.
+ * Paint right-anchored risk/reward rectangles plus full-width horizontal guides.
+ * LONG: risk below entry (SL→Entry), reward above (Entry→TP2).
+ * SHORT: reward below entry (TP2→Entry), risk above (Entry→SL).
  */
 export function drawTradeSetupOverlay(
   canvas: HTMLCanvasElement,
@@ -114,7 +153,9 @@ export function drawTradeSetupOverlay(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   ctx.clearRect(0, 0, rect.width, rect.height)
 
-  if (!visible || !isDrawableLongSetup(setup)) {
+  const isLong = isDrawableLongSetup(setup)
+  const isShort = isDrawableShortSetup(setup)
+  if (!visible || (!isLong && !isShort)) {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     return
   }
@@ -139,30 +180,25 @@ export function drawTradeSetupOverlay(
   const boxLeft = Math.max(0, plotRight - BOX_W)
   const lineRight = plotRight
 
-  // Risk zone: SL (bottom) → Entry (top)
-  const riskTop = Math.min(ySl, yEntry)
-  const riskH = Math.abs(ySl - yEntry)
-  if (riskH >= 1) {
-    ctx.fillStyle = COLORS.riskFill
-    ctx.strokeStyle = COLORS.riskStroke
-    ctx.lineWidth = 1
-    ctx.fillRect(boxLeft, riskTop, BOX_W, riskH)
-    ctx.strokeRect(boxLeft, riskTop, BOX_W, riskH)
+  const entryColor = isLong ? COLORS.entryLong : COLORS.entryShort
+  const badgeLabel = isLong ? 'LONG' : 'SHORT'
+  const badgeColor = isLong ? COLORS.badgeLong : COLORS.badgeShort
+
+  let riskTop: number
+  let rewardTop: number
+  let rewardH: number
+
+  if (isLong) {
+    riskTop = drawZoneBox(ctx, boxLeft, ySl, yEntry, COLORS.riskFill, COLORS.riskStroke) ?? 0
+    rewardTop = drawZoneBox(ctx, boxLeft, yEntry, yTp2, COLORS.rewardFill, COLORS.rewardStroke) ?? 0
+    rewardH = Math.abs(yEntry - yTp2)
+  } else {
+    rewardTop = drawZoneBox(ctx, boxLeft, yTp2, yEntry, COLORS.rewardFill, COLORS.rewardStroke) ?? 0
+    riskTop = drawZoneBox(ctx, boxLeft, yEntry, ySl, COLORS.riskFill, COLORS.riskStroke) ?? 0
+    rewardH = Math.abs(yTp2 - yEntry)
   }
 
-  // Reward zone: Entry (bottom) → TP2 (top)
-  const rewardTop = Math.min(yEntry, yTp2)
-  const rewardH = Math.abs(yEntry - yTp2)
-  if (rewardH >= 1) {
-    ctx.fillStyle = COLORS.rewardFill
-    ctx.strokeStyle = COLORS.rewardStroke
-    ctx.lineWidth = 1
-    ctx.fillRect(boxLeft, rewardTop, BOX_W, rewardH)
-    ctx.strokeRect(boxLeft, rewardTop, BOX_W, rewardH)
-  }
-
-  // TP1 divider inside reward box
-  if (yTp1 != null && yTp1 > rewardTop && yTp1 < rewardTop + rewardH) {
+  if (yTp1 > rewardTop && yTp1 < rewardTop + rewardH) {
     ctx.strokeStyle = COLORS.tp
     ctx.lineWidth = 1
     ctx.setLineDash([4, 3])
@@ -173,22 +209,19 @@ export function drawTradeSetupOverlay(
     ctx.setLineDash([])
   }
 
-  // Full-width horizontal guides
-  drawHLine(ctx, yEntry, 0, lineRight, COLORS.entry, false)
+  drawHLine(ctx, yEntry, 0, lineRight, entryColor, false)
   drawHLine(ctx, ySl, 0, lineRight, COLORS.sl, true)
   drawHLine(ctx, yTp1, 0, lineRight, COLORS.tp, true)
   drawHLine(ctx, yTp2, 0, lineRight, COLORS.tp, true)
 
-  // Price tags beside rectangles
-  drawPriceTag(ctx, boxLeft + BOX_W, yEntry, 'Entry', entry, COLORS.entry)
+  drawPriceTag(ctx, boxLeft + BOX_W, yEntry, 'Entry', entry, entryColor)
   drawPriceTag(ctx, boxLeft + BOX_W, ySl, 'SL', sl, COLORS.sl)
   drawPriceTag(ctx, boxLeft + BOX_W, yTp1, 'TP1', tp1, COLORS.tp)
   drawPriceTag(ctx, boxLeft + BOX_W, yTp2, 'TP2', tp2, COLORS.tp)
 
-  // LONG badge on risk box
   ctx.font = 'bold 9px ui-monospace, SFMono-Regular, Menlo, monospace'
-  ctx.fillStyle = 'rgba(242, 54, 69, 0.9)'
-  ctx.fillText('LONG', boxLeft + 6, riskTop + 12)
+  ctx.fillStyle = badgeColor
+  ctx.fillText(badgeLabel, boxLeft + 6, riskTop + 12)
 
   ctx.setTransform(1, 0, 0, 1, 0, 0)
 }

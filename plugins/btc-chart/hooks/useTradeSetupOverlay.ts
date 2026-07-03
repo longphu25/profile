@@ -2,11 +2,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useEffect, useRef } from 'react'
-import { isDrawableLongSetup } from '../lib/trade-setup-overlay'
+import { isDrawableTradeSetup } from '../lib/trade-setup-overlay'
 import type { ChartRefs, TradeSetup } from '../lib/types'
 
 /**
- * Syncs lightweight-charts price lines with the computed LONG trade setup.
+ * Syncs lightweight-charts price lines with the computed LONG or SHORT trade setup.
  * Clears lines when the setup is invalid or the layer is hidden.
  */
 export function useTradeSetupOverlay(
@@ -30,13 +30,14 @@ export function useTradeSetupOverlay(
     }
     linesRef.current = []
 
-    if (!visible || !isDrawableLongSetup(tradeSetup)) return
+    if (!visible || !isDrawableTradeSetup(tradeSetup)) return
 
     const { entry, sl, tp1, tp2 } = tradeSetup
+    const entryColor = tradeSetup.dir === 'short' ? '#F23645' : '#089981'
     linesRef.current = [
       series.createPriceLine({
         price: entry,
-        color: '#089981',
+        color: entryColor,
         lineWidth: 2,
         lineStyle: 0,
         axisLabelVisible: true,
