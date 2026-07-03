@@ -31,36 +31,6 @@ const TABS: Array<{ id: OscView; label: string }> = [
   { id: 'obv', label: 'OBV' },
 ]
 
-function formatOscValue(view: OscView, readouts: OscReadouts): string {
-  switch (view) {
-    case 'rsi':
-      return readouts.rsi != null ? readouts.rsi.toFixed(1) : '—'
-    case 'adx':
-      return readouts.adx != null ? readouts.adx.toFixed(1) : '—'
-    case 'stoch':
-      return readouts.stochK != null ? readouts.stochK.toFixed(1) : '—'
-    case 'obv':
-      return readouts.obv != null ? `${(readouts.obv / 1e6).toFixed(1)}M` : '—'
-    default:
-      return '—'
-  }
-}
-
-function hintForView(view: OscView, readouts: OscReadouts): { text: string; tone: string } {
-  switch (view) {
-    case 'rsi':
-      return rsiLabel(readouts.rsi)
-    case 'adx':
-      return adxLabel(readouts.adx)
-    case 'stoch':
-      return stochLabel(readouts.stochK)
-    case 'obv':
-      return obvLabel(readouts.obv)
-    default:
-      return { text: '—', tone: '' }
-  }
-}
-
 function rsiLabel(v: number | null): { text: string; tone: string } {
   if (v == null) return { text: '—', tone: '' }
   if (v > 70) return { text: 'Quá mua', tone: 'osc-ob' }
@@ -101,9 +71,6 @@ export function OscillatorPane({
   const adx = adxLabel(readouts.adx)
   const stoch = stochLabel(readouts.stochK)
   const obv = obvLabel(readouts.obv)
-  const activeTab = TABS.find((t) => t.id === view) ?? TABS[0]
-  const activeHint = hintForView(view, readouts)
-
   return (
     <div
       className={cn('btc-chart__osc-wrap', open && 'is-open')}
@@ -137,16 +104,54 @@ export function OscillatorPane({
             >
               ▸
             </m.span>
-            Oscillators
-          </span>
-          <span className="btc-chart__osc-active-summary" aria-hidden>
-            <span className="btc-chart__osc-active-key">{activeTab.label}</span>
-            <span className="btc-chart__osc-active-val">{formatOscValue(view, readouts)}</span>
-            <span className={cn('btc-chart__osc-active-hint', activeHint.tone)}>
-              {activeHint.text}
-            </span>
+            <span className="btc-chart__osc-toggle-label">OSC</span>
           </span>
         </button>
+
+        <ul className="btc-chart__osc-strip" aria-label="Oscillator quick readouts">
+          {(
+            [
+              {
+                id: 'rsi' as const,
+                label: 'RSI',
+                val: readouts.rsi,
+                fmt: (v: number) => v.toFixed(1),
+              },
+              {
+                id: 'adx' as const,
+                label: 'ADX',
+                val: readouts.adx,
+                fmt: (v: number) => v.toFixed(1),
+              },
+              {
+                id: 'stoch' as const,
+                label: 'Stoch',
+                val: readouts.stochK,
+                fmt: (v: number) => v.toFixed(1),
+              },
+              {
+                id: 'obv' as const,
+                label: 'OBV',
+                val: readouts.obv,
+                fmt: (v: number) => `${(v / 1e6).toFixed(1)}M`,
+              },
+            ] as const
+          ).map((item) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                className={cn('btc-chart__osc-strip-item', view === item.id && 'is-active')}
+                onClick={() => onViewChange(item.id)}
+                aria-pressed={view === item.id}
+              >
+                <span className="btc-chart__osc-strip-key">{item.label}</span>
+                <span className="btc-chart__osc-strip-val">
+                  {item.val != null ? item.fmt(item.val) : '—'}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
 
         <ul className="btc-chart__osc-chips" aria-label="Oscillator metrics">
           {(

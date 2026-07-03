@@ -926,8 +926,17 @@
 
 @media (max-width: 768px) {
   .btc-chart--stitch .btc-chart__body {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) auto;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .btc-chart--stitch .btc-chart__col {
+    flex: 1;
+    min-height: 0;
+    border-right: none;
   }
 
   .btc-chart--stitch .btc-chart__sidebar {
@@ -992,16 +1001,25 @@
   }
 
   .btc-chart--stitch .btc-chart__status {
-    grid-template-columns: 1fr;
-    gap: 4px;
+    display: block;
+    padding: 0;
+    min-height: var(--btc-status-h, 30px);
+  }
+
+  .btc-chart--stitch .btc-chart__status-track {
+    min-height: var(--btc-status-h, 30px);
   }
 
   .btc-chart--stitch .btc-chart__status-seg--layers {
     justify-content: flex-start;
   }
 
-  .btc-chart--stitch .btc-chart__layer-dots {
-    max-width: 70%;
+  .btc-chart--stitch .btc-chart__osc-wrap:not(.is-open) {
+    border-top: 1px solid var(--border);
+  }
+
+  .btc-chart--stitch .btc-chart__setup-fab {
+    bottom: calc(var(--btc-status-h, 30px) + 10px);
   }
 }
 

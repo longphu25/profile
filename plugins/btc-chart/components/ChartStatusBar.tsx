@@ -26,41 +26,43 @@ export function ChartStatusBar({
 
   return (
     <footer className="btc-chart__status">
-      <div className="btc-chart__status-seg btc-chart__status-seg--conn">
-        <span
-          className={
-            wsTone === 'live'
-              ? 'btc-chart__status-live'
-              : wsTone === 'err'
-                ? 'dn'
-                : 'btc-chart__status-muted'
-          }
-        >
-          <span className="btc-chart__status-dot" aria-hidden />
-          {wsText}
-        </span>
-      </div>
+      <div className="btc-chart__status-track">
+        <div className="btc-chart__status-seg btc-chart__status-seg--conn">
+          <span
+            className={
+              wsTone === 'live'
+                ? 'btc-chart__status-live'
+                : wsTone === 'err'
+                  ? 'dn'
+                  : 'btc-chart__status-muted'
+            }
+          >
+            <span className="btc-chart__status-dot" aria-hidden />
+            <span className="btc-chart__status-conn-text">{wsText}</span>
+          </span>
+        </div>
 
-      <div className="btc-chart__status-seg btc-chart__status-seg--session">
-        <span className="btc-chart__status-item">{lastUpdate}</span>
-        <span className="btc-chart__status-item">
-          OF <b>{ofCount}</b>
-        </span>
-        <span className="btc-chart__status-item">
-          Box <b>{boxCount}</b>
-        </span>
-      </div>
+        <div className="btc-chart__status-seg btc-chart__status-seg--session">
+          <span className="btc-chart__status-item">{lastUpdate}</span>
+          <span className="btc-chart__status-item">
+            OF <b>{ofCount}</b>
+          </span>
+          <span className="btc-chart__status-item">
+            Box <b>{boxCount}</b>
+          </span>
+        </div>
 
-      <div className="btc-chart__status-seg btc-chart__status-seg--layers">
-        {activeTags.length === 0 ? (
-          <span className="btc-chart__status-tag">No layers on</span>
-        ) : (
-          activeTags.map((k) => (
-            <span key={k} className="btc-chart__status-layer">
-              {IND_LABELS[k] ?? k}
-            </span>
-          ))
-        )}
+        <div className="btc-chart__status-seg btc-chart__status-seg--layers">
+          {activeTags.length === 0 ? (
+            <span className="btc-chart__status-tag">No layers</span>
+          ) : (
+            activeTags.map((k) => (
+              <span key={k} className="btc-chart__status-layer">
+                {IND_LABELS[k] ?? k}
+              </span>
+            ))
+          )}
+        </div>
       </div>
     </footer>
   )
