@@ -3,6 +3,7 @@ import {
   isDrawableLongSetup,
   isDrawableShortSetup,
   isDrawableTradeSetup,
+  resolveSetupBoxLeft,
 } from '../../plugins/btc-chart/lib/trade-setup-overlay'
 import type { TradeSetup } from '../../plugins/btc-chart/lib/types'
 
@@ -60,6 +61,15 @@ describe('isDrawableShortSetup', () => {
     expect(
       isDrawableShortSetup(baseSetup({ dir: 'short', entry: 100, sl: 105, tp1: 90, tp2: 95 })),
     ).toBe(false)
+  })
+})
+
+describe('resolveSetupBoxLeft', () => {
+  test('anchors beside last candle with gap, clamped before price scale', () => {
+    // last candle center x=400, barSpacing=10 -> halfW=4.5, gap=10 => 414.5 ~ 415
+    expect(resolveSetupBoxLeft(400, 10, 600, 76)).toBeCloseTo(414.5, 0)
+    // clamp when candle is near right edge
+    expect(resolveSetupBoxLeft(550, 10, 600, 76)).toBe(524)
   })
 })
 

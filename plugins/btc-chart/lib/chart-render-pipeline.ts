@@ -517,6 +517,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
       ctx.mainElRef.current,
       refs.mainChart,
       refs.candleSeries,
+      data,
       snapshot.tradeSetup,
       visFlags.tradeSetup,
     )

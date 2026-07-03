@@ -2,13 +2,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { fmtP } from './format'
-import type { TradeSetup } from './types'
+import type { Candle, TradeSetup } from './types'
 
 /** Default width reserved for the right price scale (matches --btc-price-scale-w). */
 const PRICE_SCALE_W = 54
 
-/** Width of right-anchored risk/reward rectangles. */
+/** Width of risk/reward rectangles beside the last candle. */
 const BOX_W = 76
+
+/** Gap between the last candle body and the overlay column. */
+const CANDLE_GAP = 10
 
 const COLORS = {
   riskFill: 'rgba(242, 54, 69, 0.2)',
@@ -50,6 +53,22 @@ export function isDrawableShortSetup(setup: TradeSetup): boolean {
 /** True when the setup can be painted on chart (LONG or SHORT). */
 export function isDrawableTradeSetup(setup: TradeSetup): boolean {
   return isDrawableLongSetup(setup) || isDrawableShortSetup(setup)
+}
+
+/**
+ * X offset for the overlay column: immediately right of the last candle,
+ * clamped so the column stays inside the plot area (left of price scale).
+ */
+export function resolveSetupBoxLeft(
+  lastCandleX: number,
+  barSpacing: number,
+  plotRight: number,
+  boxW = BOX_W,
+): number {
+  const candleHalfW = Math.max(4, barSpacing * 0.45)
+  const anchorLeft = lastCandleX + candleHalfW + CANDLE_GAP
+  const maxLeft = Math.max(0, plotRight - boxW)
+  return Math.min(Math.max(8, anchorLeft), maxLeft)
 }
 
 function readPriceScaleWidth(el: HTMLElement): number {
@@ -126,16 +145,26 @@ function drawZoneBox(
   return top
 }
 
+function resolveLastCandleX(chart: any, candles: Candle[]): number | null {
+  if (!candles.length) return null
+  const timeScale = chart?.timeScale?.()
+  if (!timeScale) return null
+  const last = candles[candles.length - 1]
+  const x = timeScale.timeToCoordinate(last.time)
+  return typeof x === 'number' && Number.isFinite(x) ? x : null
+}
+
 /**
- * Paint right-anchored risk/reward rectangles plus full-width horizontal guides.
+ * Paint risk/reward rectangles beside the last candle plus horizontal guides.
  * LONG: risk below entry (SL→Entry), reward above (Entry→TP2).
  * SHORT: reward below entry (TP2→Entry), risk above (Entry→SL).
  */
 export function drawTradeSetupOverlay(
   canvas: HTMLCanvasElement,
   mainEl: HTMLElement,
-  _chart: any,
+  chart: any,
   series: any,
+  candles: Candle[],
   setup: TradeSetup,
   visible: boolean,
 ) {
@@ -177,8 +206,15 @@ export function drawTradeSetupOverlay(
 
   const scaleW = readPriceScaleWidth(mainEl)
   const plotRight = Math.max(0, rect.width - scaleW)
-  const boxLeft = Math.max(0, plotRight - BOX_W)
-  const lineRight = plotRight
+  const lastX = resolveLastCandleX(chart, candles)
+  const barSpacing =
+    typeof chart?.timeScale?.()?.barSpacing === 'function' ? chart.timeScale().barSpacing() : 8
+  const boxLeft =
+    lastX != null
+      ? resolveSetupBoxLeft(lastX, barSpacing, plotRight)
+      : Math.max(0, plotRight - BOX_W)
+  const lineRight = boxLeft + BOX_W
+  const tagX = Math.min(boxLeft + BOX_W, plotRight - 2)
 
   const entryColor = isLong ? COLORS.entryLong : COLORS.entryShort
   const badgeLabel = isLong ? 'LONG' : 'SHORT'
@@ -214,10 +250,10 @@ export function drawTradeSetupOverlay(
   drawHLine(ctx, yTp1, 0, lineRight, COLORS.tp, true)
   drawHLine(ctx, yTp2, 0, lineRight, COLORS.tp, true)
 
-  drawPriceTag(ctx, boxLeft + BOX_W, yEntry, 'Entry', entry, entryColor)
-  drawPriceTag(ctx, boxLeft + BOX_W, ySl, 'SL', sl, COLORS.sl)
-  drawPriceTag(ctx, boxLeft + BOX_W, yTp1, 'TP1', tp1, COLORS.tp)
-  drawPriceTag(ctx, boxLeft + BOX_W, yTp2, 'TP2', tp2, COLORS.tp)
+  drawPriceTag(ctx, tagX, yEntry, 'Entry', entry, entryColor)
+  drawPriceTag(ctx, tagX, ySl, 'SL', sl, COLORS.sl)
+  drawPriceTag(ctx, tagX, yTp1, 'TP1', tp1, COLORS.tp)
+  drawPriceTag(ctx, tagX, yTp2, 'TP2', tp2, COLORS.tp)
 
   ctx.font = 'bold 9px ui-monospace, SFMono-Regular, Menlo, monospace'
   ctx.fillStyle = badgeColor

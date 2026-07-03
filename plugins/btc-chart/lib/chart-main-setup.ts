@@ -327,6 +327,7 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
         params.mainElRef.current,
         mainChart,
         candleSeries,
+        params.candlesRef.current,
         params.tradeSetupRef.current,
         params.visRef.current.tradeSetup,
       )
@@ -476,6 +477,7 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
         params.mainElRef.current,
         mainChart,
         candleSeries,
+        params.candlesRef.current,
         params.tradeSetupRef.current,
         params.visRef.current.tradeSetup,
       )
