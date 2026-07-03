@@ -5,6 +5,7 @@ import { statsFromTicker, DEFAULT_STATS, DEFAULT_FUNDING, DEFAULT_FNG } from '..
 import { fmtP, fmtV } from '../lib/format'
 import type { Interval } from '../lib/constants'
 import { HTF_MAP } from '../lib/liquidity'
+import { needsHtfKlines } from '../lib/pipeline-needs'
 import { SYMBOLS, loadSymbols, type SymbolEntry, type SymbolId } from '../lib/symbols'
 import type { FundingState, FngState, StatsState } from '../lib/types'
 import { useTicker, useFunding, useFearGreed, useKlines } from './useMarketData'
@@ -78,7 +79,9 @@ export function useBtcChartMarket(params: UseBtcChartMarketParams): UseBtcChartM
   const fngQuery = useFearGreed()
   const klinesQuery = useKlines(symbol, interval, symbolInfo)
   const htfInterval = HTF_MAP[interval as Interval]
-  const htfQuery = useKlines(symbol, htfInterval ?? (interval as Interval), symbolInfo)
+  const htfQuery = useKlines(symbol, htfInterval ?? (interval as Interval), symbolInfo, {
+    enabled: needsHtfKlines(vis) && htfInterval != null,
+  })
 
   const stats: StatsState = tickerQuery.data ? statsFromTicker(tickerQuery.data) : DEFAULT_STATS
   const funding: FundingState = fundingQuery.data ?? DEFAULT_FUNDING
