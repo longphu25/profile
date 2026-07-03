@@ -5,6 +5,7 @@
 // in the host HTML page. The plugin reads window.LightweightCharts at mount time.
 
 import type { Plugin, HostAPI } from '../../src/plugins/types'
+import { cn } from '@/lib/utils'
 import {
   useEffect,
   useLayoutEffect,
@@ -63,6 +64,7 @@ import { applyLayerPreset, type LayerPresetId } from './lib/layer-presets'
 import { RailSection } from './components/sidebar/SidebarBlocks'
 import { BtcMotionProvider } from './components/BtcMotionProvider'
 import { SidebarRailTabs } from './components/SidebarRailTabs'
+import { MobileSetupFab } from './components/MobileSetupFab'
 import type { MobileRailTab } from './lib/mobile-rail-tabs'
 // (FundingNwe / Sessions / Liquidity / OI / Technicals are lazy-loaded below)
 
@@ -2391,7 +2393,14 @@ function BtcChartView() {
 
   return (
     <BtcMotionProvider>
-      <div className={`btc-chart btc-chart--stitch${loading ? '' : ' is-ready'}`} ref={rootRef}>
+      <div
+        className={cn(
+          'btc-chart btc-chart--stitch',
+          loading ? '' : ' is-ready',
+          sidebarMobileOpen && 'is-rail-open',
+        )}
+        ref={rootRef}
+      >
         <ChartLoadingOverlay loading={loading} text={loadingText} />
         <ChartToasts
           alertMessage={firedToast}
@@ -2415,7 +2424,10 @@ function BtcChartView() {
             onToggleSidebar={() =>
               setSidebarMobileOpen((o) => {
                 const next = !o
-                if (next) setIntelOpen(false)
+                if (next) {
+                  setIntelOpen(false)
+                  setMobileRailTab('setup')
+                }
                 return next
               })
             }
@@ -2671,6 +2683,16 @@ function BtcChartView() {
             />
           </IntelDrawer>
         )}
+
+        <MobileSetupFab
+          visible={!sidebarMobileOpen}
+          setup={sidebar.tradeSetup}
+          onOpen={() => {
+            setMobileRailTab('setup')
+            setSidebarMobileOpen(true)
+            setIntelOpen(false)
+          }}
+        />
 
         <ChartStatusBar
           wsText={wsStatus.text}

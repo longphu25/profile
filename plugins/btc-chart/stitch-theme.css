@@ -932,7 +932,7 @@
 
   .btc-chart--stitch .btc-chart__sidebar {
     width: 100%;
-    max-height: min(72dvh, 520px);
+    max-height: min(78dvh, 560px);
     border-left: none;
     border-top: 1px solid var(--border-strong);
   }
@@ -962,17 +962,27 @@
     right: 0;
     bottom: var(--btc-status-h, 28px);
     z-index: 85;
-    max-height: min(72dvh, 520px);
+    max-height: min(78dvh, 560px);
     transform: translateY(100%);
     transition: transform 0.32s var(--stitch-spring);
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
   }
 
   .btc-chart--stitch .btc-chart__sidebar.is-mobile-open {
     transform: translateY(0);
+    height: min(78dvh, 560px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .btc-chart--stitch .btc-chart__rail-mobile {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 
   .btc-chart--stitch .btc-chart__intel-drawer {

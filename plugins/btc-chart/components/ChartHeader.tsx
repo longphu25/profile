@@ -123,14 +123,14 @@ export function ChartHeader({
             variant="ghost"
             size="sm"
             className={cn(
-              'btc-chart__sidebar-trigger h-8 rounded-none px-3 md:hidden',
+              'btc-chart__sidebar-trigger btc-chart__sidebar-trigger--mobile h-8 rounded-none px-3',
               sidebarOpen && 'is-on',
             )}
             onClick={onToggleSidebar}
             aria-expanded={sidebarOpen}
-            aria-label="Mở trade setup, funding, context, strategies"
+            aria-label="Mở Signal và Trade Setup"
           >
-            Rail
+            Setup
           </Button>
         )}
 
@@ -139,7 +139,10 @@ export function ChartHeader({
             type="button"
             variant="ghost"
             size="sm"
-            className={cn('btc-chart__intel-trigger h-8 rounded-none px-3', intelOpen && 'is-on')}
+            className={cn(
+              'btc-chart__intel-trigger btc-chart__intel-trigger--hide-mobile h-8 rounded-none px-3',
+              intelOpen && 'is-on',
+            )}
             onClick={onToggleIntel}
             aria-expanded={intelOpen}
             aria-haspopup="dialog"

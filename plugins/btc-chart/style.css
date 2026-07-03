@@ -471,6 +471,14 @@
   box-shadow: inset 0 -2px 0 0 var(--mint);
 }
 
+/* Mobile-only header controls (shadow DOM safe, no Tailwind breakpoint) */
+.btc-chart__sidebar-trigger--mobile {
+  display: none;
+}
+.btc-chart__intel-trigger--hide-mobile {
+  display: inline-flex;
+}
+
 /* Mobile signals rail trigger */
 .btc-chart__sidebar-trigger {
   display: inline-flex;
@@ -1604,6 +1612,10 @@
 
 /* Mobile rail bottom sheet scrim */
 .btc-chart__sidebar-scrim {
+  display: none;
+}
+
+.btc-chart__setup-fab {
   display: none;
 }
 
@@ -3687,19 +3699,82 @@
     bottom: var(--btc-status-h, 28px);
     z-index: 85;
     width: 100%;
-    max-height: min(72dvh, 520px);
+    max-height: min(78dvh, 560px);
     border-left: none;
     border-top: 1px solid var(--border-strong);
     transform: translateY(100%);
     transition: transform 0.32s cubic-bezier(0.34, 1.2, 0.64, 1);
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+  }
+  .btc-chart__sidebar.is-mobile-open {
+    transform: translateY(0);
+    display: flex;
+    flex-direction: column;
+    height: min(78dvh, 560px);
+    max-height: min(78dvh, 560px);
+    overflow: hidden;
+  }
+  .btc-chart__sidebar-trigger--mobile {
+    display: inline-flex;
+  }
+  .btc-chart__intel-trigger--hide-mobile {
+    display: none;
+  }
+  .btc-chart__rail-mobile {
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    padding-bottom: 16px;
   }
-  .btc-chart__sidebar.is-mobile-open {
-    transform: translateY(0);
+  .btc-chart.is-rail-open .btc-chart__col {
+    touch-action: none;
+  }
+  .btc-chart__setup-fab {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    position: fixed;
+    right: 12px;
+    bottom: calc(var(--btc-status-h, 28px) + 12px);
+    z-index: 82;
+    max-width: min(168px, 46vw);
+    padding: 10px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: linear-gradient(145deg, var(--surface-2) 0%, var(--surface) 100%);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.18s var(--stitch-spring, ease), border-color 0.12s;
+  }
+  .btc-chart__setup-fab:active {
+    transform: scale(0.98);
+  }
+  .btc-chart__setup-fab.is-long {
+    border-color: rgba(61, 214, 140, 0.45);
+    box-shadow: 0 8px 24px rgba(61, 214, 140, 0.12);
+  }
+  .btc-chart__setup-fab.is-short {
+    border-color: rgba(242, 87, 87, 0.45);
+    box-shadow: 0 8px 24px rgba(242, 87, 87, 0.12);
+  }
+  .btc-chart__setup-fab-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+  .btc-chart__setup-fab-hint {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
   }
   .btc-chart__header {
     gap: 8px;
