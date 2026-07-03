@@ -1,7 +1,7 @@
 // React hook for plugins to consume shared Sui context
 // Plugins import this hook to reactively access wallet/network state
 
-import { useState, useEffect, useSyncExternalStore, useCallback } from 'react'
+import { useSyncExternalStore, useCallback } from 'react'
 import type { SuiHostAPI, SuiContext } from './sui-types'
 
 /** Use shared Sui context reactively inside a plugin component */
@@ -22,17 +22,12 @@ export function useSuiContext(host: SuiHostAPI): SuiContext {
 
 /** Use a shared data value reactively */
 export function useSharedData<T = unknown>(host: SuiHostAPI, key: string): T | undefined {
-  const [value, setValue] = useState<T | undefined>(() => host.getSharedData(key) as T | undefined)
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => host.onSharedDataChange(key, onStoreChange),
+    [host, key],
+  )
 
-  useEffect(() => {
-    // Sync initial value
-    setValue(host.getSharedData(key) as T | undefined)
+  const getSnapshot = useCallback(() => host.getSharedData(key) as T | undefined, [host, key])
 
-    const unsub = host.onSharedDataChange(key, (newValue) => {
-      setValue(newValue as T | undefined)
-    })
-    return unsub
-  }, [host, key])
-
-  return value
+  return useSyncExternalStore(subscribe, getSnapshot)
 }

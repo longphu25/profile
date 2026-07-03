@@ -14,12 +14,17 @@ export function usePlugin(src: string): UsePluginResult {
   const [plugin, setPlugin] = useState<Plugin | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeSrc, setActiveSrc] = useState(src)
+
+  if (activeSrc !== src) {
+    setActiveSrc(src)
+    setPlugin(null)
+    setLoading(true)
+    setError(null)
+  }
 
   useEffect(() => {
     let cancelled = false
-
-    setLoading(true)
-    setError(null)
 
     loadPlugin(src)
       .then((p) => {

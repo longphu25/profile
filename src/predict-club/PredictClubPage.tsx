@@ -7,7 +7,7 @@ import {
   useWalletConnection,
   useWallets,
 } from '@mysten/dapp-kit-react'
-import { createDAppKit } from '@mysten/dapp-kit-core'
+import { createDAppKit, type DefaultExpectedDppKit } from '@mysten/dapp-kit-core'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
 import { ShadowContainer } from '../plugins/ShadowContainer'
@@ -17,12 +17,12 @@ type SuiNetwork = 'mainnet' | 'testnet' | 'devnet'
 const createSuiClient = (network: SuiNetwork) =>
   import.meta.env.DEV
     ? new SuiGrpcClient({ network, baseUrl: `/sui-rpc/${network}` })
-    : new SuiJsonRpcClient({ network, url: getJsonRpcFullnodeUrl(network as any) })
+    : new SuiJsonRpcClient({ network, url: getJsonRpcFullnodeUrl(network) })
 
 const dAppKit = createDAppKit({
   networks: ['mainnet', 'testnet', 'devnet'],
   defaultNetwork: 'testnet',
-  createClient: createSuiClient as any,
+  createClient: createSuiClient,
   slushWalletConfig: null,
 })
 
@@ -65,8 +65,29 @@ const WALLET_PLUGIN: PluginEntry = {
   styleUrl: '/plugins/sui-wallet-profile/style.css',
 }
 
+type WalletProfilePopupProps = { open: boolean; onClose: () => void }
+
+function RenderComponent({ component: Component }: { component: ComponentType }) {
+  return <Component />
+}
+
+function RenderWalletProfilePopup({
+  component: Component,
+  open,
+  onClose,
+}: {
+  component: ComponentType<WalletProfilePopupProps>
+  open: boolean
+  onClose: () => void
+}) {
+  return <Component open={open} onClose={onClose} />
+}
+
 function PredictClubInner() {
   const [loaded, setLoaded] = useState(false)
+  const [predictComponent, setPredictComponent] = useState<ComponentType | null>(null)
+  const [walletProfilePopup, setWalletProfilePopup] =
+    useState<ComponentType<WalletProfilePopupProps> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showWallets, setShowWallets] = useState(false)
   const [showWalletProfile, setShowWalletProfile] = useState(false)
@@ -104,7 +125,13 @@ function PredictClubInner() {
           }
         : null,
     )
-  }, [account?.address, network, connection.isConnected, connection.wallet?.name, connection.wallet?.icon])
+  }, [
+    account?.address,
+    network,
+    connection.isConnected,
+    connection.wallet?.name,
+    connection.wallet?.icon,
+  ])
 
   useEffect(() => {
     registerActions({
@@ -148,6 +175,13 @@ function PredictClubInner() {
           document.head.appendChild(link)
         }
       }
+      setPredictComponent(() => suiHostAPI.getComponent(PREDICT_PLUGIN.name) ?? null)
+      setWalletProfilePopup(
+        () =>
+          (suiHostAPI.getComponent('SuiWalletProfile.Popup') as
+            | ComponentType<WalletProfilePopupProps>
+            | undefined) ?? null,
+      )
       setLoaded(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -179,13 +213,6 @@ function PredictClubInner() {
     }
   }
 
-  const Component = loaded ? suiHostAPI.getComponent(PREDICT_PLUGIN.name) : null
-  const WalletProfilePopup = loaded
-    ? (suiHostAPI.getComponent('SuiWalletProfile.Popup') as
-        | ComponentType<{ open: boolean; onClose: () => void }>
-        | undefined)
-    : null
-
   const openWalletControl = () => {
     if (connection.isConnected) setShowWalletProfile(true)
     else setShowWallets(true)
@@ -197,7 +224,9 @@ function PredictClubInner() {
         <div className="predict-club-page__brand">
           <strong>PREDICT CLUB</strong>
           <nav className="predict-club-page__nav" aria-label="Predict Club navigation">
-            <a className="predict-club-page__nav-active" href="#clubs">Clubs</a>
+            <a className="predict-club-page__nav-active" href="#clubs">
+              Clubs
+            </a>
             <a href="#market">Market</a>
             <a href="#history">History</a>
             <a href="#leaderboard">Leaderboard</a>
@@ -231,11 +260,7 @@ function PredictClubInner() {
               {account.address.slice(0, 6)}...{account.address.slice(-4)}
             </button>
           ) : (
-            <button
-              type="button"
-              className="predict-club-page__wallet"
-              onClick={openWalletControl}
-            >
+            <button type="button" className="predict-club-page__wallet" onClick={openWalletControl}>
               Connect Wallet
             </button>
           )}
@@ -267,13 +292,26 @@ function PredictClubInner() {
         </div>
       )}
 
-      {WalletProfilePopup && showWalletProfile && (
+      {walletProfilePopup && showWalletProfile && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
           onClick={() => setShowWalletProfile(false)}
         >
           <div onClick={(e) => e.stopPropagation()}>
-            <WalletProfilePopup open={true} onClose={() => setShowWalletProfile(false)} />
+            <RenderWalletProfilePopup
+              component={walletProfilePopup}
+              open={true}
+              onClose={() => setShowWalletProfile(false)}
+            />
           </div>
         </div>
       )}
@@ -281,9 +319,9 @@ function PredictClubInner() {
       {error && <div className="predict-club-page__error">{error}</div>}
 
       <main className="predict-club-page__workspace">
-        {Component ? (
+        {loaded && predictComponent ? (
           <ShadowContainer styleUrls={[PREDICT_PLUGIN.styleUrl]}>
-            <Component />
+            <RenderComponent component={predictComponent} />
           </ShadowContainer>
         ) : (
           <div className="predict-club-page__loading">Loading {PREDICT_PLUGIN.label}...</div>
@@ -295,7 +333,7 @@ function PredictClubInner() {
 
 export function PredictClubPage() {
   return (
-    <DAppKitProvider dAppKit={dAppKit as any}>
+    <DAppKitProvider dAppKit={dAppKit as unknown as DefaultExpectedDppKit}>
       <PredictClubInner />
     </DAppKitProvider>
   )
