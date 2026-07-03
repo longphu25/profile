@@ -13,6 +13,9 @@ export type { TradeSetup }
 
 const OTE_RATIO = 0.618
 
+/** Default R-multiples for the three take-profit rungs. */
+export const TP_RR_LADDER = [2, 3, 4] as const
+
 /** Minimum spacing between adjacent TP prices (fraction of entry). */
 const TP_MIN_GAP_FRAC = 1e-5
 
@@ -20,9 +23,48 @@ function minTpGap(entry: number, risk: number): number {
   return Math.max(risk * 0.15, entry * TP_MIN_GAP_FRAC)
 }
 
+export interface TpStructureHints {
+  /** LONG: swing/NWE high may extend TP3 beyond 4R when above entry + 4R. */
+  readonly extendHigh?: number | null
+  /** SHORT: swing/NWE low may extend TP3 beyond 4R when below entry - 4R. */
+  readonly extendLow?: number | null
+}
+
+/**
+ * Build TP1/TP2/TP3 from fixed R:R rungs (2R / 3R / 4R).
+ * Structure hints only extend TP3 past 4R, never replace the ladder.
+ */
+export function calcTpLadder(
+  dir: 'long' | 'short',
+  entry: number,
+  risk: number,
+  structure: TpStructureHints = {},
+): { tp1: number; tp2: number; tp3: number } {
+  const [rr1, rr2, rr3] = TP_RR_LADDER
+  if (risk <= 0) {
+    return { tp1: entry, tp2: entry, tp3: entry }
+  }
+  if (dir === 'long') {
+    const tp1 = entry + risk * rr1
+    const tp2 = entry + risk * rr2
+    let tp3 = entry + risk * rr3
+    const hi = structure.extendHigh
+    if (hi != null && hi > tp3) tp3 = hi
+    const rungs = separateTpRungs('long', entry, risk, tp1, tp2, tp3)
+    return { tp1, tp2: rungs.tp2, tp3: rungs.tp3 }
+  }
+  const tp1 = entry - risk * rr1
+  const tp2 = entry - risk * rr2
+  let tp3 = entry - risk * rr3
+  const lo = structure.extendLow
+  if (lo != null && lo < tp3) tp3 = lo
+  const rungs = separateTpRungs('short', entry, risk, tp1, tp2, tp3)
+  return { tp1, tp2: rungs.tp2, tp3: rungs.tp3 }
+}
+
 /**
  * Ensure TP2 and TP3 stay strictly ordered and visually distinct on the chart.
- * When structure levels collapse (e.g. swing low equals 3R), nudge TP3 first.
+ * Safety net when structure extension equals an earlier rung.
  */
 export function separateTpRungs(
   dir: 'long' | 'short',
@@ -503,12 +545,11 @@ export function calcTradeSetup(
     const candidates = collectLongEntryCandidates(i, price, swingLow, swingHigh, nwe, extra)
     const { entry, method } = calcLimitEntry('long', price, sl, candidates)
     const risk = entry - sl
-    const bestUp = luxUp != null && nweUp != null ? Math.max(luxUp, nweUp) : (luxUp ?? nweUp)
-    const tp1 = entry + risk * 2
-    const tp2Raw = bestUp != null ? Math.max(bestUp, entry + risk * 3) : entry + risk * 3
-    const tp3Raw = Math.max(tp2Raw, entry + risk * 4, swingHigh * 0.998)
-    const { tp2, tp3 } = separateTpRungs('long', entry, risk, tp1, tp2Raw, tp3Raw)
-    const rr = risk > 0 ? (tp1 - entry) / risk : 2
+    const extendHigh = Math.max(swingHigh * 0.998, luxUp ?? 0, nweUp ?? 0)
+    const { tp1, tp2, tp3 } = calcTpLadder('long', entry, risk, {
+      extendHigh: extendHigh > entry ? extendHigh : null,
+    })
+    const rr = risk > 0 ? (tp1 - entry) / risk : TP_RR_LADDER[0]
     return {
       dir,
       entry,
@@ -531,12 +572,15 @@ export function calcTradeSetup(
     const candidates = collectShortEntryCandidates(i, price, swingLow, swingHigh, nwe, extra)
     const { entry, method } = calcLimitEntry('short', price, sl, candidates)
     const risk = sl - entry
-    const bestLo = luxLo != null && nweLo != null ? Math.min(luxLo, nweLo) : (luxLo ?? nweLo)
-    const tp1 = entry - risk * 2
-    const tp2Raw = bestLo != null ? Math.min(bestLo, entry - risk * 3) : entry - risk * 3
-    const tp3Raw = Math.min(tp2Raw, entry - risk * 4, swingLow * 1.002)
-    const { tp2, tp3 } = separateTpRungs('short', entry, risk, tp1, tp2Raw, tp3Raw)
-    const rr = risk > 0 ? (entry - tp1) / risk : 2
+    const extendLow = Math.min(
+      swingLow * 1.002,
+      luxLo ?? Number.POSITIVE_INFINITY,
+      nweLo ?? Number.POSITIVE_INFINITY,
+    )
+    const { tp1, tp2, tp3 } = calcTpLadder('short', entry, risk, {
+      extendLow: extendLow < entry ? extendLow : null,
+    })
+    const rr = risk > 0 ? (entry - tp1) / risk : TP_RR_LADDER[0]
     return {
       dir,
       entry,
@@ -598,19 +642,17 @@ export function suggestSlTp(
     // SL must be below entry: pick the higher of ATR-SL and NWE lower, but cap at entry
     const sl = nweLo != null && nweLo < pos.entryPrice ? Math.max(atrSl, nweLo) : atrSl
     const risk = pos.entryPrice - sl
-    const tp1 = pos.entryPrice + risk * 2
-    const tp2Raw = nweUp != null && nweUp > pos.entryPrice ? nweUp : pos.entryPrice + risk * 3
-    const tp3Raw = Math.max(tp2Raw, pos.entryPrice + risk * 4)
-    const { tp2, tp3 } = separateTpRungs('long', pos.entryPrice, risk, tp1, tp2Raw, tp3Raw)
+    const { tp1, tp2, tp3 } = calcTpLadder('long', pos.entryPrice, risk, {
+      extendHigh: nweUp != null && nweUp > pos.entryPrice ? nweUp : null,
+    })
     return { sl, tp1, tp2, tp3 }
   }
   // short: SL must be above entry
   const atrSl = pos.entryPrice + atr * 1.5
   const sl = nweUp != null && nweUp > pos.entryPrice ? Math.min(atrSl, nweUp) : atrSl
   const risk = sl - pos.entryPrice
-  const tp1 = pos.entryPrice - risk * 2
-  const tp2Raw = nweLo != null && nweLo < pos.entryPrice ? nweLo : pos.entryPrice - risk * 3
-  const tp3Raw = Math.min(tp2Raw, pos.entryPrice - risk * 4)
-  const { tp2, tp3 } = separateTpRungs('short', pos.entryPrice, risk, tp1, tp2Raw, tp3Raw)
+  const { tp1, tp2, tp3 } = calcTpLadder('short', pos.entryPrice, risk, {
+    extendLow: nweLo != null && nweLo < pos.entryPrice ? nweLo : null,
+  })
   return { sl, tp1, tp2, tp3 }
 }

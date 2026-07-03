@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { separateTpRungs } from '../../plugins/btc-chart/lib/trade-setup'
+import { calcTpLadder, separateTpRungs } from '../../plugins/btc-chart/lib/trade-setup'
 import {
   findNearestCuttingCandleIndex,
   isDrawableLongSetup,
@@ -181,6 +181,27 @@ describe('staggerLevelTagYs', () => {
     ])
     expect(ys.get('tp2')).toBe(200)
     expect(ys.get('tp3')).toBe(216)
+  })
+})
+
+describe('calcTpLadder', () => {
+  test('spaces short TPs at 2R / 3R / 4R from entry', () => {
+    const entry = 0.07576
+    const risk = 0.00111
+    const { tp1, tp2, tp3 } = calcTpLadder('short', entry, risk)
+    expect(tp1).toBeCloseTo(entry - risk * 2, 6)
+    expect(tp2).toBeCloseTo(entry - risk * 3, 6)
+    expect(tp3).toBeCloseTo(entry - risk * 4, 6)
+    expect(tp3).toBeLessThan(tp2)
+    expect(tp2).toBeLessThan(tp1)
+  })
+
+  test('extends long TP3 past 4R when structure is higher', () => {
+    const entry = 100
+    const risk = 5
+    const { tp2, tp3 } = calcTpLadder('long', entry, risk, { extendHigh: 130 })
+    expect(tp2).toBe(115)
+    expect(tp3).toBe(130)
   })
 })
 
