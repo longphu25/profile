@@ -19,6 +19,12 @@ export const LEVEL_TICK_LEN = 40
 /** Minimum gap between level tick end and overlay column. */
 export const OVERLAY_LINE_GAP = 14
 
+/** Minimum total overlay height before switching to expanded compressed layout. */
+export const MIN_SETUP_TOTAL_PX = 96
+
+/** Minimum height for each risk/reward zone when compressed. */
+export const MIN_ZONE_PX = 22
+
 const COLORS = {
   riskFill: 'rgba(242, 54, 69, 0.2)',
   riskStroke: 'rgba(242, 54, 69, 0.65)',
@@ -61,10 +67,19 @@ export function isDrawableTradeSetup(setup: TradeSetup): boolean {
   return isDrawableLongSetup(setup) || isDrawableShortSetup(setup)
 }
 
-/**
- * X offset for the overlay column: immediately right of the last candle,
- * clamped so the column stays inside the plot area (left of price scale).
- */
+/** Pixel layout for risk/reward zones (may expand when price scale compresses levels). */
+export interface SetupZoneLayout {
+  readonly riskTop: number
+  readonly riskH: number
+  readonly rewardTop: number
+  readonly rewardH: number
+  readonly compressed: boolean
+  readonly entryY: number
+  readonly slY: number
+  readonly tp1Y: number
+  readonly tp2Y: number
+}
+
 /**
  * Index of the most recent candle whose range contains `price`, scanning backward.
  * Returns -1 when no candle intersects the level.
@@ -87,6 +102,100 @@ export function resolveSetupBoxLeft(
   const anchorLeft = lastCandleX + candleHalfW + CANDLE_GAP
   const maxLeft = Math.max(0, plotRight - boxW)
   return Math.min(Math.max(8, anchorLeft), maxLeft)
+}
+
+/**
+ * Follow the last candle when it is on-screen; otherwise dock beside the plot edge.
+ * Prevents the overlay from collapsing when panning away from the live bar.
+ */
+export function resolveSetupBoxLeftForViewport(
+  lastCandleX: number | null,
+  barSpacing: number,
+  plotRight: number,
+  boxW = BOX_W,
+): number {
+  const maxLeft = Math.max(0, plotRight - boxW)
+  if (lastCandleX == null) return maxLeft
+  const candleHalfW = Math.max(4, barSpacing * 0.45)
+  const onScreen = lastCandleX + candleHalfW >= 0 && lastCandleX <= plotRight + candleHalfW
+  if (!onScreen) return maxLeft
+  return resolveSetupBoxLeft(lastCandleX, barSpacing, plotRight, boxW)
+}
+
+/**
+ * Build zone rectangles from price Y coordinates, expanding when pan/zoom compresses them.
+ */
+export function layoutSetupZones(
+  ySl: number,
+  yEntry: number,
+  yTp1: number,
+  yTp2: number,
+  prices: { sl: number; entry: number; tp1: number; tp2: number },
+  isLong: boolean,
+): SetupZoneLayout {
+  const naturalRiskH = isLong ? Math.abs(ySl - yEntry) : Math.abs(yEntry - ySl)
+  const naturalRewardH = isLong ? Math.abs(yEntry - yTp2) : Math.abs(yTp2 - yEntry)
+  const naturalTotal = naturalRiskH + naturalRewardH
+
+  if (naturalTotal >= MIN_SETUP_TOTAL_PX) {
+    if (isLong) {
+      return {
+        riskTop: Math.min(ySl, yEntry),
+        riskH: naturalRiskH,
+        rewardTop: Math.min(yEntry, yTp2),
+        rewardH: naturalRewardH,
+        compressed: false,
+        entryY: yEntry,
+        slY: ySl,
+        tp1Y: yTp1,
+        tp2Y: yTp2,
+      }
+    }
+    return {
+      riskTop: Math.min(yEntry, ySl),
+      riskH: naturalRiskH,
+      rewardTop: Math.min(yTp2, yEntry),
+      rewardH: naturalRewardH,
+      compressed: false,
+      entryY: yEntry,
+      slY: ySl,
+      tp1Y: yTp1,
+      tp2Y: yTp2,
+    }
+  }
+
+  const riskShare = isLong ? Math.abs(prices.entry - prices.sl) : Math.abs(prices.sl - prices.entry)
+  const rewardShare = isLong
+    ? Math.abs(prices.tp2 - prices.entry)
+    : Math.abs(prices.entry - prices.tp2)
+  const totalShare = riskShare + rewardShare || 1
+  const riskH = Math.max(MIN_ZONE_PX, (riskShare / totalShare) * MIN_SETUP_TOTAL_PX)
+  const rewardH = Math.max(MIN_ZONE_PX, MIN_SETUP_TOTAL_PX - riskH)
+
+  if (isLong) {
+    return {
+      riskTop: yEntry,
+      riskH,
+      rewardTop: yEntry - rewardH,
+      rewardH,
+      compressed: true,
+      entryY: yEntry,
+      slY: yEntry + riskH * 0.82,
+      tp1Y: yEntry - rewardH * 0.42,
+      tp2Y: yEntry - rewardH * 0.88,
+    }
+  }
+  return {
+    rewardTop: yEntry,
+    rewardH,
+    riskTop: yEntry - riskH,
+    riskH,
+    compressed: true,
+    entryY: yEntry,
+    slY: yEntry - riskH * 0.82,
+    tp1Y: yEntry + rewardH * 0.42,
+    tp2Y: yEntry + rewardH * 0.88,
+  }
 }
 
 function readPriceScaleWidth(el: HTMLElement): number {
@@ -144,16 +253,14 @@ function drawPriceTag(
   ctx.fillText(text, bx + padX, by + th + padY - 2)
 }
 
-function drawZoneBox(
+function drawZoneRect(
   ctx: CanvasRenderingContext2D,
   boxLeft: number,
-  yA: number,
-  yB: number,
+  top: number,
+  h: number,
   fill: string,
   stroke: string,
 ) {
-  const top = Math.min(yA, yB)
-  const h = Math.abs(yA - yB)
   if (h < 1) return
   ctx.fillStyle = fill
   ctx.strokeStyle = stroke
@@ -256,49 +363,48 @@ export function drawTradeSetupOverlay(
   const lastX = resolveLastCandleX(chart, candles)
   const barSpacing =
     typeof chart?.timeScale?.()?.barSpacing === 'function' ? chart.timeScale().barSpacing() : 8
-  const boxLeft =
-    lastX != null
-      ? resolveSetupBoxLeft(lastX, barSpacing, plotRight)
-      : Math.max(0, plotRight - BOX_W)
+  const boxLeft = resolveSetupBoxLeftForViewport(lastX, barSpacing, plotRight)
+  const layout = layoutSetupZones(ySl, yEntry, yTp1, yTp2, { sl, entry, tp1, tp2 }, isLong)
   const entryColor = isLong ? COLORS.entryLong : COLORS.entryShort
   const badgeLabel = isLong ? 'LONG' : 'SHORT'
   const badgeColor = isLong ? COLORS.badgeLong : COLORS.badgeShort
 
-  let riskTop: number
-  let rewardTop: number
-  let rewardH: number
+  const riskTop =
+    drawZoneRect(ctx, boxLeft, layout.riskTop, layout.riskH, COLORS.riskFill, COLORS.riskStroke) ??
+    layout.riskTop
 
-  if (isLong) {
-    riskTop = drawZoneBox(ctx, boxLeft, ySl, yEntry, COLORS.riskFill, COLORS.riskStroke) ?? 0
-    rewardTop = drawZoneBox(ctx, boxLeft, yEntry, yTp2, COLORS.rewardFill, COLORS.rewardStroke) ?? 0
-    rewardH = Math.abs(yEntry - yTp2)
-  } else {
-    rewardTop = drawZoneBox(ctx, boxLeft, yTp2, yEntry, COLORS.rewardFill, COLORS.rewardStroke) ?? 0
-    riskTop = drawZoneBox(ctx, boxLeft, yEntry, ySl, COLORS.riskFill, COLORS.riskStroke) ?? 0
-    rewardH = Math.abs(yTp2 - yEntry)
-  }
+  drawZoneRect(
+    ctx,
+    boxLeft,
+    layout.rewardTop,
+    layout.rewardH,
+    COLORS.rewardFill,
+    COLORS.rewardStroke,
+  )
 
-  if (yTp1 > rewardTop && yTp1 < rewardTop + rewardH) {
+  const tp1InReward =
+    layout.tp1Y > layout.rewardTop && layout.tp1Y < layout.rewardTop + layout.rewardH
+  if (tp1InReward) {
     ctx.strokeStyle = COLORS.tp
     ctx.lineWidth = 1
     ctx.setLineDash([4, 3])
     ctx.beginPath()
-    ctx.moveTo(boxLeft, yTp1)
-    ctx.lineTo(boxLeft + BOX_W, yTp1)
+    ctx.moveTo(boxLeft, layout.tp1Y)
+    ctx.lineTo(boxLeft + BOX_W, layout.tp1Y)
     ctx.stroke()
     ctx.setLineDash([])
   }
 
-  drawLevelTick(ctx, yEntry, boxLeft, entryColor, false)
-  drawLevelTick(ctx, ySl, boxLeft, COLORS.sl, true)
-  drawLevelTick(ctx, yTp1, boxLeft, COLORS.tp, true)
-  drawLevelTick(ctx, yTp2, boxLeft, COLORS.tp, true)
+  drawLevelTick(ctx, layout.entryY, boxLeft, entryColor, false)
+  drawLevelTick(ctx, layout.slY, boxLeft, COLORS.sl, true)
+  drawLevelTick(ctx, layout.tp1Y, boxLeft, COLORS.tp, true)
+  drawLevelTick(ctx, layout.tp2Y, boxLeft, COLORS.tp, true)
 
   const tagAnchor = boxLeft + 4
-  drawPriceTag(ctx, tagAnchor, yEntry, 'Entry', entry, entryColor)
-  drawPriceTag(ctx, tagAnchor, ySl, 'SL', sl, COLORS.sl)
-  drawPriceTag(ctx, tagAnchor, yTp1, 'TP1', tp1, COLORS.tp)
-  drawPriceTag(ctx, tagAnchor, yTp2, 'TP2', tp2, COLORS.tp)
+  drawPriceTag(ctx, tagAnchor, layout.entryY, 'Entry', entry, entryColor)
+  drawPriceTag(ctx, tagAnchor, layout.slY, 'SL', sl, COLORS.sl)
+  drawPriceTag(ctx, tagAnchor, layout.tp1Y, 'TP1', tp1, COLORS.tp)
+  drawPriceTag(ctx, tagAnchor, layout.tp2Y, 'TP2', tp2, COLORS.tp)
 
   ctx.font = 'bold 9px ui-monospace, SFMono-Regular, Menlo, monospace'
   ctx.fillStyle = badgeColor

@@ -4,8 +4,10 @@ import {
   isDrawableLongSetup,
   isDrawableShortSetup,
   isDrawableTradeSetup,
+  layoutSetupZones,
   resolveOverlayAdjacentTickSpan,
   resolveSetupBoxLeft,
+  resolveSetupBoxLeftForViewport,
 } from '../../plugins/btc-chart/lib/trade-setup-overlay'
 import type { Candle } from '../../plugins/btc-chart/lib/types'
 import type { TradeSetup } from '../../plugins/btc-chart/lib/types'
@@ -85,6 +87,56 @@ describe('resolveOverlayAdjacentTickSpan', () => {
   test('always hugs overlay left edge with a short fixed width', () => {
     expect(resolveOverlayAdjacentTickSpan(400)).toEqual({ x0: 346, x1: 386 })
     expect(resolveOverlayAdjacentTickSpan(14)).toBeNull()
+  })
+})
+
+describe('resolveSetupBoxLeftForViewport', () => {
+  test('docks to plot edge when the last candle is off-screen', () => {
+    expect(resolveSetupBoxLeftForViewport(900, 10, 600)).toBe(524)
+    expect(resolveSetupBoxLeftForViewport(-80, 10, 600)).toBe(524)
+  })
+
+  test('follows the last candle while it remains visible', () => {
+    expect(resolveSetupBoxLeftForViewport(400, 10, 600)).toBeCloseTo(414.5, 0)
+  })
+})
+
+describe('layoutSetupZones', () => {
+  test('expands compressed long zones instead of collapsing them', () => {
+    const layout = layoutSetupZones(
+      210,
+      200,
+      198,
+      195,
+      {
+        sl: 0.075,
+        entry: 0.077,
+        tp1: 0.081,
+        tp2: 0.096,
+      },
+      true,
+    )
+    expect(layout.compressed).toBe(true)
+    expect(layout.riskH + layout.rewardH).toBeGreaterThanOrEqual(96)
+  })
+
+  test('keeps natural layout when there is enough pixel separation', () => {
+    const layout = layoutSetupZones(
+      300,
+      200,
+      120,
+      80,
+      {
+        sl: 0.075,
+        entry: 0.077,
+        tp1: 0.081,
+        tp2: 0.096,
+      },
+      true,
+    )
+    expect(layout.compressed).toBe(false)
+    expect(layout.riskH).toBe(100)
+    expect(layout.rewardH).toBe(120)
   })
 })
 
