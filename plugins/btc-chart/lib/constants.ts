@@ -18,8 +18,17 @@ export const CHART = {
 
 export const LIMIT = 300
 
-/** Live chart repaint + polled market data cadence (ms). */
-export const LIVE_REFRESH_MS = 1000
+/** Polled ticker / header price cadence (ms). */
+export const TICKER_REFRESH_MS = 2000
+
+/** Chart pipeline + WebSocket render throttle (ms). */
+export const CHART_REFRESH_MS = 2000
+
+/** Minimum interval between heavy indicator recomputes on the same bar (ms). */
+export const HEAVY_COMPUTE_MS = 5000
+
+/** @deprecated Use TICKER_REFRESH_MS or CHART_REFRESH_MS */
+export const LIVE_REFRESH_MS = CHART_REFRESH_MS
 
 /** Default window size for heavy NWE computation (repaint mode benefits most from not using full history). */
 export const NWE_DEFAULT_WINDOW = 500

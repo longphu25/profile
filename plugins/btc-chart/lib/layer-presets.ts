@@ -9,7 +9,7 @@ export type LayerPresetId = 'scalp' | 'swing' | 'analysis'
 export const LAYER_PRESETS: Record<LayerPresetId, ReadonlyArray<keyof VisFlags>> = {
   scalp: ['of', 'volSpike', 'scalping', 'luxNwe', 'vol'],
   swing: ['ma50', 'ma200', 'vp', 'nwe', 'rsiDiv', 'vwap'],
-  analysis: ['smc', 'ict', 'liquidity', 'whale', 'vp', 'heatmap', 'boxFlip'],
+  analysis: ['smc', 'supplyDemand', 'ict', 'liquidity', 'whale', 'vp', 'heatmap', 'boxFlip'],
 }
 
 export const LAYER_PRESET_LABELS: Record<LayerPresetId, string> = {
@@ -21,10 +21,7 @@ export const LAYER_PRESET_LABELS: Record<LayerPresetId, string> = {
 /**
  * Returns a new VisFlags with only preset layers on (heatmap requires vp).
  */
-export function applyLayerPreset(
-  current: VisFlags,
-  preset: LayerPresetId,
-): VisFlags {
+export function applyLayerPreset(current: VisFlags, preset: LayerPresetId): VisFlags {
   const on = new Set(LAYER_PRESETS[preset])
   const next = { ...current }
   for (const key of ALL_IND_KEYS) {

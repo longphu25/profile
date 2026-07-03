@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { LIVE_REFRESH_MS } from '../lib/constants'
+import { TICKER_REFRESH_MS } from '../lib/constants'
 import { BtcChartPage } from './BtcChartPage'
 
 const queryClient = new QueryClient({
@@ -7,7 +7,7 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: LIVE_REFRESH_MS,
+      staleTime: TICKER_REFRESH_MS,
     },
   },
 })
