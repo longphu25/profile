@@ -575,7 +575,10 @@ export function calcTradeSetup(
 
   const confidence = Math.min(100, Math.max(bull, bear) * 20 + Math.abs(bull - bear) * 10)
   const bias = buildTradeSetupBias(bull, bear, reasons, ml.score)
-  const emptyPlan = { plan: null as const, planStatus: 'waiting' as const }
+  const emptyPlan: Pick<TradeSetup, 'plan' | 'planStatus'> = {
+    plan: null,
+    planStatus: 'waiting',
+  }
 
   if (dir === 'long') {
     const luxLo = extra?.luxNwe?.lower[i]

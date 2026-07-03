@@ -84,7 +84,11 @@ export interface SupplyDemandResult {
   readonly shortSl: number | null
 }
 
-const DEFAULT_CFG: Required<SupplyDemandConfig> = {
+type ResolvedSupplyDemandConfig = Required<
+  Pick<SupplyDemandConfig, 'minImpulseBars' | 'bodyMult' | 'wickMult' | 'spreadFrac' | 'maxZones'>
+>
+
+const DEFAULT_CFG: ResolvedSupplyDemandConfig = {
   minImpulseBars: 3,
   bodyMult: 0.75,
   wickMult: 1.2,
@@ -194,7 +198,7 @@ function isZoneActive(data: Candle[], zone: SupplyDemandZone, fromIndex: number)
   return true
 }
 
-function detectZones(data: Candle[], cfg: Required<SupplyDemandConfig>): SupplyDemandZone[] {
+function detectZones(data: Candle[], cfg: ResolvedSupplyDemandConfig): SupplyDemandZone[] {
   if (data.length < cfg.minImpulseBars + 2) return []
 
   const zones: SupplyDemandZone[] = []
