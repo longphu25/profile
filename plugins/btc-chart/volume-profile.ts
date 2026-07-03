@@ -1,5 +1,5 @@
 // BTC Chart — Volume Profile drawer (canvas).
-// Renders profile bars + a heatmap strip docked at the chart's right edge.
+// Histogram bars grow right-to-left from the price scale; heatmap strip docks on the right.
 
 export interface VPCandle {
   time: number
@@ -120,9 +120,13 @@ export function drawVolumeProfile(
   const rowH = H / rows.length
   const profileX = 0
   const heatmapX = profileW + COL_GAP
-  const barW = profileW - 10
+  const barPadLeft = 6
+  const barPadRight = 4
+  const barW = profileW - barPadLeft - barPadRight
+  /** Right edge of histogram bars (anchored beside heatmap / price scale). */
+  const barOriginRight = profileX + profileW - barPadRight
 
-  // ── 1. Profile buy/sell bars (left column) ─────────────────────────
+  // ── 1. Profile buy/sell bars (grow right → left into chart) ────────
   const vaY = H - (vahIdx + 1) * rowH
   const vaH = (vahIdx - valIdx + 1) * rowH
   ctx.fillStyle = 'rgba(255,196,107,0.05)'
@@ -138,6 +142,9 @@ export function drawVolumeProfile(
     const isHVN = !isPOC && r.total >= maxVol * hvnRatio
     if (isHVN) hvnCount++
 
+    const totalW = sellW + buyW
+    const barLeft = barOriginRight - totalW
+
     ctx.fillStyle = isPOC
       ? 'rgba(255,196,107,0.95)'
       : isHVN
@@ -145,7 +152,7 @@ export function drawVolumeProfile(
         : isVA
           ? 'rgba(255,122,133,0.6)'
           : 'rgba(255,122,133,0.3)'
-    ctx.fillRect(profileX, y + 0.5, sellW, rowH - 1)
+    ctx.fillRect(barLeft, y + 0.5, sellW, rowH - 1)
 
     ctx.fillStyle = isPOC
       ? 'rgba(255,196,107,0.95)'
@@ -154,12 +161,12 @@ export function drawVolumeProfile(
         : isVA
           ? 'rgba(52,216,164,0.6)'
           : 'rgba(52,216,164,0.3)'
-    ctx.fillRect(profileX + sellW, y + 0.5, buyW, rowH - 1)
+    ctx.fillRect(barLeft + sellW, y + 0.5, buyW, rowH - 1)
 
     if (isHVN) {
       ctx.fillStyle = 'rgba(255,196,107,0.9)'
       ctx.beginPath()
-      ctx.arc(profileX + profileW - 4, y + rowH / 2, 2, 0, Math.PI * 2)
+      ctx.arc(barOriginRight - 2, y + rowH / 2, 2, 0, Math.PI * 2)
       ctx.fill()
     }
   })
@@ -199,11 +206,12 @@ export function drawVolumeProfile(
   const pocLabel = 'POC ' + fmt(pocPrice)
   ctx.font = 'bold 9px ui-monospace, monospace'
   const pocLabelW = ctx.measureText(pocLabel).width + 8
+  const pocLabelX = Math.max(profileX + 2, barOriginRight - pocLabelW)
   ctx.fillStyle = 'rgba(255,196,107,0.95)'
-  roundRect(ctx, profileX + 2, pocY - 7, pocLabelW, 13, 3)
+  roundRect(ctx, pocLabelX, pocY - 7, pocLabelW, 13, 3)
   ctx.fill()
   ctx.fillStyle = '#071011'
-  ctx.fillText(pocLabel, profileX + 6, pocY + 2)
+  ctx.fillText(pocLabel, pocLabelX + 4, pocY + 2)
 
   ctx.font = '9px ui-monospace, monospace'
   ctx.fillStyle = 'rgba(255,122,133,0.85)'
