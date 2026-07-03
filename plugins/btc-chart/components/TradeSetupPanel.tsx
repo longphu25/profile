@@ -309,16 +309,29 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
     />
   )
 
+  const biasDir = setup.bias?.dir ?? null
+  const biasConf = setup.bias?.confidence ?? setup.confidence
+  const biasReasons = setup.bias?.reasons ?? setup.reasons
+
   if (!setup.dir) {
     return (
       <SideBlock variant="trade">
-        <SideHead title="Trade Setup" subtitle="Chờ confluence" actions={headActions} />
+        <SideHead title="Trade Setup" subtitle="Chờ plan khóa" actions={headActions} />
         {positionsDrawer}
         <div className="sb-trade-empty">
-          <p className="sb-trade-empty__title">Chưa có setup</p>
+          <p className="sb-trade-empty__title">Chưa có plan</p>
           <p className="sb-trade-empty__hint">
-            Cần ít nhất 2 tín hiệu đồng thuận để hiện mức limit entry, SL và TP.
+            Cần ít nhất 2 tín hiệu đồng thuận để khóa entry, SL và TP đến khi invalidation.
           </p>
+          {biasDir && (
+            <p className="sb-trade-empty__hint">
+              Bias live:{' '}
+              <span className={biasDir === 'long' ? 'up' : 'dn'}>
+                {biasDir === 'long' ? 'LONG' : 'SHORT'}
+              </span>{' '}
+              · {biasConf}%
+            </p>
+          )}
         </div>
         {explainOpen && <ExplainModal setup={setup} onClose={() => setExplainOpen(false)} />}
       </SideBlock>
@@ -338,9 +351,9 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
   const rrLabel = setup.rr > 0 ? setup.rr.toFixed(1) : '2.0'
   const spotOffset = fmtSpotOffset(setup.entry, setup.spotPrice)
 
-  const { mlCount, boucherCount, lienCount, nweCount, smcCount, ictCount } = countConfluenceGroups(
-    setup.reasons,
-  )
+  const biasMismatch = biasDir != null && biasDir !== setup.dir
+  const { mlCount, boucherCount, lienCount, nweCount, smcCount, ictCount } =
+    countConfluenceGroups(biasReasons)
   const chips = [
     mlCount > 0 && `ML ${mlCount}`,
     smcCount > 0 && `SMC ${smcCount}`,
@@ -363,13 +376,20 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
     <SideBlock variant="trade" tone={isLong ? 'long' : 'short'} className="sb-trade-cockpit">
       <SideHead
         title="Trade Setup"
-        subtitle={open ? 'Chi tiết' : quickSubtitle}
+        subtitle={open ? 'Plan khóa · chi tiết' : `Plan · ${quickSubtitle}`}
         collapsible
         open={open}
         onToggle={() => setOpen((o) => !o)}
         badges={
           !open ? (
-            <SideBadge tone={isLong ? 'up' : 'dn'}>{isLong ? 'LONG' : 'SHORT'}</SideBadge>
+            <>
+              <SideBadge tone={isLong ? 'up' : 'dn'}>PLAN {isLong ? 'LONG' : 'SHORT'}</SideBadge>
+              {biasMismatch && (
+                <SideBadge tone={biasDir === 'long' ? 'up' : 'dn'}>
+                  Bias {biasDir === 'long' ? 'LONG' : 'SHORT'}
+                </SideBadge>
+              )}
+            </>
           ) : undefined
         }
         actions={headActions}
@@ -399,12 +419,12 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
             <span className={`sb-trade-verdict__dir ${dirTone}`}>{isLong ? 'LONG' : 'SHORT'}</span>
             <meter
               className={`sb-trade-verdict__meter sb-trade-verdict__meter--${dirTone}`}
-              value={setup.confidence}
+              value={biasConf}
               min={0}
               max={100}
-              aria-label={`Độ tin cậy ${setup.confidence}%`}
+              aria-label={`Bias live ${biasConf}%`}
             />
-            <span className="sb-trade-verdict__conf">{setup.confidence}%</span>
+            <span className="sb-trade-verdict__conf">Bias {biasConf}%</span>
             <div className="sb-trade-verdict__stats">
               <span className="sb-trade-verdict__stat">R:R {rrLabel}</span>
               <span className="sb-trade-verdict__stat">Risk {riskPct}%</span>
@@ -446,8 +466,17 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
                   {chip}
                 </span>
               ))}
-              <span className="sb-trade-chips__total">{setup.reasons.length} signals</span>
+              <span className="sb-trade-chips__total">{biasReasons.length} signals</span>
             </div>
+          )}
+
+          {biasMismatch && (
+            <SideNote>
+              Bias live lệch plan: giữ hướng plan đến khi nến đóng hoặc SL bị phá.
+            </SideNote>
+          )}
+          {setup.planStatus === 'active' && !biasMismatch && (
+            <SideNote>Plan khóa đến đóng nến hoặc khi giá chạm SL.</SideNote>
           )}
 
           <SideNote>Tính toán tham khảo, không phải lời khuyên đầu tư</SideNote>

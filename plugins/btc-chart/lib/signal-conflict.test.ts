@@ -15,6 +15,27 @@ const baseSetup: TradeSetup = {
   volRatio: 1,
   spotPrice: 100,
   entryMethod: 'Structure',
+  bias: {
+    dir: 'short',
+    confidence: 60,
+    reasons: ['NWE Cross Sell', 'Lien Bearish Rev'],
+    mlScore: 0.62,
+    bull: 0,
+    bear: 2,
+  },
+  plan: {
+    dir: 'short',
+    entry: 100,
+    sl: 102,
+    tp1: 96,
+    tp2: 94,
+    tp3: 92,
+    rr: 2,
+    entryMethod: 'Structure',
+    lockedAt: 0,
+    candleTime: 1_700_000_000,
+  },
+  planStatus: 'active',
 }
 
 const baseMl: MLResult = {

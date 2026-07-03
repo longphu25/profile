@@ -28,6 +28,16 @@ function baseSetup(overrides: Partial<TradeSetup> = {}): TradeSetup {
     volRatio: 1,
     spotPrice: 101,
     entryMethod: 'test',
+    bias: {
+      dir: 'long',
+      confidence: 60,
+      reasons: [],
+      mlScore: 0.65,
+      bull: 2,
+      bear: 0,
+    },
+    plan: null,
+    planStatus: 'active',
     ...overrides,
   }
 }
