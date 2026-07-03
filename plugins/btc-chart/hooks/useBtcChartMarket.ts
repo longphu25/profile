@@ -100,16 +100,20 @@ export function useBtcChartMarket(params: UseBtcChartMarketParams): UseBtcChartM
     loadSymbols().then((list) => setRemoteSymbols(list))
   }, [])
 
+  const priceDispatchRef = useRef({ setPrice, setMarkPrice, setOhlcv })
+  priceDispatchRef.current = { setPrice, setMarkPrice, setOhlcv }
+
   useEffect(() => {
     const t = tickerQuery.data
     if (!t) return
-    setPrice({
+    const dispatch = priceDispatchRef.current
+    dispatch.setPrice({
       cur: fmtP(t.price),
       chg: (t.chg >= 0 ? '+' : '') + t.chg.toFixed(2) + '%',
       up: t.up,
     })
-    setMarkPrice(t.price)
-    setOhlcv((o) => ({
+    dispatch.setMarkPrice(t.price)
+    dispatch.setOhlcv((o) => ({
       ...o,
       o: fmtP(t.low),
       h: fmtP(t.high),
@@ -117,7 +121,7 @@ export function useBtcChartMarket(params: UseBtcChartMarketParams): UseBtcChartM
       c: fmtP(t.price),
       v: fmtV(t.vol),
     }))
-  }, [tickerQuery.data, setPrice, setMarkPrice, setOhlcv])
+  }, [tickerQuery.data])
 
   useEffect(() => {
     htfRef.current = htfQuery.data?.candles ?? null

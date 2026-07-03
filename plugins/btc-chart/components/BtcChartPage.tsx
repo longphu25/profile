@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
 import { calcMHBand } from '../lib/indicators'
 import { suggestSlTp } from '../lib/trade-setup'
 import { SYMBOLS, type SymbolEntry } from '../lib/symbols'
@@ -46,12 +46,33 @@ export function BtcChartPage() {
   })
   const htfRef = useRef<Candle[] | null>(null)
 
+  const setLoadingBridge = useCallback(
+    (v: SetStateAction<boolean>) => loadingBridge.current.setLoading(v),
+    [],
+  )
+  const setLoadingTextBridge = useCallback(
+    (v: SetStateAction<string>) => loadingBridge.current.setLoadingText(v),
+    [],
+  )
+  const setPriceBridge = useCallback(
+    (v: SetStateAction<PriceState>) => priceBridge.current.setPrice(v),
+    [],
+  )
+  const setMarkPriceBridge = useCallback(
+    (v: SetStateAction<number | null>) => priceBridge.current.setMarkPrice(v),
+    [],
+  )
+  const setOhlcvBridge = useCallback(
+    (v: SetStateAction<OhlcvState>) => priceBridge.current.setOhlcv(v),
+    [],
+  )
+
   const ui = useBtcChartUI()
 
   const config = useBtcChartConfig({
     chartRefs,
-    setLoading: (v) => loadingBridge.current.setLoading(v),
-    setLoadingText: (v) => loadingBridge.current.setLoadingText(v),
+    setLoading: setLoadingBridge,
+    setLoadingText: setLoadingTextBridge,
     setImportErr: ui.setImportErr,
     setFiredToast: ui.setFiredToast,
     allSymbolsRef,
@@ -62,9 +83,9 @@ export function BtcChartPage() {
     interval: config.interval,
     customSymbols: config.customSymbols,
     vis: config.vis,
-    setPrice: (v) => priceBridge.current.setPrice(v),
-    setMarkPrice: (v) => priceBridge.current.setMarkPrice(v),
-    setOhlcv: (v) => priceBridge.current.setOhlcv(v),
+    setPrice: setPriceBridge,
+    setMarkPrice: setMarkPriceBridge,
+    setOhlcv: setOhlcvBridge,
     htfRef,
   })
 

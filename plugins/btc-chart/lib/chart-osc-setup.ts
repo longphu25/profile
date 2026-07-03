@@ -65,14 +65,30 @@ export function createOscChart(params: OscChartSetupParams): (() => void) | null
 
   mainChart.applyOptions({ timeScale: { visible: false } })
 
-  const syncFrom = mainChart.timeScale().subscribeVisibleLogicalRangeChange((r: any) => {
-    if (r) chart.timeScale().setVisibleLogicalRange(r)
-  })
-  chart.timeScale().subscribeVisibleLogicalRangeChange((r: any) => {
-    if (r) mainChart.timeScale().setVisibleLogicalRange(r)
-  })
+  let disposed = false
+
+  const syncToOsc = (r: { from: number; to: number } | null) => {
+    if (disposed || !r) return
+    try {
+      chart.timeScale().setVisibleLogicalRange(r)
+    } catch {
+      /* osc chart removed */
+    }
+  }
+
+  const syncToMain = (r: { from: number; to: number } | null) => {
+    if (disposed || !r) return
+    try {
+      mainChart.timeScale().setVisibleLogicalRange(r)
+    } catch {
+      /* main chart removed */
+    }
+  }
+
+  mainChart.timeScale().subscribeVisibleLogicalRangeChange(syncToOsc)
+  chart.timeScale().subscribeVisibleLogicalRangeChange(syncToMain)
   const cur = mainChart.timeScale().getVisibleLogicalRange()
-  if (cur) chart.timeScale().setVisibleLogicalRange(cur)
+  if (cur) syncToOsc(cur)
 
   const ro = new ResizeObserver(() => {
     if (el.clientHeight > 0) chart.applyOptions({ width: el.clientWidth, height: el.clientHeight })
@@ -94,9 +110,15 @@ export function createOscChart(params: OscChartSetupParams): (() => void) | null
     stochOS,
     obvS,
     cleanup: () => {
+      disposed = true
       ro.disconnect()
       try {
-        mainChart.timeScale().unsubscribeVisibleLogicalRangeChange(syncFrom)
+        mainChart.timeScale().unsubscribeVisibleLogicalRangeChange(syncToOsc)
+      } catch {
+        /* noop */
+      }
+      try {
+        chart.timeScale().unsubscribeVisibleLogicalRangeChange(syncToMain)
       } catch {
         /* noop */
       }
