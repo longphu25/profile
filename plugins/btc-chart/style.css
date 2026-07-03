@@ -1323,7 +1323,8 @@
 .btc-chart__osc-toggle {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
   background: transparent;
   border: none;
   color: var(--text);
@@ -1334,6 +1335,81 @@
   min-width: 0;
   flex: 1 1 auto;
   overflow: hidden;
+}
+.btc-chart__osc-toggle-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.btc-chart__osc-active-summary {
+  display: none;
+}
+.btc-chart__osc-chips {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+.btc-chart__osc-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-3);
+  font-family: var(--font-mono);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
+}
+.btc-chart__osc-chip-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+}
+.btc-chart__osc-chip-key {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.btc-chart__osc-chip-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.btc-chart__osc-chip-hint {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.2;
+}
+.btc-chart__osc-chip-hint.osc-ob {
+  color: #ff7a85;
+}
+.btc-chart__osc-chip-hint.osc-os {
+  color: #34d8a4;
+}
+.btc-chart__osc-chip-hint.osc-strong {
+  color: #ffc46b;
+}
+.btc-chart__osc-chip.is-active {
+  border-color: var(--border-strong);
+  background: rgba(128, 255, 213, 0.08);
+  box-shadow: inset 0 -2px 0 0 var(--mint);
+}
+.btc-chart__osc-chip.is-active .btc-chart__osc-chip-val {
+  color: var(--mint);
 }
 .btc-chart__osc-caret {
   color: var(--mint);
@@ -1518,6 +1594,22 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+/* Mobile rail bottom sheet scrim */
+.btc-chart__sidebar-scrim {
+  display: none;
+}
+
+/* Mobile rail section tabs (Setup, Funding, Context, Strategies) */
+.btc-chart__rail-tabs {
+  display: none;
+}
+.btc-chart__rail-mobile {
+  display: none;
+}
+.btc-chart__rail-desktop {
+  display: contents;
 }
 
 /* ── SIDEBAR — editorial data rail */
@@ -3509,14 +3601,84 @@
   }
 }
 @media (max-width: 768px) {
+  .btc-chart__sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 84;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: rgba(7, 16, 17, 0.42);
+    cursor: pointer;
+  }
+
+  .btc-chart__rail-tabs {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0;
+    padding: 0;
+    border-bottom: 1px solid var(--border-strong);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .btc-chart__rail-tab {
+    flex: 1;
+    min-height: 40px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.12s, border-color 0.12s, background 0.12s;
+  }
+  .btc-chart__rail-tab.is-active {
+    color: var(--text);
+    border-bottom-color: var(--mint);
+    background: rgba(128, 255, 213, 0.06);
+  }
+
+  .btc-chart__rail-desktop {
+    display: none;
+  }
+  .btc-chart__rail-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-height: 0;
+  }
+
   .btc-chart__body {
     flex-direction: column;
   }
   .btc-chart__sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--btc-status-h, 28px);
+    z-index: 85;
     width: 100%;
+    max-height: min(72dvh, 520px);
     border-left: none;
-    border-top: 1px solid var(--border);
-    max-height: 45vh;
+    border-top: 1px solid var(--border-strong);
+    transform: translateY(100%);
+    transition: transform 0.32s cubic-bezier(0.34, 1.2, 0.64, 1);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .btc-chart__sidebar.is-mobile-open {
+    transform: translateY(0);
   }
   .btc-chart__header {
     gap: 8px;
@@ -3570,14 +3732,115 @@
     display: none;
   }
   .btc-chart__osc-bar {
-    padding: 3px 6px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 10px;
+    overflow: visible;
   }
   .btc-chart__osc-toggle {
+    width: 100%;
+    font-size: 11px;
+    flex: none;
+  }
+  .btc-chart__osc-active-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 4px 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    background: var(--surface-2);
+  }
+  .btc-chart__osc-active-key {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .btc-chart__osc-active-val {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--mint);
+    line-height: 1;
+  }
+  .btc-chart__osc-active-hint {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--muted);
+    max-width: 88px;
+    text-align: right;
+    line-height: 1.2;
+  }
+  .btc-chart__osc-active-hint.osc-ob {
+    color: #ff7a85;
+  }
+  .btc-chart__osc-active-hint.osc-os {
+    color: #34d8a4;
+  }
+  .btc-chart__osc-active-hint.osc-strong {
+    color: #ffc46b;
+  }
+  .btc-chart__osc-chips {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+  }
+  .btc-chart__osc-chip {
+    width: 100%;
+    min-height: 68px;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .btc-chart__osc-chip-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .btc-chart__osc-chip-key {
+    font-size: 9px;
+  }
+  .btc-chart__osc-chip-val {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .btc-chart__osc-chip-hint {
     font-size: 10px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .btc-chart__osc-chip-hint.osc-ob {
+    background: rgba(255, 122, 133, 0.14);
+  }
+  .btc-chart__osc-chip-hint.osc-os {
+    background: rgba(52, 216, 164, 0.14);
+  }
+  .btc-chart__osc-chip-hint.osc-strong {
+    background: rgba(255, 196, 107, 0.14);
+  }
+  .btc-chart__osc-wrap.is-open .btc-chart__osc-active-summary {
+    display: none;
+  }
+  .btc-chart__osc-tabs--desktop {
+    display: none;
   }
   .btc-chart__osc-tab {
     font-size: 9px;
     padding: 2px 6px;
+  }
+  .btc-chart__osc-wrap.is-open {
+    min-height: 200px;
+  }
+  .btc-chart__osc-wrap.is-open .btc-chart__osc {
+    min-height: 120px;
   }
 
   .btc-chart__status {
@@ -3690,7 +3953,17 @@
   }
 
   .btc-chart__osc-wrap.is-open {
-    max-height: 120px;
+    max-height: min(32dvh, 240px);
+    min-height: 180px;
+  }
+  .btc-chart__osc-wrap.is-open .btc-chart__osc {
+    min-height: 96px;
+  }
+  .btc-chart__osc-active-val {
+    font-size: 15px;
+  }
+  .btc-chart__osc-chip-val {
+    font-size: 18px;
   }
   .btc-chart__osc-tabs {
     gap: 1px;

@@ -611,36 +611,48 @@
 }
 
 .btc-chart--stitch .btc-chart__osc-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border: 1px solid var(--border);
+  border-radius: 0;
   background: var(--surface-2);
-  font-family: var(--font-mono);
-  font-size: 9px;
   color: var(--muted);
-  cursor: pointer;
   transition:
     border-color 0.18s var(--stitch-spring),
-    background 0.18s var(--stitch-spring);
+    background 0.18s var(--stitch-spring),
+    box-shadow 0.18s var(--stitch-spring);
 }
 
 .btc-chart--stitch .btc-chart__osc-chip.is-active {
   border-color: var(--border-strong);
-  background: rgba(232, 184, 74, 0.06);
+  background: rgba(128, 255, 213, 0.08);
+  box-shadow: inset 0 -2px 0 0 var(--mint);
   color: var(--text);
 }
 
-.btc-chart--stitch .btc-chart__osc-chip-val {
-  font-weight: 700;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
+.btc-chart--stitch .btc-chart__osc-chip.is-active .btc-chart__osc-chip-val {
+  color: var(--mint);
 }
 
-.btc-chart--stitch .btc-chart__osc-chip-hint {
-  font-size: 8px;
-  color: var(--muted);
+.btc-chart--stitch .btc-chart__osc-chip-hint.osc-os {
+  color: var(--up);
+}
+
+.btc-chart--stitch .btc-chart__osc-chip-hint.osc-strong {
+  color: var(--warn, #ffc46b);
+}
+
+.btc-chart--stitch .btc-chart__osc-chip-hint.osc-ob {
+  color: var(--dn);
+}
+
+.btc-chart--stitch .btc-chart__osc-active-hint.osc-os {
+  color: var(--up);
+}
+
+.btc-chart--stitch .btc-chart__osc-active-hint.osc-strong {
+  color: var(--warn, #ffc46b);
+}
+
+.btc-chart--stitch .btc-chart__osc-active-hint.osc-ob {
+  color: var(--dn);
 }
 
 /* ── Intel rail ───────────────────────────────────────────────── */
@@ -920,7 +932,7 @@
 
   .btc-chart--stitch .btc-chart__sidebar {
     width: 100%;
-    max-height: 42dvh;
+    max-height: min(72dvh, 520px);
     border-left: none;
     border-top: 1px solid var(--border-strong);
   }
@@ -948,12 +960,15 @@
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: var(--btc-status-h, 28px);
     z-index: 85;
-    max-height: min(50dvh, 420px);
+    max-height: min(72dvh, 520px);
     transform: translateY(100%);
     transition: transform 0.32s var(--stitch-spring);
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .btc-chart--stitch .btc-chart__sidebar.is-mobile-open {
