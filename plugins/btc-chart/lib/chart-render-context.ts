@@ -13,7 +13,9 @@ import type { BoucherResult } from './boucher-scalping'
 import type { ICTResult } from './ict-sessions'
 import type { LienResult } from './lien-reversal'
 import type { LiquidityResult } from './liquidity'
+import type { SupplyDemandResult } from './supply-demand'
 import type { SignalConfig } from './signal-config'
+import type { TradeSetupLockState } from './trade-setup-stable'
 import type { Candle, ChartRefs, SidebarState, TradeSetup } from './types'
 
 /** Oscillator pane series handles (ADX / StochRSI / OBV / RSI). */
@@ -75,8 +77,10 @@ export interface ChartRenderContext {
   readonly liqDataRef: RefObject<LiquidityResult>
   readonly htfRef: RefObject<Candle[] | null>
   readonly smcDataRef: RefObject<SMCResult>
+  readonly sdDataRef: RefObject<SupplyDemandResult>
   readonly boxFlipRef: RefObject<BoxFlipResult>
   readonly tradeSetupRef: RefObject<TradeSetup>
+  readonly tradeSetupLockRef: RefObject<TradeSetupLockState>
   readonly ofOverlayRef: RefObject<OFOverlaySignal[]>
   readonly oscRefs: RefObject<OscChartRefs | null>
 
@@ -91,6 +95,7 @@ export interface ChartRenderContext {
   readonly symbolRef: RefObject<SymbolId>
   readonly spikeMultRef: RefObject<number>
   readonly oscViewRef: RefObject<'rsi' | 'adx' | 'stoch' | 'obv'>
+  readonly oscOpenRef: RefObject<boolean>
   readonly nweCfgRef: RefObject<NadarayaConfig>
   readonly signalConfigRef: RefObject<SignalConfig>
   readonly vpOptsRef: RefObject<{ hvnRatio: number }>
@@ -100,6 +105,11 @@ export interface ChartRenderContext {
   readonly nweCacheRef: RefObject<LuxNweResult | null>
   readonly smcCacheKeyRef: RefObject<string>
   readonly smcCacheRef: RefObject<SMCResult | null>
+  readonly heavyBarKeyRef: RefObject<string>
+  readonly lastHeavyComputeMsRef: RefObject<number>
+  readonly sidebarKeyRef: RefObject<string>
+  readonly boucherCacheRef: RefObject<BoucherResult | null>
+  readonly lienCacheRef: RefObject<LienResult | null>
 
   // React state setters invoked during render
   readonly setPanelCandles: Dispatch<SetStateAction<Candle[]>>

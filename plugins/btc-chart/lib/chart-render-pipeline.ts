@@ -2,15 +2,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { pushNotification } from '../alerts'
+import type { OFOverlaySignal } from '../order-flow-overlay'
 import { drawVolumeProfile as drawVP } from '../volume-profile'
 import { drawOrderFlow } from '../order-flow-overlay'
 import { computeSMC, computeNadarayaWatson } from '../smc-wasm'
 import { buildBoxFlipSignals } from '../box-flip'
 import { loadConfig } from '../storage'
-import type { SMCResult } from '../smc-wasm'
 import type { ChartRenderContext } from './chart-render-context'
 import { buildSidebarSnapshot } from './build-sidebar-snapshot'
-import { CHART, LIMIT, NWE_DEFAULT_WINDOW } from './constants'
+import { stabilizeTradeSetup } from './trade-setup-stable'
+import { CHART, HEAVY_COMPUTE_MS, LIMIT, NWE_DEFAULT_WINDOW } from './constants'
+import { resolvePipelineNeeds } from './pipeline-needs'
+import { sidebarSnapshotKey } from './sidebar-snapshot-key'
 import { detectCandlePatterns } from './candlestick-patterns'
 import { computeBoucherScalping } from './boucher-scalping'
 import { computeLienReversal } from './lien-reversal'
@@ -30,8 +33,10 @@ import {
   smaNum,
 } from './indicators'
 import { mlSignal } from './ml'
+import { HTF_MAP } from './liquidity'
+import { computeSupplyDemand } from './supply-demand'
 import {
-  drawSMCOverlay,
+  drawSmcStackOverlay,
   drawBoxFlipOverlay,
   drawICTOverlay,
   drawLiquidityOverlay,
@@ -39,7 +44,7 @@ import {
 import { drawTradeSetupOverlay } from './trade-setup-overlay'
 import { applyDefaultViewport } from './chart-viewport'
 import { fmtP } from './format'
-import type { Candle } from './types'
+import type { Candle, OrderFlowSignal } from './types'
 
 /**
  * Render all chart series, overlays, and sidebar state for the given candle data.
@@ -59,6 +64,18 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
   const isInitial = ctx.fitNextRef.current
 
   const visFlags = ctx.visRef.current
+  const needs = resolvePipelineNeeds(visFlags, ctx.oscOpenRef.current)
+  const lastCandle = data[data.length - 1]
+  const barKey = `${data.length}:${lastCandle.time}`
+  const now = Date.now()
+  const needHeavy =
+    barKey !== ctx.heavyBarKeyRef.current ||
+    now - ctx.lastHeavyComputeMsRef.current >= HEAVY_COMPUTE_MS
+  if (needHeavy) {
+    ctx.heavyBarKeyRef.current = barKey
+    ctx.lastHeavyComputeMsRef.current = now
+  }
+
   const nwe = calcMHBand(data)
   const sma50 = calcSMA(data, 50)
   const sma200 = calcSMA(data, 200)
@@ -68,46 +85,59 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
   const stoch = calcStochRSI(data)
   const obv = calcOBV(data)
   const vwapR = calcVWAP(data)
-  const divs = detectRSIDivergence(data, rsi)
-  const of_ = buildOrderFlow(data, nwe)
-  const boxFlip = buildBoxFlipSignals(data, {
-    minBoxBars: 10,
-    maxBoxHeightPct: 0.012,
-    breakoutConfirm: 'close',
-    bufferPct: 0.0007,
-  })
+  const divs = needs.rsiDiv ? detectRSIDivergence(data, rsi) : []
+  const of_ = needs.orderFlow
+    ? buildOrderFlow(data, nwe)
+    : { overlay: [] as OFOverlaySignal[], log: [] as OrderFlowSignal[] }
+  const boxFlip = needs.boxFlip
+    ? buildBoxFlipSignals(data, {
+        minBoxBars: 10,
+        maxBoxHeightPct: 0.012,
+        breakoutConfirm: 'close',
+        bufferPct: 0.0007,
+      })
+    : ctx.boxFlipRef.current
 
-  let luxNwe: any
-  const currentNweCfg = ctx.nweCfgRef.current
-  const nweKey = `${data.length}:${data[data.length - 1]?.time ?? 0}:${currentNweCfg.repaint}:${currentNweCfg.bandwidth}:${currentNweCfg.multiplier}:${currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW}`
-  if (nweKey === ctx.nweCacheKeyRef.current && ctx.nweCacheRef.current) {
-    luxNwe = ctx.nweCacheRef.current
-  } else {
-    const t0 = performance.now()
-    const win = Math.min(currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW, data.length)
-    const nweInput = currentNweCfg.repaint ? data.slice(-win) : data
-    luxNwe = computeNadarayaWatson(nweInput, { ...currentNweCfg, maxBarsBack: win })
-    if (currentNweCfg.repaint && nweInput.length < data.length) {
-      const pad = data.length - nweInput.length
-      luxNwe = {
-        mid: [...Array(pad).fill(null), ...luxNwe.mid],
-        upper: [...Array(pad).fill(null), ...luxNwe.upper],
-        lower: [...Array(pad).fill(null), ...luxNwe.lower],
-        signals: luxNwe.signals.map((s: any) => ({ ...s, index: s.index + pad })),
+  let luxNwe = ctx.nweCacheRef.current ?? {
+    mid: [],
+    upper: [],
+    lower: [],
+    signals: [],
+  }
+  if (needs.luxNwe && (needHeavy || !ctx.nweCacheRef.current)) {
+    const currentNweCfg = ctx.nweCfgRef.current
+    const nweKey = `${barKey}:${currentNweCfg.repaint}:${currentNweCfg.bandwidth}:${currentNweCfg.multiplier}:${currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW}`
+    if (nweKey !== ctx.nweCacheKeyRef.current || !ctx.nweCacheRef.current) {
+      const t0 = performance.now()
+      const win = Math.min(currentNweCfg.maxBarsBack ?? NWE_DEFAULT_WINDOW, data.length)
+      const nweInput = currentNweCfg.repaint ? data.slice(-win) : data
+      luxNwe = computeNadarayaWatson(nweInput, { ...currentNweCfg, maxBarsBack: win })
+      if (currentNweCfg.repaint && nweInput.length < data.length) {
+        const pad = data.length - nweInput.length
+        luxNwe = {
+          mid: [...Array(pad).fill(null), ...luxNwe.mid],
+          upper: [...Array(pad).fill(null), ...luxNwe.upper],
+          lower: [...Array(pad).fill(null), ...luxNwe.lower],
+          signals: luxNwe.signals.map((s: any) => ({ ...s, index: s.index + pad })),
+        }
       }
+      const t1 = performance.now()
+      // eslint-disable-next-line no-console
+      console.log(
+        `[perf] NWE ${currentNweCfg.repaint ? 'repaint' : 'non-repaint'} compute: ${(t1 - t0).toFixed(2)}ms (win=${win}, n=${data.length})`,
+      )
+      ctx.nweCacheKeyRef.current = nweKey
+      ctx.nweCacheRef.current = luxNwe
+      ctx.setLuxNweResult(luxNwe)
     }
-    const t1 = performance.now()
-    // eslint-disable-next-line no-console
-    console.log(
-      `[perf] NWE ${currentNweCfg.repaint ? 'repaint' : 'non-repaint'} compute: ${(t1 - t0).toFixed(2)}ms (win=${win}, n=${data.length})`,
-    )
-    ctx.nweCacheKeyRef.current = nweKey
-    ctx.nweCacheRef.current = luxNwe
   }
 
-  const ict = computeICT(data, ctx.intervalRef.current)
-  ctx.ictDataRef.current = ict
-  ctx.setICTResult(ict)
+  let ict = ctx.ictDataRef.current
+  if (needs.ict && (needHeavy || !ctx.ictDataRef.current.sessions.length)) {
+    ict = computeICT(data, ctx.intervalRef.current)
+    ctx.ictDataRef.current = ict
+    ctx.setICTResult(ict)
+  }
   const ml = mlSignal(
     data,
     nwe,
@@ -164,8 +194,12 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     }
   }
 
-  const bScalp = computeBoucherScalping(data)
-  if (visFlags.scalping) {
+  let bScalp = ctx.boucherCacheRef.current
+  if (needs.boucher && (needHeavy || !bScalp)) {
+    bScalp = computeBoucherScalping(data)
+    ctx.boucherCacheRef.current = bScalp
+  }
+  if (visFlags.scalping && bScalp) {
     for (const sig of bScalp.threeBar) {
       markers.push({
         time: sig.time,
@@ -177,8 +211,12 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     }
   }
 
-  const lienR = computeLienReversal(data)
-  if (visFlags.reversal) {
+  let lienR = ctx.lienCacheRef.current
+  if (needs.lien && (needHeavy || !lienR)) {
+    lienR = computeLienReversal(data)
+    ctx.lienCacheRef.current = lienR
+  }
+  if (visFlags.reversal && lienR) {
     for (const rev of lienR.reversals) {
       markers.push({
         time: rev.time,
@@ -250,8 +288,6 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
   refs.luxNweUpS.setData(visFlags.luxNwe ? toLine(luxNwe.upper) : [])
   refs.luxNweLoS.setData(visFlags.luxNwe ? toLine(luxNwe.lower) : [])
 
-  ctx.setLuxNweResult(luxNwe)
-
   refs.ma50S.setData(visFlags.ma50 ? toLine(sma50) : [])
   refs.ma200S.setData(visFlags.ma200 ? toLine(sma200) : [])
   refs.vwapS.setData(visFlags.vwap ? toLine(vwapR.vwap) : [])
@@ -314,7 +350,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
       : [],
   )
 
-  const osc = ctx.oscRefs.current
+  const osc = needs.oscillators ? ctx.oscRefs.current : null
   if (osc) {
     const view = ctx.oscViewRef.current
     const empty: { time: number; value: number }[] = []
@@ -381,7 +417,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     ctx.fitNextRef.current = false
   }
 
-  if (ctx.vpCanvasRef.current && ctx.mainElRef.current) {
+  if (needs.vp && ctx.vpCanvasRef.current && ctx.mainElRef.current) {
     const info = drawVP(
       ctx.vpCanvasRef.current,
       ctx.mainElRef.current,
@@ -389,7 +425,7 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
       visFlags.vp,
       {
         ...ctx.vpOptsRef.current,
-        heatmap: visFlags.heatmap,
+        heatmap: visFlags.heatmap && visFlags.vp,
       },
     )
     ctx.setSidebar((s) => ({
@@ -399,38 +435,53 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     }))
   }
 
-  let smcResult: SMCResult
-  const smcKey = `${data.length}:${data[data.length - 1]?.time ?? 0}`
-  if (smcKey === ctx.smcCacheKeyRef.current && ctx.smcCacheRef.current) {
-    smcResult = ctx.smcCacheRef.current
-  } else {
-    const t0 = performance.now()
-    smcResult = computeSMC(data, {
-      structure: true,
-      orderBlocks: true,
-      fvg: true,
-      swingLen: 10,
-      internalLen: 5,
-    })
-    const t1 = performance.now()
-    // eslint-disable-next-line no-console
-    console.log(`[perf] SMC compute: ${(t1 - t0).toFixed(2)}ms (n=${data.length})`)
-    ctx.smcCacheKeyRef.current = smcKey
-    ctx.smcCacheRef.current = smcResult
+  let smcResult = ctx.smcCacheRef.current ?? ctx.smcDataRef.current
+  if (needs.smc && (needHeavy || !ctx.smcCacheRef.current)) {
+    const smcKey = barKey
+    if (smcKey !== ctx.smcCacheKeyRef.current || !ctx.smcCacheRef.current) {
+      const t0 = performance.now()
+      smcResult = computeSMC(data, {
+        structure: true,
+        orderBlocks: true,
+        fvg: true,
+        swingLen: 10,
+        internalLen: 5,
+      })
+      const t1 = performance.now()
+      // eslint-disable-next-line no-console
+      console.log(`[perf] SMC compute: ${(t1 - t0).toFixed(2)}ms (n=${data.length})`)
+      ctx.smcCacheKeyRef.current = smcKey
+      ctx.smcCacheRef.current = smcResult
+    }
+    ctx.smcDataRef.current = smcResult
   }
-  ctx.smcDataRef.current = smcResult
-  if (ctx.smcCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
-    drawSMCOverlay(
+
+  let sdResult = ctx.sdDataRef.current
+  if (needs.supplyDemand && (needHeavy || !ctx.sdDataRef.current.zones.length)) {
+    const ltfInterval = ctx.intervalRef.current
+    const htfInterval = HTF_MAP[ltfInterval]
+    sdResult = computeSupplyDemand(data, {
+      htfData: ctx.htfRef.current,
+      htfInterval: htfInterval ?? null,
+      ltfInterval,
+    })
+    ctx.sdDataRef.current = sdResult
+  }
+
+  if (needHeavy && ctx.smcCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
+    drawSmcStackOverlay(
       ctx.smcCanvasRef.current,
       ctx.mainElRef.current,
       refs.mainChart,
       refs.candleSeries,
       smcResult,
+      sdResult,
       visFlags.smc,
+      visFlags.supplyDemand,
     )
   }
 
-  if (ctx.ictCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
+  if (needHeavy && ctx.ictCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
     drawICTOverlay(
       ctx.ictCanvasRef.current,
       ctx.mainElRef.current,
@@ -442,10 +493,13 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     )
   }
 
-  const liq = computeLiquidity(data, ctx.htfRef.current, smcResult, ctx.intervalRef.current)
-  ctx.liqDataRef.current = liq
-  ctx.setLiquidityResult(liq)
-  if (ctx.liqCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
+  let liq = ctx.liqDataRef.current
+  if (needs.liquidity && (needHeavy || !ctx.liqDataRef.current.range)) {
+    liq = computeLiquidity(data, ctx.htfRef.current, smcResult, ctx.intervalRef.current)
+    ctx.liqDataRef.current = liq
+    ctx.setLiquidityResult(liq)
+  }
+  if (needHeavy && ctx.liqCanvasRef.current && ctx.mainElRef.current && refs.mainChart) {
     drawLiquidityOverlay(
       ctx.liqCanvasRef.current,
       ctx.mainElRef.current,
@@ -501,27 +555,67 @@ export function renderChartPipeline(ctx: ChartRenderContext, data: Candle[]): vo
     ofLog: of_.log,
     boxFlip,
     ml,
-    bScalp,
-    lienR,
+    bScalp: bScalp ?? {
+      atr: 0,
+      boxSize: 0,
+      currentBox: null,
+      boxes: [],
+      ladder: [],
+      threeBar: [],
+      entries: [],
+      envelope: 0,
+      target: 0,
+      speed: 'normal' as const,
+      stats: { signals: 0, wins: 0, rr: 0 },
+    },
+    lienR: lienR ?? {
+      dbb: null,
+      zone: 'neutral' as const,
+      prevZone: 'neutral' as const,
+      regime: 'range' as const,
+      squeeze: { active: false, bars: 0, breakout: null },
+      reversals: [],
+      latestSignal: null,
+      exhaustion: false,
+      bandTouch: null,
+      adrSpent: 0,
+    },
     luxNwe,
     ict,
     liq,
     smcResult,
+    supplyDemand: sdResult,
   })
 
-  ctx.setSidebar((s) => ({ ...s, ...snapshot }))
-  ctx.tradeSetupRef.current = snapshot.tradeSetup
-  if (ctx.setupCanvasRef.current && ctx.mainElRef.current && refs.candleSeries) {
+  const lastBar = data[data.length - 1]
+  const stabilizedSetup = stabilizeTradeSetup(snapshot.tradeSetup, ctx.tradeSetupLockRef.current, {
+    candleTime: lastBar.time,
+    spot: lastBar.close,
+  })
+  const snapshotWithPlan = { ...snapshot, tradeSetup: stabilizedSetup }
+
+  const snapKey = sidebarSnapshotKey(snapshotWithPlan)
+  if (snapKey !== ctx.sidebarKeyRef.current) {
+    ctx.sidebarKeyRef.current = snapKey
+    ctx.setSidebar((s) => ({ ...s, ...snapshotWithPlan }))
+  }
+  ctx.tradeSetupRef.current = stabilizedSetup
+  if (
+    needs.tradeSetup &&
+    ctx.setupCanvasRef.current &&
+    ctx.mainElRef.current &&
+    refs.candleSeries
+  ) {
     drawTradeSetupOverlay(
       ctx.setupCanvasRef.current,
       ctx.mainElRef.current,
       refs.mainChart,
       refs.candleSeries,
       data,
-      snapshot.tradeSetup,
+      stabilizedSetup,
       visFlags.tradeSetup,
     )
   }
-  ctx.setBoucherScalp(bScalp)
-  ctx.setLienReversal(lienR)
+  if (needHeavy && bScalp) ctx.setBoucherScalp(bScalp)
+  if (needHeavy && lienR) ctx.setLienReversal(lienR)
 }

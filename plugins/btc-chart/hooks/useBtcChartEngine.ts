@@ -14,13 +14,14 @@ import { createOscChart } from '../lib/chart-osc-setup'
 import { closeKlinesWebSocket, wireKlinesWebSocket } from '../lib/chart-websocket'
 import type { ChartRenderContext, LuxNweResult } from '../lib/chart-render-context'
 import { renderChartPipeline } from '../lib/chart-render-pipeline'
-import { LIVE_REFRESH_MS, NWE_DEFAULT_WINDOW } from '../lib/constants'
+import { NWE_DEFAULT_WINDOW } from '../lib/constants'
 import { INITIAL_SIDEBAR } from '../lib/types'
 import type { BoucherResult } from '../lib/boucher-scalping'
 import type { Interval } from '../lib/constants'
 import type { ICTResult } from '../lib/ict-sessions'
 import type { LienResult } from '../lib/lien-reversal'
 import type { LiquidityResult } from '../lib/liquidity'
+import type { SupplyDemandResult } from '../lib/supply-demand'
 import type { SignalConfig } from '../lib/signal-config'
 import type { SymbolEntry, SymbolId } from '../lib/symbols'
 import type { Candle, ChartRefs, OhlcvState, SidebarState } from '../lib/types'
@@ -147,8 +148,24 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     nextTarget: null,
   })
   const smcDataRef = useRef<SMCResult>({ structures: [], orderBlocks: [], fvgs: [] })
+  const sdDataRef = useRef<SupplyDemandResult>({
+    zones: [],
+    grabs: [],
+    nearestDemand: null,
+    nearestSupply: null,
+    htfInterval: null,
+    nearestHtfDemand: null,
+    nearestHtfSupply: null,
+    mtfLong: null,
+    mtfShort: null,
+    longEntry: null,
+    longSl: null,
+    shortEntry: null,
+    shortSl: null,
+  })
   const boxFlipRef = useRef<BoxFlipResult>({ boxes: [], signals: [] })
   const tradeSetupRef = useRef(INITIAL_SIDEBAR.tradeSetup)
+  const tradeSetupLockRef = useRef({ plan: null, lockedBarTime: 0, lockedAtMs: 0 })
   const ofOverlayRef = useRef<OFOverlaySignal[]>([])
   const chartRefs = useRef<ChartRefs | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -173,6 +190,11 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   const nweCacheRef = useRef<LuxNweResult | null>(null)
   const smcCacheKeyRef = useRef<string>('')
   const smcCacheRef = useRef<SMCResult | null>(null)
+  const heavyBarKeyRef = useRef('')
+  const lastHeavyComputeMsRef = useRef(0)
+  const sidebarKeyRef = useRef('')
+  const boucherCacheRef = useRef<BoucherResult | null>(null)
+  const lienCacheRef = useRef<LienResult | null>(null)
   const fitNextRef = useRef(true)
   const panelCandleKeyRef = useRef('')
 
@@ -214,8 +236,8 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   })
   const [panelCandles, setPanelCandles] = useState<Candle[]>([])
   const [lastCandleClose, setLastCandleClose] = useState<number | null>(null)
-  const [boucherEnabled, setBoucherEnabled] = useState(true)
-  const [lienEnabled, setLienEnabled] = useState(true)
+  const [boucherEnabled, setBoucherEnabled] = useState(false)
+  const [lienEnabled, setLienEnabled] = useState(false)
   const [luxNweResult, setLuxNweResult] = useState<LuxNweResult>({
     mid: [],
     upper: [],
@@ -258,8 +280,10 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     liqDataRef,
     htfRef,
     smcDataRef,
+    sdDataRef,
     boxFlipRef,
     tradeSetupRef,
+    tradeSetupLockRef,
     ofOverlayRef,
     oscRefs,
     fitNextRef,
@@ -272,6 +296,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     symbolRef: config.symbolRef,
     spikeMultRef: config.spikeMultRef,
     oscViewRef: config.oscViewRef,
+    oscOpenRef: config.oscOpenRef,
     nweCfgRef: config.nweCfgRef,
     signalConfigRef: config.signalConfigRef,
     vpOptsRef,
@@ -279,6 +304,11 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     nweCacheRef,
     smcCacheKeyRef,
     smcCacheRef,
+    heavyBarKeyRef,
+    lastHeavyComputeMsRef,
+    sidebarKeyRef,
+    boucherCacheRef,
+    lienCacheRef,
     setPanelCandles,
     setLastCandleClose,
     setICTResult,
@@ -306,6 +336,12 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     panelCandleKeyRef.current = ''
     smcCacheKeyRef.current = ''
     smcCacheRef.current = null
+    heavyBarKeyRef.current = ''
+    lastHeavyComputeMsRef.current = 0
+    sidebarKeyRef.current = ''
+    tradeSetupLockRef.current = { plan: null, lockedBarTime: 0, lockedAtMs: 0 }
+    boucherCacheRef.current = null
+    lienCacheRef.current = null
     nweCacheKeyRef.current = ''
     nweCacheRef.current = null
 
@@ -346,6 +382,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
       vpOptsRef,
       ofOverlayRef,
       smcDataRef,
+      sdDataRef,
       ictDataRef,
       liqDataRef,
       boxFlipRef,
@@ -422,17 +459,6 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
       closeKlinesWebSocket(wsRef)
     }
   }, [klinesQuery.data, klinesQuery.error, config.interval, config.symbol, renderData])
-
-  useEffect(() => {
-    const iv = setInterval(() => {
-      if (!candlesRef.current.length) return
-      const now = Date.now()
-      if (now - lastChartUpdateRef.current < LIVE_REFRESH_MS) return
-      lastChartUpdateRef.current = now
-      renderData(candlesRef.current)
-    }, LIVE_REFRESH_MS)
-    return () => clearInterval(iv)
-  }, [config.symbol, config.interval, renderData])
 
   const toggle = useCallback(
     (key: keyof VisFlags) => {
