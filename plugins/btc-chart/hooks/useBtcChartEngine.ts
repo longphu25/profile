@@ -405,7 +405,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
       alertsRef: config.alertsRef,
       sidebarRef,
       soundRef: config.soundRef,
-      soundEnabled: config.sound.enabled,
+      soundEnabledRef: config.soundEnabledRef,
       renderData,
       setPrice,
       setMarkPrice,
@@ -421,19 +421,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
       cancelled = true
       closeKlinesWebSocket(wsRef)
     }
-  }, [
-    klinesQuery.data,
-    klinesQuery.error,
-    config.interval,
-    config.symbol,
-    config.sound.enabled,
-    config.alertsRef,
-    config.setAlerts,
-    config.soundRef,
-    renderData,
-    setFiredToast,
-    symbolInfoRef,
-  ])
+  }, [klinesQuery.data, klinesQuery.error, config.interval, config.symbol, renderData])
 
   const toggle = useCallback(
     (key: keyof VisFlags) => {

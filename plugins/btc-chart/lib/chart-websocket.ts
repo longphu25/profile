@@ -49,7 +49,7 @@ export interface WireKlinesWebSocketParams {
   readonly alertsRef: MutableRefObject<AlertRule[]>
   readonly sidebarRef: MutableRefObject<SidebarState>
   readonly soundRef: MutableRefObject<AlertSound>
-  readonly soundEnabled: boolean
+  readonly soundEnabledRef: MutableRefObject<boolean>
   readonly renderData: (data: Candle[]) => void
   readonly setPrice: Dispatch<SetStateAction<PriceState>>
   readonly setMarkPrice: Dispatch<SetStateAction<number | null>>
@@ -61,23 +61,25 @@ export interface WireKlinesWebSocketParams {
   readonly setAlerts: Dispatch<SetStateAction<AlertRule[]>>
 }
 
-/** Close a WebSocket without "closed before connection established" console noise. */
+/** Close a WebSocket without handshake console noise when still connecting. */
 export function closeWebSocketSafe(ws: WebSocket): void {
+  if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) return
   ws.onmessage = null
   ws.onerror = null
   ws.onclose = null
   if (ws.readyState === WebSocket.CONNECTING) {
     ws.onopen = () => {
       try {
-        ws.close()
+        ws.close(1000, 'replaced')
       } catch {
         /* noop */
       }
     }
     return
   }
+  ws.onopen = null
   try {
-    ws.close()
+    ws.close(1000, 'replaced')
   } catch {
     /* noop */
   }
@@ -117,6 +119,7 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
   }
 
   const connectWs = (spotMode = false) => {
+    closeKlinesWebSocket(params.wsRef)
     let ws: WebSocket
     const info = params.symbolInfoRef.current
     const { symbol, interval } = params
@@ -125,7 +128,10 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
       const msym = 'mexcSymbol' in info ? info.mexcSymbol : symbol
       ws = new WebSocket('wss://contract.mexc.com/edge')
       ws.onopen = () => {
-        if (params.cancelled()) return
+        if (params.cancelled()) {
+          closeWebSocketSafe(ws)
+          return
+        }
         ws.send(
           JSON.stringify({
             method: 'sub.kline',
@@ -155,7 +161,10 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
       const cat = 'bybitCategory' in info ? info.bybitCategory : 'linear'
       ws = new WebSocket(`wss://stream.bybit.com/v5/public/${cat}`)
       ws.onopen = () => {
-        if (params.cancelled()) return
+        if (params.cancelled()) {
+          closeWebSocketSafe(ws)
+          return
+        }
         ws.send(
           JSON.stringify({
             op: 'subscribe',
@@ -184,7 +193,10 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
       const instId = 'okxInstId' in info ? info.okxInstId : symbol
       ws = new WebSocket('wss://ws.okx.com:8443/ws/v5/business')
       ws.onopen = () => {
-        if (params.cancelled()) return
+        if (params.cancelled()) {
+          closeWebSocketSafe(ws)
+          return
+        }
         ws.send(
           JSON.stringify({
             op: 'subscribe',
@@ -216,11 +228,18 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
       ws = new WebSocket(wsUrl)
       ws.onerror = () => {
         if (!spotMode && !params.cancelled()) {
-          params.wsRef.current = null
+          closeWebSocketSafe(ws)
           const spotWs = new WebSocket(
             `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${interval}`,
           )
-          spotWs.onopen = ws.onopen
+          spotWs.onopen = () => {
+            if (params.cancelled()) {
+              closeWebSocketSafe(spotWs)
+              return
+            }
+            params.setWsStatus({ text: 'Live', tone: 'live' })
+            params.setLastUpdate(tsNow())
+          }
           spotWs.onmessage = ws.onmessage
           spotWs.onerror = () => params.setWsStatus({ text: 'Error', tone: 'err' })
           spotWs.onclose = () => {
@@ -232,7 +251,10 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
         params.setWsStatus({ text: 'Error', tone: 'err' })
       }
       ws.onopen = () => {
-        if (params.cancelled()) return
+        if (params.cancelled()) {
+          closeWebSocketSafe(ws)
+          return
+        }
         params.setWsStatus({ text: 'Live', tone: 'live' })
         params.setLastUpdate(tsNow())
       }
@@ -277,7 +299,7 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
         params.lastPriceRef.current = candle.close
         const fired = evaluateAlerts(params.alertsRef.current, ctx)
         if (fired.length) {
-          if (params.soundEnabled) params.soundRef.current.play()
+          if (params.soundEnabledRef.current) params.soundRef.current.play()
           for (const f of fired)
             pushNotification('BTC Chart Alert', `${describeRule(f.rule)} — ${f.message}`)
           params.setFiredToast(fired.map((f) => describeRule(f.rule)).join(' · '))
