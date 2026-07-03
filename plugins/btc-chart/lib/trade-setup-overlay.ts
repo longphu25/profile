@@ -13,6 +13,12 @@ const BOX_W = 76
 /** Gap between the last candle body and the overlay column. */
 const CANDLE_GAP = 10
 
+/** Short tick length at the nearest cutting candle (does not reach overlay). */
+export const LEVEL_TICK_LEN = 40
+
+/** Minimum gap between level tick end and overlay column. */
+export const OVERLAY_LINE_GAP = 14
+
 const COLORS = {
   riskFill: 'rgba(242, 54, 69, 0.2)',
   riskStroke: 'rgba(242, 54, 69, 0.65)',
@@ -173,6 +179,22 @@ function resolveCuttingCandleRightX(
   return x + candleHalfW
 }
 
+/**
+ * Short horizontal tick beside the cutting candle, stopping before the overlay column.
+ */
+export function resolveLevelTickSpan(
+  cutRight: number,
+  boxLeft: number,
+  tickLen = LEVEL_TICK_LEN,
+  gap = OVERLAY_LINE_GAP,
+): { x0: number; x1: number } | null {
+  const x1 = Math.min(cutRight, boxLeft - gap)
+  if (!Number.isFinite(x1) || x1 <= 0) return null
+  const x0 = Math.max(0, x1 - tickLen)
+  if (x1 - x0 < 4) return null
+  return { x0, x1 }
+}
+
 function drawLevelConnector(
   ctx: CanvasRenderingContext2D,
   chart: any,
@@ -186,8 +208,10 @@ function drawLevelConnector(
 ) {
   if (y == null) return
   const cutRight = resolveCuttingCandleRightX(chart, candles, price, barSpacing)
-  if (cutRight == null || cutRight >= boxLeft) return
-  drawHLine(ctx, y, cutRight, boxLeft, color, dashed)
+  if (cutRight == null) return
+  const span = resolveLevelTickSpan(cutRight, boxLeft)
+  if (!span) return
+  drawHLine(ctx, y, span.x0, span.x1, color, dashed)
 }
 
 function resolveLastCandleX(chart: any, candles: Candle[]): number | null {
@@ -259,8 +283,6 @@ export function drawTradeSetupOverlay(
     lastX != null
       ? resolveSetupBoxLeft(lastX, barSpacing, plotRight)
       : Math.max(0, plotRight - BOX_W)
-  const tagX = Math.min(boxLeft + BOX_W, plotRight - 2)
-
   const entryColor = isLong ? COLORS.entryLong : COLORS.entryShort
   const badgeLabel = isLong ? 'LONG' : 'SHORT'
   const badgeColor = isLong ? COLORS.badgeLong : COLORS.badgeShort
@@ -295,10 +317,11 @@ export function drawTradeSetupOverlay(
   drawLevelConnector(ctx, chart, candles, barSpacing, tp1, yTp1, boxLeft, COLORS.tp, true)
   drawLevelConnector(ctx, chart, candles, barSpacing, tp2, yTp2, boxLeft, COLORS.tp, true)
 
-  drawPriceTag(ctx, tagX, yEntry, 'Entry', entry, entryColor)
-  drawPriceTag(ctx, tagX, ySl, 'SL', sl, COLORS.sl)
-  drawPriceTag(ctx, tagX, yTp1, 'TP1', tp1, COLORS.tp)
-  drawPriceTag(ctx, tagX, yTp2, 'TP2', tp2, COLORS.tp)
+  const tagAnchor = boxLeft + 4
+  drawPriceTag(ctx, tagAnchor, yEntry, 'Entry', entry, entryColor)
+  drawPriceTag(ctx, tagAnchor, ySl, 'SL', sl, COLORS.sl)
+  drawPriceTag(ctx, tagAnchor, yTp1, 'TP1', tp1, COLORS.tp)
+  drawPriceTag(ctx, tagAnchor, yTp2, 'TP2', tp2, COLORS.tp)
 
   ctx.font = 'bold 9px ui-monospace, SFMono-Regular, Menlo, monospace'
   ctx.fillStyle = badgeColor

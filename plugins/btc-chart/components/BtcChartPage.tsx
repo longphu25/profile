@@ -21,7 +21,6 @@ import { MobileSetupFab } from './MobileSetupFab'
 import { SidebarRail } from './SidebarRail'
 
 import { usePositions } from '../hooks/usePositions'
-import { useTradeSetupOverlay } from '../hooks/useTradeSetupOverlay'
 import { useBtcChartEngine, useBtcChartConfig, useBtcChartMarket, useBtcChartUI } from '../hooks'
 
 /** Main BTC chart workspace: composes config, market, engine, and UI hooks. */
@@ -99,13 +98,6 @@ export function BtcChartPage() {
     removePosition,
     updatePosition,
   } = usePositions(engine.chartRefs, !engine.loading, engine.markPrice)
-
-  useTradeSetupOverlay(
-    engine.chartRefs,
-    engine.sidebar.tradeSetup,
-    config.vis.tradeSetup,
-    !engine.loading,
-  )
 
   const posSuggestions = useMemo(() => {
     const candles = engine.panelCandles
