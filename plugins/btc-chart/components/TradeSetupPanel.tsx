@@ -27,6 +27,83 @@ export interface TradeSetupPanelProps {
   posSuggestions?: Record<string, PosSuggestion>
 }
 
+const PLAN_VOTES_REQUIRED = 2
+
+interface BiasLiveHeroProps {
+  dir: 'long' | 'short'
+  confidence: number
+  bull: number
+  bear: number
+  reasons: string[]
+}
+
+/** Prominent live bias when plan is not locked yet (1 vote threshold). */
+function BiasLiveHero({ dir, confidence, bull, bear, reasons }: BiasLiveHeroProps) {
+  const tone = dir === 'long' ? 'up' : 'dn'
+  const leadVotes = dir === 'long' ? bull : bear
+  const opposeVotes = dir === 'long' ? bear : bull
+  const votesToPlan = Math.max(0, PLAN_VOTES_REQUIRED - leadVotes)
+  const { nweCount, smcCount, mlCount } = countConfluenceGroups(reasons)
+  const previewChips = [
+    nweCount > 0 && `Lux ${nweCount}`,
+    smcCount > 0 && `SMC ${smcCount}`,
+    mlCount > 0 && `ML ${mlCount}`,
+  ].filter(Boolean) as string[]
+  const topReasons = reasons.slice(0, 3)
+
+  return (
+    <div
+      className={cn('sb-trade-bias-live', `sb-trade-bias-live--${tone}`)}
+      aria-live="polite"
+      aria-label={`Bias live ${dir}, ${confidence} percent`}
+    >
+      <div className="sb-trade-bias-live__head">
+        <span className="sb-trade-bias-live__kicker">Bias live</span>
+        <span className={cn('sb-trade-bias-live__dir', tone)}>
+          {dir === 'long' ? 'LONG' : 'SHORT'}
+        </span>
+        <span className="sb-trade-bias-live__conf">{confidence}%</span>
+      </div>
+      <meter
+        className={cn('sb-trade-verdict__meter', `sb-trade-verdict__meter--${tone}`)}
+        value={confidence}
+        min={0}
+        max={100}
+        aria-hidden
+      />
+      <p className="sb-trade-bias-live__votes">
+        <span className="sb-trade-bias-live__votes-now">
+          {leadVotes}/{PLAN_VOTES_REQUIRED} vote khóa plan
+        </span>
+        {votesToPlan > 0 && (
+          <span className="sb-trade-bias-live__votes-need">
+            Cần thêm {votesToPlan} tín hiệu cùng hướng
+          </span>
+        )}
+        {opposeVotes > 0 && (
+          <span className="sb-trade-bias-live__votes-oppose">Đối nghịch: {opposeVotes} vote</span>
+        )}
+      </p>
+      {previewChips.length > 0 && (
+        <div className="sb-trade-bias-live__chips" aria-label="Nhóm tín hiệu">
+          {previewChips.map((chip) => (
+            <span key={chip} className="sb-trade-bias-live__chip">
+              {chip}
+            </span>
+          ))}
+        </div>
+      )}
+      {topReasons.length > 0 && (
+        <ul className="sb-trade-bias-live__reasons">
+          {topReasons.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function countConfluenceGroups(reasons: string[]) {
   const mlCount = reasons.filter(
     (r) =>
@@ -314,24 +391,45 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
   const biasReasons = setup.bias?.reasons ?? setup.reasons
 
   if (!setup.dir) {
+    const biasTone = biasDir === 'long' ? 'long' : biasDir === 'short' ? 'short' : undefined
     return (
-      <SideBlock variant="trade">
-        <SideHead title="Trade Setup" subtitle="Chờ plan khóa" actions={headActions} />
+      <SideBlock
+        variant="trade"
+        tone={biasTone}
+        className={biasDir ? 'sb-trade-awaiting' : undefined}
+      >
+        <SideHead
+          title="Trade Setup"
+          subtitle={
+            biasDir
+              ? `Bias ${biasDir === 'long' ? 'LONG' : 'SHORT'} · chưa khóa plan`
+              : 'Chờ plan khóa'
+          }
+          badges={
+            biasDir ? (
+              <SideBadge tone={biasDir === 'long' ? 'up' : 'dn'}>
+                BIAS {biasDir === 'long' ? 'LONG' : 'SHORT'}
+              </SideBadge>
+            ) : undefined
+          }
+          actions={headActions}
+        />
         {positionsDrawer}
+        {biasDir && setup.bias && (
+          <BiasLiveHero
+            dir={biasDir}
+            confidence={biasConf}
+            bull={setup.bias.bull}
+            bear={setup.bias.bear}
+            reasons={biasReasons}
+          />
+        )}
         <div className="sb-trade-empty">
           <p className="sb-trade-empty__title">Chưa có plan</p>
           <p className="sb-trade-empty__hint">
-            Cần ít nhất 2 tín hiệu đồng thuận để khóa entry, SL và TP đến khi invalidation.
+            Plan khóa entry, SL và TP khi có ít nhất {PLAN_VOTES_REQUIRED} vote cùng hướng (đến khi
+            invalidation). Bias live chỉ là hướng sớm, chưa có mức giá.
           </p>
-          {biasDir && (
-            <p className="sb-trade-empty__hint">
-              Bias live:{' '}
-              <span className={biasDir === 'long' ? 'up' : 'dn'}>
-                {biasDir === 'long' ? 'LONG' : 'SHORT'}
-              </span>{' '}
-              · {biasConf}%
-            </p>
-          )}
         </div>
         {explainOpen && <ExplainModal setup={setup} onClose={() => setExplainOpen(false)} />}
       </SideBlock>

@@ -3389,6 +3389,111 @@
   border-top: 1px solid var(--border);
 }
 
+.sb-trade-bias-live {
+  margin: 0 10px 8px;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sb-trade-bias-live--up {
+  border-color: color-mix(in srgb, var(--up) 35%, var(--border));
+  background: color-mix(in srgb, var(--up) 6%, var(--surface-2));
+}
+.sb-trade-bias-live--dn {
+  border-color: color-mix(in srgb, var(--dn) 35%, var(--border));
+  background: color-mix(in srgb, var(--dn) 6%, var(--surface-2));
+}
+.sb-trade-bias-live__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sb-trade-bias-live__kicker {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sb-trade-bias-live__dir {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.sb-trade-bias-live__dir.up {
+  color: var(--up);
+}
+.sb-trade-bias-live__dir.dn {
+  color: var(--dn);
+}
+.sb-trade-bias-live__conf {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+.sb-trade-bias-live__votes {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.sb-trade-bias-live__votes-now {
+  font-weight: 700;
+  color: var(--text-2);
+}
+.sb-trade-bias-live__votes-need {
+  color: var(--warn, #ffc46b);
+}
+.sb-trade-bias-live__votes-oppose {
+  color: var(--muted-2);
+}
+.sb-trade-bias-live__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sb-trade-bias-live__chip {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
+  color: var(--muted);
+}
+.sb-trade-bias-live__reasons {
+  margin: 0;
+  padding: 0 0 0 14px;
+  font-size: 9px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.sb-trade-bias-live__reasons li {
+  margin: 0;
+}
+.sb-trade-awaiting.sb-block--long,
+.sb-trade-awaiting.sb-block--short {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sb-accent) 25%, transparent);
+}
+
 .sb-trade-empty {
   padding: 12px 14px 14px;
   display: flex;
