@@ -63,6 +63,21 @@ export interface SoundConfig {
 
 export type OscView = 'rsi' | 'adx' | 'stoch' | 'obv'
 
+/** Sidebar strategy/context panel ON/OFF (display only, separate from chart vis layers). */
+export interface SidebarPanelPrefs {
+  boucher: boolean
+  lien: boolean
+  ict: boolean
+  liquidity: boolean
+}
+
+export const DEFAULT_SIDEBAR_PANELS: SidebarPanelPrefs = {
+  boucher: false,
+  lien: false,
+  ict: false,
+  liquidity: false,
+}
+
 export interface ChartConfig {
   version: 1
   interval: string
@@ -87,6 +102,8 @@ export interface ChartConfig {
   luxNwe?: NadarayaConfig
   /** Long/Short signal notifications for the active symbol. */
   signalNotify?: SignalNotifyConfig
+  /** Persisted sidebar panel visibility (ICT Sessions, Liquidity, Strategies). */
+  sidebarPanels?: SidebarPanelPrefs
 }
 
 export const DEFAULT_CONFIG: ChartConfig = {
@@ -129,6 +146,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
   spikeMult: 2.5,
   luxNwe: { bandwidth: 8, multiplier: 3, repaint: false, maxBarsBack: 250 },
   signalNotify: { ...DEFAULT_SIGNAL_NOTIFY_CONFIG },
+  sidebarPanels: { ...DEFAULT_SIDEBAR_PANELS },
 }
 
 /** Read full config from localStorage, with safe fallback. */
@@ -156,6 +174,7 @@ export function mergeConfig(p: Partial<ChartConfig>): ChartConfig {
     zoom: p.zoom ?? null,
     luxNwe: p.luxNwe ? { ...DEFAULT_CONFIG.luxNwe!, ...p.luxNwe } : DEFAULT_CONFIG.luxNwe,
     signalNotify: mergeSignalNotifyConfig(p.signalNotify),
+    sidebarPanels: { ...DEFAULT_SIDEBAR_PANELS, ...(p.sidebarPanels ?? {}) },
   }
 }
 

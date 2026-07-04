@@ -155,14 +155,14 @@ export function BtcChartPage() {
     boucherScalp: engine.boucherScalp,
     lienReversal: engine.lienReversal,
     interval: config.interval,
-    boucherEnabled: engine.boucherEnabled,
-    lienEnabled: engine.lienEnabled,
-    onToggleBoucher: () => engine.setBoucherEnabled((v) => !v),
-    onToggleLien: () => engine.setLienEnabled((v) => !v),
-    ictEnabled: engine.ictEnabled,
-    liquidityEnabled: engine.liquidityEnabled,
-    onToggleIct: () => engine.setIctEnabled((v) => !v),
-    onToggleLiquidity: () => engine.setLiquidityEnabled((v) => !v),
+    boucherEnabled: config.boucherEnabled,
+    lienEnabled: config.lienEnabled,
+    onToggleBoucher: config.toggleBoucherPanel,
+    onToggleLien: config.toggleLienPanel,
+    ictEnabled: config.ictEnabled,
+    liquidityEnabled: config.liquidityEnabled,
+    onToggleIct: config.toggleIctPanel,
+    onToggleLiquidity: config.toggleLiquidityPanel,
   } as const
 
   return (

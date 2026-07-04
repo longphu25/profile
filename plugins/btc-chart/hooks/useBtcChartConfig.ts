@@ -10,6 +10,8 @@ import {
   type VisFlags,
   type OscView,
   type NadarayaConfig,
+  type SidebarPanelPrefs,
+  DEFAULT_SIDEBAR_PANELS,
 } from '../storage'
 import {
   AlertSound,
@@ -106,6 +108,14 @@ export interface UseBtcChartConfig {
   requestNotif: () => Promise<void>
   exportNow: () => void
   importNow: (file: File) => Promise<void>
+  boucherEnabled: boolean
+  lienEnabled: boolean
+  ictEnabled: boolean
+  liquidityEnabled: boolean
+  toggleBoucherPanel: () => void
+  toggleLienPanel: () => void
+  toggleIctPanel: () => void
+  toggleLiquidityPanel: () => void
 }
 
 /** Owns persisted chart configuration, alert rules, and import/export. */
@@ -158,6 +168,12 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
   )
   const signalNotifyRef = useRef<SignalNotifyConfig>(signalNotify)
 
+  const initialPanels = cfgInit.sidebarPanels ?? DEFAULT_SIDEBAR_PANELS
+  const [boucherEnabled, setBoucherEnabled] = useState(initialPanels.boucher)
+  const [lienEnabled, setLienEnabled] = useState(initialPanels.lien)
+  const [ictEnabled, setIctEnabled] = useState(initialPanels.ict)
+  const [liquidityEnabled, setLiquidityEnabled] = useState(initialPanels.liquidity)
+
   useLayoutEffect(() => {
     spikeMultRef.current = spikeMult
     oscViewRef.current = oscView
@@ -206,6 +222,12 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
         signalConfig,
         luxNwe: nweCfg,
         signalNotify,
+        sidebarPanels: {
+          boucher: boucherEnabled,
+          lien: lienEnabled,
+          ict: ictEnabled,
+          liquidity: liquidityEnabled,
+        },
       })
     },
     [
@@ -222,6 +244,10 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
       signalConfig,
       nweCfg,
       signalNotify,
+      boucherEnabled,
+      lienEnabled,
+      ictEnabled,
+      liquidityEnabled,
     ],
   )
 
@@ -232,6 +258,18 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
       return next
     })
   }, [])
+
+  const applySidebarPanels = useCallback((panels: SidebarPanelPrefs) => {
+    setBoucherEnabled(panels.boucher)
+    setLienEnabled(panels.lien)
+    setIctEnabled(panels.ict)
+    setLiquidityEnabled(panels.liquidity)
+  }, [])
+
+  const toggleBoucherPanel = useCallback(() => setBoucherEnabled((v) => !v), [])
+  const toggleLienPanel = useCallback(() => setLienEnabled((v) => !v), [])
+  const toggleIctPanel = useCallback(() => setIctEnabled((v) => !v), [])
+  const toggleLiquidityPanel = useCallback(() => setLiquidityEnabled((v) => !v), [])
 
   useEffect(() => {
     persist(undefined)
@@ -345,6 +383,12 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
       signalConfig,
       luxNwe: nweCfg,
       signalNotify,
+      sidebarPanels: {
+        boucher: boucherEnabled,
+        lien: lienEnabled,
+        ict: ictEnabled,
+        liquidity: liquidityEnabled,
+      },
     })
   }, [
     interval,
@@ -360,6 +404,10 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
     signalConfig,
     nweCfg,
     signalNotify,
+    boucherEnabled,
+    lienEnabled,
+    ictEnabled,
+    liquidityEnabled,
   ])
 
   const importNow = useCallback(
@@ -387,6 +435,7 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
         }
         cfg.minimal = cfg.minimal ?? false
         if (cfg.interval !== interval) setInterval_(cfg.interval as Interval)
+        applySidebarPanels(cfg.sidebarPanels ?? DEFAULT_SIDEBAR_PANELS)
         if (cfg.zoom && chartRefs.current?.mainChart) {
           chartRefs.current.mainChart.timeScale().setVisibleLogicalRange(cfg.zoom)
         }
@@ -396,7 +445,7 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
         setImportErr(e instanceof Error ? e.message : 'invalid file')
       }
     },
-    [interval, chartRefs, setImportErr],
+    [interval, chartRefs, setImportErr, applySidebarPanels],
   )
 
   return {
@@ -454,5 +503,13 @@ export function useBtcChartConfig(params: UseBtcChartConfigParams): UseBtcChartC
     requestNotif,
     exportNow,
     importNow,
+    boucherEnabled,
+    lienEnabled,
+    ictEnabled,
+    liquidityEnabled,
+    toggleBoucherPanel,
+    toggleLienPanel,
+    toggleIctPanel,
+    toggleLiquidityPanel,
   }
 }

@@ -104,14 +104,6 @@ export interface UseBtcChartEngine {
   luxNweResult: LuxNweResult
   ictResult: ICTResult
   liquidityResult: LiquidityResult
-  boucherEnabled: boolean
-  setBoucherEnabled: React.Dispatch<React.SetStateAction<boolean>>
-  lienEnabled: boolean
-  setLienEnabled: React.Dispatch<React.SetStateAction<boolean>>
-  ictEnabled: boolean
-  setIctEnabled: React.Dispatch<React.SetStateAction<boolean>>
-  liquidityEnabled: boolean
-  setLiquidityEnabled: React.Dispatch<React.SetStateAction<boolean>>
   renderData: (data: Candle[], options?: ScheduleChartRenderOptions) => void
   toggle: (key: keyof VisFlags) => void
   applyPreset: (preset: LayerPresetId) => void
@@ -252,10 +244,6 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   })
   const [panelCandles, setPanelCandles] = useState<Candle[]>([])
   const [lastCandleClose, setLastCandleClose] = useState<number | null>(null)
-  const [boucherEnabled, setBoucherEnabled] = useState(false)
-  const [lienEnabled, setLienEnabled] = useState(false)
-  const [ictEnabled, setIctEnabled] = useState(false)
-  const [liquidityEnabled, setLiquidityEnabled] = useState(false)
   const [luxNweResult, setLuxNweResult] = useState<LuxNweResult>({
     mid: [],
     upper: [],
@@ -605,14 +593,6 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     luxNweResult,
     ictResult,
     liquidityResult,
-    boucherEnabled,
-    setBoucherEnabled,
-    lienEnabled,
-    setLienEnabled,
-    ictEnabled,
-    setIctEnabled,
-    liquidityEnabled,
-    setLiquidityEnabled,
     renderData,
     toggle,
     applyPreset,
