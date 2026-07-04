@@ -45,7 +45,7 @@ import {
   drawLiquidityOverlay,
 } from './overlays'
 import { clearTradeSetupOverlay, drawTradeSetupOverlay } from './trade-setup-overlay'
-import { applyDefaultViewport } from './chart-viewport'
+import { applyDefaultViewport, applyPendingViewportLock } from './chart-viewport'
 import { fmtP } from './format'
 import { fvgLegendHtml, summarizeFvgs } from './smc-fvg-summary'
 import type { Candle, NWE, OrderFlowSignal } from './types'
@@ -519,6 +519,13 @@ export function renderChartPipeline(
       oscChart.timeScale().setVisibleLogicalRange(range)
     }
     ctx.fitNextRef.current = false
+  }
+
+  if (runFast) {
+    applyPendingViewportLock(ctx.viewportLockRef, [
+      refs.mainChart.timeScale(),
+      ctx.oscRefs.current?.chart?.timeScale(),
+    ])
   }
 
   if (runHeavy && visFlags.luxNwe && ctx.nweCacheRef.current) {

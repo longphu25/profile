@@ -35,6 +35,17 @@ export function createOscChart(params: OscChartSetupParams): (() => void) | null
       horzLines: { color: CHART.grid },
     },
     crosshair: { mode: LWC.CrosshairMode.Normal },
+    handleScroll: {
+      mouseWheel: false,
+      pressedMouseMove: false,
+      horzTouchDrag: false,
+      vertTouchDrag: false,
+    },
+    handleScale: {
+      axisPressedMouseMove: false,
+      mouseWheel: false,
+      pinch: false,
+    },
     rightPriceScale: { borderColor: CHART.border, scaleMargins: { top: 0.12, bottom: 0.08 } },
     timeScale: { borderColor: CHART.border, timeVisible: true, secondsVisible: false },
     width: el.clientWidth || 600,
@@ -64,37 +75,21 @@ export function createOscChart(params: OscChartSetupParams): (() => void) | null
   const rsiS = chart.addSeries(LWC.LineSeries, { ...lineOpts(CHART.neu, 2), title: 'RSI' })
 
   let disposed = false
-  let syncing = false
 
   const syncToOsc = (r: { from: number; to: number } | null) => {
-    if (disposed || syncing || !r) return
-    syncing = true
+    if (disposed || !r) return
     try {
       chart.timeScale().setVisibleLogicalRange(r)
     } catch {
       /* osc chart removed */
-    } finally {
-      syncing = false
-    }
-  }
-
-  const syncToMain = (r: { from: number; to: number } | null) => {
-    if (disposed || syncing || !r) return
-    syncing = true
-    try {
-      mainChart.timeScale().setVisibleLogicalRange(r)
-    } catch {
-      /* main chart removed */
-    } finally {
-      syncing = false
     }
   }
 
   const cur = mainChart.timeScale().getVisibleLogicalRange()
   if (cur) syncToOsc(cur)
 
+  // One-way sync: main chart is the pan/zoom source of truth.
   mainChart.timeScale().subscribeVisibleLogicalRangeChange(syncToOsc)
-  chart.timeScale().subscribeVisibleLogicalRangeChange(syncToMain)
 
   const ro = new ResizeObserver(() => {
     if (el.clientHeight > 0) chart.applyOptions({ width: el.clientWidth, height: el.clientHeight })
@@ -120,11 +115,6 @@ export function createOscChart(params: OscChartSetupParams): (() => void) | null
       ro.disconnect()
       try {
         mainChart.timeScale().unsubscribeVisibleLogicalRangeChange(syncToOsc)
-      } catch {
-        /* noop */
-      }
-      try {
-        chart.timeScale().unsubscribeVisibleLogicalRangeChange(syncToMain)
       } catch {
         /* noop */
       }

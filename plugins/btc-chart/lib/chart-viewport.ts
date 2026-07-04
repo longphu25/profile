@@ -90,3 +90,16 @@ export function scheduleViewportRestore(
   }
   requestAnimationFrame(() => requestAnimationFrame(restore))
 }
+
+/** Apply a one-shot viewport lock after osc data paint (clears the ref). */
+export function applyPendingViewportLock(
+  lockRef: { current: LogicalRange | null },
+  charts: Array<TimeScaleLike | null | undefined>,
+): void {
+  const range = lockRef.current
+  if (!range) return
+  for (const chart of charts) {
+    setVisibleLogicalRangeSafe(chart, range)
+  }
+  lockRef.current = null
+}

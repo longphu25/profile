@@ -12,7 +12,8 @@ import { applyLayerPreset, type LayerPresetId } from '../lib/layer-presets'
 import { visOverlayTurnedOn } from '../lib/overlay-vis-keys'
 import { createMainChart } from '../lib/chart-main-setup'
 import { createOscChart } from '../lib/chart-osc-setup'
-import { getVisibleLogicalRangeSafe, scheduleViewportRestore } from '../lib/chart-viewport'
+import { getVisibleLogicalRangeSafe } from '../lib/chart-viewport'
+import type { LogicalRange } from '../lib/chart-viewport'
 import { closeKlinesWebSocket, wireKlinesWebSocket } from '../lib/chart-websocket'
 import type { ChartRenderContext, LuxNweResult } from '../lib/chart-render-context'
 import {
@@ -201,6 +202,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   const boucherCacheRef = useRef<BoucherResult | null>(null)
   const lienCacheRef = useRef<LienResult | null>(null)
   const fitNextRef = useRef(true)
+  const viewportLockRef = useRef<LogicalRange | null>(null)
   const panelCandleKeyRef = useRef('')
   const renderGenRef = useRef(0)
   const nwePendingKeyRef = useRef('')
@@ -294,6 +296,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     ofOverlayRef,
     oscRefs,
     fitNextRef,
+    viewportLockRef,
     panelCandleKeyRef,
     lastCandleTimeRef,
     soundEnabledRef: config.soundEnabledRef,
@@ -414,32 +417,27 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     const main = chartRefs.current?.mainChart
     if (!main) return
 
-    const savedRange = getVisibleLogicalRangeSafe(main.timeScale())
     config.oscOpenRef.current = config.oscOpen
     try {
       main.applyOptions({ timeScale: { visible: !config.oscOpen } })
     } catch {
       /* main chart removed */
     }
-    scheduleViewportRestore(
-      () => [main.timeScale(), config.oscOpen ? oscRefs.current?.chart?.timeScale() : null],
-      savedRange,
-    )
   }, [config.oscOpen, config.oscOpenRef])
 
   useEffect(() => {
     if (!config.oscOpen) return
-    const savedRange = getVisibleLogicalRangeSafe(chartRefs.current?.mainChart?.timeScale())
     const cleanup = createOscChart({
       oscElRef,
       chartRefs,
       oscRefs,
       candlesRef,
       onReady: () => {
-        scheduleViewportRestore(
-          () => [chartRefs.current?.mainChart?.timeScale(), oscRefs.current?.chart?.timeScale()],
-          savedRange,
-        )
+        if (!viewportLockRef.current) {
+          viewportLockRef.current = getVisibleLogicalRangeSafe(
+            chartRefs.current?.mainChart?.timeScale(),
+          )
+        }
         if (candlesRef.current.length) renderData(candlesRef.current)
       },
     })
@@ -549,6 +547,8 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   )
 
   const toggleOscOpen = useCallback(() => {
+    const range = getVisibleLogicalRangeSafe(chartRefs.current?.mainChart?.timeScale())
+    if (range) viewportLockRef.current = range
     config.setOscOpen((o) => !o)
   }, [config])
 
@@ -558,6 +558,8 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
       const startY = e.clientY
       const startH = config.oscHeight
       const onMove = (ev: PointerEvent) => {
+        const range = getVisibleLogicalRangeSafe(chartRefs.current?.mainChart?.timeScale())
+        if (range) viewportLockRef.current = range
         const next = Math.max(90, Math.min(480, startH + (startY - ev.clientY)))
         config.setOscHeight(next)
       }

@@ -7,6 +7,7 @@ import type { BoxFlipResult } from '../box-flip'
 import type { OFOverlaySignal } from '../order-flow-overlay'
 import type { SMCResult } from '../smc-wasm'
 import type { NadarayaConfig, VisFlags } from '../storage'
+import type { LogicalRange } from './chart-viewport'
 import type { Interval } from './constants'
 import type { SymbolId } from './symbols'
 import type { BoucherResult } from './boucher-scalping'
@@ -88,6 +89,8 @@ export interface ChartRenderContext {
 
   // Config / state mirrors (read inside pipeline without React deps)
   readonly fitNextRef: RefObject<boolean>
+  /** One-shot range to restore after OSC pane layout or data paint. */
+  readonly viewportLockRef: RefObject<LogicalRange | null>
   readonly panelCandleKeyRef: RefObject<string>
   readonly lastCandleTimeRef: RefObject<number>
   readonly soundEnabledRef: RefObject<boolean>
