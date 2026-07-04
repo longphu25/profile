@@ -56,6 +56,8 @@ export interface ChartRefs {
   luxNweLoS: any
   ma50S: any
   ma200S: any
+  maFastS: any
+  maSlowS: any
   volSeries: any
   vwapS: any
   vwapUpS: any

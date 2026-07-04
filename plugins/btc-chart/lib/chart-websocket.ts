@@ -363,6 +363,8 @@ export function wireKlinesWebSocket(params: WireKlinesWebSocketParams): boolean 
       params.chartRefs.current.nweLowS.applyOptions({ priceFormat: pf })
       params.chartRefs.current.ma50S.applyOptions({ priceFormat: pf })
       params.chartRefs.current.ma200S.applyOptions({ priceFormat: pf })
+      params.chartRefs.current.maFastS.applyOptions({ priceFormat: pf })
+      params.chartRefs.current.maSlowS.applyOptions({ priceFormat: pf })
       params.chartRefs.current.mainChart.priceScale('right').applyOptions({ autoScale: true })
     }
     params.setLoading(false)

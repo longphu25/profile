@@ -242,6 +242,7 @@ export function BtcChartPage() {
               onApplyPreset={engine.applyPreset}
               signalNotify={config.signalNotify}
               onUpdateSignalNotify={config.updateSignalNotify}
+              interval={config.interval}
             />
             <div className="btc-chart__chart-stage">
               <div className="btc-chart__legend-dock">

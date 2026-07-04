@@ -29,6 +29,7 @@ describe('pipeline-needs', () => {
   })
 
   test('overlay defaults off in DEFAULT_CONFIG', () => {
+    expect(DEFAULT_CONFIG.vis.maAdaptive).toBe(false)
     expect(DEFAULT_CONFIG.vis.tradeSetupOverlay).toBe(false)
     expect(DEFAULT_CONFIG.vis.tradeSetup).toBe(false)
     expect(shouldDrawTradeSetupOverlay(DEFAULT_CONFIG.vis)).toBe(false)

@@ -11,6 +11,8 @@ export const CHART = {
   neu: '#6fbcf0',
   hi: '#e8b84a',
   ma50: '#e8b84a',
+  maFast: '#6fbcf0',
+  maSlow: 'rgba(232,184,74,0.72)',
   vol: 'rgba(138,143,152,0.45)',
   upSoft: 'rgba(61,214,140,0.5)',
   dnSoft: 'rgba(242,87,87,0.5)',

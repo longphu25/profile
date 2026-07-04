@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
   computeAdaptiveMaSeries,
+  formatAdaptiveMaToolLabel,
   getAdaptiveMaPeriods,
   isMaContextBlockReason,
   maContextBlockHint,
@@ -21,6 +22,14 @@ function candles(closes: number[]): Candle[] {
     volume: 1000,
   }))
 }
+
+describe('formatAdaptiveMaToolLabel', () => {
+  test('reflects interval periods in Tools label', () => {
+    expect(formatAdaptiveMaToolLabel('5m')).toBe('EMA 9/21')
+    expect(formatAdaptiveMaToolLabel('1h')).toBe('EMA 20/50')
+    expect(formatAdaptiveMaToolLabel('4h')).toBe('EMA 50/200')
+  })
+})
 
 describe('getAdaptiveMaPeriods', () => {
   test('uses 9/21 on 1m through 15m', () => {

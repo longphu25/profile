@@ -9,6 +9,11 @@ export const TRADE_SETUP_LAYER_KEYS = [
   'tradeSetupOverlay',
 ] as const satisfies ReadonlyArray<keyof VisFlags>
 
+/** MA line toggles (Tools panel section, not layer chips). */
+export const MA_LINE_KEYS = ['maAdaptive', 'ma50', 'ma200'] as const satisfies ReadonlyArray<
+  keyof VisFlags
+>
+
 export const IND_GROUPS: Record<string, Array<keyof VisFlags>> = {
   'Trend & Momentum': ['luxNwe', 'nwe', 'ma50', 'ma200', 'dbb', 'vwap'],
   'Smart Money (ICT/SMC)': ['smc', 'supplyDemand', 'ict', 'liquidity', 'boxFlip'],
@@ -44,6 +49,13 @@ export const IND_LABELS: Partial<Record<keyof VisFlags, string>> = {
   volSpike: 'Vol Spike',
   tradeSetup: 'Setup confluence',
   tradeSetupOverlay: 'Setup overlay',
+  maAdaptive: 'EMA Adaptive',
+}
+
+export const MA_LINE_HINTS: Partial<Record<(typeof MA_LINE_KEYS)[number], string>> = {
+  maAdaptive: 'EMA nhanh/chậm theo khung (9/21, 20/50, 50/200). Dùng cho bối cảnh Trade Setup.',
+  ma50: 'SMA 50 cố định trên chart.',
+  ma200: 'SMA 200 cố định trên chart.',
 }
 
 export const TRADE_SETUP_LAYER_HINTS: Record<(typeof TRADE_SETUP_LAYER_KEYS)[number], string> = {
@@ -55,4 +67,5 @@ export const TRADE_SETUP_LAYER_HINTS: Record<(typeof TRADE_SETUP_LAYER_KEYS)[num
 export const ALL_IND_KEYS = [
   ...(Object.values(IND_GROUPS).flat() as Array<keyof VisFlags>),
   ...TRADE_SETUP_LAYER_KEYS,
+  ...MA_LINE_KEYS.filter((k) => k === 'maAdaptive'),
 ]

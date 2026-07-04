@@ -16,6 +16,12 @@ export interface AdaptiveMaPeriods {
  * Map interval to adaptive MA periods:
  * 1m–15m → 9/21, 1h → 20/50, 4h+ → 50/200.
  */
+/** Tools panel label for the adaptive MA line toggle. */
+export function formatAdaptiveMaToolLabel(interval: Interval): string {
+  const { label } = getAdaptiveMaPeriods(interval)
+  return `EMA ${label}`
+}
+
 export function getAdaptiveMaPeriods(interval: Interval): AdaptiveMaPeriods {
   switch (interval) {
     case '1m':

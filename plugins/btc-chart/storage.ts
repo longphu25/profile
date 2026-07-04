@@ -13,6 +13,8 @@ export interface VisFlags {
   nwe: boolean
   ma50: boolean
   ma200: boolean
+  /** Interval-scaled EMA fast/slow lines (9/21, 20/50, 50/200). */
+  maAdaptive: boolean
   of: boolean
   vp: boolean
   /** Volume intensity strip beside the profile (requires Vol Profile). */
@@ -114,6 +116,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
     nwe: false,
     ma50: false,
     ma200: false,
+    maAdaptive: false,
     of: false,
     vp: false,
     heatmap: false,

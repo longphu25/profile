@@ -239,6 +239,8 @@ export function renderChartPipeline(
       .map((c, i) => (arr[i] != null ? { time: c.time, value: arr[i] as number } : null))
       .filter(Boolean) as { time: number; value: number }[]
 
+  const toEmaLine = (arr: number[]) => data.map((c, i) => ({ time: c.time, value: arr[i] }))
+
   if (runFast) {
     refs.candleSeries.setData(
       data.map((c) => ({
@@ -374,6 +376,15 @@ export function renderChartPipeline(
 
     refs.ma50S.setData(visFlags.ma50 ? toLine(sma50) : [])
     refs.ma200S.setData(visFlags.ma200 ? toLine(sma200) : [])
+    if (visFlags.maAdaptive) {
+      refs.maFastS.applyOptions({ title: `EMA${adaptiveMa.fastPeriod}` })
+      refs.maSlowS.applyOptions({ title: `EMA${adaptiveMa.slowPeriod}` })
+      refs.maFastS.setData(toEmaLine(adaptiveMaSeries.fast))
+      refs.maSlowS.setData(toEmaLine(adaptiveMaSeries.slow))
+    } else {
+      refs.maFastS.setData([])
+      refs.maSlowS.setData([])
+    }
     refs.vwapS.setData(visFlags.vwap ? toLine(vwapR.vwap) : [])
     refs.vwapUpS.setData(visFlags.vwap ? toLine(vwapR.upper) : [])
     refs.vwapLoS.setData(visFlags.vwap ? toLine(vwapR.lower) : [])
@@ -647,11 +658,17 @@ export function renderChartPipeline(
       legendBand.lower[i] != null
         ? `<span style="color:${CHART.up}">↓ ${fmtP(legendBand.lower[i] as number)}</span>`
         : null,
-      sma50[i] != null
+      visFlags.ma50 && sma50[i] != null
         ? `<span style="color:${CHART.ma50}">MA50 ${fmtP(sma50[i] as number)}</span>`
         : null,
-      sma200[i] != null
+      visFlags.ma200 && sma200[i] != null
         ? `<span style="color:${CHART.hi}">MA200 ${fmtP(sma200[i] as number)}</span>`
+        : null,
+      visFlags.maAdaptive && adaptiveMa.fast != null
+        ? `<span style="color:${CHART.maFast}">EMA${adaptiveMa.fastPeriod} ${fmtP(adaptiveMa.fast)}</span>`
+        : null,
+      visFlags.maAdaptive && adaptiveMa.slow != null
+        ? `<span style="color:${CHART.maSlow}">EMA${adaptiveMa.slowPeriod} ${fmtP(adaptiveMa.slow)}</span>`
         : null,
       rsi[i] != null
         ? `<span style="color:${CHART.neu}">RSI ${(rsi[i] as number).toFixed(1)}</span>`

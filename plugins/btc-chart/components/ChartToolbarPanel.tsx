@@ -6,10 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { NadarayaConfig, VisFlags } from '../storage'
+import type { Interval } from '../lib/constants'
+import { formatAdaptiveMaToolLabel } from '../lib/ma-adaptive'
 import {
   ALL_IND_KEYS,
   IND_GROUPS,
   IND_LABELS,
+  MA_LINE_HINTS,
+  MA_LINE_KEYS,
   TRADE_SETUP_LAYER_HINTS,
   TRADE_SETUP_LAYER_KEYS,
 } from '../lib/indicator-groups'
@@ -37,6 +41,7 @@ export interface ChartToolbarPanelProps {
   onApplyPreset?: (preset: LayerPresetId) => void
   signalNotify: SignalNotifyConfig
   onUpdateSignalNotify: (patch: Partial<SignalNotifyConfig>) => void
+  interval: Interval
 }
 
 export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
@@ -56,7 +61,9 @@ export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
   onApplyPreset,
   signalNotify,
   onUpdateSignalNotify,
+  interval,
 }: ChartToolbarPanelProps) {
+  const adaptiveMaLabel = formatAdaptiveMaToolLabel(interval)
   const activeCount = ALL_IND_KEYS.filter((k) => vis[k]).length
 
   const handleClose = useEffectEvent(() => {
@@ -259,6 +266,35 @@ export const ChartToolbarPanel = React.memo(function ChartToolbarPanel({
                     </div>
                   )
                 })}
+              </section>
+
+              <section className="btc-chart__tools-section btc-chart__tools-section--ma-lines">
+                <div className="btc-chart__tools-section-head">
+                  <span className="btc-chart__tools-section-label">MA Lines</span>
+                  <span className="btc-chart__tools-section-hint">
+                    {interval} · {adaptiveMaLabel}
+                  </span>
+                </div>
+                <div className="ind-panel-chips">
+                  {MA_LINE_KEYS.map((key) => {
+                    const on = !!vis[key]
+                    const label = key === 'maAdaptive' ? adaptiveMaLabel : IND_LABELS[key]
+                    return (
+                      <Button
+                        key={key}
+                        type="button"
+                        variant="ghost"
+                        className={cn('ind-panel-chip h-auto rounded-none', on && 'is-on')}
+                        aria-pressed={on}
+                        title={MA_LINE_HINTS[key]}
+                        onClick={() => onToggle(key)}
+                      >
+                        <span className="ind-panel-chip__dot" aria-hidden />
+                        {label}
+                      </Button>
+                    )
+                  })}
+                </div>
               </section>
 
               <section className="btc-chart__tools-section">

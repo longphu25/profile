@@ -180,6 +180,23 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
     crosshairMarkerVisible: false,
     title: 'MA200',
   })
+  const maFastS = mainChart.addSeries(LWC.LineSeries, {
+    color: CHART.maFast,
+    lineWidth: 1.5,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: false,
+    title: 'EMA Fast',
+  })
+  const maSlowS = mainChart.addSeries(LWC.LineSeries, {
+    color: CHART.maSlow,
+    lineWidth: 1,
+    lineStyle: 2,
+    priceLineVisible: false,
+    lastValueVisible: false,
+    crosshairMarkerVisible: false,
+    title: 'EMA Slow',
+  })
 
   const vwapS = mainChart.addSeries(LWC.LineSeries, {
     color: '#c792ea',
@@ -510,6 +527,8 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
     luxNweLoS,
     ma50S,
     ma200S,
+    maFastS,
+    maSlowS,
     volSeries,
     vwapS,
     vwapUpS,
