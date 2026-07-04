@@ -17,6 +17,13 @@ export interface NWE {
   lower: (number | null)[]
 }
 
+/** Placeholder when MH Band is disabled (no compute, no votes). */
+export const EMPTY_NWE: NWE = {
+  mid: [],
+  upper: [],
+  lower: [],
+}
+
 export interface OrderFlowSignal {
   type: 'buy' | 'sell'
   price: string

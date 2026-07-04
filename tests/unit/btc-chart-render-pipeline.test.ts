@@ -62,6 +62,22 @@ function minimalSnapshotParams(overrides: {
     ict: { sessions: [], judas: [], killzones: [], activeSession: null, adrPct: 0 },
     liq: { range: null, levels: [], inverseFvgs: [], sweeps: [], nextTarget: null },
     smcResult: { structures: [], orderBlocks: [], fvgs: [] },
+    supplyDemand: {
+      zones: [],
+      grabs: [],
+      nearestDemand: null,
+      nearestSupply: null,
+      nearestHtfDemand: null,
+      nearestHtfSupply: null,
+      longEntry: null,
+      longSl: null,
+      shortEntry: null,
+      shortSl: null,
+      mtfLong: null,
+      mtfShort: null,
+      htfInterval: null,
+    },
+    mhEnabled: false,
   }
 }
 

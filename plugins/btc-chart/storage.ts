@@ -35,7 +35,7 @@ export interface VisFlags {
   supplyDemand: boolean
   /**
    * Rich trade-setup confluence (ICT, SMC, Boucher, etc.). Off by default for lighter pipeline.
-   * Sidebar still shows a basic setup from ML/RSI/NWE without this.
+   * Basic setup uses Lux NWE + ML/RSI; MH Band (`nwe`) is opt-in only.
    */
   tradeSetup: boolean
   /** Entry / SL / TP risk-reward overlay on chart canvas. Off by default (heavy on pan/zoom). */

@@ -4,6 +4,8 @@ import type { VisFlags } from '../storage'
 
 /** Per-stage compute/draw flags derived from layer toggles. */
 export interface PipelineNeeds {
+  /** Midnight Hunter band (off by default; Lux NWE is primary). */
+  readonly mhBand: boolean
   readonly luxNwe: boolean
   readonly ict: boolean
   readonly liquidity: boolean
@@ -26,6 +28,7 @@ export interface PipelineNeeds {
 export function resolvePipelineNeeds(vis: VisFlags, oscOpen: boolean): PipelineNeeds {
   const ts = vis.tradeSetup
   return {
+    mhBand: vis.nwe,
     luxNwe: vis.luxNwe || ts,
     ict: vis.ict || ts,
     liquidity: vis.liquidity || ts,
@@ -34,7 +37,7 @@ export function resolvePipelineNeeds(vis: VisFlags, oscOpen: boolean): PipelineN
     boucher: vis.scalping || ts,
     lien: vis.reversal || ts,
     boxFlip: vis.boxFlip,
-    orderFlow: vis.of,
+    orderFlow: vis.of && vis.nwe,
     vp: vis.vp,
     rsiDiv: vis.rsiDiv,
     oscillators: oscOpen,

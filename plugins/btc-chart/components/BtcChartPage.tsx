@@ -125,13 +125,16 @@ export function BtcChartPage() {
   const posSuggestions = useMemo(() => {
     const candles = engine.panelCandles
     if (!candles.length || !positions.length) return {}
-    const nweData = calcMHBand(candles)
+    const lux = engine.luxNweResult
+    const band = config.vis.nwe
+      ? calcMHBand(candles)
+      : { mid: lux.mid, upper: lux.upper, lower: lux.lower }
     const result: Record<string, { sl: number; tp1: number; tp2: number; tp3: number }> = {}
     for (const p of positions) {
-      result[p.id] = suggestSlTp(p, candles, nweData)
+      result[p.id] = suggestSlTp(p, candles, band)
     }
     return result
-  }, [positions, engine.panelCandles])
+  }, [positions, engine.panelCandles, engine.luxNweResult, config.vis.nwe])
 
   const railProps = {
     sidebar: engine.sidebar,

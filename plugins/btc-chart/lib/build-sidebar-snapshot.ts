@@ -59,6 +59,8 @@ export interface BuildSidebarSnapshotParams {
   liq: LiquidityResult
   smcResult: SMCResult
   supplyDemand: SupplyDemandResult
+  /** When false, MH Band readouts stay empty; alerts use Lux band levels. */
+  mhEnabled: boolean
 }
 
 /** Sidebar fields updated on each chart render (volume profile is set separately). */
@@ -91,14 +93,18 @@ export function buildSidebarSnapshot(params: BuildSidebarSnapshotParams): Sideba
     liq,
     smcResult,
     supplyDemand,
+    mhEnabled,
   } = params
 
   const i = data.length - 1
   const c = data[i]
+  const bandForAlerts = mhEnabled
+    ? nwe
+    : { mid: luxNwe.mid, upper: luxNwe.upper, lower: luxNwe.lower }
 
   let zoneText = '—',
     zoneCls = ''
-  if (nwe.upper[i] != null && nwe.lower[i] != null) {
+  if (mhEnabled && nwe.upper[i] != null && nwe.lower[i] != null) {
     if (c.close > (nwe.upper[i] as number)) {
       zoneText = 'Above Upper'
       zoneCls = 'dn'
@@ -142,7 +148,7 @@ export function buildSidebarSnapshot(params: BuildSidebarSnapshotParams): Sideba
       : { text: '—', cls: '' }
 
   let sigNwe = { text: '—', cls: '' }
-  if (i > 0 && nwe.upper[i - 1] != null && nwe.lower[i - 1] != null) {
+  if (mhEnabled && i > 0 && nwe.upper[i - 1] != null && nwe.lower[i - 1] != null) {
     const prev = data[i - 1]
     const sell =
       prev.high > (nwe.upper[i - 1] as number) && prev.close > prev.open && c.close < c.open
@@ -201,9 +207,9 @@ export function buildSidebarSnapshot(params: BuildSidebarSnapshotParams): Sideba
     : { text: '—', cls: '' }
 
   return {
-    nweUpper: nwe.upper[i] != null ? fmtP(nwe.upper[i] as number) : '—',
-    nweMid: nwe.mid[i] != null ? fmtP(nwe.mid[i] as number) : '—',
-    nweLower: nwe.lower[i] != null ? fmtP(nwe.lower[i] as number) : '—',
+    nweUpper: mhEnabled && nwe.upper[i] != null ? fmtP(nwe.upper[i] as number) : '—',
+    nweMid: mhEnabled && nwe.mid[i] != null ? fmtP(nwe.mid[i] as number) : '—',
+    nweLower: mhEnabled && nwe.lower[i] != null ? fmtP(nwe.lower[i] as number) : '—',
     nweZone: { text: zoneText, cls: zoneCls },
     sigRsi,
     sigMa,
@@ -225,8 +231,8 @@ export function buildSidebarSnapshot(params: BuildSidebarSnapshotParams): Sideba
     adxNow: adxR.adx[i] ?? null,
     stochKNow: stoch.k[i] ?? null,
     obvNow: obv[i] ?? null,
-    nweUp: nwe.upper[i] ?? null,
-    nweLo: nwe.lower[i] ?? null,
+    nweUp: bandForAlerts.upper[i] ?? null,
+    nweLo: bandForAlerts.lower[i] ?? null,
     tradeSetup: calcTradeSetup(data, nwe, rsi, adxR, ml, {
       boucher: bScalp,
       lien: lienR,

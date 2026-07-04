@@ -47,7 +47,8 @@ import { clearTradeSetupOverlay, drawTradeSetupOverlay } from './trade-setup-ove
 import { applyDefaultViewport } from './chart-viewport'
 import { fmtP } from './format'
 import { fvgLegendHtml, summarizeFvgs } from './smc-fvg-summary'
-import type { Candle, OrderFlowSignal } from './types'
+import type { Candle, NWE, OrderFlowSignal } from './types'
+import { EMPTY_NWE } from './types'
 
 export type PipelinePhase = 'all' | 'fast' | 'heavy'
 
@@ -153,7 +154,7 @@ export function renderChartPipeline(
     ctx.lastHeavyComputeMsRef.current = now
   }
 
-  const nwe = calcMHBand(data)
+  const mhNwe = needs.mhBand ? calcMHBand(data) : EMPTY_NWE
   const sma50 = calcSMA(data, 50)
   const sma200 = calcSMA(data, 200)
   const rsi = calcRSI(data, 14)
@@ -164,7 +165,7 @@ export function renderChartPipeline(
   const vwapR = calcVWAP(data)
   const divs = needs.rsiDiv ? detectRSIDivergence(data, rsi) : []
   const of_ = needs.orderFlow
-    ? buildOrderFlow(data, nwe)
+    ? buildOrderFlow(data, mhNwe)
     : { overlay: [] as OFOverlaySignal[], log: [] as OrderFlowSignal[] }
   const boxFlip = needs.boxFlip
     ? buildBoxFlipSignals(data, {
@@ -208,9 +209,14 @@ export function renderChartPipeline(
     ctx.ictDataRef.current = ict
     ctx.setICTResult(ict)
   }
+
+  const mlBand: NWE = needs.mhBand
+    ? mhNwe
+    : { mid: luxNwe.mid, upper: luxNwe.upper, lower: luxNwe.lower }
+
   const ml = mlSignal(
     data,
-    nwe,
+    mlBand,
     sma50,
     sma200,
     rsi,
@@ -355,9 +361,9 @@ export function renderChartPipeline(
   }
 
   if (runFast) {
-    refs.nweMidS.setData(visFlags.nwe ? toLine(nwe.mid) : [])
-    refs.nweUpS.setData(visFlags.nwe ? toLine(nwe.upper) : [])
-    refs.nweLowS.setData(visFlags.nwe ? toLine(nwe.lower) : [])
+    refs.nweMidS.setData(visFlags.nwe ? toLine(mhNwe.mid) : [])
+    refs.nweUpS.setData(visFlags.nwe ? toLine(mhNwe.upper) : [])
+    refs.nweLowS.setData(visFlags.nwe ? toLine(mhNwe.lower) : [])
 
     refs.luxNweMidS.setData(visFlags.luxNwe ? toLine(luxNwe.mid) : [])
     refs.luxNweUpS.setData(visFlags.luxNwe ? toLine(luxNwe.upper) : [])
@@ -621,16 +627,22 @@ export function renderChartPipeline(
   }
 
   const i = data.length - 1
+  const legendBand: NWE = visFlags.nwe
+    ? mhNwe
+    : visFlags.luxNwe
+      ? { mid: luxNwe.mid, upper: luxNwe.upper, lower: luxNwe.lower }
+      : EMPTY_NWE
   if (runFast && ctx.legendRef.current) {
+    const legendLabel = visFlags.nwe ? 'NWE' : 'Lux'
     ctx.legendRef.current.innerHTML = [
-      nwe.mid[i] != null
-        ? `<span style="color:${CHART.neu}">NWE ${fmtP(nwe.mid[i] as number)}</span>`
+      legendBand.mid[i] != null
+        ? `<span style="color:${CHART.neu}">${legendLabel} ${fmtP(legendBand.mid[i] as number)}</span>`
         : null,
-      nwe.upper[i] != null
-        ? `<span style="color:${CHART.dn}">↑ ${fmtP(nwe.upper[i] as number)}</span>`
+      legendBand.upper[i] != null
+        ? `<span style="color:${CHART.dn}">↑ ${fmtP(legendBand.upper[i] as number)}</span>`
         : null,
-      nwe.lower[i] != null
-        ? `<span style="color:${CHART.up}">↓ ${fmtP(nwe.lower[i] as number)}</span>`
+      legendBand.lower[i] != null
+        ? `<span style="color:${CHART.up}">↓ ${fmtP(legendBand.lower[i] as number)}</span>`
         : null,
       sma50[i] != null
         ? `<span style="color:${CHART.ma50}">MA50 ${fmtP(sma50[i] as number)}</span>`
@@ -652,7 +664,8 @@ export function renderChartPipeline(
 
   const snapshot = buildSidebarSnapshot({
     data,
-    nwe,
+    nwe: mhNwe,
+    mhEnabled: needs.mhBand,
     sma50,
     sma200,
     rsi,
