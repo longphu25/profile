@@ -170,6 +170,17 @@
   background: var(--surface);
 }
 
+.btc-chart--stitch .btc-chart__osc-toggle {
+  flex: 0 0 auto;
+  padding: 4px 10px 4px 0;
+  margin-right: 2px;
+  border-right: 1px solid var(--border);
+}
+
+.btc-chart--stitch .btc-chart__osc-toggle-label {
+  color: var(--text);
+}
+
 .btc-chart--stitch .btc-chart__osc-hint b,
 .btc-chart--stitch .btc-chart__osc-info,
 .btc-chart--stitch .btc-chart__osc-desc {

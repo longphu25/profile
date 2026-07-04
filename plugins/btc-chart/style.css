@@ -1567,8 +1567,9 @@
   cursor: pointer;
   letter-spacing: 0.02em;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   overflow: hidden;
+  padding: 2px 0;
 }
 .btc-chart__osc-toggle-main {
   display: inline-flex;
@@ -3769,7 +3770,13 @@
   display: contents;
 }
 .btc-chart__osc-toggle-label {
-  display: none;
+  display: inline;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 /* Loading */
