@@ -428,7 +428,8 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
           <p className="sb-trade-empty__title">Chưa có plan</p>
           <p className="sb-trade-empty__hint">
             Plan khóa entry, SL và TP khi có ít nhất {PLAN_VOTES_REQUIRED} vote cùng hướng (đến khi
-            invalidation). Bias live chỉ là hướng sớm, chưa có mức giá.
+            invalidation). Mặc định: Lux (vùng giá) + SMC (cấu trúc). Bias live là hướng sớm, chưa
+            có mức giá.
           </p>
         </div>
         {explainOpen && <ExplainModal setup={setup} onClose={() => setExplainOpen(false)} />}

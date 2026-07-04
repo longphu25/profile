@@ -119,7 +119,7 @@ export const DEFAULT_CONFIG: ChartConfig = {
     heatmap: false,
     rsi: false,
     vol: false,
-    smc: false,
+    smc: true,
     boxFlip: false,
     vwap: false,
     rsiDiv: false,

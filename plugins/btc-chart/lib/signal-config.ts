@@ -32,13 +32,17 @@ export interface SignalPreset {
   features: FeatureKey[]
 }
 
-/** All features enabled. */
-export const DEFAULT_SIGNAL_CONFIG: SignalConfig = Object.fromEntries(
-  ALL_FEATURES.map((k) => [k, true]),
-) as SignalConfig
+/** Default ML features for Lux zone + SMC structure Trade Setup stack. */
+export const LUX_SMC_SIGNAL_PRESET: SignalPreset = {
+  id: 'luxSmc',
+  name: 'Lux + SMC',
+  description: 'Lux NWE band + RSI/Vol; SMC votes from chart layer',
+  features: ['NWE_pos', 'Price>NWE_mid', 'RSI', 'VolSpike'],
+}
 
 /** Presets for quick selection. */
 export const SIGNAL_PRESETS: SignalPreset[] = [
+  LUX_SMC_SIGNAL_PRESET,
   {
     id: 'all',
     name: 'Full (All)',
@@ -88,7 +92,7 @@ export const SIGNAL_PRESET_GROUPS: ReadonlyArray<{
   readonly label: string
   readonly presetIds: readonly string[]
 }> = [
-  { label: 'Tổng hợp', presetIds: ['all', 'conservative'] },
+  { label: 'Tổng hợp', presetIds: ['luxSmc', 'all', 'conservative'] },
   { label: 'Xu hướng', presetIds: ['trend', 'momentum'] },
   { label: 'Đảo chiều', presetIds: ['reversal'] },
   { label: 'Scalp & Dòng tiền', presetIds: ['scalp', 'volume'] },
@@ -132,3 +136,6 @@ export function configFromPreset(preset: SignalPreset): SignalConfig {
   for (const k of preset.features) cfg[k] = true
   return cfg
 }
+
+/** Default signal config for new sessions (Lux band + light ML; SMC votes via layer). */
+export const DEFAULT_SIGNAL_CONFIG: SignalConfig = configFromPreset(LUX_SMC_SIGNAL_PRESET)

@@ -48,7 +48,7 @@ export const IND_LABELS: Partial<Record<keyof VisFlags, string>> = {
 
 export const TRADE_SETUP_LAYER_HINTS: Record<(typeof TRADE_SETUP_LAYER_KEYS)[number], string> = {
   tradeSetup:
-    'Tính Entry/SL/TP từ ICT, SMC, Boucher, Lien. Nặng CPU. Tắt nếu chỉ cần ML/RSI cơ bản ở sidebar.',
+    'Bật thêm ICT, Boucher, Lien vào confluence. Lux + SMC đủ cho setup mặc định mà không cần toggle này.',
   tradeSetupOverlay: 'Vẽ vùng Entry, SL, TP trên chart. Tắt để giảm lag khi pan/zoom.',
 }
 

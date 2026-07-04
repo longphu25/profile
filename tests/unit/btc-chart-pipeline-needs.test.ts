@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { DEFAULT_CONFIG } from '../../plugins/btc-chart/storage'
+import { detectActiveLayerPreset } from '../../plugins/btc-chart/lib/layer-presets'
 import {
   resolvePipelineNeeds,
   shouldDrawTradeSetupOverlay,
@@ -15,6 +16,16 @@ describe('pipeline-needs', () => {
     const needs = resolvePipelineNeeds(vis, false)
     expect(needs.tradeSetup).toBe(true)
     expect(shouldDrawTradeSetupOverlay(vis)).toBe(false)
+  })
+
+  test('default vis is Lux + SMC stack for trade setup', () => {
+    expect(DEFAULT_CONFIG.vis.luxNwe).toBe(true)
+    expect(DEFAULT_CONFIG.vis.smc).toBe(true)
+    expect(detectActiveLayerPreset(DEFAULT_CONFIG.vis)).toBe('luxSmc')
+    const needs = resolvePipelineNeeds(DEFAULT_CONFIG.vis, false)
+    expect(needs.luxNwe).toBe(true)
+    expect(needs.smc).toBe(true)
+    expect(needs.tradeSetup).toBe(false)
   })
 
   test('overlay defaults off in DEFAULT_CONFIG', () => {

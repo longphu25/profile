@@ -5,6 +5,7 @@ import { ALL_IND_KEYS } from './indicator-groups'
 import { WHALE_TRACKER_ENABLED } from './feature-flags'
 
 export type LayerPresetId =
+  | 'luxSmc'
   | 'minimal'
   | 'scalp'
   | 'swing'
@@ -26,6 +27,7 @@ export interface LayerPresetMeta {
 
 /** Layer keys enabled per preset (others turned off when applied). */
 export const LAYER_PRESETS: Record<LayerPresetId, ReadonlyArray<keyof VisFlags>> = {
+  luxSmc: ['luxNwe', 'smc'],
   minimal: ['luxNwe'],
   scalp: ['of', 'volSpike', 'scalping', 'luxNwe', 'vol'],
   swing: ['ma50', 'ma200', 'vp', 'nwe', 'rsiDiv', 'vwap'],
@@ -53,6 +55,12 @@ export const LAYER_PRESET_GROUP_LABELS: Record<LayerPresetGroup, string> = {
 }
 
 export const LAYER_PRESET_META: readonly LayerPresetMeta[] = [
+  {
+    id: 'luxSmc',
+    label: 'Lux + SMC',
+    hint: 'Vùng giá Lux + xác nhận cấu trúc SMC',
+    group: 'light',
+  },
   { id: 'minimal', label: 'Minimal', hint: 'Chỉ Lux NWE', group: 'light' },
   { id: 'scalp', label: 'Scalp', hint: 'OF, Vol, M1', group: 'style' },
   { id: 'swing', label: 'Swing', hint: 'MA, VP, RSI Div', group: 'style' },
