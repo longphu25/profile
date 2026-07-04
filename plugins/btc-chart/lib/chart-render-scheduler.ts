@@ -44,7 +44,7 @@ export function scheduleChartRender(
         if (gen !== generation.current) return
         renderChartPipeline(ctx, data, 'heavy', gen)
       },
-      { timeout: 150 },
+      { timeout: 300 },
     )
   })
 }

@@ -83,6 +83,8 @@ export function BtcChartPage() {
     interval: config.interval,
     customSymbols: config.customSymbols,
     vis: config.vis,
+    intelOpen: ui.intelOpen,
+    sidebarMobileOpen: ui.sidebarMobileOpen,
     setPrice: setPriceBridge,
     setMarkPrice: setMarkPriceBridge,
     setOhlcv: setOhlcvBridge,

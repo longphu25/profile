@@ -16,7 +16,14 @@ const BtcChartPlugin: Plugin = {
   },
 
   mount() {
-    initSmcWasm()
+    const warmWasm = () => {
+      void initSmcWasm()
+    }
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(warmWasm, { timeout: 4000 })
+    } else {
+      setTimeout(warmWasm, 800)
+    }
     console.log('[BtcChart] mounted')
   },
 

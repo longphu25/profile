@@ -17,6 +17,10 @@ export interface UseBtcChartMarketParams {
   interval: Interval
   customSymbols: SymbolEntry[]
   vis: VisFlags
+  /** Intel drawer open: enables OI, mcap, Fear & Greed polls. */
+  intelOpen: boolean
+  /** Mobile setup rail open: enables funding poll on narrow layouts. */
+  sidebarMobileOpen: boolean
   setPrice: React.Dispatch<React.SetStateAction<{ cur: string; chg: string; up: boolean }>>
   setMarkPrice: React.Dispatch<React.SetStateAction<number | null>>
   setOhlcv: React.Dispatch<
@@ -46,9 +50,30 @@ export interface UseBtcChartMarket {
 
 /** React Query market data, remote symbol list, and ticker-driven price sync. */
 export function useBtcChartMarket(params: UseBtcChartMarketParams): UseBtcChartMarket {
-  const { symbol, interval, customSymbols, vis, setPrice, setMarkPrice, setOhlcv, htfRef } = params
+  const {
+    symbol,
+    interval,
+    customSymbols,
+    vis,
+    intelOpen,
+    sidebarMobileOpen,
+    setPrice,
+    setMarkPrice,
+    setOhlcv,
+    htfRef,
+  } = params
 
   const [remoteSymbols, setRemoteSymbols] = useState<readonly SymbolEntry[]>(SYMBOLS)
+  const [isMobileLayout, setIsMobileLayout] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(max-width: 768px)')
+    const sync = () => setIsMobileLayout(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
 
   const allSymbols = useMemo<SymbolEntry[]>(
     () => [
@@ -74,9 +99,12 @@ export function useBtcChartMarket(params: UseBtcChartMarketParams): UseBtcChartM
     symbolInfoRef.current = symbolInfo
   }, [symbolInfo])
 
+  const intelMetricsEnabled = intelOpen
+  const fundingEnabled = !isMobileLayout || sidebarMobileOpen
+
   const tickerQuery = useTicker(symbol, symbolInfo)
-  const fundingQuery = useFunding(symbol, symbolInfo)
-  const fngQuery = useFearGreed()
+  const fundingQuery = useFunding(symbol, symbolInfo, { enabled: fundingEnabled })
+  const fngQuery = useFearGreed({ enabled: intelMetricsEnabled })
   const klinesQuery = useKlines(symbol, interval, symbolInfo)
   const htfInterval = HTF_MAP[interval as Interval]
   const htfQuery = useKlines(symbol, htfInterval ?? (interval as Interval), symbolInfo, {
@@ -88,8 +116,8 @@ export function useBtcChartMarket(params: UseBtcChartMarketParams): UseBtcChartM
   const fng: FngState = fngQuery.data ?? DEFAULT_FNG
 
   const currentPrice = tickerQuery.data?.price ?? 0
-  const oiQuery = useOpenInterest(symbol, currentPrice)
-  const supplyQuery = useSupply(symbolInfo.geckoId)
+  const oiQuery = useOpenInterest(symbol, currentPrice, { enabled: intelMetricsEnabled })
+  const supplyQuery = useSupply(symbolInfo.geckoId, { enabled: intelMetricsEnabled })
   const mcap = supplyQuery.data != null ? supplyQuery.data * currentPrice : null
 
   const whaleTracker = useWhaleTracker(symbol, {
@@ -100,7 +128,15 @@ export function useBtcChartMarket(params: UseBtcChartMarketParams): UseBtcChartM
   })
 
   useEffect(() => {
-    loadSymbols().then((list) => setRemoteSymbols(list))
+    const load = () => {
+      void loadSymbols().then((list) => setRemoteSymbols(list))
+    }
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(load, { timeout: 2500 })
+      return () => cancelIdleCallback(id)
+    }
+    const t = setTimeout(load, 400)
+    return () => clearTimeout(t)
   }, [])
 
   const priceDispatchRef = useRef({ setPrice, setMarkPrice, setOhlcv })

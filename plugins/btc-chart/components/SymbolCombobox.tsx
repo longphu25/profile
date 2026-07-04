@@ -84,6 +84,11 @@ export function SymbolCombobox({ symbol, symbols, onSelect }: SymbolComboboxProp
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search trading pairs"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            enterKeyHint="search"
           />
           <ul className="btc-chart__symbol-list">
             {filtered.length === 0 ? (

@@ -15,21 +15,23 @@ export function useTicker(symbol: string, info: SymbolEntry) {
   })
 }
 
-export function useFunding(symbol: string, info: SymbolEntry) {
+export function useFunding(symbol: string, info: SymbolEntry, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['btc-chart', 'funding', symbol],
     queryFn: () => fetchFunding(symbol, info),
     refetchInterval: 30_000,
     staleTime: 30_000,
+    enabled: options?.enabled ?? true,
   })
 }
 
-export function useFearGreed() {
+export function useFearGreed(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['btc-chart', 'fng'],
     queryFn: fetchFearGreed,
     refetchInterval: 60_000,
     staleTime: 60_000,
+    enabled: options?.enabled ?? true,
   })
 }
 

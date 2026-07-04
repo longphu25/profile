@@ -463,8 +463,10 @@
   background: var(--surface);
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 10px;
+  /* 16px prevents iOS Safari auto-zoom on focus (inputs below 16px zoom the page). */
+  font-size: 16px;
   outline: none;
+  touch-action: manipulation;
 }
 
 .btc-chart--stitch .btc-chart__symbol-search:focus {
@@ -924,7 +926,25 @@
   }
 }
 
+@media (min-width: 769px) {
+  .btc-chart--stitch .btc-chart__symbol-search {
+    height: 28px;
+    font-size: 10px;
+  }
+}
+
 @media (max-width: 768px) {
+  .btc-chart--stitch .btc-chart__symbol-menu {
+    width: min(240px, calc(100vw - 24px));
+    max-height: min(50dvh, 320px);
+  }
+
+  .btc-chart--stitch .btc-chart__symbol-search {
+    height: 40px;
+    padding: 0 12px;
+    font-size: 16px;
+  }
+
   .btc-chart--stitch .btc-chart__body {
     display: flex;
     flex-direction: column;
