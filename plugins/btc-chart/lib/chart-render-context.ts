@@ -48,6 +48,9 @@ export interface DbbSeriesRefs {
   sma: any
 }
 
+/** Live chart refresh split: fast paint (~80%) then deferred heavy (~20%). */
+export type PipelineRefreshPhase = 'idle' | 'fast' | 'heavy'
+
 /** LuxAlgo NWE envelope result shape used by panels and trade setup. */
 export interface LuxNweResult {
   mid: (number | null)[]
@@ -133,4 +136,6 @@ export interface ChartRenderContext {
   readonly setBoucherScalp: Dispatch<SetStateAction<BoucherResult>>
   readonly setLienReversal: Dispatch<SetStateAction<LienResult>>
   readonly setFiredToast: Dispatch<SetStateAction<string | null>>
+  /** Optional UI hook for the 80/20 fast/heavy refresh indicator. */
+  readonly setPipelinePhase?: (phase: PipelineRefreshPhase) => void
 }

@@ -26,6 +26,9 @@ export const TICKER_REFRESH_MS = 2000
 /** Chart pipeline + WebSocket render throttle (ms). */
 export const CHART_REFRESH_MS = 2000
 
+/** Minimum time the 80/20 refresh badge stays visible after a pipeline tick (ms). */
+export const PIPELINE_SPLIT_VISIBLE_MS = 450
+
 /** Minimum interval between heavy indicator recomputes on the same bar (ms). */
 export const HEAVY_COMPUTE_MS = 5000
 

@@ -358,6 +358,7 @@ export function BtcChartPage() {
         <ChartStatusBar
           wsText={engine.wsStatus.text}
           wsTone={engine.wsStatus.tone}
+          pipelinePhase={engine.pipelinePhase}
           lastUpdate={engine.lastUpdate}
           ofCount={engine.sidebar.ofLog.length}
           boxCount={engine.sidebar.boxFlip.count}

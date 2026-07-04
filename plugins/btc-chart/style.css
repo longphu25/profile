@@ -3871,6 +3871,43 @@
 .btc-chart__status-item {
   white-space: nowrap;
 }
+.btc-chart__status-split {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: rgba(8, 10, 13, 0.55);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted-2);
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.btc-chart__status-split-part {
+  min-width: 1.1rem;
+  text-align: center;
+}
+.btc-chart__status-split-sep {
+  opacity: 0.55;
+}
+.btc-chart__status-split.is-fast .btc-chart__status-split-part:first-child {
+  color: var(--mint);
+}
+.btc-chart__status-split.is-fast {
+  border-color: rgba(61, 214, 140, 0.35);
+}
+.btc-chart__status-split.is-heavy .btc-chart__status-split-part:last-child {
+  color: var(--gold, #e8b84a);
+}
+.btc-chart__status-split.is-heavy {
+  border-color: rgba(232, 184, 74, 0.35);
+}
 .btc-chart__osc-strip {
   display: none;
   list-style: none;

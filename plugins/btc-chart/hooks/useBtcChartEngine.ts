@@ -15,13 +15,17 @@ import { createOscChart } from '../lib/chart-osc-setup'
 import { getVisibleLogicalRangeSafe } from '../lib/chart-viewport'
 import type { LogicalRange } from '../lib/chart-viewport'
 import { closeKlinesWebSocket, wireKlinesWebSocket } from '../lib/chart-websocket'
-import type { ChartRenderContext, LuxNweResult } from '../lib/chart-render-context'
+import type {
+  ChartRenderContext,
+  LuxNweResult,
+  PipelineRefreshPhase,
+} from '../lib/chart-render-context'
 import {
   bumpRenderGeneration,
   scheduleChartRender,
   type ScheduleChartRenderOptions,
 } from '../lib/chart-render-scheduler'
-import { NWE_DEFAULT_WINDOW } from '../lib/constants'
+import { NWE_DEFAULT_WINDOW, PIPELINE_SPLIT_VISIBLE_MS } from '../lib/constants'
 import { EMPTY_SIGNAL_NOTIFY_STATE, resetSignalNotifyState } from '../lib/signal-notify'
 import { INITIAL_SIDEBAR } from '../lib/types'
 import type { BoucherResult } from '../lib/boucher-scalping'
@@ -94,6 +98,7 @@ export interface UseBtcChartEngine {
   loading: boolean
   loadingText: string
   wsStatus: { text: string; tone: 'muted' | 'live' | 'err' }
+  pipelinePhase: PipelineRefreshPhase
   lastUpdate: string
   price: { cur: string; chg: string; up: boolean }
   markPrice: number | null
@@ -215,6 +220,8 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     text: 'Idle',
     tone: 'muted' as 'muted' | 'live' | 'err',
   })
+  const [pipelinePhase, setPipelinePhase] = useState<PipelineRefreshPhase>('idle')
+  const pipelineIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [lastUpdate, setLastUpdate] = useState('—')
   const [price, setPrice] = useState({ cur: '—', chg: '+0.00%', up: true })
   const [markPrice, setMarkPrice] = useState<number | null>(null)
@@ -271,6 +278,28 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   useEffect(() => {
     sidebarRef.current = sidebar
   }, [sidebar])
+
+  const notifyPipelinePhase = useCallback((phase: PipelineRefreshPhase) => {
+    if (pipelineIdleTimerRef.current) {
+      clearTimeout(pipelineIdleTimerRef.current)
+      pipelineIdleTimerRef.current = null
+    }
+    if (phase === 'idle') {
+      pipelineIdleTimerRef.current = setTimeout(() => {
+        setPipelinePhase('idle')
+        pipelineIdleTimerRef.current = null
+      }, PIPELINE_SPLIT_VISIBLE_MS)
+      return
+    }
+    setPipelinePhase(phase)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (pipelineIdleTimerRef.current) clearTimeout(pipelineIdleTimerRef.current)
+    },
+    [],
+  )
 
   const renderCtx = useRef<ChartRenderContext>({
     mainElRef,
@@ -331,6 +360,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     setBoucherScalp,
     setLienReversal,
     setFiredToast,
+    setPipelinePhase: notifyPipelinePhase,
     renderGenRef,
     nwePendingKeyRef,
   })
@@ -606,6 +636,7 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
     loading,
     loadingText,
     wsStatus,
+    pipelinePhase,
     lastUpdate,
     price,
     markPrice,

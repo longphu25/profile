@@ -1,11 +1,14 @@
 // BTC Chart — segmented status strip (connection, session, layers).
 
+import { cn } from '@/lib/utils'
+import type { PipelineRefreshPhase } from '../lib/chart-render-context'
 import type { VisFlags } from '../storage'
 import { IND_LABELS } from '../lib/indicator-groups'
 
 export interface ChartStatusBarProps {
   wsText: string
   wsTone: 'muted' | 'live' | 'err'
+  pipelinePhase: PipelineRefreshPhase
   lastUpdate: string
   ofCount: number
   boxCount: number
@@ -17,12 +20,14 @@ const LAYER_TAGS: Array<keyof VisFlags> = ['luxNwe', 'vp', 'of', 'boxFlip']
 export function ChartStatusBar({
   wsText,
   wsTone,
+  pipelinePhase,
   lastUpdate,
   ofCount,
   boxCount,
   vis,
 }: ChartStatusBarProps) {
   const activeTags = LAYER_TAGS.filter((k) => vis[k])
+  const showRefreshSplit = pipelinePhase !== 'idle'
 
   return (
     <footer className="btc-chart__status">
@@ -43,6 +48,21 @@ export function ChartStatusBar({
         </div>
 
         <div className="btc-chart__status-seg btc-chart__status-seg--session">
+          {showRefreshSplit && (
+            <span
+              className={cn(
+                'btc-chart__status-split',
+                pipelinePhase === 'fast' && 'is-fast',
+                pipelinePhase === 'heavy' && 'is-heavy',
+              )}
+              aria-label="Chart refresh pipeline 80/20"
+              title="Fast paint 80%, deferred heavy 20%"
+            >
+              <span className="btc-chart__status-split-part">80</span>
+              <span className="btc-chart__status-split-sep">/</span>
+              <span className="btc-chart__status-split-part">20</span>
+            </span>
+          )}
           <span className="btc-chart__status-item">{lastUpdate}</span>
           <span className="btc-chart__status-item">
             OF <b>{ofCount}</b>

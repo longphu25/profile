@@ -30,19 +30,30 @@ export function scheduleChartRender(
   const gen = ++generation.current
   ctx.renderGenRef.current = gen
 
+  const notifyPhase = ctx.setPipelinePhase
   const phase = options?.phase
   if (phase === 'all' || options?.deferHeavy === false) {
+    notifyPhase?.('fast')
     renderChartPipeline(ctx, data, 'all', gen)
+    notifyPhase?.('heavy')
+    queueMicrotask(() => {
+      if (gen === generation.current) notifyPhase?.('idle')
+    })
     return
   }
 
   scheduleFrame(() => {
     if (gen !== generation.current) return
+    notifyPhase?.('fast')
     renderChartPipeline(ctx, data, 'fast', gen)
     scheduleIdle(
       () => {
         if (gen !== generation.current) return
+        notifyPhase?.('heavy')
         renderChartPipeline(ctx, data, 'heavy', gen)
+        queueMicrotask(() => {
+          if (gen === generation.current) notifyPhase?.('idle')
+        })
       },
       { timeout: 300 },
     )
