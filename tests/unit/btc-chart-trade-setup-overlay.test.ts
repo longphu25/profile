@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test'
-import { calcTpLadder, separateTpRungs } from '../../plugins/btc-chart/lib/trade-setup'
+import {
+  calcLongStopLoss,
+  calcShortStopLoss,
+  calcTpLadder,
+  separateTpRungs,
+} from '../../plugins/btc-chart/lib/trade-setup'
 import {
   findNearestCuttingCandleIndex,
   isDrawableLongSetup,
@@ -195,23 +200,52 @@ describe('staggerLevelTagYs', () => {
 })
 
 describe('calcTpLadder', () => {
-  test('spaces short TPs at 2R / 3R / 4R from entry', () => {
+  test('spaces short TPs at 1R / 1.5R / 2R from entry', () => {
     const entry = 0.07576
     const risk = 0.00111
     const { tp1, tp2, tp3 } = calcTpLadder('short', entry, risk)
-    expect(tp1).toBeCloseTo(entry - risk * 2, 6)
-    expect(tp2).toBeCloseTo(entry - risk * 3, 6)
-    expect(tp3).toBeCloseTo(entry - risk * 4, 6)
+    expect(tp1).toBeCloseTo(entry - risk * 1, 6)
+    expect(tp2).toBeCloseTo(entry - risk * 1.5, 6)
+    expect(tp3).toBeCloseTo(entry - risk * 2, 6)
     expect(tp3).toBeLessThan(tp2)
     expect(tp2).toBeLessThan(tp1)
   })
 
-  test('extends long TP3 past 4R when structure is higher', () => {
+  test('caps long TP3 extension at 2.5R even when structure is higher', () => {
     const entry = 100
     const risk = 5
     const { tp2, tp3 } = calcTpLadder('long', entry, risk, { extendHigh: 130 })
-    expect(tp2).toBe(115)
-    expect(tp3).toBe(130)
+    expect(tp2).toBe(107.5)
+    expect(tp3).toBe(112.5)
+  })
+
+  test('uses Lux mid as TP1 when within the first rung', () => {
+    const entry = 100
+    const risk = 5
+    const { tp1 } = calcTpLadder('long', entry, risk, { luxMid: 103 })
+    expect(tp1).toBe(103)
+  })
+})
+
+describe('calcLongStopLoss', () => {
+  test('uses nearest support and caps wide swing risk', () => {
+    const anchor = 100
+    const atr = 2
+    const sl = calcLongStopLoss(anchor, [92, 95, 94], atr)
+    expect(sl).toBeGreaterThan(88)
+    expect(sl).toBeLessThan(anchor)
+    expect(anchor - sl).toBeLessThanOrEqual(anchor * 0.012 + 1e-9)
+  })
+})
+
+describe('calcShortStopLoss', () => {
+  test('uses nearest resistance and caps wide swing risk', () => {
+    const anchor = 100
+    const atr = 2
+    const sl = calcShortStopLoss(anchor, [108, 105, 106], atr)
+    expect(sl).toBeLessThan(112)
+    expect(sl).toBeGreaterThan(anchor)
+    expect(sl - anchor).toBeLessThanOrEqual(anchor * 0.012 + 1e-9)
   })
 })
 

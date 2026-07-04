@@ -15,8 +15,20 @@ export type { TradeSetup }
 
 const OTE_RATIO = 0.618
 
-/** Default R-multiples for the three take-profit rungs. */
-export const TP_RR_LADDER = [2, 3, 4] as const
+/** Conservative R-multiples: closer targets, higher hit rate, lower give-back risk. */
+export const TP_RR_LADDER = [1, 1.5, 2] as const
+
+/** Max SL distance from entry (fraction of price). */
+const MAX_RISK_PCT = 0.012
+
+/** Max SL distance as ATR multiple. */
+const MAX_RISK_ATR_MULT = 1.5
+
+/** Wick buffer beyond the nearest structure (fraction). */
+const SL_WICK_BUFFER = 0.001
+
+/** Hard cap for TP3 extension past the 2R rung (R multiple). */
+const MAX_TP3_RR = 2.5
 
 /** Minimum spacing between adjacent TP prices (fraction of entry). */
 const TP_MIN_GAP_FRAC = 1e-5
@@ -26,15 +38,75 @@ function minTpGap(entry: number, risk: number): number {
 }
 
 export interface TpStructureHints {
-  /** LONG: swing/NWE high may extend TP3 beyond 4R when above entry + 4R. */
+  /** Lux mid: preferred TP1 for mean-reversion (long: above entry). */
+  readonly luxMid?: number | null
+  /** Lux opposite band: soft cap for TP2/TP3 (upper for long, lower for short). */
+  readonly luxBand?: number | null
+  /** Swing or legacy structure cap for TP3 (cannot exceed {@link MAX_TP3_RR}). */
   readonly extendHigh?: number | null
-  /** SHORT: swing/NWE low may extend TP3 beyond 4R when below entry - 4R. */
   readonly extendLow?: number | null
 }
 
+/** ATR(14) true range average at bar `i`. */
+export function calcAtr(data: Candle[], i: number, period = 14): number {
+  const start = Math.max(1, i - period + 1)
+  let sum = 0
+  let count = 0
+  for (let j = start; j <= i; j++) {
+    const tr = Math.max(
+      data[j].high - data[j].low,
+      Math.abs(data[j].high - data[j - 1].close),
+      Math.abs(data[j].low - data[j - 1].close),
+    )
+    sum += tr
+    count++
+  }
+  return count > 0 ? sum / count : 0
+}
+
+function maxRiskDistance(anchor: number, atr: number): number {
+  return Math.min(anchor * MAX_RISK_PCT, atr > 0 ? atr * MAX_RISK_ATR_MULT : anchor * MAX_RISK_PCT)
+}
+
 /**
- * Build TP1/TP2/TP3 from fixed R:R rungs (2R / 3R / 4R).
- * Structure hints only extend TP3 past 4R, never replace the ladder.
+ * Long SL: nearest support below anchor, wick buffer, then cap width to max risk.
+ * Uses the tightest valid structure (highest low), not the deepest swing.
+ */
+export function calcLongStopLoss(anchor: number, structureLows: number[], atr: number): number {
+  const maxDist = maxRiskDistance(anchor, atr)
+  const floor = anchor - maxDist
+  const below = structureLows.filter((p) => Number.isFinite(p) && p < anchor)
+  if (below.length === 0) return floor
+  const tight = Math.max(...below) * (1 - SL_WICK_BUFFER)
+  return Math.max(tight, floor)
+}
+
+/**
+ * Short SL: nearest resistance above anchor, wick buffer, then cap width to max risk.
+ */
+export function calcShortStopLoss(anchor: number, structureHighs: number[], atr: number): number {
+  const maxDist = maxRiskDistance(anchor, atr)
+  const ceiling = anchor + maxDist
+  const above = structureHighs.filter((p) => Number.isFinite(p) && p > anchor)
+  if (above.length === 0) return ceiling
+  const tight = Math.min(...above) * (1 + SL_WICK_BUFFER)
+  return Math.min(tight, ceiling)
+}
+
+/** Clamp SL after supply/demand overrides so risk never exceeds the cap. */
+function clampLongSl(entry: number, sl: number, atr: number): number {
+  const maxDist = maxRiskDistance(entry, atr)
+  return Math.max(sl, entry - maxDist)
+}
+
+function clampShortSl(entry: number, sl: number, atr: number): number {
+  const maxDist = maxRiskDistance(entry, atr)
+  return Math.min(sl, entry + maxDist)
+}
+
+/**
+ * Build TP1/TP2/TP3 from conservative R rungs (1R / 1.5R / 2R).
+ * Lux mid/band hints pull targets toward mean-reversion levels when in range.
  */
 export function calcTpLadder(
   dir: 'long' | 'short',
@@ -47,19 +119,35 @@ export function calcTpLadder(
     return { tp1: entry, tp2: entry, tp3: entry }
   }
   if (dir === 'long') {
-    const tp1 = entry + risk * rr1
-    const tp2 = entry + risk * rr2
+    let tp1 = entry + risk * rr1
+    const mid = structure.luxMid
+    if (mid != null && mid > entry && mid <= entry + risk * (rr1 + 0.35)) {
+      tp1 = mid
+    }
+    let tp2 = entry + risk * rr2
+    const band = structure.luxBand
+    if (band != null && band > entry && band < tp2) tp2 = band
     let tp3 = entry + risk * rr3
+    const tp3Cap = entry + risk * MAX_TP3_RR
     const hi = structure.extendHigh
-    if (hi != null && hi > tp3) tp3 = hi
+    if (band != null && band > tp2) tp3 = Math.min(Math.max(tp3, band), tp3Cap)
+    else if (hi != null && hi > tp3) tp3 = Math.min(hi, tp3Cap)
     const rungs = separateTpRungs('long', entry, risk, tp1, tp2, tp3)
     return { tp1, tp2: rungs.tp2, tp3: rungs.tp3 }
   }
-  const tp1 = entry - risk * rr1
-  const tp2 = entry - risk * rr2
+  let tp1 = entry - risk * rr1
+  const mid = structure.luxMid
+  if (mid != null && mid < entry && mid >= entry - risk * (rr1 + 0.35)) {
+    tp1 = mid
+  }
+  let tp2 = entry - risk * rr2
+  const band = structure.luxBand
+  if (band != null && band < entry && band > tp2) tp2 = band
   let tp3 = entry - risk * rr3
+  const tp3Cap = entry - risk * MAX_TP3_RR
   const lo = structure.extendLow
-  if (lo != null && lo < tp3) tp3 = lo
+  if (band != null && band < tp2) tp3 = Math.max(Math.min(tp3, band), tp3Cap)
+  else if (lo != null && lo < tp3) tp3 = Math.max(lo, tp3Cap)
   const rungs = separateTpRungs('short', entry, risk, tp1, tp2, tp3)
   return { tp1, tp2: rungs.tp2, tp3: rungs.tp3 }
 }
@@ -580,10 +668,16 @@ export function calcTradeSetup(
     planStatus: 'waiting',
   }
 
+  const atr = calcAtr(data, i)
+
   if (dir === 'long') {
     const luxLo = extra?.luxNwe?.lower[i]
     const luxUp = extra?.luxNwe?.upper[i]
-    let sl = Math.min(swingLow, nweLo ?? swingLow, luxLo ?? swingLow) * 0.998
+    const luxMid = extra?.luxNwe?.mid[i]
+    const structureLows: number[] = [swingLow]
+    if (nweLo != null) structureLows.push(nweLo)
+    if (luxLo != null) structureLows.push(luxLo)
+    let sl = calcLongStopLoss(price, structureLows, atr)
     const candidates = collectLongEntryCandidates(i, price, swingLow, swingHigh, nwe, extra)
     let { entry, method } = calcLimitEntry('long', price, sl, candidates)
     const sdLong = extra?.supplyDemand
@@ -602,10 +696,18 @@ export function calcTradeSetup(
           : 'Demand zone top + spread'
       }
     }
+    sl = clampLongSl(entry, sl, atr)
+    if (sl >= entry) sl = calcLongStopLoss(entry, structureLows, atr)
     const risk = entry - sl
-    const extendHigh = Math.max(swingHigh * 0.998, luxUp ?? 0, nweUp ?? 0)
+    const extendHigh = Math.min(
+      swingHigh * 0.998,
+      luxUp ?? Number.POSITIVE_INFINITY,
+      nweUp ?? Number.POSITIVE_INFINITY,
+    )
     const { tp1, tp2, tp3 } = calcTpLadder('long', entry, risk, {
-      extendHigh: extendHigh > entry ? extendHigh : null,
+      luxMid,
+      luxBand: luxUp ?? null,
+      extendHigh: Number.isFinite(extendHigh) && extendHigh > entry ? extendHigh : null,
     })
     const rr = risk > 0 ? (tp1 - entry) / risk : TP_RR_LADDER[0]
     return {
@@ -628,7 +730,11 @@ export function calcTradeSetup(
   if (dir === 'short') {
     const luxUp = extra?.luxNwe?.upper[i]
     const luxLo = extra?.luxNwe?.lower[i]
-    let sl = Math.max(swingHigh, nweUp ?? swingHigh, luxUp ?? swingHigh) * 1.002
+    const luxMid = extra?.luxNwe?.mid[i]
+    const structureHighs: number[] = [swingHigh]
+    if (nweUp != null) structureHighs.push(nweUp)
+    if (luxUp != null) structureHighs.push(luxUp)
+    let sl = calcShortStopLoss(price, structureHighs, atr)
     const candidates = collectShortEntryCandidates(i, price, swingLow, swingHigh, nwe, extra)
     let { entry, method } = calcLimitEntry('short', price, sl, candidates)
     const sdShort = extra?.supplyDemand
@@ -647,14 +753,18 @@ export function calcTradeSetup(
           : 'Supply zone bottom - spread'
       }
     }
+    sl = clampShortSl(entry, sl, atr)
+    if (sl <= entry) sl = calcShortStopLoss(entry, structureHighs, atr)
     const risk = sl - entry
-    const extendLow = Math.min(
+    const extendLow = Math.max(
       swingLow * 1.002,
-      luxLo ?? Number.POSITIVE_INFINITY,
-      nweLo ?? Number.POSITIVE_INFINITY,
+      luxLo ?? Number.NEGATIVE_INFINITY,
+      nweLo ?? Number.NEGATIVE_INFINITY,
     )
     const { tp1, tp2, tp3 } = calcTpLadder('short', entry, risk, {
-      extendLow: extendLow < entry ? extendLow : null,
+      luxMid,
+      luxBand: luxLo ?? null,
+      extendLow: Number.isFinite(extendLow) && extendLow < entry ? extendLow : null,
     })
     const rr = risk > 0 ? (entry - tp1) / risk : TP_RR_LADDER[0]
     return {
@@ -694,7 +804,7 @@ export function calcTradeSetup(
   }
 }
 
-/** Compute SL/TP suggestions for an existing position based on NWE + ATR. */
+/** Compute SL/TP suggestions for an existing position (same risk model as Trade Setup). */
 export function suggestSlTp(
   pos: { side: 'long' | 'short'; entryPrice: number },
   data: Candle[],
@@ -703,35 +813,28 @@ export function suggestSlTp(
   const i = data.length - 1
   const nweUp = nwe.upper[i]
   const nweLo = nwe.lower[i]
-
-  // ATR(14) for volatility-based stops
-  let atrSum = 0
-  const period = Math.min(14, data.length - 1)
-  for (let j = data.length - period; j < data.length; j++) {
-    const tr = Math.max(
-      data[j].high - data[j].low,
-      Math.abs(data[j].high - data[j - 1].close),
-      Math.abs(data[j].low - data[j - 1].close),
-    )
-    atrSum += tr
-  }
-  const atr = atrSum / period
+  const nweMid = nwe.mid[i]
+  const atr = calcAtr(data, i)
 
   if (pos.side === 'long') {
-    const atrSl = pos.entryPrice - atr * 1.5
-    // SL must be below entry: pick the higher of ATR-SL and NWE lower, but cap at entry
-    const sl = nweLo != null && nweLo < pos.entryPrice ? Math.max(atrSl, nweLo) : atrSl
+    const lows: number[] = []
+    if (nweLo != null) lows.push(nweLo)
+    const sl = calcLongStopLoss(pos.entryPrice, lows, atr)
     const risk = pos.entryPrice - sl
     const { tp1, tp2, tp3 } = calcTpLadder('long', pos.entryPrice, risk, {
+      luxMid: nweMid,
+      luxBand: nweUp,
       extendHigh: nweUp != null && nweUp > pos.entryPrice ? nweUp : null,
     })
     return { sl, tp1, tp2, tp3 }
   }
-  // short: SL must be above entry
-  const atrSl = pos.entryPrice + atr * 1.5
-  const sl = nweUp != null && nweUp > pos.entryPrice ? Math.min(atrSl, nweUp) : atrSl
+  const highs: number[] = []
+  if (nweUp != null) highs.push(nweUp)
+  const sl = calcShortStopLoss(pos.entryPrice, highs, atr)
   const risk = sl - pos.entryPrice
   const { tp1, tp2, tp3 } = calcTpLadder('short', pos.entryPrice, risk, {
+    luxMid: nweMid,
+    luxBand: nweLo,
     extendLow: nweLo != null && nweLo < pos.entryPrice ? nweLo : null,
   })
   return { sl, tp1, tp2, tp3 }
