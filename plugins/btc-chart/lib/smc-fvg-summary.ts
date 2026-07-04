@@ -1,6 +1,6 @@
 // BTC Chart — FVG (Fair Value Gap) counts for legend and layer hints.
 
-import type { FVGBox } from '../smc-wasm'
+import type { FVGBox } from '../smc'
 
 export interface FvgSummary {
   readonly bull: number
