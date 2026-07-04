@@ -93,7 +93,7 @@ export function OscillatorPane({
           className="btc-chart__osc-toggle"
           onClick={onToggleOpen}
           aria-expanded={open}
-          aria-label="Bật/tắt panel chỉ báo dao động"
+          aria-label="Toggle oscillators panel"
         >
           <span className="btc-chart__osc-toggle-main">
             <m.span
@@ -104,7 +104,7 @@ export function OscillatorPane({
             >
               ▸
             </m.span>
-            <span className="btc-chart__osc-toggle-label">Chỉ báo dao động</span>
+            <span className="btc-chart__osc-toggle-label">Oscillator</span>
           </span>
         </button>
 
