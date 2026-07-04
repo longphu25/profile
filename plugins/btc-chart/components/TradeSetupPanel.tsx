@@ -5,6 +5,7 @@ import { Briefcase } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fmtP } from '../lib/format'
 import type { PosForm, Position } from '../lib/positions'
+import { maContextBlockHint } from '../lib/ma-adaptive'
 import type { TradeSetup } from '../lib/trade-setup'
 import { parseBoundedInt } from '../lib/numeric-field'
 import type { PositionPatch } from '../hooks/usePositions'
@@ -392,6 +393,7 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
 
   if (!setup.dir) {
     const biasTone = biasDir === 'long' ? 'long' : biasDir === 'short' ? 'short' : undefined
+    const maHint = maContextBlockHint(biasReasons)
     return (
       <SideBlock
         variant="trade"
@@ -426,10 +428,11 @@ export const TradeSetupPanel = memo(function TradeSetupPanel({
         )}
         <div className="sb-trade-empty">
           <p className="sb-trade-empty__title">Chưa có plan</p>
+          {maHint && <p className="sb-trade-empty__ma">{maHint}</p>}
           <p className="sb-trade-empty__hint">
             Plan khóa entry, SL và TP khi có ít nhất {PLAN_VOTES_REQUIRED} vote cùng hướng (đến khi
-            invalidation). Mặc định: Lux (vùng giá) + SMC (cấu trúc). Bias live là hướng sớm, chưa
-            có mức giá.
+            invalidation). Mặc định: Lux (vùng giá) + SMC (cấu trúc). EMA nhanh theo khung là bối
+            cảnh (không vote). Bias live là hướng sớm, chưa có mức giá.
           </p>
         </div>
         {explainOpen && <ExplainModal setup={setup} onClose={() => setExplainOpen(false)} />}

@@ -8,6 +8,7 @@ import type { LiquidityResult } from './liquidity'
 import type { SupplyDemandResult } from './supply-demand'
 import type { Candle, Divergence, MLResult, NWE, OrderFlowSignal, SidebarState } from './types'
 import type { LuxNweResult } from './chart-render-context'
+import type { AdaptiveMaSnapshot } from './ma-adaptive'
 import { calcTradeSetup } from './trade-setup'
 import { fmtP } from './format'
 
@@ -61,6 +62,7 @@ export interface BuildSidebarSnapshotParams {
   supplyDemand: SupplyDemandResult
   /** When false, MH Band readouts stay empty; alerts use Lux band levels. */
   mhEnabled: boolean
+  adaptiveMa: AdaptiveMaSnapshot
 }
 
 /** Sidebar fields updated on each chart render (volume profile is set separately). */
@@ -94,6 +96,7 @@ export function buildSidebarSnapshot(params: BuildSidebarSnapshotParams): Sideba
     smcResult,
     supplyDemand,
     mhEnabled,
+    adaptiveMa,
   } = params
 
   const i = data.length - 1
@@ -241,6 +244,7 @@ export function buildSidebarSnapshot(params: BuildSidebarSnapshotParams): Sideba
       liquidity: liq,
       smc: smcResult,
       supplyDemand,
+      adaptiveMa,
     }),
   }
 }

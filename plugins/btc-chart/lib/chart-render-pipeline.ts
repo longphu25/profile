@@ -37,6 +37,7 @@ import {
 import { mlSignal } from './ml'
 import { HTF_MAP } from './liquidity'
 import { computeSupplyDemand } from './supply-demand'
+import { computeAdaptiveMaSeries, snapshotAdaptiveMa } from './ma-adaptive'
 import {
   drawSmcStackOverlay,
   drawBoxFlipOverlay,
@@ -157,6 +158,8 @@ export function renderChartPipeline(
   const mhNwe = needs.mhBand ? calcMHBand(data) : EMPTY_NWE
   const sma50 = calcSMA(data, 50)
   const sma200 = calcSMA(data, 200)
+  const adaptiveMaSeries = computeAdaptiveMaSeries(data, ctx.intervalRef.current)
+  const adaptiveMa = snapshotAdaptiveMa(adaptiveMaSeries, data.length - 1)
   const rsi = calcRSI(data, 14)
   const macd = calcMACD(data)
   const adxR = calcADX(data, 14)
@@ -708,6 +711,7 @@ export function renderChartPipeline(
     liq,
     smcResult,
     supplyDemand: sdResult,
+    adaptiveMa,
   })
 
   const lastBar = data[data.length - 1]

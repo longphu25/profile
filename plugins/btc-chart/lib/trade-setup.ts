@@ -8,6 +8,12 @@ import type { NadarayaWatsonResult } from './nadaraya-watson'
 import type { ICTResult } from './ict-sessions'
 import type { LiquidityResult } from './liquidity'
 import type { SMCResult } from '../smc'
+import {
+  maContextBlockReason,
+  maContextPassReason,
+  passesMaContextFilter,
+  type AdaptiveMaSnapshot,
+} from './ma-adaptive'
 import { collectSmcConfluenceVotes } from './smc-signals'
 import { collectSupplyDemandVotes, type SupplyDemandResult } from './supply-demand'
 
@@ -382,6 +388,8 @@ export interface TradeSetupExtra {
   liquidity?: LiquidityResult
   smc?: SMCResult
   supplyDemand?: SupplyDemandResult
+  /** Interval-scaled fast/slow EMA snapshot for Lux + SMC context gate. */
+  adaptiveMa?: AdaptiveMaSnapshot
 }
 
 /**
@@ -670,6 +678,16 @@ export function calcTradeSetup(
 
   const atr = calcAtr(data, i)
 
+  const maSnap = extra?.adaptiveMa
+  if (dir && maSnap?.fast != null) {
+    if (passesMaContextFilter(dir, price, maSnap)) {
+      reasons.push(maContextPassReason(dir, maSnap.fastPeriod))
+    } else {
+      reasons.push(maContextBlockReason(dir, maSnap.fastPeriod))
+      dir = null
+    }
+  }
+
   if (dir === 'long') {
     const luxLo = extra?.luxNwe?.lower[i]
     const luxUp = extra?.luxNwe?.upper[i]
@@ -785,7 +803,7 @@ export function calcTradeSetup(
     }
   }
 
-  // No setup
+  // No setup (bias may still lean from live votes; MA gate can block plan here)
   return {
     dir: null,
     entry: price,
@@ -794,8 +812,8 @@ export function calcTradeSetup(
     tp2: price,
     tp3: price,
     rr: 0,
-    confidence: 0,
-    reasons: ['No confluence'],
+    confidence: bias.confidence,
+    reasons: reasons.length > 0 ? reasons : ['No confluence'],
     volRatio,
     spotPrice: price,
     entryMethod: '',

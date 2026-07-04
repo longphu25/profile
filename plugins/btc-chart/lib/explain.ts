@@ -52,6 +52,24 @@ export function explainReason(reason: string): ReasonExplain {
       text: 'Vùng thanh khoản giá đang nhắm tới tiếp theo (không đổi hướng, chỉ định hướng mục tiêu).',
     }
   }
+  if (reason.startsWith('MA context:')) {
+    const above = reason.includes('above fast')
+    return {
+      side: 'context',
+      text: above
+        ? 'Giá trên EMA nhanh theo khung: bối cảnh thuận Long (không tính vote).'
+        : 'Giá dưới EMA nhanh theo khung: bối cảnh thuận Short (không tính vote).',
+    }
+  }
+  if (reason.startsWith('MA blocked:')) {
+    const below = reason.includes('below fast')
+    return {
+      side: 'context',
+      text: below
+        ? 'Đủ vote Long nhưng close chưa trên EMA nhanh: chờ xác nhận trước khi khóa plan.'
+        : 'Đủ vote Short nhưng close chưa dưới EMA nhanh: chờ xác nhận trước khi khóa plan.',
+    }
+  }
   if (reason.startsWith('MTF Demand + LTF grab')) {
     return {
       side: 'bull',

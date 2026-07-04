@@ -78,6 +78,13 @@ function minimalSnapshotParams(overrides: {
       htfInterval: null,
     },
     mhEnabled: false,
+    adaptiveMa: {
+      fast: null,
+      slow: null,
+      fastPeriod: 9,
+      slowPeriod: 21,
+      label: '9/21',
+    },
   }
 }
 
