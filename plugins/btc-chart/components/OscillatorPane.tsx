@@ -71,18 +71,6 @@ export function OscillatorPane({
   const adx = adxLabel(readouts.adx)
   const stoch = stochLabel(readouts.stochK)
   const obv = obvLabel(readouts.obv)
-  const activeTab = TABS.find((t) => t.id === view)
-  const activeHint = view === 'rsi' ? rsi : view === 'adx' ? adx : view === 'stoch' ? stoch : obv
-  const activeVal =
-    view === 'rsi'
-      ? readouts.rsi
-      : view === 'adx'
-        ? readouts.adx
-        : view === 'stoch'
-          ? readouts.stochK
-          : readouts.obv
-  const activeDisplay =
-    activeVal == null ? '—' : view === 'obv' ? activeVal.toFixed(0) : activeVal.toFixed(1)
   return (
     <div
       className={cn('btc-chart__osc-wrap', open && 'is-open')}
@@ -105,7 +93,7 @@ export function OscillatorPane({
           className="btc-chart__osc-toggle"
           onClick={onToggleOpen}
           aria-expanded={open}
-          aria-label="Toggle oscillators panel"
+          aria-label="Bật/tắt panel chỉ báo dao động"
         >
           <span className="btc-chart__osc-toggle-main">
             <m.span
@@ -116,16 +104,7 @@ export function OscillatorPane({
             >
               ▸
             </m.span>
-            <span className="btc-chart__osc-toggle-label">OSC</span>
-            <span className="btc-chart__osc-active-summary">
-              <span className="btc-chart__osc-active-name">
-                {activeTab?.label ?? view.toUpperCase()}
-              </span>
-              <span className="btc-chart__osc-active-val">{activeDisplay}</span>
-              <span className={cn('btc-chart__osc-active-hint', activeHint.tone)}>
-                {activeHint.text}
-              </span>
-            </span>
+            <span className="btc-chart__osc-toggle-label">Chỉ báo dao động</span>
           </span>
         </button>
 

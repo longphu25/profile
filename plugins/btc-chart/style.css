@@ -1579,41 +1579,6 @@
   gap: 8px;
   min-width: 0;
 }
-.btc-chart__osc-active-summary {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  min-width: 0;
-  font-family: var(--font-mono);
-}
-.btc-chart__osc-active-name {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text);
-}
-.btc-chart__osc-active-val {
-  font-size: 11px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--mint);
-}
-.btc-chart__osc-active-hint {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.btc-chart__osc-active-hint.osc-ob {
-  color: #ff7a85;
-}
-.btc-chart__osc-active-hint.osc-os {
-  color: #34d8a4;
-}
-.btc-chart__osc-active-hint.osc-strong {
-  color: #ffc46b;
-}
 .btc-chart__osc-chips {
   display: flex;
   flex: 1 1 auto;
@@ -3917,12 +3882,11 @@
 }
 .btc-chart__osc-toggle-label {
   display: inline;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  white-space: nowrap;
 }
 
 /* Loading */
@@ -4316,21 +4280,11 @@
   }
   .btc-chart__osc-toggle-label {
     display: inline;
-    font-family: var(--font-mono);
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .btc-chart__osc-active-summary {
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    max-width: 42vw;
-  }
-  .btc-chart__osc-active-hint {
-    display: none;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    white-space: nowrap;
   }
   .btc-chart__osc-strip {
     display: flex;
