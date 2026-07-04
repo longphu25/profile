@@ -12,6 +12,7 @@ import { applyLayerPreset, type LayerPresetId } from '../lib/layer-presets'
 import { visOverlayTurnedOn } from '../lib/overlay-vis-keys'
 import { createMainChart } from '../lib/chart-main-setup'
 import { createOscChart } from '../lib/chart-osc-setup'
+import { getVisibleLogicalRangeSafe, scheduleViewportRestore } from '../lib/chart-viewport'
 import { closeKlinesWebSocket, wireKlinesWebSocket } from '../lib/chart-websocket'
 import type { ChartRenderContext, LuxNweResult } from '../lib/chart-render-context'
 import {
@@ -410,13 +411,35 @@ export function useBtcChartEngine(params: UseBtcChartEngineParams): UseBtcChartE
   }, [])
 
   useEffect(() => {
+    const main = chartRefs.current?.mainChart
+    if (!main) return
+
+    const savedRange = getVisibleLogicalRangeSafe(main.timeScale())
+    config.oscOpenRef.current = config.oscOpen
+    try {
+      main.applyOptions({ timeScale: { visible: !config.oscOpen } })
+    } catch {
+      /* main chart removed */
+    }
+    scheduleViewportRestore(
+      () => [main.timeScale(), config.oscOpen ? oscRefs.current?.chart?.timeScale() : null],
+      savedRange,
+    )
+  }, [config.oscOpen, config.oscOpenRef])
+
+  useEffect(() => {
     if (!config.oscOpen) return
+    const savedRange = getVisibleLogicalRangeSafe(chartRefs.current?.mainChart?.timeScale())
     const cleanup = createOscChart({
       oscElRef,
       chartRefs,
       oscRefs,
       candlesRef,
       onReady: () => {
+        scheduleViewportRestore(
+          () => [chartRefs.current?.mainChart?.timeScale(), oscRefs.current?.chart?.timeScale()],
+          savedRange,
+        )
         if (candlesRef.current.length) renderData(candlesRef.current)
       },
     })

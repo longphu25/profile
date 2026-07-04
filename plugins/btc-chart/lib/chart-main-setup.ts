@@ -10,6 +10,7 @@ import type { BoxFlipResult } from '../box-flip'
 import type { OFOverlaySignal } from '../order-flow-overlay'
 import type { SMCResult } from '../smc-wasm'
 import { CHART, LIMIT } from './constants'
+import { getVisibleLogicalRangeSafe, setVisibleLogicalRangeSafe } from './chart-viewport'
 import { fmtP } from './format'
 import type { DbbSeriesRefs } from './chart-render-context'
 import type { ICTResult } from './ict-sessions'
@@ -416,16 +417,21 @@ export function createMainChart(params: MainChartSetupParams): (() => void) | nu
     const mw = params.mainElRef.current.clientWidth
     const mh2 = params.mainElRef.current.clientHeight
     if (mh2 <= 0) return
+    const savedRange = getVisibleLogicalRangeSafe(mainChart.timeScale())
     mainChart.applyOptions({ width: mw, height: mh2 })
+    setVisibleLogicalRangeSafe(mainChart.timeScale(), savedRange)
     if (
       params.oscRefs.current &&
       params.oscElRef.current &&
       params.oscElRef.current.clientHeight > 0
     ) {
-      params.oscRefs.current.chart.applyOptions({
+      const oscChart = params.oscRefs.current.chart
+      const oscRange = getVisibleLogicalRangeSafe(oscChart.timeScale())
+      oscChart.applyOptions({
         width: params.oscElRef.current.clientWidth,
         height: params.oscElRef.current.clientHeight,
       })
+      setVisibleLogicalRangeSafe(oscChart.timeScale(), oscRange)
     }
     if (params.candlesRef.current.length && params.vpCanvasRef.current) {
       const info = drawVP(

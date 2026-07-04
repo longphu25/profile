@@ -46,7 +46,7 @@ export function createOscChart(params: OscChartSetupParams): (() => void) | null
     lineWidth: width,
     lineStyle: dashed ? 2 : 0,
     priceLineVisible: false,
-    lastValueVisible: true,
+    lastValueVisible: false,
     crosshairMarkerVisible: false,
   })
 
@@ -63,32 +63,38 @@ export function createOscChart(params: OscChartSetupParams): (() => void) | null
   const rsiOS = chart.addSeries(LWC.LineSeries, lineOpts('rgba(52,216,164,0.3)', 1, true))
   const rsiS = chart.addSeries(LWC.LineSeries, { ...lineOpts(CHART.neu, 2), title: 'RSI' })
 
-  mainChart.applyOptions({ timeScale: { visible: false } })
-
   let disposed = false
+  let syncing = false
 
   const syncToOsc = (r: { from: number; to: number } | null) => {
-    if (disposed || !r) return
+    if (disposed || syncing || !r) return
+    syncing = true
     try {
       chart.timeScale().setVisibleLogicalRange(r)
     } catch {
       /* osc chart removed */
+    } finally {
+      syncing = false
     }
   }
 
   const syncToMain = (r: { from: number; to: number } | null) => {
-    if (disposed || !r) return
+    if (disposed || syncing || !r) return
+    syncing = true
     try {
       mainChart.timeScale().setVisibleLogicalRange(r)
     } catch {
       /* main chart removed */
+    } finally {
+      syncing = false
     }
   }
 
-  mainChart.timeScale().subscribeVisibleLogicalRangeChange(syncToOsc)
-  chart.timeScale().subscribeVisibleLogicalRangeChange(syncToMain)
   const cur = mainChart.timeScale().getVisibleLogicalRange()
   if (cur) syncToOsc(cur)
+
+  mainChart.timeScale().subscribeVisibleLogicalRangeChange(syncToOsc)
+  chart.timeScale().subscribeVisibleLogicalRangeChange(syncToMain)
 
   const ro = new ResizeObserver(() => {
     if (el.clientHeight > 0) chart.applyOptions({ width: el.clientWidth, height: el.clientHeight })
@@ -124,11 +130,6 @@ export function createOscChart(params: OscChartSetupParams): (() => void) | null
       }
       try {
         chart.remove()
-      } catch {
-        /* noop */
-      }
-      try {
-        params.chartRefs.current?.mainChart.applyOptions({ timeScale: { visible: true } })
       } catch {
         /* noop */
       }

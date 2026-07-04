@@ -48,3 +48,45 @@ export function applyDefaultViewport(chart: TimeScaleLike, barCount: number): Lo
   chart.setVisibleLogicalRange(range)
   return range
 }
+
+/** Read the current logical range without throwing when the chart is mid-teardown. */
+export function getVisibleLogicalRangeSafe(
+  chart: TimeScaleLike | null | undefined,
+): LogicalRange | null {
+  if (!chart) return null
+  try {
+    return chart.getVisibleLogicalRange()
+  } catch {
+    return null
+  }
+}
+
+/** Restore a logical range without throwing when the chart is mid-teardown. */
+export function setVisibleLogicalRangeSafe(
+  chart: TimeScaleLike | null | undefined,
+  range: LogicalRange | null,
+): void {
+  if (!chart || !range) return
+  try {
+    chart.setVisibleLogicalRange(range)
+  } catch {
+    /* chart removed or not ready */
+  }
+}
+
+/**
+ * Re-apply a saved range on the next frame(s) after layout or pane toggles.
+ * lightweight-charts can shift the viewport when height or time-scale visibility changes.
+ */
+export function scheduleViewportRestore(
+  getCharts: () => Array<TimeScaleLike | null | undefined>,
+  range: LogicalRange | null,
+): void {
+  if (!range) return
+  const restore = () => {
+    for (const chart of getCharts()) {
+      setVisibleLogicalRangeSafe(chart, range)
+    }
+  }
+  requestAnimationFrame(() => requestAnimationFrame(restore))
+}
