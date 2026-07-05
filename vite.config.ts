@@ -100,6 +100,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
+      '@btc-chart': resolve(__dirname, 'plugins/btc-chart/lib'),
     },
   },
   plugins: [
@@ -136,6 +137,7 @@ export default defineConfig({
       'predict-club.html',
       'predict-club-next.html',
       'predict-surface-studio.html',
+      'telegram-btc-alert.html',
     ],
   },
   server: {
@@ -222,6 +224,7 @@ export default defineConfig({
         'predict-club': resolve(__dirname, 'predict-club.html'),
         'predict-club-next': resolve(__dirname, 'predict-club-next.html'),
         'predict-surface-studio': resolve(__dirname, 'predict-surface-studio.html'),
+        'telegram-btc-alert': resolve(__dirname, 'telegram-btc-alert.html'),
         'predict-club-lifecycle-prototype': resolve(
           __dirname,
           'predict-club-lifecycle-prototype.html',

@@ -26,7 +26,8 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@btc-chart/*": ["./plugins/btc-chart/lib/*"]
     }
   },
   "include": ["src", "plugins"]
