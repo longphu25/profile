@@ -1,5 +1,7 @@
 /** Minimal Telegram WebApp bridge (script tag from telegram.org). */
 
+import { mapRawTelegramUser, type TelegramUser } from './telegram-user'
+
 export interface TelegramTheme {
   readonly bg: string
   readonly text: string
@@ -17,6 +19,8 @@ export interface TelegramWebAppBridge {
   readonly haptic: (kind: 'light' | 'medium' | 'heavy') => void
   readonly theme: TelegramTheme
   readonly startParam: string | null
+  readonly initData: string | null
+  readonly user: TelegramUser | null
   readonly userName: string | null
   readonly isTelegram: boolean
 }
@@ -46,10 +50,18 @@ function readTheme(): TelegramTheme {
   }
 }
 
+function readUser(): TelegramUser | null {
+  const raw = window.Telegram?.WebApp?.initDataUnsafe?.user
+  if (!raw) return null
+  return mapRawTelegramUser(raw as Record<string, unknown>)
+}
+
 /** Access Telegram WebApp APIs when running inside Telegram; safe no-ops in browser. */
 export function getTelegramWebApp(): TelegramWebAppBridge {
   const twa = window.Telegram?.WebApp
-  const isTelegram = Boolean(twa?.initData)
+  const initData = twa?.initData?.trim() ? twa.initData : null
+  const user = readUser()
+  const isTelegram = Boolean(initData && user)
   return {
     ready: () => twa?.ready(),
     expand: () => twa?.expand(),
@@ -63,7 +75,9 @@ export function getTelegramWebApp(): TelegramWebAppBridge {
     },
     theme: readTheme(),
     startParam: twa?.initDataUnsafe?.start_param ?? null,
-    userName: twa?.initDataUnsafe?.user?.first_name ?? null,
+    initData,
+    user,
+    userName: user?.firstName ?? null,
     isTelegram,
   }
 }
@@ -78,7 +92,7 @@ declare global {
         initData?: string
         initDataUnsafe?: {
           start_param?: string
-          user?: { first_name?: string }
+          user?: Record<string, unknown>
         }
         themeParams?: Record<string, string | undefined>
         HapticFeedback?: { impactOccurred: (style: string) => void }

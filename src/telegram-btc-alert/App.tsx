@@ -1,10 +1,12 @@
 import { useEffect, useMemo } from 'react'
 import { AlertScreen } from './components/AlertScreen'
 import { useBtcAlert } from './hooks/useBtcAlert'
+import { useTelegramAuth } from './hooks/useTelegramAuth'
 import { getTelegramWebApp } from './lib/telegram-webapp'
 
 export function App() {
   const tg = useMemo(() => getTelegramWebApp(), [])
+  const auth = useTelegramAuth()
   const alert = useBtcAlert()
 
   useEffect(() => {
@@ -27,6 +29,7 @@ export function App() {
 
   return (
     <AlertScreen
+      auth={auth}
       symbol={alert.symbol}
       interval={alert.interval}
       snapshot={alert.snapshot}

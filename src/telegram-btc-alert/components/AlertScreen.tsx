@@ -1,8 +1,11 @@
 import type { Interval } from '@btc-chart/constants'
 import { INTERVALS } from '@btc-chart/constants'
 import type { BtcAlertSnapshot } from '../lib/analyze-alert'
+import type { TelegramAuthState } from '../lib/telegram-user'
+import { TelegramUserBar } from './TelegramUserBar'
 
 export interface AlertScreenProps {
+  readonly auth: TelegramAuthState
   readonly symbol: string
   readonly interval: Interval
   readonly snapshot: BtcAlertSnapshot | null
@@ -27,6 +30,7 @@ function dirLabel(dir: 'long' | 'short' | null): string {
 }
 
 export function AlertScreen({
+  auth,
   symbol,
   interval,
   snapshot,
@@ -46,6 +50,8 @@ export function AlertScreen({
 
   return (
     <div className="tga">
+      <TelegramUserBar auth={auth} />
+
       <header className="tga__header">
         <div>
           <p className="tga__kicker">BTC Chart Alert</p>

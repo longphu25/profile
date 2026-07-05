@@ -1,7 +1,7 @@
 {
   "name": "profile",
   "private": true,
-  "version": "0.115.0",
+  "version": "0.116.0",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -28,6 +28,7 @@
     "coins:turso": "bun scripts/turso-coins.mjs",
     "convex:dev": "bun run --filter @profile/convex dev",
     "convex:deploy": "bun run --filter @profile/convex deploy",
+    "telegram:bot": "bun apps/telegram/bot.mjs",
     "convex:typecheck": "bun run --filter @profile/convex typecheck",
     "market-core:typecheck": "bun run --filter @profile/market-core typecheck",
     "prepare": "husky",

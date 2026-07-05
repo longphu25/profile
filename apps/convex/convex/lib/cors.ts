@@ -1,4 +1,8 @@
-const DEFAULT_ORIGINS = ['http://localhost:5173', 'https://longphu.com']
+const DEFAULT_ORIGINS = [
+  'http://localhost:5173',
+  'https://longphu.com',
+  'https://longphu25.github.io',
+]
 
 /** Allowed browser origins for HTTP actions (comma-separated env override). */
 export function allowedOrigins(): readonly string[] {
@@ -17,8 +21,8 @@ export function corsHeaders(request: Request): Headers {
 
   return new Headers({
     'Access-Control-Allow-Origin': match ?? '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     Vary: 'Origin',
   })
 }
