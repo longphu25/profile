@@ -17,7 +17,7 @@ add "/" \
   "Profile repo docs harness (docs/): product contracts, stories/plans, decisions ADR, domain folders btc-chart/, telegram/, deepbook/, defi/navi/, seal/, walrus/, zklogin/. Bilingual *.md + *.vi.md. Index: INDEX.md. Search: qmd search -c profile-docs."
 
 add "/telegram/" \
-  "Telegram BTC Chart Alert Mini App: auto-login initData, bot.mjs, Convex /telegram/auth, Turso coin catalog, ROADMAP phases 1-6. Pair: TECHNICAL.md, ROADMAP.md, decisions/telegram-data-backend.md, stories/plans/24-telegram-btc-alert.md."
+  "Telegram BTC Chart Alert: DEPLOY.md (bot + GitHub Pages), TECHNICAL.md, auto-login initData, bot.mjs, Convex /telegram/auth, Turso, ROADMAP. ADR: telegram-data-backend. Story: plans/24-telegram-btc-alert.md."
 
 add "/btc-chart/" \
   "BTC Chart Pro plugin: Lux NWE, ML signal, Trade Setup confluence, SMC WASM, multi-exchange, Turso coins. See TECHNICAL.md, trade-setup.md, ml-signal.md."

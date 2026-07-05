@@ -159,6 +159,7 @@
 ## Telegram BTC Chart Alert
 
 - [[telegram/README]] — Mini App overview, URLs, shipped scope
+- [[telegram/DEPLOY]] — Deploy Mini App on GitHub Pages + run Telegram bot 24/7
 - [[telegram/TECHNICAL]] — Architecture, auto-login, Turso + Convex split, env vars
 - [[telegram/ROADMAP]] — Phased plan: Turso coins, prefs, push alerts, SMC parity
 - [[decisions/telegram-data-backend]] — ADR: Turso vs Convex for Telegram data

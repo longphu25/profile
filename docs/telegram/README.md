@@ -7,6 +7,7 @@ from the btc-chart plugin, with **Telegram auto-login**.
 
 | File | Description |
 |------|-------------|
+| [DEPLOY.md](./DEPLOY.md) | **Deploy guide:** GitHub Pages Mini App + BotFather + run `bot.mjs` 24/7 |
 | [TECHNICAL.md](./TECHNICAL.md) | Architecture, auth flow, Turso/Convex roles, file map, env vars |
 | [ROADMAP.md](./ROADMAP.md) | Phased next steps: Turso coins, user prefs, push alerts, SMC parity |
 | [../decisions/telegram-data-backend.md](../decisions/telegram-data-backend.md) | ADR: Turso vs Convex for Telegram data |

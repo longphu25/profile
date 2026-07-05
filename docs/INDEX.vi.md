@@ -131,6 +131,7 @@
 ## Telegram BTC Chart Alert
 
 - [[telegram/README.vi]] — Tổng quan Mini App, URL, phạm vi đã ship
+- [[telegram/DEPLOY.vi]] — Triển khai Pages + bot Telegram (BotFather, bot.mjs)
 - [[telegram/TECHNICAL.vi]] — Kiến trúc, auto-login, Turso + Convex, env
 - [[telegram/ROADMAP.vi]] — Lộ trình: Turso, prefs, push alert, SMC
 - [[decisions/telegram-data-backend.vi]] — ADR: Turso vs Convex

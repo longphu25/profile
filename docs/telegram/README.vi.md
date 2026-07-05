@@ -7,6 +7,7 @@ btc-chart, kèm **đăng nhập tự động Telegram**.
 
 | File | Mô tả |
 |------|--------|
+| [DEPLOY.vi.md](./DEPLOY.vi.md) | **Hướng dẫn triển khai:** Pages + BotFather + chạy `bot.mjs` 24/7 |
 | [TECHNICAL.vi.md](./TECHNICAL.vi.md) | Kiến trúc, luồng auth, vai trò Turso/Convex, cấu trúc file, biến môi trường |
 | [ROADMAP.vi.md](./ROADMAP.vi.md) | Lộ trình: Turso coins, prefs user, push alert, parity SMC |
 | [../decisions/telegram-data-backend.vi.md](../decisions/telegram-data-backend.vi.md) | ADR: Turso vs Convex cho dữ liệu Telegram |
