@@ -8,13 +8,24 @@ QMD is configured for simple local docs search.
 - Path: `docs/`
 - Mask: `**/*.md`
 - Scope: English source docs and Vietnamese `*.vi.md` translations.
-- Context (collection root): Sui profile harness, btc-chart, Predict Club,
-  Telegram Mini App, Turso, Convex, stories, and ADRs.
+- Indexed files: **270** Markdown files under `docs/` (must match `find docs -name '*.md' | wc -l`)
+- Contexts (folder hints for search ranking):
 
-Check health:
+| QMD path | Topics |
+|----------|--------|
+| `qmd://profile-docs/` | Harness root: INDEX, HARNESS, product, bilingual policy |
+| `qmd://profile-docs/telegram/` | Mini App, auto-login, Turso/Convex, ROADMAP |
+| `qmd://profile-docs/btc-chart/` | Chart plugin, Trade Setup, ML, WASM, Turso coins |
+| `qmd://profile-docs/agents/` | Grok VPS, GitHub workers, Cursor IDE |
+| `qmd://profile-docs/decisions/` | ADRs (telegram-data-backend, exchange backend, …) |
+| `qmd://profile-docs/stories/` | Story plans, STATUS.md (plan 24 telegram) |
+
+Check health (counts must match):
 
 ```bash
+find docs -name '*.md' | wc -l
 bun run docs:status
+qmd collection show profile-docs
 qmd ls profile-docs/telegram
 ```
 
@@ -31,9 +42,13 @@ qmd update
 Repo shortcuts:
 
 ```bash
-bun run docs:index    # re-index all collections (includes profile-docs)
+bun run docs:index    # qmd update + restore folder contexts (scripts/qmd-profile-docs-context.sh)
+bun run docs:context  # re-apply contexts only (after fresh QMD install)
 bun run docs:status   # file counts and pending embeds
 ```
+
+Folder contexts are stored in `~/.cache/qmd/index.sqlite`, not in git. Run
+`bun run docs:context` on a new machine after `qmd collection add` for profile-docs.
 
 Use `qmd search` for BM25 keyword search and `qmd get` for retrieval. Avoid
 `qmd query`, `qmd vsearch`, and `qmd embed` unless a task explicitly needs local
@@ -90,8 +105,15 @@ qmd status
 The `profile-docs` collection should include all Markdown files under `docs/`,
 including `*.vi.md` translations.
 
-After adding docs under `docs/telegram/`, `docs/decisions/`, or `docs/stories/`,
-run `bun run docs:index` before expecting search hits.
+After adding, moving, or deleting docs, run:
+
+```bash
+bun run docs:index
+find docs -name '*.md' | wc -l   # should equal profile-docs file count in docs:status
+```
+
+If counts diverge, run `qmd update` again. Do not expect search hits until the
+index reports the same file total as `find`.
 
 ## RTK pairing
 

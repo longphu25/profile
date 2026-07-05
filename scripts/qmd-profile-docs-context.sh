@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Re-apply QMD folder contexts for profile-docs after qmd update or fresh index.
+# Contexts live in ~/.cache/qmd/index.sqlite (not in git).
+
+set -euo pipefail
+
+ROOT="qmd://profile-docs"
+
+add() {
+  local path="$1"
+  local text="$2"
+  qmd context rm "${ROOT}${path}" 2>/dev/null || true
+  qmd context add "${ROOT}${path}" "$text"
+}
+
+add "/" \
+  "Profile repo docs harness (docs/): product contracts, stories/plans, decisions ADR, domain folders btc-chart/, telegram/, deepbook/, defi/navi/, seal/, walrus/, zklogin/. Bilingual *.md + *.vi.md. Index: INDEX.md. Search: qmd search -c profile-docs."
+
+add "/telegram/" \
+  "Telegram BTC Chart Alert Mini App: auto-login initData, bot.mjs, Convex /telegram/auth, Turso coin catalog, ROADMAP phases 1-6. Pair: TECHNICAL.md, ROADMAP.md, decisions/telegram-data-backend.md, stories/plans/24-telegram-btc-alert.md."
+
+add "/btc-chart/" \
+  "BTC Chart Pro plugin: Lux NWE, ML signal, Trade Setup confluence, SMC WASM, multi-exchange, Turso coins. See TECHNICAL.md, trade-setup.md, ml-signal.md."
+
+add "/agents/" \
+  "Agent tooling docs: Grok VPS GitHub automation, Cursor IDE, MCP setup."
+
+add "/decisions/" \
+  "Architecture decision records (ADR): durable tradeoffs. Includes telegram-data-backend, btc-chart-exchange-backend."
+
+add "/stories/" \
+  "Story packets and plans under stories/plans/. STATUS.md tracks state. Plan 24: telegram-btc-alert."
+
+echo "profile-docs contexts:"
+qmd context list | sed -n '/^profile-docs/,/^$/p' || qmd context list

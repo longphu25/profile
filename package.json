@@ -1,7 +1,7 @@
 {
   "name": "profile",
   "private": true,
-  "version": "0.116.2",
+  "version": "0.116.3",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -24,8 +24,9 @@
     "setup:mirrors": "bash scripts/setup-agent-mirrors.sh",
     "codegraph:index": "codegraph init -i",
     "codegraph:status": "codegraph status",
-    "docs:index": "qmd update",
+    "docs:index": "qmd update && bash scripts/qmd-profile-docs-context.sh",
     "docs:status": "qmd status",
+    "docs:context": "bash scripts/qmd-profile-docs-context.sh",
     "codegen": "sui-ts-codegen generate",
     "coins:turso": "bun scripts/turso-coins.mjs",
     "convex:dev": "bun run --filter @profile/convex dev",
