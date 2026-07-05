@@ -1,0 +1,26 @@
+# Example Grok config for profile repo + VPS workers.
+# Copy to ~/.grok/config.toml (global) or <repo>/.grok/config.toml (per-repo).
+
+[models]
+default = "grok-composer-2.5-fast"
+
+[ui]
+fork_secondary_model = "grok-composer-2.5-fast"
+
+[compat.cursor]
+skills = true
+rules = true
+agents = true
+mcps = true
+hooks = true
+
+[subagents.models]
+explore = "grok-composer-2.5-fast"
+general-purpose = "grok-composer-2.5-fast"
+
+# GitHub MCP for issue/PR automation (set token in env, not in git)
+# [mcp_servers.github]
+# command = "npx"
+# args = ["-y", "@modelcontextprotocol/server-github"]
+# env = { GITHUB_PERSONAL_ACCESS_TOKEN = "${GITHUB_PERSONAL_ACCESS_TOKEN}" }
+# enabled = true

@@ -28,6 +28,7 @@ state changes. States: `planned` | `in-progress` | `done` | `unknown`.
 | 18-predict-club-quick-predict | done | All phases complete |
 | 19-predict-club-ui-roadmap | in-progress | UI roadmap ongoing |
 | 20-swap-multi-route-aggregator | done | Multi-route + WASM shipped (v0.52.0) |
+| 24-telegram-btc-alert | in-progress | Phase 0 shipped (v0.115–v0.116); Phases 1–3 planned |
 
 ## Recent harness/infra work not yet storied
 

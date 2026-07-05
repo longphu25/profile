@@ -2,6 +2,8 @@
 
 Lightweight Telegram Web App for **ML bias** and **Trade Setup plan** with **auto-login** via Telegram account.
 
+**Full documentation:** [docs/telegram/README.md](../../docs/telegram/README.md) (technical reference, Turso/Convex ADR, roadmap).
+
 ## URL
 
 After deploy (GitHub Pages):

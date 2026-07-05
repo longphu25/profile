@@ -17,6 +17,7 @@ Tài liệu kỹ thuật và hướng dẫn sử dụng cho plugin BTC Chart Pro
 | [USER-GUIDE.vi.md](./USER-GUIDE.vi.md) | Hướng dẫn sử dụng (giao diện, tính năng, mobile) |
 | [RESEARCH-2026-07.vi.md](./RESEARCH-2026-07.vi.md) | Research 7/2026: SMC, deploy, mobile, OI, Convex vs Worker |
 | [multi-exchange-data.vi.md](./multi-exchange-data.vi.md) | Catalog 4 sàn, aggregate ngoài OI, lộ trình triển khai |
+| [../telegram/README.vi.md](../telegram/README.vi.md) | Mini App Telegram: alert bias, auto-login, Turso/Convex |
 
 Ngoài ra: ICT Sessions (`lib/ict-sessions.ts`) và ICT Liquidity Hacks
 (`lib/liquidity.ts`) — mô tả trong `TECHNICAL.vi.md`.

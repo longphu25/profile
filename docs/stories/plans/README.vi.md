@@ -27,6 +27,7 @@ TaskOS. Nó nằm dưới `docs/stories/` vì các file này mô tả các lát 
 | [17-scallop-plugin-extraction.md](17-scallop-plugin-extraction.md) | Tách Scallop borrow thành plugin độc lập `sui-scallop`, mount vào predict-club qua Host Component Registry. |
 | [18-predict-club-quick-predict.md](18-predict-club-quick-predict.md) | Luồng Quick Predict để tạo round và thao tác prediction nhanh hơn. |
 | [19-predict-club-ui-roadmap.vi.md](19-predict-club-ui-roadmap.vi.md) | Roadmap từng bước để hoàn thiện giao diện Predict Club, data contracts, risk/exposure, wallet UX, portfolio/vaults, funding, lifecycle, tests và docs. |
+| [24-telegram-btc-alert.vi.md](24-telegram-btc-alert.vi.md) | Mini App Telegram: alert ML bias và Trade Setup, auto-login, backend Turso/Convex chung (Phase 0 đã ship). |
 
 ## Thứ Tự Xây Dựng Được Khuyến Nghị
 

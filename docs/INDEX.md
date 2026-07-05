@@ -43,6 +43,13 @@
 - [[demo/decision]] — Demo decision record
 - [[demo/validation]] — Demo validation note
 
+## Agent Tooling
+
+- [[agents/grok-vps-github/README]] — Grok on VPS with GitHub issue-to-PR automation
+- [[agents/grok-vps-github/TECHNICAL]] — Technical reference: auth, MCP, workers, security
+- [[agents/grok-vps-github/CURSOR-IDE]] — Grok in Cursor IDE (built-in agent vs CLI terminal)
+- [[agents/grok-vps-github/MODEL-DEFAULT]] — Default model grok-composer-2.5-fast
+
 ## Project Guide
 
 - [[project-overview]] — Bức tranh tổng thể: mục tiêu repo, các lớp hệ thống, lộ trình đọc
@@ -149,6 +156,21 @@
 | sui-navi-chatbot | Chat-based DeFi advisor via MCP (wallet-aware) | — | ✅ |
 | sui-navi-analysis | Real-time pool stats + Scallop cross-protocol | Rust 128KB | ✅ |
 
+## Telegram BTC Chart Alert
+
+- [[telegram/README]] — Mini App overview, URLs, shipped scope
+- [[telegram/TECHNICAL]] — Architecture, auto-login, Turso + Convex split, env vars
+- [[telegram/ROADMAP]] — Phased plan: Turso coins, prefs, push alerts, SMC parity
+- [[decisions/telegram-data-backend]] — ADR: Turso vs Convex for Telegram data
+- [[stories/plans/24-telegram-btc-alert]] — Story 24 (Phase 0 shipped v0.115–v0.116)
+
+## BTC Chart Plugin
+
+- [[btc-chart/README]] — Plugin doc index
+- [[btc-chart/TECHNICAL]] — Full chart architecture and indicators
+- [[btc-chart/trade-setup]] — Confluence Trade Setup engine
+- [[btc-chart/ml-signal]] — ML weighted ensemble
+
 ## DeepBook Trading (10 plugins)
 
 - [[deepbook/README]] — Overview
@@ -186,6 +208,7 @@
 - [[stories/plans/17-scallop-plugin-extraction]] — Scallop plugin extraction and Host Component Registry plan
 - [[stories/plans/18-predict-club-quick-predict]] — Quick Predict entry flow
 - [[stories/plans/19-predict-club-ui-roadmap]] — Predict Club UI implementation roadmap by phase
+- [[stories/plans/24-telegram-btc-alert]] — Telegram Mini App: bias alert, auto-login, Turso/Convex roadmap
 
 ## Walrus Storage (3 plugins)
 

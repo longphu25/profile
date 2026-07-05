@@ -41,6 +41,13 @@
 - [[demo/decision]] — Demo decision record
 - [[demo/validation]] — Demo validation note
 
+## Công Cụ Agent
+
+- [[agents/grok-vps-github/README]] — Grok trên VPS với tự động hóa issue → PR trên GitHub
+- [[agents/grok-vps-github/TECHNICAL.vi]] — Tài liệu kỹ thuật: auth, MCP, worker, bảo mật
+- [[agents/grok-vps-github/CURSOR-IDE.vi]] — Grok trên Cursor IDE (agent tích hợp vs CLI terminal)
+- [[agents/grok-vps-github/MODEL-DEFAULT.vi]] — Model mặc định grok-composer-2.5-fast
+
 ## Hướng Dẫn Dự Án
 
 - [[project-overview]] — Bức tranh tổng thể: mục tiêu repo, các lớp hệ thống, lộ trình đọc
@@ -121,6 +128,21 @@
 | sui-navi-chatbot | Cố vấn DeFi dạng chat qua MCP (nhận biết ví) | — | ✅ |
 | sui-navi-analysis | Xếp hạng pool thời gian thực + Scallop cross-protocol | Rust 128KB | ✅ |
 
+## Telegram BTC Chart Alert
+
+- [[telegram/README.vi]] — Tổng quan Mini App, URL, phạm vi đã ship
+- [[telegram/TECHNICAL.vi]] — Kiến trúc, auto-login, Turso + Convex, env
+- [[telegram/ROADMAP.vi]] — Lộ trình: Turso, prefs, push alert, SMC
+- [[decisions/telegram-data-backend.vi]] — ADR: Turso vs Convex
+- [[stories/plans/24-telegram-btc-alert.vi]] — Story 24
+
+## BTC Chart Plugin
+
+- [[btc-chart/README.vi]] — Mục lục tài liệu plugin
+- [[btc-chart/TECHNICAL.vi]] — Kiến trúc chart đầy đủ
+- [[btc-chart/trade-setup.vi]] — Engine Trade Setup confluence
+- [[btc-chart/ml-signal.vi]] — ML weighted ensemble
+
 ## DeepBook Trading (10 plugin)
 
 - [[deepbook/README]] — Tổng quan
@@ -158,6 +180,7 @@
 - [[stories/plans/17-scallop-plugin-extraction]] — Kế hoạch tách Scallop plugin và Host Component Registry
 - [[stories/plans/18-predict-club-quick-predict]] — Luồng Quick Predict
 - [[stories/plans/19-predict-club-ui-roadmap]] — Roadmap triển khai UI Predict Club theo phase
+- [[stories/plans/24-telegram-btc-alert.vi]] — Mini App Telegram: alert bias, auto-login, Turso/Convex
 
 ## Walrus Storage (3 plugin)
 

@@ -31,6 +31,7 @@ candidate work slices, roadmap order, and implementation packets.
 | [21-predict-club-ui-redesign.md](21-predict-club-ui-redesign.md) | Predict Club UI redesign (R1-R8): multi-region `next/` cockpit layout, superseded by plan 22. |
 | [22-predict-club-cockpit-rebuild.md](22-predict-club-cockpit-rebuild.md) | Chart-king pro cockpit rebuild (C0-C7): one focal chart, docked action rail, custom SVG king chart, mobile hero + sheet. |
 | [23-predict-vol-surface-studio.md](23-predict-vol-surface-studio.md) | Decision-support terminal: a dedicated vol-surface Studio (IV heatmap + smile + mispricing/IV-vs-realized/arb-free edge) plus a cockpit mispricing badge and deploy-ready CORS fix. |
+| [24-telegram-btc-alert.md](24-telegram-btc-alert.md) | Telegram Mini App for ML bias and Trade Setup alerts, Telegram auto-login, shared Turso/Convex backend (Phase 0 shipped). |
 
 ## Recommended Build Order
 

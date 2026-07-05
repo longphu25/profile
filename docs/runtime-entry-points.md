@@ -72,6 +72,21 @@ Use case:
 
 Trang này tách riêng vì feature bot lớn hơn mức "một card plugin thông thường".
 
+## Telegram BTC Chart Alert (Mini App)
+
+- HTML: `telegram-btc-alert.html`
+- React entry: `src/telegram-btc-alert/main.tsx`
+- Root component: `src/telegram-btc-alert/App.tsx`
+- Mục đích: ML bias + Trade Setup alert trong Telegram WebApp, auto-login Telegram
+
+Use case:
+
+- mở từ bot Telegram (`bun run telegram:bot`) hoặc menu **Chart Alert**
+- poll klines 15s, engine nhẹ (Lux + ML + Trade Setup, không SMC WASM)
+- auth tùy chọn qua Convex `POST /telegram/auth`
+
+Tài liệu: `docs/telegram/README.vi.md`, `docs/telegram/TECHNICAL.vi.md`.
+
 ## Registration nằm ở đâu
 
 Muốn một plugin thật sự hoạt động đầy đủ, thường phải chạm ít nhất 3 điểm:

@@ -42,9 +42,16 @@ của `docs/` để dễ tìm từ chỉ mục Obsidian:
 Quy tắc đặt tài liệu chi tiết nằm trong `ORGANIZATION.md`.
 Quyết định dọn root-level docs nằm trong `ROOT_DOC_AUDIT.md`.
 
+## Công cụ Agent
+
+- `agents/grok-vps-github/`: Chạy Grok Build CLI trên VPS, nối GitHub issue với
+  luồng code và PR tự động. Bắt đầu tại `agents/grok-vps-github/README.vi.md`;
+  chi tiết kỹ thuật trong `TECHNICAL.vi.md`.
+
 ## Các Thư Mục Domain
 
 - `deepbook/`: tài liệu về giao dịch DeepBook, Predict, biểu đồ BTC và tài chính on-chain.
+- `telegram/`: Telegram BTC Chart Alert Mini App (auth, Turso/Convex, lộ trình).
 - `defi/navi/`: tài liệu về dashboard NAVI, advisor, chatbot, MCP và mở rộng.
 - `seal/`: tài liệu plugin mã hóa Seal và policy.
 - `walrus/`: tài liệu tích hợp Walrus storage.

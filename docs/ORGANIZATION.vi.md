@@ -16,6 +16,7 @@ chưa cập nhật toàn bộ wiki link.
 | `decisions/` | Quyết định và tradeoff bền vững | Quyết định kiến trúc, funding/escrow |
 | `demo/` | Ví dụ tối thiểu về flow harness | Request tới intake, product, story, decision, validation |
 | `templates/` | Mẫu viết lại được | Story, decision, validation template |
+| `agents/` | Hướng dẫn runtime agent và automation | Grok VPS, GitHub worker, thiết lập MCP |
 | Thư mục domain | Chiều sâu kỹ thuật theo domain | `deepbook/`, `defi/navi/`, `seal/`, `walrus/`, `zklogin/`, `contracts/` |
 | Artifact thiết kế | Tham chiếu UI sinh ra và preview tĩnh | `stitch_predict_club_trading_terminal/` |
 

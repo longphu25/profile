@@ -39,9 +39,16 @@ of `docs/` so they remain easy to find from the Obsidian index:
 For detailed placement rules, see `ORGANIZATION.md`.
 For root-level cleanup decisions, see `ROOT_DOC_AUDIT.md`.
 
+## Agent Tooling
+
+- `agents/grok-vps-github/`: Run Grok Build CLI on a VPS, connect GitHub issues to
+  automated coding and PR workflows. Start at `agents/grok-vps-github/README.md`;
+  deep setup in `TECHNICAL.md`.
+
 ## Domain Folders
 
 - `deepbook/`: DeepBook trading, Predict, BTC chart, and on-chain finance docs.
+- `telegram/`: Telegram BTC Chart Alert Mini App (auth, Turso/Convex, roadmap).
 - `defi/navi/`: NAVI dashboard, advisor, chatbot, MCP, and expansion docs.
 - `seal/`: Seal encryption plugin and policy docs.
 - `walrus/`: Walrus storage integration docs.
