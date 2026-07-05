@@ -76,6 +76,8 @@ branch + commit + gh pr create + comment issue
 
 ## Tài liệu liên quan trong repo
 
+- [open-design-grok/README.vi.md](../open-design-grok/README.vi.md): Open Design desktop +
+  Grok Build cho thiết kế UI local (bổ sung cho tự động hóa VPS)
 - [SETUP.md](../../SETUP.md): thiết lập harness, QMD, MCP trong dự án này
 - [HARNESS.md](../../HARNESS.md): cách agent nên đọc docs ở đây
 - [CONTEXT_RULES.md](../../CONTEXT_RULES.md): đọc gì theo từng phase

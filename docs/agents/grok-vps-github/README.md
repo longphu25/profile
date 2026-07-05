@@ -78,6 +78,8 @@ Read [TECHNICAL.md](./TECHNICAL.md) for:
 
 ## Related Repo Docs
 
+- [open-design-grok/README.md](../open-design-grok/README.md): Open Design desktop +
+  Grok Build for local UI design (complements VPS automation)
 - [SETUP.md](../../SETUP.md): harness, QMD, and MCP setup in this project
 - [HARNESS.md](../../HARNESS.md): how agents should read docs here
 - [CONTEXT_RULES.md](../../CONTEXT_RULES.md): what to load per task phase

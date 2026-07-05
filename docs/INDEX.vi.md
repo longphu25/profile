@@ -43,6 +43,8 @@
 
 ## Công Cụ Agent
 
+- [[agents/open-design-grok/README]] — Open Design desktop + Grok Build cho thiết kế UI local
+- [[agents/open-design-grok/WORKFLOW.vi]] — Cài đặt, luồng làm việc, map repo profile, lưu ý
 - [[agents/grok-vps-github/README]] — Grok trên VPS với tự động hóa issue → PR trên GitHub
 - [[agents/grok-vps-github/TECHNICAL.vi]] — Tài liệu kỹ thuật: auth, MCP, worker, bảo mật
 - [[agents/grok-vps-github/CURSOR-IDE.vi]] — Grok trên Cursor IDE (agent tích hợp vs CLI terminal)

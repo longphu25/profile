@@ -45,6 +45,8 @@
 
 ## Agent Tooling
 
+- [[agents/open-design-grok/README]] — Open Design desktop + Grok Build for local UI design
+- [[agents/open-design-grok/WORKFLOW]] — Setup, workflow, profile repo mapping, pitfalls
 - [[agents/grok-vps-github/README]] — Grok on VPS with GitHub issue-to-PR automation
 - [[agents/grok-vps-github/TECHNICAL]] — Technical reference: auth, MCP, workers, security
 - [[agents/grok-vps-github/CURSOR-IDE]] — Grok in Cursor IDE (built-in agent vs CLI terminal)

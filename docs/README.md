@@ -41,6 +41,9 @@ For root-level cleanup decisions, see `ROOT_DOC_AUDIT.md`.
 
 ## Agent Tooling
 
+- `agents/open-design-grok/`: Use Open Design desktop with the Grok Build adapter for
+  local UI design and implementation in this repo. Start at `agents/open-design-grok/README.md`;
+  full workflow in `WORKFLOW.md`.
 - `agents/grok-vps-github/`: Run Grok Build CLI on a VPS, connect GitHub issues to
   automated coding and PR workflows. Start at `agents/grok-vps-github/README.md`;
   deep setup in `TECHNICAL.md`.

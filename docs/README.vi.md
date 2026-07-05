@@ -44,6 +44,9 @@ Quyết định dọn root-level docs nằm trong `ROOT_DOC_AUDIT.md`.
 
 ## Công cụ Agent
 
+- `agents/open-design-grok/`: Dùng Open Design desktop với adapter Grok Build cho
+  thiết kế UI local và implement trong repo này. Bắt đầu tại `agents/open-design-grok/README.vi.md`;
+  luồng đầy đủ trong `WORKFLOW.vi.md`.
 - `agents/grok-vps-github/`: Chạy Grok Build CLI trên VPS, nối GitHub issue với
   luồng code và PR tự động. Bắt đầu tại `agents/grok-vps-github/README.vi.md`;
   chi tiết kỹ thuật trong `TECHNICAL.vi.md`.

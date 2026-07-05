@@ -23,7 +23,10 @@ add "/btc-chart/" \
   "BTC Chart Pro plugin: Lux NWE, ML signal, Trade Setup confluence, SMC WASM, multi-exchange, Turso coins. See TECHNICAL.md, trade-setup.md, ml-signal.md."
 
 add "/agents/" \
-  "Agent tooling docs: Grok VPS GitHub automation, Cursor IDE, MCP setup."
+  "Agent tooling docs: Open Design + Grok local UI workflow, Grok VPS GitHub automation, Cursor IDE, MCP setup."
+
+add "/agents/open-design-grok/" \
+  "Open Design desktop + Grok Build adapter: WORKFLOW setup, design systems, DESIGN.md, profile UI surfaces (telegram-btc-alert, plugins components). Not production dependency. Cross-link grok-vps-github for headless VPS."
 
 add "/decisions/" \
   "Architecture decision records (ADR): durable tradeoffs. Includes telegram-data-backend, btc-chart-exchange-backend."
