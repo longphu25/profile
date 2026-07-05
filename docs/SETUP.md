@@ -58,6 +58,15 @@ Current collection:
 profile-docs
 Path: docs/
 Mask: **/*.md
+Files: ~270 (run bun run docs:status for live count)
+Context: collection-root summary for harness, btc-chart, telegram, Turso, Convex
+```
+
+Repo shortcuts:
+
+```bash
+bun run docs:index
+bun run docs:status
 ```
 
 This collection intentionally includes both English `.md` files and Vietnamese

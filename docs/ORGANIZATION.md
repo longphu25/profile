@@ -17,7 +17,7 @@ updating every wiki link.
 | `demo/` | Minimal harness flow example | Request to intake, product, story, decision, validation |
 | `templates/` | Reusable writing formats | Story, decision, validation templates |
 | `agents/` | Agent runtime and automation guides | Grok VPS, GitHub workers, MCP setup |
-| Domain folders | Technical depth by domain | `deepbook/`, `defi/navi/`, `seal/`, `walrus/`, `zklogin/`, `contracts/` |
+| Domain folders | Technical depth by domain | `btc-chart/`, `telegram/`, `deepbook/`, `defi/navi/`, `seal/`, `walrus/`, `zklogin/`, `contracts/` |
 | Design artifacts | Generated UI references and static previews | `stitch_predict_club_trading_terminal/` |
 
 ## Language Policy
