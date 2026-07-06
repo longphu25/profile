@@ -60,7 +60,7 @@
     "@scallop-io/sui-scallop-sdk": "^4.2.0",
     "@scure/bip32": "^2.2.0",
     "@scure/bip39": "^2.2.0",
-    "@solana/kit": "^6.10.0",
+    "@solana/kit": "^7.0.0",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-react": "^0.15.39",
     "@solana/wallet-adapter-react-ui": "^0.9.39",
