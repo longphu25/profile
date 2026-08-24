@@ -46,7 +46,7 @@
     "@mysten/bcs": "^2.1.0",
     "@mysten/dapp-kit-core": "^1.6.3",
     "@mysten/dapp-kit-react": "^2.1.5",
-    "@mysten/deepbook-v3": "^1.5.3",
+    "@mysten/deepbook-v3": "^2.0.1",
     "@mysten/payment-kit": "^0.2.3",
     "@mysten/seal": "^1.2.3",
     "@mysten/slush-wallet": "^1.1.3",
