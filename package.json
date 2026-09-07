@@ -84,7 +84,7 @@
     "jwt-decode": "^4.0.0",
     "lightweight-charts": "5.2.0",
     "lucide-react": "^1.23.0",
-    "motion": "^12.42.2",
+    "motion": "^13.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-haiku": "^2.4.1",
